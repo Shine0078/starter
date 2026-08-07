@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FINVERSE — dev dashboard</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f6f7f9;
+        --panel: #ffffff;
+        --ink: #14161a;
+        --muted: #646b76;
+        --line: #e3e6ea;
+        --accent: #2f6df6;
+        --good: #1f9254;
+        --warn: #b8730a;
+        --bad: #c0392b;
+        --radius: 10px;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0f1115;
+          --panel: #171a20;
+          --ink: #e8eaed;
+          --muted: #99a1ad;
+          --line: #262a32;
+          --accent: #6f9bff;
+          --good: #4ec27f;
+          --warn: #e0a944;
+          --bad: #ef6a5c;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 24px;
+        background: var(--bg);
+        color: var(--ink);
+        font: 14px/1.5 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+      header { max-width: 1100px; margin: 0 auto 20px; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+      h1 { font-size: 18px; margin: 0; letter-spacing: -0.01em; }
+      .tag { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); border: 1px solid var(--line); border-radius: 99px; padding: 2px 8px; }
+      main { max-width: 1100px; margin: 0 auto; display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+      section { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+      section.wide { grid-column: 1 / -1; }
+      h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 12px; font-weight: 600; }
+      button {
+        font: inherit; font-weight: 500; cursor: pointer;
+        background: var(--accent); color: #fff; border: 0;
+        border-radius: 8px; padding: 8px 14px;
+      }
+      button.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+      button:disabled { opacity: .55; cursor: progress; }
+      table { width: 100%; border-collapse: collapse; }
+      th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; padding-bottom: 6px; }
+      td { padding: 5px 0; border-top: 1px solid var(--line); vertical-align: top; }
+      td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+      .scroll { overflow-x: auto; }
+      .muted { color: var(--muted); }
+      .score { font-size: 40px; font-weight: 650; letter-spacing: -0.03em; line-height: 1; }
+      .bar { height: 6px; border-radius: 99px; background: var(--line); overflow: hidden; margin-top: 4px; }
+      .bar > i { display: block; height: 100%; background: var(--accent); }
+      .bar > i.warn { background: var(--warn); }
+      .bar > i.bad { background: var(--bad); }
+      .row { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+      .pill { font-size: 11px; padding: 1px 7px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); }
+      .pill.good { color: var(--good); border-color: currentColor; }
+      .pill.warn { color: var(--warn); border-color: currentColor; }
+      .pill.bad { color: var(--bad); border-color: currentColor; }
+      ul { margin: 0; padding-left: 18px; }
+      li { margin-bottom: 5px; }
+      .stat { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; }
+      .stat dt { color: var(--muted); }
+      .stat dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+      code { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 12px; }
+      #status { color: var(--muted); font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>FINVERSE</h1>
+      <span class="tag">dev dashboard</span>
+      <span class="tag">mock aggregator</span>
+      <button id="sync">Sync</button>
+      <span id="status">not synced yet</span>
+    </header>
+
+    <main>
+      <section>
+        <h2>Accounts</h2>
+        <div id="accounts" class="muted">—</div>
+      </section>
+
+      <section>
+        <h2>Financial health</h2>
+        <div id="health" class="muted">—</div>
+      </section>
+
+      <section class="wide">
+        <h2>Budgets — this month</h2>
+        <div id="budgets" class="muted">—</div>
+      </section>
+
+      <section>
+        <h2>This month vs last (like for like)</h2>
+        <div id="summary" class="muted">—</div>
+      </section>
+
+      <section>
+        <h2>Insights</h2>
+        <div id="insights" class="muted">—</div>
+      </section>
+
+      <section class="wide">
+        <h2>Detected subscriptions</h2>
+        <div id="subs" class="scroll muted">—</div>
+      </section>
+
+      <section class="wide">
+        <h2>Needs review — we refuse to guess</h2>
+        <div id="review" class="scroll muted">—</div>
+      </section>
+
+      <section class="wide">
+        <h2>Recent transactions</h2>
+        <div id="txns" class="scroll muted">—</div>
+      </section>
+    </main>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const api = (path, options) =>
+        fetch(`/api${path}`, options).then((r) => {
+          if (!r.ok) throw new Error(`${path} -> ${r.status}`);
+          return r.json();
+        });
+
+      const esc = (s) =>
+        String(s ?? '').replace(/[&<>"']/g, (c) =>
+          ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
+        );
+
+      const statusClass = (s) =>
+        s === 'exceeded' ? 'bad' : s === 'critical' || s === 'warning' ? 'warn' : 'good';
+
+      function renderAccounts(rows) {
+        $('accounts').className = 'scroll';
+        $('accounts').innerHTML = `<table><thead><tr>
+            <th>Account</th><th>Type</th><th class="num">Balance</th><th class="num">Used</th>
+          </tr></thead><tbody>${rows
+            .map(
+              (a) => `<tr>
+                <td>${esc(a.name)} <span class="muted">••${esc(a.mask)}</span></td>
+                <td class="muted">${esc(a.type.replace('_', ' '))}</td>
+                <td class="num">${esc(a.balanceFormatted)}</td>
+                <td class="num">${a.utilization === null ? '<span class="muted">—</span>' : Math.round(a.utilization * 100) + '%'}</td>
+              </tr>`,
+            )
+            .join('')}</tbody></table>`;
+      }
+
+      function renderHealth(h) {
+        const band = h.score >= 700 ? 'good' : h.score >= 550 ? 'warn' : 'bad';
+        $('health').className = '';
+        $('health').innerHTML = `
+          <div class="row"><span class="score">${h.score}</span>
+            <span class="pill ${band}">${esc(h.band)}</span></div>
+          <div class="muted" style="margin:2px 0 14px">out of 1000</div>
+          ${h.components
+            .map((c) => {
+              const pct = Math.round((c.points / c.maxPoints) * 100);
+              const cls = pct >= 70 ? '' : pct >= 40 ? 'warn' : 'bad';
+              return `<div style="margin-bottom:10px">
+                <div class="row"><span>${esc(c.label)}</span>
+                  <span class="muted">${c.points}/${c.maxPoints}</span></div>
+                <div class="bar"><i class="${cls}" style="width:${pct}%"></i></div>
+                <div class="muted" style="font-size:12px">${esc(c.detail)}</div>
+              </div>`;
+            })
+            .join('')}
+          ${
+            h.topActions.length
+              ? `<h2 style="margin-top:14px">Do next</h2><ul>${h.topActions
+                  .map((a) => `<li>${esc(a)}</li>`)
+                  .join('')}</ul>`
+              : ''
+          }`;
+      }
+
+      function renderBudgets(data) {
+        if (!data.count) {
+          $('budgets').innerHTML = '<span class="muted">No budgets yet.</span>';
+          return;
+        }
+        $('budgets').className = 'scroll';
+        $('budgets').innerHTML = `<table><thead><tr>
+            <th>Category</th><th class="num">Spent</th><th class="num">Limit</th>
+            <th class="num">Used</th><th style="width:30%">Progress</th><th class="num">Days left</th>
+          </tr></thead><tbody>${data.budgets
+            .map((b) => {
+              const cls = statusClass(b.status);
+              return `<tr>
+                <td>${esc(b.categoryName)} <span class="pill ${cls}">${esc(b.status.replace('_', ' '))}</span></td>
+                <td class="num">${esc(b.spentFormatted)}</td>
+                <td class="num">${esc(b.limitFormatted)}</td>
+                <td class="num">${b.percentUsed}%</td>
+                <td><div class="bar"><i class="${cls === 'good' ? '' : cls}" style="width:${Math.min(100, b.percentUsed)}%"></i></div></td>
+                <td class="num">${b.daysRemaining}</td>
+              </tr>`;
+            })
+            .join('')}</tbody></table>
+          ${
+            data.alerts.length
+              ? `<ul style="margin-top:12px">${data.alerts
+                  .map((a) => `<li>${esc(a.message)}</li>`)
+                  .join('')}</ul>`
+              : ''
+          }`;
+      }
+
+      function renderInsights(report) {
+        const h = report.headline;
+        $('summary').className = '';
+        $('summary').innerHTML = `<dl class="stat">
+            <dt>Income</dt><dd>${esc(h.income)}</dd>
+            <dt>Expenses</dt><dd>${esc(h.expenses)}</dd>
+            <dt>Net cash flow</dt><dd>${esc(h.netCashFlow)}</dd>
+            <dt>Savings rate</dt><dd>${esc(h.savingsRate)}</dd>
+            <dt>Avg daily spend</dt><dd>${esc(h.averageDailySpend)}</dd>
+            <dt>Transactions</dt><dd>${h.transactionCount}</dd>
+          </dl>
+          <h2 style="margin-top:14px">Top categories</h2>
+          <dl class="stat">${report.topCategories
+            .map((c) => `<dt>${esc(c.categoryName)}</dt><dd>${esc(c.totalFormatted)}</dd>`)
+            .join('')}</dl>`;
+
+        $('insights').className = '';
+        $('insights').innerHTML = report.insights.length
+          ? report.insights
+              .map((i) => {
+                const cls = i.severity === 'positive' ? 'good' : i.severity === 'warning' ? 'warn' : '';
+                return `<div style="margin-bottom:12px">
+                  <div class="row"><strong>${esc(i.title)}</strong>
+                    <span class="pill ${cls}">${esc(i.severity)}</span></div>
+                  <div class="muted">${esc(i.detail)}</div>
+                  <div class="muted" style="font-size:12px">${i.evidenceTransactionIds.length} transaction(s) behind this</div>
+                </div>`;
+              })
+              .join('')
+          : '<span class="muted">Nothing notable changed.</span>';
+      }
+
+      function renderSubs(data) {
+        $('subs').innerHTML = `<div class="muted" style="margin-bottom:10px">
+            ${data.count} detected · ${esc(data.monthlyTotalFormatted)}/mo · ${esc(data.annualTotalFormatted)}/yr
+          </div>
+          <table><thead><tr>
+            <th>Merchant</th><th>Cadence</th><th class="num">Amount</th>
+            <th class="num">Annual</th><th>Next</th><th class="num">Confidence</th>
+          </tr></thead><tbody>${data.subscriptions
+            .map(
+              (s) => `<tr>
+                <td>${esc(s.merchant)}${
+                  s.priceIncrease
+                    ? ` <span class="pill warn">price up ${Math.round(s.priceIncrease.percent)}%</span>`
+                    : ''
+                }</td>
+                <td class="muted">${esc(s.cadence)}</td>
+                <td class="num">${esc(s.typicalAmountFormatted)}</td>
+                <td class="num">${esc(s.annualCostFormatted)}</td>
+                <td class="muted">${esc(s.nextExpected)}</td>
+                <td class="num">${s.confidence}</td>
+              </tr>`,
+            )
+            .join('')}</tbody></table>`;
+      }
+
+      const FIX_CATEGORIES = [
+        'rent', 'restaurants', 'groceries', 'coffee', 'shopping', 'fitness',
+        'utilities', 'transportation', 'entertainment', 'healthcare',
+      ];
+
+      function renderTxnTable(target, rows, withAction) {
+        if (!rows.length) {
+          target.innerHTML = '<span class="muted">Nothing here.</span>';
+          return;
+        }
+        target.innerHTML = `<table><thead><tr>
+            <th>Date</th><th>Descriptor</th><th>Normalized</th><th>Category</th>
+            <th class="num">Amount</th>${withAction ? '<th></th>' : ''}
+          </tr></thead><tbody>${rows
+            .map(
+              (t) => `<tr>
+                <td class="muted">${esc(t.postedAt)}</td>
+                <td>${esc(t.rawDescriptor)}${t.pending ? ' <span class="pill">pending</span>' : ''}</td>
+                <td class="muted"><code>${esc(t.normalizedDescriptor)}</code></td>
+                <td>${esc(t.categorySlug)} <span class="muted" style="font-size:12px">${esc(t.categorySource)}</span></td>
+                <td class="num">${esc(t.amountFormatted)}</td>
+                ${
+                  withAction
+                    ? `<td style="white-space:nowrap">
+                        <select data-for="${esc(t.id)}">${FIX_CATEGORIES.map(
+                          (c) => `<option value="${esc(c)}">${esc(c)}</option>`,
+                        ).join('')}</select>
+                        <button class="ghost" data-fix="${esc(t.id)}">Apply + rule</button>
+                      </td>`
+                    : ''
+                }
+              </tr>`,
+            )
+            .join('')}</tbody></table>`;
+      }
+
+      // The API ships with no budgets — budgets are a user's choice, not a
+      // default. The dev dashboard seeds a few so the panel has something to
+      // show; this lives here and not in the API on purpose.
+      const STARTER_BUDGETS = [
+        { categorySlug: 'restaurants', limitAmount: 25000 },
+        { categorySlug: 'groceries', limitAmount: 60000 },
+        { categorySlug: 'coffee', limitAmount: 6000 },
+        { categorySlug: 'food_delivery', limitAmount: 12000 },
+      ];
+
+      async function ensureBudgets() {
+        const existing = await api('/budgets');
+        if (existing.length > 0) return;
+        for (const budget of STARTER_BUDGETS) {
+          await api('/budgets', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(budget),
+          });
+        }
+      }
+
+      async function refresh() {
+        const [accounts, health, budgets, report, subs, review, txns] = await Promise.all([
+          api('/accounts'),
+          api('/health-score'),
+          api('/budgets/progress'),
+          api('/insights'),
+          api('/subscriptions'),
+          api('/transactions/needs-review'),
+          api('/transactions?limit=25'),
+        ]);
+
+        renderAccounts(accounts);
+        renderHealth(health);
+        renderBudgets(budgets);
+        renderInsights(report);
+        renderSubs(subs);
+
+        $('review').className = 'scroll';
+        renderTxnTable($('review'), review.transactions.slice(0, 10), true);
+        $('txns').className = 'scroll';
+        renderTxnTable($('txns'), txns.transactions, false);
+      }
+
+      // Demonstrates the correction backfill: one fix updates every past
+      // transaction from the same merchant.
+      document.addEventListener('click', async (event) => {
+        const id = event.target?.dataset?.fix;
+        if (!id) return;
+        event.target.disabled = true;
+        const select = document.querySelector(`select[data-for="${CSS.escape(id)}"]`);
+        const result = await api(`/transactions/${encodeURIComponent(id)}/category`, {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ categorySlug: select?.value ?? 'shopping', createRule: true }),
+        });
+        $('status').textContent = result.message;
+        await refresh();
+      });
+
+      $('sync').addEventListener('click', async () => {
+        const button = $('sync');
+        button.disabled = true;
+        $('status').textContent = 'syncing…';
+        try {
+          const result = await api('/sync', { method: 'POST' });
+          await ensureBudgets();
+          $('status').textContent =
+            `${result.fetched} fetched · ${result.inserted} new · ${result.updated} updated · ` +
+            `${Math.round(result.coverage * 100)}% categorized · ${result.needsReview} need review`;
+          await refresh();
+        } catch (error) {
+          $('status').textContent = String(error);
+        } finally {
+          button.disabled = false;
+        }
+      });
+
+      // Seed the view on first load so the page is never empty.
+      $('sync').click();
+    </script>
+  </body>
+</html>
