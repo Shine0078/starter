@@ -1,0 +1,187 @@
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+
+import { categorizeDescriptor, coverageRate, ruleFromCorrection } from '../../domain/categorization/categorize';
+import { normalizeDescriptor } from '../../domain/categorization/normalize';
+import { isKnownCategory } from '../../domain/categories';
+import { detectSubscriptions } from '../../domain/insights/subscriptions';
+import type { Account, RawTransaction, Transaction } from '../../domain/types';
+import {
+  ACCOUNT_STORE,
+  AGGREGATOR,
+  CLOCK,
+  RULE_STORE,
+  TRANSACTION_STORE,
+  type AccountStore,
+  type AggregatorPort,
+  type ClockPort,
+  type RuleStore,
+  type TransactionQuery,
+  type TransactionStore,
+} from '../../ports';
+
+export interface SyncResult {
+  accounts: number;
+  fetched: number;
+  inserted: number;
+  updated: number;
+  /** Share of transactions we could assign a category to, 0–1. */
+  coverage: number;
+  needsReview: number;
+  recurringDetected: number;
+}
+
+@Injectable()
+export class LedgerService {
+  constructor(
+    @Inject(AGGREGATOR) private readonly aggregator: AggregatorPort,
+    @Inject(ACCOUNT_STORE) private readonly accounts: AccountStore,
+    @Inject(TRANSACTION_STORE) private readonly transactions: TransactionStore,
+    @Inject(RULE_STORE) private readonly rules: RuleStore,
+    @Inject(CLOCK) private readonly clock: ClockPort,
+  ) {}
+
+  /**
+   * Pull from the aggregator, categorize, persist.
+   *
+   * Safe to run repeatedly: transaction identity is derived from
+   * `(accountId, providerTxnId)`, so a provider resending its whole history
+   * updates rows rather than duplicating them.
+   */
+  async sync(userId: string, linkId = 'link_demo'): Promise<SyncResult> {
+    const remoteAccounts = await this.aggregator.listAccounts(linkId);
+    await this.accounts.upsertMany(userId, remoteAccounts);
+
+    const { transactions: raw } = await this.aggregator.fetchTransactions(linkId);
+    const rules = await this.rules.list(userId);
+
+    const results = raw.map((rawTxn) => ({
+      rawTxn,
+      categorization: categorizeDescriptor(rawTxn.descriptor, { rules }),
+    }));
+
+    const mapped: Transaction[] = results.map(({ rawTxn, categorization }) =>
+      this.toTransaction(rawTxn, categorization),
+    );
+
+    const { inserted, updated } = await this.transactions.upsertMany(userId, mapped);
+
+    // Recurrence is a property of the series, not of a single row, so it can
+    // only be determined after the whole ledger is stored.
+    const stored = await this.transactions.list(userId);
+    const subscriptions = detectSubscriptions(stored);
+    const recurringDescriptors = new Set(subscriptions.map((s) => s.normalizedDescriptor));
+
+    for (const txn of stored) {
+      const shouldBeRecurring = recurringDescriptors.has(txn.normalizedDescriptor);
+      if (txn.isRecurring !== shouldBeRecurring) {
+        await this.transactions.update(userId, txn.id, { isRecurring: shouldBeRecurring });
+      }
+    }
+
+    return {
+      accounts: remoteAccounts.length,
+      fetched: raw.length,
+      inserted,
+      updated,
+      coverage: coverageRate(results.map((r) => r.categorization)),
+      needsReview: results.filter((r) => r.categorization.source === 'unknown').length,
+      recurringDetected: subscriptions.length,
+    };
+  }
+
+  private toTransaction(
+    raw: RawTransaction,
+    categorization: ReturnType<typeof categorizeDescriptor>,
+  ): Transaction {
+    return {
+      // Deterministic id: re-syncing the same provider transaction must map to
+      // the same row even if the store is rebuilt from scratch.
+      id: `txn_${raw.accountId}_${raw.providerTxnId}`,
+      accountId: raw.accountId,
+      providerTxnId: raw.providerTxnId,
+      postedAt: raw.postedAt,
+      amount: raw.amount,
+      currency: raw.currency,
+      rawDescriptor: raw.descriptor,
+      normalizedDescriptor: normalizeDescriptor(raw.descriptor),
+      merchant: categorization.merchant,
+      categorySlug: categorization.categorySlug,
+      categorySource: categorization.source,
+      categoryConfidence: categorization.confidence,
+      isRecurring: false,
+      pending: raw.pending,
+    };
+  }
+
+  listAccounts(userId: string): Promise<Account[]> {
+    return this.accounts.list(userId);
+  }
+
+  listTransactions(userId: string, query: TransactionQuery): Promise<Transaction[]> {
+    return this.transactions.list(userId, query);
+  }
+
+  /** Transactions the categorizer could not place. The review queue. */
+  async listNeedsReview(userId: string): Promise<Transaction[]> {
+    const all = await this.transactions.list(userId);
+    return all.filter((t) => t.categorySource === 'unknown');
+  }
+
+  /**
+   * A user correction.
+   *
+   * With `createRule`, this also writes a tier-1 rule and reapplies it across
+   * the whole ledger. That is the mechanism behind "we never make the same
+   * mistake twice" (ADR-0004) — without the backfill the user still sees the
+   * old category on every past transaction from that merchant.
+   */
+  async recategorize(
+    userId: string,
+    transactionId: string,
+    categorySlug: string,
+    createRule: boolean,
+  ): Promise<{ transaction: Transaction; alsoUpdated: number }> {
+    if (!isKnownCategory(categorySlug)) {
+      throw new NotFoundException(`Unknown category "${categorySlug}"`);
+    }
+
+    const existing = await this.transactions.get(userId, transactionId);
+    if (!existing) throw new NotFoundException(`No transaction ${transactionId}`);
+
+    const updated = await this.transactions.update(userId, transactionId, {
+      categorySlug,
+      categorySource: 'user_manual',
+      categoryConfidence: 1,
+    });
+
+    let alsoUpdated = 0;
+
+    if (createRule) {
+      const rule = ruleFromCorrection(
+        existing.rawDescriptor,
+        categorySlug,
+        `rule_${Date.now()}_${existing.id.slice(-6)}`,
+      );
+      await this.rules.create(userId, rule);
+
+      const all = await this.transactions.list(userId);
+      for (const txn of all) {
+        if (txn.id === transactionId) continue;
+        if (txn.categorySource === 'user_manual') continue; // never override an explicit choice
+        if (!txn.normalizedDescriptor.includes(rule.pattern)) continue;
+        await this.transactions.update(userId, txn.id, {
+          categorySlug,
+          categorySource: 'user_rule',
+          categoryConfidence: 1,
+        });
+        alsoUpdated += 1;
+      }
+    }
+
+    return { transaction: updated!, alsoUpdated };
+  }
+
+  today(): string {
+    return this.clock.today();
+  }
+}

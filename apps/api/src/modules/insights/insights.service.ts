@@ -1,0 +1,103 @@
+import { Inject, Injectable } from '@nestjs/common';
+
+import { addDays, comparablePreviousRange, monthToDateRange } from '../../domain/dates';
+import {
+  cashFlowInsight,
+  compareCategoryTotals,
+  summarizePeriod,
+  type Insight,
+  type PeriodSummary,
+} from '../../domain/insights/insights';
+import {
+  detectSubscriptions,
+  staleSubscriptions,
+  totalAnnualSubscriptionCost,
+  type DetectedSubscription,
+} from '../../domain/insights/subscriptions';
+import { computeHealthScore, type HealthScore } from '../../domain/health-score/score';
+import {
+  ACCOUNT_STORE,
+  CLOCK,
+  TRANSACTION_STORE,
+  type AccountStore,
+  type ClockPort,
+  type TransactionStore,
+} from '../../ports';
+import { BudgetsService } from '../budgets/budgets.service';
+
+export interface MonthlyReport {
+  summary: PeriodSummary;
+  previous: PeriodSummary;
+  insights: Insight[];
+}
+
+@Injectable()
+export class InsightsService {
+  constructor(
+    @Inject(TRANSACTION_STORE) private readonly transactions: TransactionStore,
+    @Inject(ACCOUNT_STORE) private readonly accounts: AccountStore,
+    @Inject(CLOCK) private readonly clock: ClockPort,
+    private readonly budgets: BudgetsService,
+  ) {}
+
+  async monthlyReport(userId: string, asOf?: string): Promise<MonthlyReport> {
+    const today = asOf ?? this.clock.today();
+    const transactions = await this.transactions.list(userId);
+
+    // Month-to-date against the same elapsed window last month, so the
+    // comparison isn't dominated by how far into the month we are.
+    const summary = summarizePeriod(transactions, monthToDateRange(today), 'USD');
+    const previous = summarizePeriod(transactions, comparablePreviousRange(today), 'USD');
+
+    const insights = compareCategoryTotals(summary, previous, transactions);
+    const cashFlow = cashFlowInsight(summary);
+    if (cashFlow) insights.unshift(cashFlow);
+
+    return { summary, previous, insights };
+  }
+
+  async subscriptions(
+    userId: string,
+    asOf?: string,
+  ): Promise<{
+    subscriptions: DetectedSubscription[];
+    annualTotal: number;
+    monthlyTotal: number;
+    priceIncreases: DetectedSubscription[];
+    possiblyCancelled: DetectedSubscription[];
+  }> {
+    const today = asOf ?? this.clock.today();
+    const transactions = await this.transactions.list(userId);
+    const detected = detectSubscriptions(transactions);
+    const annualTotal = totalAnnualSubscriptionCost(detected);
+
+    return {
+      subscriptions: detected,
+      annualTotal,
+      monthlyTotal: Math.round(annualTotal / 12),
+      priceIncreases: detected.filter((s) => s.priceIncrease !== null),
+      possiblyCancelled: staleSubscriptions(detected, today),
+    };
+  }
+
+  async healthScore(userId: string, asOf?: string): Promise<HealthScore> {
+    const today = asOf ?? this.clock.today();
+    const [transactions, accounts, adherence] = await Promise.all([
+      this.transactions.list(userId),
+      this.accounts.list(userId),
+      this.budgets.adherenceRatio(userId, today),
+    ]);
+
+    // Trailing 30 days, not month-to-date. The emergency-fund component divides
+    // savings by "monthly expenses"; feeding it a 7-day figure on the 7th would
+    // report 30 months of runway where there are 7.
+    const summary = summarizePeriod(transactions, { start: addDays(today, -29), end: today }, 'USD');
+
+    return computeHealthScore({
+      summary,
+      accounts,
+      transactions,
+      budgetAdherenceRatio: adherence,
+    });
+  }
+}
