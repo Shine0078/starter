@@ -4,6 +4,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
 import { loadConfig } from './config';
 import { CATEGORIES } from './domain/categories';
+import { PostgresThrottlerStorage } from './infra/http/postgres-throttler-storage';
 import { getAppPool } from './infra/postgres/pool';
 import { AuthGuard, Public } from './modules/auth/auth.guard';
 import { AuthModule } from './modules/auth/auth.module';
@@ -15,6 +16,8 @@ import { GoalsModule } from './modules/goals/goals.module';
 import { LedgerModule } from './modules/ledger/ledger.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PrivacyModule } from './modules/privacy/privacy.module';
+
+const appConfig = loadConfig();
 
 @Controller()
 class MetaController {
@@ -84,6 +87,10 @@ class MetaController {
     // further; account lockout is separate and counts per-account, because
     // per-IP alone is bypassed with a proxy pool.
     ThrottlerModule.forRoot({
+      storage:
+        appConfig.store === 'postgres'
+          ? new PostgresThrottlerStorage(getAppPool(appConfig.appDatabaseUrl))
+          : undefined,
       throttlers: [{ name: 'default', ttl: 60_000, limit: 120 }],
       // Test suites drive hundreds of requests from one address and would
       // otherwise fail on 429 for reasons unrelated to what they assert.

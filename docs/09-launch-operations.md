@@ -86,6 +86,12 @@ secret manager, back it up separately, and plan rotation before launch. Webhooks
 verified against Plaid's ES256 JWK, bound to the exact raw request body, deduplicated
 within a delivery-retry window, and processed through a durable PostgreSQL queue.
 
+Production rate limits also use PostgreSQL. Migration `011_rate_limits.sql`
+creates opaque fixed-window counters shared by all API instances; Nest hashes
+the route and tracker before persistence, so raw IP addresses are not stored.
+The development memory path stays process-local. No Redis service is required
+for the current low-cost architecture.
+
 Treat `MFA_ENCRYPTION_KEY` with the same care, but keep it distinct from the bank
 token key. Losing it prevents MFA-enabled users from signing in; disclosing it
 exposes authenticator seeds if the database is also compromised. Recovery codes

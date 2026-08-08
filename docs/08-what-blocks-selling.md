@@ -25,7 +25,7 @@ Stated so the rest of this document is not read as "nothing works".
 | Authentication | Argon2id, rotating refresh tokens with reuse detection, email verification, password reset, TOTP MFA/recovery codes, device app lock, recoverable deletion, global guard, per-account lockout, session list, audit trail |
 | Persistence | Postgres behind ports, contract-tested against both adapters, migrations |
 | Isolation | Row-level security, app connects as a non-superuser role, 21 dedicated tests |
-| Tests | 303 without a database, 399 against real PostgreSQL, 21 Flutter tests, and an Android debug APK build; all passing |
+| Tests | 303 without a database, 401 against real PostgreSQL, 21 Flutter tests, and an Android debug APK build; all passing |
 | CI | GitHub Actions: API typecheck/test/build/image + Flutter analyze/test/Android compile; tagged API/APK releases |
 
 That is a solid Phase-0 foundation. It is not a product.
@@ -120,7 +120,7 @@ has a `docker-compose.yml` for local development and a CI workflow. That is all.
 | 4.5 | **Backups not scheduled** | Backup and guarded restore-drill scripts now exist; storage, encryption policy, schedule, and a real drill need a production database | external account + drill |
 | 4.6 | **No monitoring, metrics, or alerting** | `/healthz` now fails with HTTP 503 when PostgreSQL is down; nothing external scrapes or alerts on it | 1 week |
 | 4.7 | **External error tracking absent** | Structured request logs now carry correlation ids and deliberately omit headers, bodies, queries, users, merchants, and amounts; no external log/error service is configured | external account + days |
-| 4.8 | **No rate limiting beyond in-process** | `@nestjs/throttler` keeps counters in memory, so limits reset on restart and are per-instance. Redis is in `docker-compose.yml` and the API does not reference it once | days |
+| 4.8 | **Shared rate limiting** | **Completed for the PostgreSQL launch path:** opaque fixed-window counters and block state are atomic across API instances and survive restarts. The memory development path remains process-local by design | production load testing remains |
 | 4.9 | **No general scheduler** | Plaid webhooks use a durable PostgreSQL retry queue, but scheduled purge, proactive notification refresh, and recurring report delivery still need platform jobs | external host + days |
 | 4.10 | **No load or performance testing** | "Scalable to millions" is currently an aspiration with no measurement behind it | 1 week |
 | 4.11 | **No staging environment** | Nowhere to verify a release before users get it | with 4.2 |
@@ -230,7 +230,7 @@ Worth fixing because they cause bad decisions later.
 |---|---|---|
 | 9.1 | Security controls described in the present tense that do not exist | `03-security-privacy.md` — see §3.1 |
 | 9.2 | The deletion purge is described in operational detail as though it runs | `02-data-model.md` |
-| 9.3 | Redis is provisioned in docker-compose and referenced by zero lines of code | `infra/docker-compose.yml` |
+| 9.3 | Unused Redis was provisioned despite zero application references | Fixed: shared rate limits and webhook jobs use PostgreSQL, and Redis was removed from the cheap-launch stack |
 | 9.4 | Test counts drift out of date and are then quoted as evidence — 225/288 were stale until re-measured at 243/309 | fixed in `07-session-notes.md`, but the pattern will recur |
 | 9.5 | `06-cheap-launch-path.md` describes a *personal beta*, not a sellable product. It is correct for what it is, and should say so at the top so it is not mistaken for a launch plan | `06-cheap-launch-path.md` |
 

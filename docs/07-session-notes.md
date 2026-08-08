@@ -2,7 +2,8 @@
 
 Written for whoever picks this up next — including a fresh agent session with no
 memory of how any of it got here. Last updated after the MFA, professional
-monthly-report, smart-alert, and core-accessibility milestones on 2026-08-08.
+monthly-report, smart-alert, core-accessibility, and shared-rate-limit milestones
+on 2026-08-08.
 
 Read [`MISSION.md`](../MISSION.md) for the product, [`HANDOVER.md`](../HANDOVER.md)
 for the backlog, and [`04-roadmap.md`](04-roadmap.md) for the sequence. This file
@@ -13,7 +14,7 @@ is the shortest path to being productive again.
 ```bash
 npm install
 npm test          # 303 tests, no database needed
-npm run test:db   # 399 tests, spins up a real PostgreSQL and tears it down
+npm run test:db   # 401 tests, spins up a real PostgreSQL and tears it down
 npm run dev       # API + dev dashboard on http://localhost:3000
 ```
 
@@ -28,7 +29,7 @@ Every number below was produced by running the thing, not by reading the code.
 | Check | Result |
 |---|---|
 | API tests, in-memory | 303 passed |
-| API tests, real Postgres | 399 passed |
+| API tests, real Postgres | 401 passed |
 | `tsc --noEmit`, `npm run build` | clean |
 | `flutter analyze`, `flutter test` | clean, 21 passed |
 | Android debug compile | `com.finverse.finance`, API 36, 170.9 MB APK; debug-only artifact built successfully |

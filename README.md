@@ -63,7 +63,7 @@ apps/
   mobile/       Flutter Android client with native Plaid Link
 packages/
   contracts/    shared API types
-infra/          docker-compose: Postgres + Redis
+infra/          docker-compose: PostgreSQL plus backup/restore tooling
 docs/           architecture, data model, privacy, roadmap, ADRs
 ```
 
@@ -150,8 +150,7 @@ The default is `postgres` when `DATABASE_URL` is set and `memory` otherwise, so
 the repo works on a machine with no database but persists as soon as one exists.
 
 ```bash
-npm run infra:up                        # Postgres + Redis via docker compose
-cd apps/api && cp .env.example .env     # both URLs are already filled in
+npm run infra:up                        # PostgreSQL via docker compose
 npm run dev
 ```
 
@@ -212,7 +211,7 @@ stopped running.
 ## Notes on what is and isn't verified
 
 - **The API and its domain logic run and are tested.** 303 tests run with no
-  database; the full suite is **399 passing** against real PostgreSQL, including
+  database; the full suite is **401 passing** against real PostgreSQL, including
   the store contract — which runs as the restricted role, so it executes with the
   row-level security policies in force — and a suite that issues deliberately
   unfiltered SQL to prove the database withholds other users' rows on its own.

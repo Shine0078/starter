@@ -18,15 +18,14 @@ distributed-systems problems and sell nothing.
 │  identity │ accounts │ transactions │ categorization        │
 │  budgets  │ goals    │ insights     │ health-score          │
 │  subscriptions │ notifications │ reports                    │
-└───┬─────────────────┬──────────────────┬────────────────────┘
-    │                 │                  │
-┌───▼──────┐   ┌──────▼──────┐   ┌───────▼────────┐
-│ Postgres │   │    Redis    │   │  Ports (adapters)│
-│ system   │   │ cache, rate │   │  Aggregator      │
-│ of record│   │ limit, jobs │   │  LLM             │
-└──────────┘   └─────────────┘   │  Notifier        │
-                                 │  ObjectStore     │
-                                 └──────────────────┘
+└───┬────────────────────────────┬────────────────────────────┘
+    │                            │
+┌───▼──────────────┐    ┌────────▼─────────┐
+│ PostgreSQL       │    │ Ports (adapters) │
+│ records, queues, │    │ Aggregator       │
+│ shared limits    │    │ Notifier         │
+└──────────────────┘    │ ObjectStore      │
+                        └──────────────────┘
 ```
 
 ## The one rule that matters
@@ -35,7 +34,7 @@ distributed-systems problems and sell nothing.
 
 Categorization, budget arithmetic, insight derivation, and health scoring are plain
 TypeScript functions over plain data. They import no framework, touch no database, and
-make no network calls. Everything else — Postgres, Redis, Plaid, the LLM — sits behind
+make no network calls. Everything else — Postgres, Plaid, the LLM — sits behind
 a port interface that the domain declares and infrastructure implements.
 
 This is not architectural decoration. It buys three concrete things:

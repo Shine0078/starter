@@ -164,6 +164,24 @@ Derived, not declared. Detection writes here; the user can confirm or dismiss.
 | `last_seen_at` | date | |
 | `state` | enum | `detected` \| `confirmed` \| `dismissed` \| `cancelled` |
 
+### `rate_limit_buckets`
+
+Shared fixed-window request counters used by every API instance. Nest hashes the
+route and client tracker before the storage adapter receives a key, so this table
+does not persist IP addresses or user ids.
+
+| Column | Type | Notes |
+|---|---|---|
+| `key_hash` | text | SHA-256 request key; composite pk |
+| `throttler_name` | text | named policy; composite pk |
+| `total_hits` | integer | current-window count |
+| `window_expires_at` | timestamptz | fixed-window boundary |
+| `blocked_until` | timestamptz | shared block expiry, nullable |
+
+This table intentionally has no user RLS policy: registration and login are
+rate-limited before a user is known. The restricted runtime role can update the
+opaque counters but cannot change schema or migration history.
+
 ## Retention and deletion
 
 The implemented lifecycle is:
