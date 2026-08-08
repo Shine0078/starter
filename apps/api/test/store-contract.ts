@@ -117,6 +117,14 @@ export function runStoreContract(name: string, create: () => Promise<StoreSet>):
       it('returns null for another user', async () => {
         expect(await stores.accounts.get(OTHER, 'acc_checking')).toBeNull();
       });
+
+      it('removes only the requested user account', async () => {
+        await stores.accounts.upsertMany(OTHER, [{ ...ACCOUNT }]);
+        expect(await stores.accounts.remove(USER, ACCOUNT.id)).toBe(true);
+        expect(await stores.accounts.get(USER, ACCOUNT.id)).toBeNull();
+        expect(await stores.accounts.get(OTHER, ACCOUNT.id)).toEqual(ACCOUNT);
+        expect(await stores.accounts.remove(USER, ACCOUNT.id)).toBe(false);
+      });
     });
 
     describe('transactions', () => {

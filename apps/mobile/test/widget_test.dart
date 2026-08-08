@@ -63,6 +63,7 @@ void main() {
             currency: 'CAD',
             balanceCurrent: 250000,
             balanceFormatted: r'$2,500.00',
+            source: 'provider',
           ),
           Account(
             id: 'cad-card',
@@ -72,6 +73,7 @@ void main() {
             currency: 'CAD',
             balanceCurrent: -50000,
             balanceFormatted: r'-$500.00',
+            source: 'provider',
           ),
           Account(
             id: 'usd-savings',
@@ -81,6 +83,7 @@ void main() {
             currency: 'USD',
             balanceCurrent: 100000,
             balanceFormatted: r'$1,000.00',
+            source: 'provider',
           ),
         ]),
       ),
@@ -103,6 +106,38 @@ void main() {
       findsOneWidget,
     );
     semantics.dispose();
+  });
+
+  testWidgets('manual account controls survive 200% text scaling',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(400, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final api = clientWith(MockClient((request) async {
+      if (request.url.path.endsWith('/bank-links')) {
+        return http.Response('{"links":[]}', 200);
+      }
+      if (request.url.path.endsWith('/accounts')) {
+        return http.Response(
+          '[{"id":"manual-1","name":"Emergency cash reserve","type":"cash","mask":"manual","currency":"CAD","balanceCurrent":125000,"balanceFormatted":"\$1,250.00","source":"manual","utilization":null}]',
+          200,
+        );
+      }
+      return http.Response('{}', 200);
+    }));
+
+    await tester.pumpWidget(MaterialApp(
+      home: MediaQuery(
+        data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+        child: BankConnectionsScreen(api: api),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView), const Offset(0, -350));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Emergency cash reserve'), findsOneWidget);
+    expect(find.text('Add manual'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets(
@@ -677,6 +712,7 @@ void main() {
 
   testWidgets('navigates to transactions, budgets, and goals', (tester) async {
     final semantics = tester.ensureSemantics();
+    var manualAccountCreated = false;
     final api = clientWith(MockClient((request) async {
       final path = request.url.path;
       if (path.endsWith('/sync')) {
@@ -685,7 +721,24 @@ void main() {
           201,
         );
       }
-      if (path.endsWith('/accounts')) return http.Response('[]', 200);
+      if (path.endsWith('/accounts')) {
+        return http.Response(
+          manualAccountCreated
+              ? '[{"id":"manual-1","name":"Wallet cash","type":"cash","mask":"manual","currency":"USD","balanceCurrent":12500,"balanceFormatted":"\$125.00","source":"manual","utilization":null}]'
+              : '[]',
+          200,
+        );
+      }
+      if (path.endsWith('/accounts/manual') && request.method == 'POST') {
+        manualAccountCreated = true;
+        return http.Response(
+          '{"id":"manual-1","name":"Wallet cash","type":"cash","mask":"manual","currency":"USD","balanceCurrent":12500,"balanceFormatted":"\$125.00","source":"manual","utilization":null}',
+          201,
+        );
+      }
+      if (path.endsWith('/bank-links')) {
+        return http.Response('{"links":[]}', 200);
+      }
       if (path.endsWith('/health-score')) {
         return http.Response(
           '{"score":500,"band":"fair","components":[],"topActions":[]}',
@@ -866,6 +919,19 @@ void main() {
     expect(find.text('New goal'), findsOneWidget);
     expect(find.text('Create a goal and turn saving into a plan.'),
         findsOneWidget);
+
+    await tester.tap(find.text('Accounts'));
+    await tester.pumpAndSettle();
+    expect(find.text('No balances yet'), findsOneWidget);
+    await tester.tap(find.text('Add manual'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).at(0), 'Wallet cash');
+    await tester.enterText(find.byType(TextField).at(1), '125');
+    await tester.enterText(find.byType(TextField).at(2), 'USD');
+    await tester.tap(find.text('Add account'));
+    await tester.pumpAndSettle();
+    expect(find.text('Wallet cash'), findsOneWidget);
+    expect(find.text('\$125.00'), findsOneWidget);
     semantics.dispose();
   });
 }

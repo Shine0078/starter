@@ -58,6 +58,14 @@ export class InMemoryAccountStore implements AccountStore {
     }
   }
 
+  async remove(userId: string, accountId: string): Promise<boolean> {
+    const rows = bucket(this.byUser, userId);
+    const index = rows.findIndex((account) => account.id === accountId);
+    if (index < 0) return false;
+    rows.splice(index, 1);
+    return true;
+  }
+
   purgeUser(userId: string): void {
     this.byUser.delete(userId);
   }

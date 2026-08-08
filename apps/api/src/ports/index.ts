@@ -35,6 +35,7 @@ export interface AccountStore {
   list(userId: string): Promise<Account[]>;
   get(userId: string, accountId: string): Promise<Account | null>;
   upsertMany(userId: string, accounts: readonly Account[]): Promise<void>;
+  remove(userId: string, accountId: string): Promise<boolean>;
 }
 
 export interface TransactionQuery {

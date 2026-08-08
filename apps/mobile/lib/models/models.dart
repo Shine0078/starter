@@ -252,6 +252,7 @@ class Account {
     required this.currency,
     required this.balanceCurrent,
     required this.balanceFormatted,
+    required this.source,
     this.utilization,
   });
 
@@ -265,6 +266,7 @@ class Account {
         currency: json['currency'] as String? ?? 'USD',
         balanceCurrent: json['balanceCurrent'] as int,
         balanceFormatted: json['balanceFormatted'] as String,
+        source: json['source'] as String? ?? 'provider',
         utilization: (json['utilization'] as num?)?.toDouble(),
       );
 
@@ -275,11 +277,13 @@ class Account {
   final String currency;
   final int balanceCurrent;
   final String balanceFormatted;
+  final String source;
 
   /// Credit cards only; null everywhere else.
   final double? utilization;
 
   bool get isCreditCard => type == 'credit_card';
+  bool get isManual => source == 'manual';
 }
 
 class Transaction {

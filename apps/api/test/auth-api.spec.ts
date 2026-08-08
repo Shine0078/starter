@@ -504,6 +504,52 @@ describe('auth API', () => {
       expect(bobBudgets.body).toHaveLength(0);
     });
 
+    it('creates editable manual assets and debts without exposing provider accounts', async () => {
+      const alice = await register();
+      const bob = await register();
+      const aliceAuth = { Authorization: `Bearer ${alice.tokens.accessToken}` };
+      const bobAuth = { Authorization: `Bearer ${bob.tokens.accessToken}` };
+
+      const created = await request(http)
+        .post('/api/accounts/manual')
+        .set(aliceAuth)
+        .send({ name: 'Wallet cash', type: 'cash', currency: 'cad', balanceCurrent: 12500 })
+        .expect(201);
+      expect(created.body.source).toBe('manual');
+      expect(created.body.currency).toBe('CAD');
+      expect(created.body.id).toMatch(/^manual_/);
+
+      const updated = await request(http)
+        .patch(`/api/accounts/manual/${created.body.id}`)
+        .set(aliceAuth)
+        .send({ name: 'Wallet cash', type: 'cash', currency: 'CAD', balanceCurrent: 14000 })
+        .expect(200);
+      expect(updated.body.balanceCurrent).toBe(14000);
+
+      await request(http)
+        .patch(`/api/accounts/manual/${created.body.id}`)
+        .set(bobAuth)
+        .send({ name: 'Stolen', type: 'cash', currency: 'CAD', balanceCurrent: 1 })
+        .expect(404);
+      await request(http)
+        .post('/api/accounts/manual')
+        .set(aliceAuth)
+        .send({ name: 'Invalid debt', type: 'loan', currency: 'CAD', balanceCurrent: 100 })
+        .expect(400);
+
+      await request(http).post('/api/sync').set(aliceAuth).expect(201);
+      await request(http)
+        .patch('/api/accounts/manual/acc_checking')
+        .set(aliceAuth)
+        .send({ name: 'Bank account', type: 'cash', currency: 'USD', balanceCurrent: 1 })
+        .expect(404);
+
+      await request(http)
+        .delete(`/api/accounts/manual/${created.body.id}`)
+        .set(aliceAuth)
+        .expect(200, { removed: true });
+    });
+
     it('generates a private multi-page monthly PDF report with charts', async () => {
       const account = await register();
       const authorization = `Bearer ${account.tokens.accessToken}`;

@@ -78,7 +78,7 @@ async function ensureUser(client: PoolClient, userId: string): Promise<void> {
 
 const ACCOUNT_COLUMNS = `
   id, name, type, mask, currency, balance_current,
-  credit_limit, statement_day, payment_due_day
+  credit_limit, statement_day, payment_due_day, source
 `;
 
 export class PostgresAccountStore implements AccountStore {
@@ -114,7 +114,7 @@ export class PostgresAccountStore implements AccountStore {
       const tuples: string[] = [];
 
       accounts.forEach((account, index) => {
-        tuples.push(placeholders(10, index));
+        tuples.push(placeholders(11, index));
         values.push(
           account.id,
           userId,
@@ -126,13 +126,14 @@ export class PostgresAccountStore implements AccountStore {
           account.creditLimit ?? null,
           account.statementDay ?? null,
           account.paymentDueDay ?? null,
+          account.source ?? 'provider',
         );
       });
 
       await client.query(
         `INSERT INTO accounts (
            id, user_id, name, type, mask, currency,
-           balance_current, credit_limit, statement_day, payment_due_day
+           balance_current, credit_limit, statement_day, payment_due_day, source
          ) VALUES ${tuples.join(', ')}
          ON CONFLICT (user_id, id) DO UPDATE SET
            name            = EXCLUDED.name,
@@ -143,9 +144,20 @@ export class PostgresAccountStore implements AccountStore {
            credit_limit    = EXCLUDED.credit_limit,
            statement_day   = EXCLUDED.statement_day,
            payment_due_day = EXCLUDED.payment_due_day,
+           source          = EXCLUDED.source,
            updated_at      = now()`,
         values,
       );
+    });
+  }
+
+  async remove(userId: string, accountId: string): Promise<boolean> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const result = await client.query(
+        'DELETE FROM accounts WHERE user_id = $1 AND id = $2',
+        [userId, accountId],
+      );
+      return (result.rowCount ?? 0) > 0;
     });
   }
 }

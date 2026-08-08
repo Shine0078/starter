@@ -1,4 +1,5 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 
 import { categorizeDescriptor, coverageRate, ruleFromCorrection } from '../../domain/categorization/categorize';
 import { normalizeDescriptor } from '../../domain/categorization/normalize';
@@ -115,6 +116,47 @@ export class LedgerService {
 
   listAccounts(userId: string): Promise<Account[]> {
     return this.accounts.list(userId);
+  }
+
+  async createManualAccount(
+    userId: string,
+    details: Omit<Account, 'id' | 'mask' | 'source'>,
+  ): Promise<Account> {
+    const account: Account = {
+      ...details,
+      id: `manual_${randomUUID()}`,
+      mask: 'manual',
+      source: 'manual',
+    };
+    await this.accounts.upsertMany(userId, [account]);
+    return account;
+  }
+
+  async updateManualAccount(
+    userId: string,
+    accountId: string,
+    details: Omit<Account, 'id' | 'mask' | 'source'>,
+  ): Promise<Account> {
+    const existing = await this.accounts.get(userId, accountId);
+    if (!existing || existing.source !== 'manual') {
+      throw new NotFoundException('No editable manual account was found.');
+    }
+    const account: Account = {
+      ...details,
+      id: existing.id,
+      mask: existing.mask,
+      source: 'manual',
+    };
+    await this.accounts.upsertMany(userId, [account]);
+    return account;
+  }
+
+  async removeManualAccount(userId: string, accountId: string): Promise<void> {
+    const existing = await this.accounts.get(userId, accountId);
+    if (!existing || existing.source !== 'manual') {
+      throw new NotFoundException('No editable manual account was found.');
+    }
+    await this.accounts.remove(userId, accountId);
   }
 
   listTransactions(userId: string, query: TransactionQuery): Promise<Transaction[]> {

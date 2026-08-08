@@ -119,6 +119,7 @@ last 15 minutes; exchange the refresh token at `/api/auth/refresh` for a new pai
 | `POST` | `/bank-links/:id/sync` | Incrementally reconcile one institution |
 | `DELETE` | `/bank-links/:id` | Revoke Plaid access and remove the stored token |
 | `GET` | `/accounts` | Balances and credit utilization |
+| `POST`/`PATCH`/`DELETE` | `/accounts/manual[/:id]` | User-owned cash, offline assets, investments, and debts; provider rows are never editable here |
 | `GET` | `/transactions` | `?search=&category=&account=&from=&to=&limit=` |
 | `GET` | `/transactions/export.csv` | Download the user-owned ledger as a CSV; spreadsheet-formula-safe text fields |
 | `GET` | `/transactions/needs-review` | What we refused to guess at |
@@ -220,13 +221,13 @@ stopped running.
 
 ## Notes on what is and isn't verified
 
-- **The API and its domain logic run and are tested.** 304 tests run with no
-  database; the full suite is **402 passing** against real PostgreSQL, including
+- **The API and its domain logic run and are tested.** 306 tests run with no
+  database; the full suite is **405 passing** against real PostgreSQL, including
   the store contract — which runs as the restricted role, so it executes with the
   row-level security policies in force — and a suite that issues deliberately
   unfiltered SQL to prove the database withholds other users' rows on its own.
   The slice is also exercised end to end over HTTP.
-- **The Flutter app is verified by static analysis, 22 tests, and a real
+- **The Flutter app is verified by static analysis, 23 tests, and a real
   Android debug APK build.** Android and iOS platform projects can be generated
   locally. See the
   [cheap launch path](docs/06-cheap-launch-path.md).

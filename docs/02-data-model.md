@@ -73,6 +73,7 @@ aggregator's opaque item/link token and nothing that could authenticate as the u
 ### `accounts`
 | Column | Type | Notes |
 |---|---|---|
+| `source` | text | `provider` or `manual`; only manual rows may be user-edited |
 | `id` | uuid | pk |
 | `link_id` | uuid | fk, nullable — manual/cash accounts have no link |
 | `type` | enum | `checking` \| `savings` \| `credit_card` \| `investment` \| `cash` \| `loan` |

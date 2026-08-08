@@ -25,7 +25,7 @@ Stated so the rest of this document is not read as "nothing works".
 | Authentication | Argon2id, rotating refresh tokens with reuse detection, email verification, password reset, TOTP MFA/recovery codes, device app lock, recoverable deletion, global guard, per-account lockout, session list, audit trail |
 | Persistence | Postgres behind ports, contract-tested against both adapters, migrations |
 | Isolation | Row-level security, app connects as a non-superuser role, 21 dedicated tests |
-| Tests | 304 without a database, 402 against real PostgreSQL, 22 Flutter tests, and an Android debug APK build; all passing |
+| Tests | 306 without a database, 405 against real PostgreSQL, 23 Flutter tests, and an Android debug APK build; all passing |
 | CI | GitHub Actions: API typecheck/test/build/image + Flutter analyze/test/Android compile; tagged API/APK releases |
 
 That is a solid Phase-0 foundation. It is not a product.
@@ -138,7 +138,7 @@ smaller than the complete MISSION.md product.
 
 | # | Item | Detail | Effort |
 |---|---|---|---|
-| 5.1 | **Core navigation started** | Onboarding, currency-safe net position, cash-flow planning and purchase scenarios, transaction search/detail/correction, budgets, goals, bank accounts, subscriptions, notifications, settings/session controls, portable export, versioned legal/optional consent history, device app lock, and recent security activity are implemented | 2–3 weeks for remaining breadth/polish |
+| 5.1 | **Core navigation started** | Onboarding, currency-safe net position, user-managed cash/offline assets/loans, cash-flow planning and purchase scenarios, transaction search/detail/correction, budgets, goals, bank accounts, subscriptions, notifications, settings/session controls, portable export, versioned legal/optional consent history, device app lock, and recent security activity are implemented | 2–3 weeks for remaining breadth/polish |
 | 5.2 | **Read-only offline cache implemented** | Authenticated GET responses can fall back to a 30-day, user-scoped encrypted cache with a visible stale-data banner. Offline writes, background reconciliation, and conflict handling remain | 2–3 weeks |
 | 5.3 | **No state management** | `setState` only. Honest at one screen, unworkable at twenty | with 5.1 |
 | 5.4 | **No push notifications** | Persistent preferences and a mobile centre now cover budgets, utilization, low balances, bank sync, upcoming bills, subscription price rises, possible duplicates, and conservative spending outliers. Device push delivery remains | external push credentials + 1–2 weeks |
@@ -196,9 +196,9 @@ features them.
   subscriptions, a 30-day forecast, and an action plan. The mission's later
   investment, tax, fraud, and AI sections depend on those underlying features.
 - Goals and savings targets — persistent model, progress math, contribution history, API, RLS, and Flutter screen are complete
-- Net-position dashboard — connected assets and debts are charted separately per
-  currency; property/manual assets, full investment holdings, and historical
-  net-worth snapshots remain
+- Net-position dashboard — connected and manual assets/debts are charted
+  separately per currency; full investment holdings, property-specific fields,
+  valuations, and historical net-worth snapshots remain
 - Notifications and smart reminders — persistent preferences and deduplicated
   in-app budget, credit-utilization, low-balance, bank-sync, upcoming-bill,
   subscription-price-rise, possible-duplicate, and spending-outlier alerts exist;

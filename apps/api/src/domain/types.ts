@@ -35,6 +35,8 @@ export interface Account {
   currency: string;
   /** Minor units. For credit cards this is negative when money is owed. */
   balanceCurrent: number;
+  /** Provider rows are sync-owned; only manual rows may be user-edited. */
+  source?: 'provider' | 'manual';
   /** Credit cards only. Positive, minor units. */
   creditLimit?: number;
   /** Credit cards only. Day of month, 1–31. */

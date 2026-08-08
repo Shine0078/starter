@@ -23,6 +23,7 @@ class _DefaultPlaidLink extends PlaidLink {
 
 class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
   List<BankLink> _links = const [];
+  List<Account> _accounts = const [];
   bool _loading = true;
   bool _working = false;
   String? _error;
@@ -37,10 +38,14 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
   Future<void> _load() async {
     widget.api.resetOfflineStatus();
     try {
-      final links = await widget.api.bankLinks();
+      final results = await Future.wait([
+        widget.api.bankLinks(),
+        widget.api.accounts(),
+      ]);
       if (mounted) {
         setState(() {
-          _links = links;
+          _links = results[0] as List<BankLink>;
+          _accounts = results[1] as List<Account>;
           _loading = false;
           _error = null;
         });
@@ -204,6 +209,180 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
     }
   }
 
+  int? _minorUnits(String input) {
+    final match = RegExp(r'^(\d+)(?:\.(\d{1,2}))?$').firstMatch(input.trim());
+    if (match == null) return null;
+    final whole = int.tryParse(match.group(1)!);
+    final cents = int.tryParse((match.group(2) ?? '').padRight(2, '0')) ?? 0;
+    if (whole == null) return null;
+    return whole * 100 + cents;
+  }
+
+  Future<void> _editManual([Account? existing]) async {
+    var enteredName = existing?.name ?? '';
+    var enteredBalanceText = existing == null
+        ? ''
+        : (existing.balanceCurrent.abs() / 100).toStringAsFixed(2);
+    var enteredCurrency = existing?.currency ??
+        (_accounts.isEmpty ? 'USD' : _accounts.first.currency);
+    var type = existing?.type ?? 'cash';
+    final submitted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(
+              existing == null ? 'Add manual account' : 'Edit manual account'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  initialValue: enteredName,
+                  onChanged: (value) => enteredName = value,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: const InputDecoration(
+                    labelText: 'Account name',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: type,
+                  decoration: const InputDecoration(
+                    labelText: 'Account type',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                        value: 'cash', child: Text('Cash or wallet')),
+                    DropdownMenuItem(
+                        value: 'checking', child: Text('Offline chequing')),
+                    DropdownMenuItem(
+                        value: 'savings', child: Text('Offline savings')),
+                    DropdownMenuItem(
+                        value: 'investment', child: Text('Investment value')),
+                    DropdownMenuItem(
+                        value: 'loan', child: Text('Loan or other debt')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) setDialogState(() => type = value);
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  initialValue: enteredBalanceText,
+                  onChanged: (value) => enteredBalanceText = value,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: type == 'loan' ? 'Amount owed' : 'Current value',
+                    helperText:
+                        'Enter a positive amount; debts are stored as owed.',
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  initialValue: enteredCurrency,
+                  onChanged: (value) => enteredCurrency = value,
+                  textCapitalization: TextCapitalization.characters,
+                  maxLength: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Currency (for example CAD)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(existing == null ? 'Add account' : 'Save changes'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    enteredName = enteredName.trim();
+    enteredCurrency = enteredCurrency.trim().toUpperCase();
+    final enteredBalance = _minorUnits(enteredBalanceText);
+    if (submitted != true || !mounted) return;
+    if (enteredName.isEmpty ||
+        !RegExp(r'^[A-Z]{3}$').hasMatch(enteredCurrency) ||
+        enteredBalance == null) {
+      _show('Enter a name, a three-letter currency, and a valid amount.');
+      return;
+    }
+
+    setState(() => _working = true);
+    try {
+      final signedBalance = type == 'loan' ? -enteredBalance : enteredBalance;
+      if (existing == null) {
+        await widget.api.createManualAccount(
+          name: enteredName,
+          type: type,
+          currency: enteredCurrency,
+          balanceCurrent: signedBalance,
+        );
+      } else {
+        await widget.api.updateManualAccount(
+          existing.id,
+          name: enteredName,
+          type: type,
+          currency: enteredCurrency,
+          balanceCurrent: signedBalance,
+        );
+      }
+      await _load();
+      _show(existing == null
+          ? 'Manual account added.'
+          : 'Manual account updated.');
+    } catch (error) {
+      if (mounted) setState(() => _error = _friendly(error));
+    } finally {
+      if (mounted) setState(() => _working = false);
+    }
+  }
+
+  Future<void> _removeManual(Account account) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Remove ${account.name}?'),
+        content: const Text(
+          'This removes the manual balance from FINVERSE. It does not affect any bank or financial institution.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    setState(() => _working = true);
+    try {
+      await widget.api.deleteManualAccount(account.id);
+      await _load();
+      _show('Manual account removed.');
+    } catch (error) {
+      if (mounted) setState(() => _error = _friendly(error));
+    } finally {
+      if (mounted) setState(() => _working = false);
+    }
+  }
+
   void _show(String message) {
     if (mounted) {
       ScaffoldMessenger.of(context)
@@ -230,18 +409,31 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
                 tooltip: 'Refresh'),
           ],
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          heroTag: 'connect-bank',
-          onPressed: _working ? null : () => _connect(),
-          icon: const Icon(Icons.add_link),
-          label: const Text('Connect bank'),
+        floatingActionButton: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            FloatingActionButton.extended(
+              heroTag: 'add-manual-account',
+              onPressed: _working ? null : () => _editManual(),
+              icon: const Icon(Icons.add_card),
+              label: const Text('Add manual'),
+            ),
+            const SizedBox(height: 10),
+            FloatingActionButton.extended(
+              heroTag: 'connect-bank',
+              onPressed: _working ? null : () => _connect(),
+              icon: const Icon(Icons.add_link),
+              label: const Text('Connect bank'),
+            ),
+          ],
         ),
         body: _loading
             ? const Center(child: CircularProgressIndicator())
             : RefreshIndicator(
                 onRefresh: _load,
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 168),
                   children: [
                     const Card(
                       child: ListTile(
@@ -262,6 +454,25 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
                               icon: const Icon(Icons.refresh)),
                         ),
                       ),
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(4, 16, 4, 6),
+                      child: Text('ACCOUNTS IN YOUR NET POSITION'),
+                    ),
+                    if (_accounts.isEmpty)
+                      const Card(
+                        child: ListTile(
+                          leading: Icon(Icons.account_balance_wallet_outlined),
+                          title: Text('No balances yet'),
+                          subtitle: Text(
+                            'Connect a bank or add cash, an offline investment, or a loan manually.',
+                          ),
+                        ),
+                      ),
+                    for (final account in _accounts) _accountCard(account),
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(4, 20, 4, 6),
+                      child: Text('BANK CONNECTIONS'),
+                    ),
                     if (_links.isEmpty)
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 48),
@@ -273,7 +484,7 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
                                   fontSize: 20, fontWeight: FontWeight.w600)),
                           SizedBox(height: 8),
                           Text(
-                              'Connect an account to replace sample data with your real balances and transactions.',
+                              'Connect a bank for automatic balances and transactions.',
                               textAlign: TextAlign.center),
                         ]),
                       ),
@@ -282,6 +493,53 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
                 ),
               ),
       );
+
+  Widget _accountCard(Account account) => Card(
+        child: ListTile(
+          leading: CircleAvatar(
+            child: Icon(account.type == 'loan'
+                ? Icons.request_quote_outlined
+                : account.type == 'investment'
+                    ? Icons.trending_up
+                    : Icons.account_balance_wallet_outlined),
+          ),
+          title: Text(account.name),
+          subtitle: Text(account.isManual
+              ? '${_typeLabel(account.type)} · Manual · ${account.currency}'
+              : '${_typeLabel(account.type)} · •••• ${account.mask}'),
+          trailing: account.isManual
+              ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(account.balanceFormatted),
+                    PopupMenuButton<String>(
+                      tooltip: 'Manual account actions',
+                      onSelected: (value) {
+                        if (value == 'edit') _editManual(account);
+                        if (value == 'remove') _removeManual(account);
+                      },
+                      itemBuilder: (_) => const [
+                        PopupMenuItem(
+                            value: 'edit', child: Text('Edit balance')),
+                        PopupMenuItem(
+                            value: 'remove', child: Text('Remove account')),
+                      ],
+                    ),
+                  ],
+                )
+              : Text(account.balanceFormatted),
+        ),
+      );
+
+  String _typeLabel(String type) => switch (type) {
+        'credit_card' => 'Credit card',
+        'checking' => 'Chequing',
+        'savings' => 'Savings',
+        'investment' => 'Investment',
+        'loan' => 'Loan',
+        'cash' => 'Cash',
+        _ => type,
+      };
 
   Widget _connectionCard(BankLink link) => Card(
         child: Padding(

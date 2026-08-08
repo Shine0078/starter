@@ -25,6 +25,7 @@ export interface AccountRow {
   mask: string;
   currency: string;
   balance_current: number;
+  source: 'provider' | 'manual';
   credit_limit: number | null;
   statement_day: number | null;
   payment_due_day: number | null;
@@ -38,6 +39,9 @@ export function toAccount(row: AccountRow): Account {
     mask: row.mask,
     currency: row.currency,
     balanceCurrent: row.balance_current,
+    // Keep the historical provider-account shape stable across adapters while
+    // retaining the provenance marker needed to authorize manual edits.
+    ...(row.source === 'manual' ? { source: 'manual' as const } : {}),
     // Omit rather than pass null: the domain type declares these optional, and
     // `creditLimit: null` would defeat every `?? 0` guard downstream.
     ...(row.credit_limit === null ? {} : { creditLimit: row.credit_limit }),

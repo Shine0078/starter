@@ -444,6 +444,45 @@ class ApiClient {
         .toList();
   }
 
+  Future<Account> createManualAccount({
+    required String name,
+    required String type,
+    required String currency,
+    required int balanceCurrent,
+  }) async {
+    final json = await _send('POST', '/accounts/manual', {
+      'name': name,
+      'type': type,
+      'currency': currency,
+      'balanceCurrent': balanceCurrent,
+    }) as Map<String, dynamic>;
+    return Account.fromJson(json);
+  }
+
+  Future<Account> updateManualAccount(
+    String id, {
+    required String name,
+    required String type,
+    required String currency,
+    required int balanceCurrent,
+  }) async {
+    final json = await _send(
+      'PATCH',
+      '/accounts/manual/${Uri.encodeComponent(id)}',
+      {
+        'name': name,
+        'type': type,
+        'currency': currency,
+        'balanceCurrent': balanceCurrent,
+      },
+    ) as Map<String, dynamic>;
+    return Account.fromJson(json);
+  }
+
+  Future<void> deleteManualAccount(String id) async {
+    await _send('DELETE', '/accounts/manual/${Uri.encodeComponent(id)}');
+  }
+
   Future<CashFlowForecast> cashFlowForecast({
     required int days,
     required String currency,
