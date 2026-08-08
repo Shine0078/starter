@@ -1,8 +1,13 @@
 # Cheap launch path
 
 This is the lowest-cost responsible route from the working prototype to a
-personal beta. It deliberately avoids paid bank-data access, advice features,
-and a production launch until users, legal terms, and security controls exist.
+**personal beta** — you, running it on your own device, with mock data. It
+deliberately avoids paid bank-data access, advice features, and a production
+launch until users, legal terms, and security controls exist.
+
+**This is not a plan for selling the product.** For that, see
+[08-what-blocks-selling.md](08-what-blocks-selling.md), which is considerably
+longer.
 
 ## Done locally
 

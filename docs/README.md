@@ -16,6 +16,7 @@ the traps that cost time to rediscover.
 | [05-vertical-slice.md](05-vertical-slice.md) | The slice that exists in this repo today |
 | [06-cheap-launch-path.md](06-cheap-launch-path.md) | The lowest-cost route to a personal beta |
 | [07-session-notes.md](07-session-notes.md) | Where work stopped and how to pick it up |
+| [08-what-blocks-selling.md](08-what-blocks-selling.md) | Everything between this repo and charging money for it |
 | [adr/](adr/) | Decisions with consequences, recorded |
 
 ## Reading order for a new engineer
