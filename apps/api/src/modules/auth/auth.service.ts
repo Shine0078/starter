@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import {
   BadRequestException,
   ForbiddenException,
@@ -31,13 +31,20 @@ import {
 import { REFRESH_TOKEN_TTL_MS } from '../../infra/auth/jwt-issuer';
 import { CLOCK, type ClockPort } from '../../ports';
 import {
+  ACCOUNT_DELETION_STORE,
+  AUTH_ACTION_TOKEN_STORE,
   AUTH_EVENT_STORE,
+  EMAIL_SENDER,
   DuplicateEmailError,
   PASSWORD_HASHER,
   SESSION_STORE,
   TOKEN_ISSUER,
   USER_STORE,
+  type AccountDeletionStore,
+  type AuthActionKind,
+  type AuthActionTokenStore,
   type AuthEventStore,
+  type EmailSender,
   type PasswordHasher,
   type SessionStore,
   type TokenIssuer,
@@ -63,6 +70,9 @@ export class AuthService {
     @Inject(USER_STORE) private readonly users: UserStore,
     @Inject(SESSION_STORE) private readonly sessions: SessionStore,
     @Inject(AUTH_EVENT_STORE) private readonly events: AuthEventStore,
+    @Inject(ACCOUNT_DELETION_STORE) private readonly deletions: AccountDeletionStore,
+    @Inject(AUTH_ACTION_TOKEN_STORE) private readonly actionTokens: AuthActionTokenStore,
+    @Inject(EMAIL_SENDER) private readonly emailSender: EmailSender,
     @Inject(PASSWORD_HASHER) private readonly hasher: PasswordHasher,
     @Inject(TOKEN_ISSUER) private readonly tokens: TokenIssuer,
     @Inject(CLOCK) private readonly clock: ClockPort,
@@ -110,6 +120,21 @@ export class AuthService {
     }
 
     await this.record('register', true, user.id, normalized, context, null);
+
+    try {
+      await this.issueAuthAction(user, 'verify_email');
+      await this.record('email_verification_sent', true, user.id, user.email, context, null);
+    } catch (error) {
+      this.logger.error(`Failed to issue verification email for ${user.id}`, error as Error);
+      await this.record(
+        'email_verification_sent',
+        false,
+        user.id,
+        user.email,
+        context,
+        'delivery failed',
+      );
+    }
 
     return { user: toPublicUser(user), tokens: await this.issueSession(user, null, context) };
   }
@@ -169,6 +194,160 @@ export class AuthService {
     await this.record('login', true, user.id, normalized, context, null);
 
     return { user: toPublicUser(user), tokens: await this.issueSession(user, null, context) };
+  }
+
+  // ---------------------------------------------------- account deletion
+
+  async requestAccountDeletion(
+    userId: string,
+    password: string,
+    context: RequestContext,
+  ): Promise<{ purgeScheduledFor: string }> {
+    const user = await this.users.findById(userId);
+    if (!user || user.status !== 'active') {
+      throw new UnauthorizedException('Session is no longer valid. Sign in again.');
+    }
+
+    if (!(await this.hasher.verify(user.passwordHash, password))) {
+      await this.record(
+        'account_deletion_requested',
+        false,
+        user.id,
+        user.email,
+        context,
+        'password re-verification failed',
+      );
+      throw new UnauthorizedException('Password is incorrect.');
+    }
+
+    const requestedAt = this.clock.now();
+    const purgeAfter = new Date(requestedAt.getTime() + 30 * 24 * 60 * 60 * 1_000);
+    await this.deletions.request(user.id, user.email, requestedAt, purgeAfter);
+    await this.sessions.revokeAllForUser(user.id, 'admin', requestedAt);
+    await this.record(
+      'account_deletion_requested',
+      true,
+      user.id,
+      user.email,
+      context,
+      `purge scheduled for ${purgeAfter.toISOString()}`,
+    );
+    return { purgeScheduledFor: purgeAfter.toISOString() };
+  }
+
+  async cancelAccountDeletion(
+    email: string,
+    password: string,
+    context: RequestContext,
+  ): Promise<AuthResult> {
+    const normalized = normalizeEmail(email);
+    const user = await this.users.findByEmail(normalized);
+    const passwordOk = user
+      ? await this.hasher.verify(user.passwordHash, password)
+      : await this.hasher.verify(await this.decoyHash(), password);
+
+    if (!user || !passwordOk || user.status !== 'pending_deletion') {
+      await this.record(
+        'account_deletion_cancelled',
+        false,
+        user?.id ?? null,
+        normalized,
+        context,
+        'bad credentials or deletion not pending',
+      );
+      throw new UnauthorizedException('Incorrect email or password.');
+    }
+
+    await this.deletions.cancel(user.id);
+    const restored = { ...user, status: 'active' as const };
+    await this.record('account_deletion_cancelled', true, user.id, normalized, context, null);
+    return {
+      user: toPublicUser(restored),
+      tokens: await this.issueSession(restored, null, context),
+    };
+  }
+
+  // ------------------------------------------ verification and recovery
+
+  async requestEmailVerification(
+    userId: string,
+    context: RequestContext,
+  ): Promise<{ accepted: true }> {
+    const user = await this.users.findById(userId);
+    if (!user || user.status !== 'active') {
+      throw new UnauthorizedException('Session is no longer valid. Sign in again.');
+    }
+    if (user.emailVerifiedAt === null) {
+      await this.issueAuthAction(user, 'verify_email');
+      await this.record('email_verification_sent', true, user.id, user.email, context, null);
+    }
+    return { accepted: true };
+  }
+
+  async confirmEmailVerification(
+    token: string,
+    context: RequestContext,
+  ): Promise<{ verified: true }> {
+    const now = this.clock.now();
+    const userId = await this.actionTokens.consume(
+      'verify_email',
+      this.hashActionToken(token),
+      now,
+    );
+    if (!userId) throw new BadRequestException('This verification link is invalid or expired.');
+
+    const user = await this.users.findById(userId);
+    if (!user || user.status !== 'active') {
+      throw new BadRequestException('This verification link is invalid or expired.');
+    }
+    await this.users.markEmailVerified(user.id, now);
+    await this.record('email_verified', true, user.id, user.email, context, null);
+    return { verified: true };
+  }
+
+  async requestPasswordReset(
+    email: string,
+    context: RequestContext,
+  ): Promise<{ accepted: true }> {
+    const normalized = normalizeEmail(email);
+    const user = await this.users.findByEmail(normalized);
+    if (user?.status === 'active') {
+      await this.issueAuthAction(user, 'reset_password');
+      await this.record('password_reset_requested', true, user.id, normalized, context, null);
+    } else {
+      // The response remains identical, but the attempt is still useful for
+      // abuse detection. Do not name account existence in the detail.
+      await this.record('password_reset_requested', false, null, normalized, context, null);
+    }
+    return { accepted: true };
+  }
+
+  async confirmPasswordReset(
+    token: string,
+    password: string,
+    context: RequestContext,
+  ): Promise<{ reset: true }> {
+    const check = checkPassword(password);
+    if (!check.ok) {
+      throw new BadRequestException({ message: 'Password rejected.', problems: check.problems });
+    }
+
+    const now = this.clock.now();
+    const userId = await this.actionTokens.consume(
+      'reset_password',
+      this.hashActionToken(token),
+      now,
+    );
+    if (!userId) throw new BadRequestException('This reset link is invalid or expired.');
+
+    const user = await this.users.findById(userId);
+    if (!user || user.status !== 'active') {
+      throw new BadRequestException('This reset link is invalid or expired.');
+    }
+    await this.users.updatePasswordHash(user.id, await this.hasher.hash(password));
+    await this.sessions.revokeAllForUser(user.id, 'admin', now);
+    await this.record('password_reset_completed', true, user.id, user.email, context, null);
+    return { reset: true };
   }
 
   // -------------------------------------------------------------- refresh
@@ -276,12 +455,31 @@ export class AuthService {
     if (!session || session.revokedAt !== null) return null;
     if (session.expiresAt.getTime() <= this.clock.now().getTime()) return null;
 
+    const user = await this.users.findById(claims.userId);
+    if (!user || user.status !== 'active') return null;
+
     return claims;
   }
 
   // -------------------------------------------------------------- helpers
 
   private decoyHashPromise: Promise<string> | null = null;
+
+  private async issueAuthAction(user: User, kind: AuthActionKind): Promise<void> {
+    const token = randomBytes(32).toString('base64url');
+    const lifetime = kind === 'verify_email' ? 24 * 60 * 60 * 1_000 : 60 * 60 * 1_000;
+    await this.actionTokens.issue(
+      user.id,
+      kind,
+      this.hashActionToken(token),
+      new Date(this.clock.now().getTime() + lifetime),
+    );
+    await this.emailSender.sendAction(user.email, kind, token);
+  }
+
+  private hashActionToken(token: string): string {
+    return createHash('sha256').update(token).digest('hex');
+  }
 
   /**
    * A real Argon2id hash of a random secret nobody holds.

@@ -16,18 +16,18 @@ document is the list of those constraints.
 4. **Every AI feature is explainable.** An insight must be able to say which
    transactions produced it. "The model said so" is not acceptable for money.
 
-## Encryption
+## Encryption: current state and target
 
-| Layer | Mechanism |
-|---|---|
-| In transit | TLS 1.3, HSTS, certificate pinning on mobile |
-| At rest (disk) | Managed volume encryption on the database host |
-| At rest (field) | AES-256-GCM envelope encryption via KMS for `email`, `provider_item_id`, receipt images |
-| On device | OS keystore (Keychain / Android Keystore); local SQLite encrypted with SQLCipher |
-| Backups | Encrypted with a separate key; restore requires a second approval |
+| Layer | Current state | Production target |
+|---|---|---|
+| In transit | API serves HTTP locally; no repository TLS or pinning config | TLS at the production edge, HSTS after domain validation; evaluate mobile pinning with a rotation plan |
+| At rest (disk) | Depends on the as-yet-unselected host | Managed database and volume encryption verified in provider configuration |
+| At rest (field) | Email and financial fields are plaintext in PostgreSQL | KMS-backed envelope encryption for the fields selected by the threat model |
+| On device | Refresh/access tokens use Keychain / Android Keystore | Add an encrypted offline database only when offline mode is implemented |
+| Backups | No backup system exists | Encrypted backups, documented retention, access controls, and a tested restore drill |
 
-Field-level encryption uses per-user data keys wrapped by a KMS master key. Rotating
-the master key rewraps data keys without rewriting user rows.
+KMS data keys, master-key rotation, SQLCipher, and backup approval are design targets;
+none is implemented in this repository today.
 
 ## Authentication
 
@@ -49,19 +49,19 @@ routes are authenticated by default:
 | Security event audit trail (`auth_events`) | Implemented |
 | No default signing key; production refuses to start without one | Implemented |
 | Device token storage in the platform keystore | Implemented (mobile) |
+| Email verification with hashed, single-use, 24-hour tokens | Implemented with development and SMTP delivery adapters |
+| Password reset with hashed, single-use, one-hour tokens | Implemented API, mobile flow, and SMTP delivery adapter |
+| Password reset revokes every existing session | Implemented |
 
 Password rules follow NIST SP 800-63B — length plus a blocklist, no composition
 requirements. Composition rules produce `Password1!` and get reused everywhere.
 
 **Not yet implemented**, and named here so the gap is not mistaken for coverage:
 
-- Email verification. The column and timestamp exist; nothing sends mail, so an
-  address is currently unproven.
-- Password reset / account recovery. There is no flow, which means a forgotten
-  password is unrecoverable.
 - MFA/TOTP, passkeys (WebAuthn), and OAuth 2.0 + PKCE. Passkeys need a
   registered domain for the relying-party id.
-- Step-up authentication for linking an account, exporting, or deletion.
+- Step-up authentication for linking an account or exporting. Account deletion now
+  re-verifies the current password and requires explicit typed confirmation.
 - Biometric app lock on the device.
 
 The blocklist is a small built-in set. Production should check a real corpus —
@@ -77,14 +77,15 @@ be wrong before anything leaks.
 Requests are served by `finverse_app`, a role that is explicitly not a superuser and
 holds no `BYPASSRLS` — either of those would bypass every policy without reporting
 anything. The schema owner in `DATABASE_URL` is used for migrations and nothing else.
-Policies are `FORCE`d, so they apply to the owner too. `accounts`, `transactions`,
+Policies are `FORCE`d for ordinary table-owner roles, but a PostgreSQL superuser still
+bypasses them. Runtime requests therefore use the restricted role. `accounts`, `transactions`,
 `budgets` and `categorization_rules` are covered; `users`, `sessions` and `auth_events`
 are read before a user is known and cannot be, which is a real limit rather than an
 omission. See [ADR-0006](adr/0006-row-level-security.md).
 
-Engineers do not have standing production data access. Break-glass access is
-time-boxed, requires a second approver, and emits an audit event the user can see in
-their privacy dashboard.
+No production environment exists yet, so there is no implemented engineer-access or
+break-glass process. Before launch, production access must be time-boxed, approved,
+and audited; a user-visible privacy access log remains a product target.
 
 ## The zero-knowledge tension — read this before proposing E2E everywhere
 
@@ -92,7 +93,7 @@ The mission asks for **zero-knowledge architecture where possible** *and* for
 server-side AI categorization, insights, and monthly reports. These are in direct
 conflict: a server that cannot read transaction descriptors cannot categorize them.
 
-Where we landed:
+Target architecture (not an inventory of implemented adapters):
 
 | Data | Server can read? | Why |
 |---|---|---|
@@ -110,7 +111,8 @@ product; we cannot read your notes, your receipts, or reach your bank."*
 
 ### Sending data to an LLM
 
-The conversational assistant does **not** get raw transaction rows. It gets
+No conversational LLM integration exists today. When it is added, it must not get
+raw transaction rows. It gets
 pre-aggregated, merchant-anonymized summaries computed server-side, with a strict
 allowlist of fields. Concretely: category totals, deltas, and counts — not
 `raw_descriptor` strings.
@@ -123,8 +125,8 @@ aggregates only, or self-hosted.
 
 | Framework | Status | Blocker |
 |---|---|---|
-| GDPR / CCPA / PIPEDA | Designed for — deletion, export, consent, DSAR path | Needs counsel review, not code |
-| SOC 2 Type II | Controls designed; evidence not collected | Requires 6–12mo observation window + auditor |
+| GDPR / CCPA / PIPEDA | Account request, recovery, purge, and CSV ledger export implemented; consent and full DSAR path absent | Counsel review plus missing product work |
+| SOC 2 Type II | Not ready; several production controls do not exist | Requires implemented controls, evidence window, and auditor |
 | PCI DSS | Mostly **out of scope by design** — we never touch card PANs | Stays true only if we never accept card entry |
 | Open Banking (PSD2, CDR, UK OBIE) | Handled via aggregator | Their license, not ours, in most regions |
 
@@ -136,11 +138,11 @@ billing goes through a hosted processor (Stripe Checkout), never our own form.
 
 | Threat | Mitigation |
 |---|---|
-| Stolen device | Local store encrypted, biometric gate, remote session revocation |
-| Compromised API server | Field encryption keys in KMS, not on the box; RLS limits blast radius |
-| Malicious insider | No standing prod access, audited break-glass, user-visible access log |
-| Aggregator breach | Tokens are per-user and revocable; we can rotate every link |
-| Prompt injection via transaction descriptor | LLM never receives raw descriptors; aggregates only |
+| Stolen device | Tokens are in the OS keystore and remote session revocation works; biometric app gate remains absent |
+| Compromised API server | RLS limits cross-user query mistakes; KMS field encryption remains absent |
+| Malicious insider | Production access controls and break-glass process must be created before launch |
+| Aggregator breach | No aggregator is connected; token revocation belongs in that future adapter |
+| Prompt injection via transaction descriptor | No LLM is connected; aggregate-only input is the required future boundary |
 
 That last row is not hypothetical. A merchant name is attacker-controlled text that
 reaches our system and would reach the model. Aggregation is the mitigation.

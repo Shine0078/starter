@@ -65,6 +65,9 @@ jobs:
 
       - run: npm run build
 
+      - name: Build deployable API image
+        run: docker build --tag finverse-api:ci .
+
   mobile:
     name: Flutter analysis and tests
     runs-on: ubuntu-latest
@@ -80,3 +83,5 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
+      - name: Compile Android release target
+        run: flutter build apk --release --dart-define=API_BASE_URL=https://api.example.invalid

@@ -6,9 +6,9 @@ documents — several of them describe the intended design in the present tense,
 which reads as coverage that does not exist. Where that happens it is listed
 here as a defect.
 
-**Honest one-line summary:** the financial engine is real and well tested; the
-product is not sellable because it has never seen a real bank, has no way to
-take payment, has nowhere to run, and the mobile app is two screens.
+**Honest one-line summary:** the financial engine and initial mobile workflows
+are real and well tested; the product is not sellable because it has never seen
+a real bank, has not been deployed or legally reviewed, and cannot take payment.
 
 Effort figures are rough order-of-magnitude for one experienced engineer, and
 they exclude the external lead times in §1, which dominate the schedule.
@@ -22,11 +22,11 @@ Stated so the rest of this document is not read as "nothing works".
 | Area | State |
 |---|---|
 | Financial math | Money as integer minor units, categorisation, budgets, insights, subscription detection, health score, cash-flow forecast, credit-card planner, purchase simulator, CSV export |
-| Authentication | Argon2id, rotating refresh tokens with reuse detection, global guard, per-account lockout, session list, audit trail |
+| Authentication | Argon2id, rotating refresh tokens with reuse detection, email verification, password reset, recoverable deletion, global guard, per-account lockout, session list, audit trail |
 | Persistence | Postgres behind ports, contract-tested against both adapters, migrations |
 | Isolation | Row-level security, app connects as a non-superuser role, 21 dedicated tests |
-| Tests | 243 without a database, 309 against real Postgres, all passing |
-| CI | GitHub Actions: API typecheck/test/build + Flutter analyze/test |
+| Tests | 251 without a database, 321 against real Postgres, 10 Flutter tests; all passing |
+| CI | GitHub Actions: API typecheck/test/build/image + Flutter analyze/test/Android compile; tagged API/APK releases |
 
 That is a solid Phase-0 foundation. It is not a product.
 
@@ -70,7 +70,7 @@ These are listed separately because `03-security-privacy.md` currently describes
 several of them in the present tense. **Anyone reading that document today would
 believe controls exist that do not.** Fixing the wording is part of the work.
 
-### 3.1 Documented as if implemented, but absent
+### 3.1 Previously documented as if implemented, but absent
 
 | # | Control | Doc says | Reality |
 |---|---|---|---|
@@ -79,22 +79,22 @@ believe controls exist that do not.** Fixing the wording is part of the work.
 | 3.1.3 | SQLCipher-encrypted local SQLite on device | "On device" row | No local database exists on the device at all |
 | 3.1.4 | Encrypted backups with second-approver restore | "Backups" row | No backup process exists |
 | 3.1.5 | No standing production access, audited break-glass | "Access control" section, present tense | No production exists; no access control process exists |
-| 3.1.6 | Deletion purge job at +30 days | `02-data-model.md` describes it in detail | Nothing implements it. See 3.2.1 |
+| 3.1.6 | Deletion purge job at +30 days | `02-data-model.md` previously described it as present | Implemented and proven against PostgreSQL; production still needs to schedule the command |
 
-**Action:** rewrite those sections to separate "designed" from "implemented",
-the way the authentication table already does. That table is the model to follow —
-it is honest, and it is why the auth gaps below were easy to find.
+The security and data-model documents now distinguish implemented controls from
+targets. The infrastructure-backed controls below still need a real production
+environment before they can be claimed.
 
 ### 3.2 Genuinely missing controls
 
 | # | Item | Why it blocks selling | Effort |
 |---|---|---|---|
-| 3.2.1 | **Account deletion** | `users.deleted_at` and `pending_deletion` exist as columns nothing writes. GDPR/CCPA/PIPEDA all require it, and the mission promises it | 1–2 weeks |
-| 3.2.2 | **Email verification** | `email_verified_at` is never set — every address in the system is unproven | with 3.2.3 |
-| 3.2.3 | **Password reset** | No flow exists. A forgotten password is currently unrecoverable, which is unshippable | 1–2 weeks incl. an `EmailPort` + provider |
+| 3.2.1 | **Account deletion** | **Completed:** password re-verification, typed confirmation, immediate session revocation, 30-day recovery, mobile UI, purge command, and owner-level PostgreSQL erasure proof | Deployment must schedule the job |
+| 3.2.2 | **Email verification** | One-time hashed-token API, mobile confirmation, and SMTP adapter are complete | Real email provider credentials and deliverability setup remain |
+| 3.2.3 | **Password reset** | Enumeration-safe request, one-time reset, password policy, session revocation, mobile flow, and SMTP adapter are complete | Real email provider credentials remain |
 | 3.2.4 | **MFA / TOTP** | The mission names it explicitly. Absent | 1 week |
 | 3.2.5 | **Passkeys / WebAuthn, OAuth2 + PKCE** | Mission names both. Absent. Needs 1.4 | 2–3 weeks |
-| 3.2.6 | **Step-up auth** for linking, export, deletion | High-consequence actions currently need only a valid access token | 1 week |
+| 3.2.6 | **Step-up auth** for linking and export | Deletion password re-verification is complete; linking and export still rely only on a valid access token | 1 week |
 | 3.2.7 | **Biometric app lock** | Mission names it. Absent | days |
 | 3.2.8 | **Password blocklist is a small built-in set** | Should check a real corpus via HIBP k-anonymity | days |
 | 3.2.9 | **CORS is wide open in development** | Correctly fails closed in production, but the production allowlist has never been exercised | days |
@@ -113,37 +113,38 @@ has a `docker-compose.yml` for local development and a CI workflow. That is all.
 
 | # | Item | Detail | Effort |
 |---|---|---|---|
-| 4.1 | **No Dockerfile** | Nothing packages the API for deployment | days |
+| 4.1 | **API container image** | **Completed:** non-root Node 22 multi-stage image with health check | Docker daemon on this workstation remains unavailable for a local image build |
 | 4.2 | **No hosting** | No cloud account, no infrastructure-as-code, no environments | 1–2 weeks |
-| 4.3 | **No CD pipeline** | CI tests but never deploys | days |
+| 4.3 | **No hosting deployment** | Tagged releases now publish the API image and APK; no provider has been selected to receive the image | external account + days |
 | 4.4 | **No managed database** | No provisioning, no connection pooling at scale, no read replicas | days |
-| 4.5 | **No backups or restore drill** | An untested backup is not a backup | 1 week |
-| 4.6 | **No monitoring, metrics, or alerting** | `/healthz` exists and nothing scrapes it | 1 week |
+| 4.5 | **Backups not scheduled** | Backup and guarded restore-drill scripts now exist; storage, encryption policy, schedule, and a real drill need a production database | external account + drill |
+| 4.6 | **No monitoring, metrics, or alerting** | `/healthz` now fails with HTTP 503 when PostgreSQL is down; nothing external scrapes or alerts on it | 1 week |
 | 4.7 | **No error tracking or structured logging** | Console logging only. No log aggregation, and no scrubbing to keep financial data out of logs | 1 week |
 | 4.8 | **No rate limiting beyond in-process** | `@nestjs/throttler` keeps counters in memory, so limits reset on restart and are per-instance. Redis is in `docker-compose.yml` and the API does not reference it once | days |
 | 4.9 | **No job queue or scheduler** | Needed for sync, purge jobs, monthly reports, and notifications. The mission names RabbitMQ/Kafka; nothing exists | 1–2 weeks |
 | 4.10 | **No load or performance testing** | "Scalable to millions" is currently an aspiration with no measurement behind it | 1 week |
 | 4.11 | **No staging environment** | Nowhere to verify a release before users get it | with 4.2 |
-| 4.12 | **Migrations run on boot** | Correct for development; two instances starting together will race. `MIGRATE_ON_BOOT=false` plus a deploy step is supported but has never been exercised | days |
+| 4.12 | **Production migration orchestration** | Idempotence is tested and the image defaults `MIGRATE_ON_BOOT=false`; the release guide defines the step | Must wire into selected host |
 
 ---
 
-## 5. The mobile app is a prototype
+## 5. The mobile app is an early product
 
-Nine Dart files. Two screens: sign-in and one dashboard. This is the largest gap
-between the mission and the repository, and it is mostly invisible in the other
-documents because they describe the API.
+The app now has authentication/recovery, a dashboard, category-spending chart,
+searchable transactions, category corrections, budget creation/removal, email
+verification, and recoverable account deletion. It remains far smaller than the
+MISSION.md product and still lacks the externally gated bank-linking experience.
 
 | # | Item | Detail | Effort |
 |---|---|---|---|
-| 5.1 | **Two screens exist** | Sign-in and dashboard. No transactions list, no transaction detail, no budget editor, no goals, no subscriptions, no settings, no onboarding, no account linking | 8–12 weeks |
+| 5.1 | **Core navigation started** | Home, transactions, and budgets are implemented. No transaction detail, goals, subscription screen, full settings/privacy dashboard, onboarding, or account linking | 6–10 weeks |
 | 5.2 | **No offline mode** | Mission requires offline-first. There is no local database — every screen is a live API call | 3–4 weeks |
 | 5.3 | **No state management** | `setState` only. Honest at one screen, unworkable at twenty | with 5.1 |
 | 5.4 | **No push notifications** | The mission's entire notification and alert surface — bills, due dates, fraud, budgets — does not exist on either end | 2–3 weeks |
-| 5.5 | **Default Android application id** | Still `TODO: Specify your own unique Application ID` in `build.gradle.kts` | minutes |
-| 5.6 | **No release signing config** | `TODO: Add your own signing config`. Debug-signed builds cannot ship | days |
+| 5.5 | **Android identity and launcher** | **Completed:** `com.finverse.finance`, FINVERSE label, versioned platform project, and branded launcher asset | Store listing still external |
+| 5.6 | **Release signing credentials** | Gradle and the release workflow are wired for an upload key and refuse a distributable release without secrets | User must generate and protect the upload key |
 | 5.7 | **iOS never built** | Requires a Mac. Untested and unverified | 1 week |
-| 5.8 | **One widget test** | 7 tests total against 9 files. No integration tests, no golden tests | 2 weeks |
+| 5.8 | **Mobile testing is still thin** | 10 tests cover auth protocol, recovery, deletion, and navigation. No device integration or golden tests | 2 weeks |
 | 5.9 | **No accessibility work** | Mission requires VoiceOver, TalkBack, dynamic text, colour-blind modes, high contrast, one-handed use. None verified | 2–3 weeks |
 | 5.10 | **No localisation** | Mission asks for multiple languages. Single hardcoded locale | 1–2 weeks |
 | 5.11 | **No crash reporting** | "Crash-free above 99.9%" cannot be claimed without measuring it | days |
@@ -235,16 +236,13 @@ is pure calendar time.
 
 **While waiting — fully unblocked engineering, roughly this order:**
 
-1. Account deletion and retention (3.2.1) — legally required, and the last
-   Phase 1 item with no external dependency
-2. `EmailPort` + dev adapter, then email verification and password reset
-   (3.2.2, 3.2.3) — closes "every address is unproven"
-3. Fix the documentation defects in §9 — cheap, and it stops the next person
-   trusting a control that isn't there
-4. Dockerfile, hosting, CD, backups, monitoring (§4) — nothing ships without it
-5. Mobile app past the prototype (§1 of §5) — the longest single track, start early
-6. MFA, step-up auth, secrets management (3.2.4, 3.2.6, 3.2.10)
-7. Billing (§6) — only once there is something worth paying for
+1. Configure the SMTP adapter with a production delivery provider and validate
+   SPF/DKIM/DMARC once credentials exist (3.2.2, 3.2.3)
+2. Keep the documentation honest as production controls land
+3. Select hosting, wire deployment, schedule backups, and add monitoring (§4)
+4. Mobile app past the prototype (§1 of §5) — the longest single track, start early
+5. MFA, step-up auth, secrets management (3.2.4, 3.2.6, 3.2.10)
+6. Billing (§6) — only once there is something worth paying for
 
 **Blocked until §1 lands:** everything in §2, passkeys (needs the domain), the
 LLM assistant (needs a zero-retention contract), app store submission.
@@ -256,8 +254,9 @@ LLM assistant (needs a zero-retention contract), app store submission.
 Three things make this unsellable today, and they are not the same size:
 
 1. **It has never seen a real bank.** Gated on a commercial agreement, not code.
-2. **The mobile app is two screens.** Months of work, and it can start now.
-3. **There is nowhere to run it and no way to charge for it.** Weeks of work,
-   and it can also start now.
+2. **The mobile app covers the first daily workflows, not the full product.**
+   Goals, subscriptions, notifications, offline mode, and onboarding remain.
+3. **There is no live production deployment and no way to charge.** Release
+   artifacts exist, but provider accounts and production wiring do not.
 
 Everything else on this list is real, but those three decide the date.

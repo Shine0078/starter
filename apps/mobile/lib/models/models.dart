@@ -249,8 +249,9 @@ class HealthScore {
         components: (json['components'] as List<dynamic>)
             .map((e) => ScoreComponent.fromJson(e as Map<String, dynamic>))
             .toList(),
-        topActions:
-            (json['topActions'] as List<dynamic>).map((e) => e as String).toList(),
+        topActions: (json['topActions'] as List<dynamic>)
+            .map((e) => e as String)
+            .toList(),
       );
 
   final int score;
@@ -292,6 +293,7 @@ class InsightsReport {
     required this.expenses,
     required this.netCashFlow,
     required this.savingsRate,
+    required this.topCategories,
     required this.insights,
   });
 
@@ -302,6 +304,9 @@ class InsightsReport {
       expenses: headline['expenses'] as String,
       netCashFlow: headline['netCashFlow'] as String,
       savingsRate: headline['savingsRate'] as String,
+      topCategories: (json['topCategories'] as List<dynamic>)
+          .map((e) => CategorySpend.fromJson(e as Map<String, dynamic>))
+          .toList(),
       insights: (json['insights'] as List<dynamic>)
           .map((e) => Insight.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -312,7 +317,32 @@ class InsightsReport {
   final String expenses;
   final String netCashFlow;
   final String savingsRate;
+  final List<CategorySpend> topCategories;
   final List<Insight> insights;
+}
+
+class CategorySpend {
+  CategorySpend({
+    required this.categorySlug,
+    required this.categoryName,
+    required this.total,
+    required this.totalFormatted,
+    required this.transactionCount,
+  });
+
+  factory CategorySpend.fromJson(Map<String, dynamic> json) => CategorySpend(
+        categorySlug: json['categorySlug'] as String,
+        categoryName: json['categoryName'] as String,
+        total: json['total'] as int,
+        totalFormatted: json['totalFormatted'] as String,
+        transactionCount: json['transactionCount'] as int,
+      );
+
+  final String categorySlug;
+  final String categoryName;
+  final int total;
+  final String totalFormatted;
+  final int transactionCount;
 }
 
 class Subscription {

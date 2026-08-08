@@ -53,7 +53,6 @@ class HealthScoreCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-
             ...score.components.map(
               (component) => Padding(
                 padding: const EdgeInsets.only(bottom: 10),
@@ -63,7 +62,8 @@ class HealthScoreCard extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(component.label, style: theme.textTheme.bodyMedium),
+                        Text(component.label,
+                            style: theme.textTheme.bodyMedium),
                         Text(
                           '${component.points}/${component.maxPoints}',
                           style: theme.textTheme.bodySmall,
@@ -76,7 +76,8 @@ class HealthScoreCard extends StatelessWidget {
                       child: LinearProgressIndicator(
                         value: component.ratio,
                         minHeight: 5,
-                        backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                        backgroundColor:
+                            theme.colorScheme.surfaceContainerHighest,
                       ),
                     ),
                     const SizedBox(height: 3),
@@ -85,7 +86,6 @@ class HealthScoreCard extends StatelessWidget {
                 ),
               ),
             ),
-
             if (score.topActions.isNotEmpty) ...[
               const Divider(height: 20),
               Text('Do next', style: theme.textTheme.titleSmall),

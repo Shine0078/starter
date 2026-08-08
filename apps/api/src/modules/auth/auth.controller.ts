@@ -1,7 +1,15 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Post } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 
-import { LoginDto, RefreshDto, RegisterDto } from './auth.dto';
+import {
+  ActionTokenDto,
+  ConfirmPasswordResetDto,
+  DeleteAccountDto,
+  EmailDto,
+  LoginDto,
+  RefreshDto,
+  RegisterDto,
+} from './auth.dto';
 import {
   CurrentSessionId,
   CurrentUser,
@@ -35,11 +43,58 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @HttpCode(200)
+  @Post('cancel-deletion')
+  cancelDeletion(@Body() body: LoginDto, @ReqContext() context: RequestContext) {
+    return this.auth.cancelAccountDeletion(body.email, body.password, context);
+  }
+
+  @Public()
   @Throttle({ default: { limit: 30, ttl: 60_000 } })
   @HttpCode(200)
   @Post('refresh')
   refresh(@Body() body: RefreshDto, @ReqContext() context: RequestContext) {
     return this.auth.refresh(body.refreshToken, context);
+  }
+
+  @HttpCode(202)
+  @Post('email-verification/request')
+  requestEmailVerification(
+    @CurrentUser() userId: string,
+    @ReqContext() context: RequestContext,
+  ) {
+    return this.auth.requestEmailVerification(userId, context);
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @HttpCode(200)
+  @Post('email-verification/confirm')
+  confirmEmailVerification(
+    @Body() body: ActionTokenDto,
+    @ReqContext() context: RequestContext,
+  ) {
+    return this.auth.confirmEmailVerification(body.token, context);
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @HttpCode(202)
+  @Post('password-reset/request')
+  requestPasswordReset(@Body() body: EmailDto, @ReqContext() context: RequestContext) {
+    return this.auth.requestPasswordReset(body.email, context);
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @HttpCode(200)
+  @Post('password-reset/confirm')
+  confirmPasswordReset(
+    @Body() body: ConfirmPasswordResetDto,
+    @ReqContext() context: RequestContext,
+  ) {
+    return this.auth.confirmPasswordReset(body.token, body.password, context);
   }
 
   @HttpCode(204)
@@ -67,6 +122,16 @@ export class AuthController {
   @Get('sessions')
   sessions(@CurrentUser() userId: string, @CurrentSessionId() sessionId: string) {
     return this.auth.listSessions(userId, sessionId);
+  }
+
+  @HttpCode(202)
+  @Delete('account')
+  deleteAccount(
+    @CurrentUser() userId: string,
+    @Body() body: DeleteAccountDto,
+    @ReqContext() context: RequestContext,
+  ) {
+    return this.auth.requestAccountDeletion(userId, body.password, context);
   }
 
   @HttpCode(204)

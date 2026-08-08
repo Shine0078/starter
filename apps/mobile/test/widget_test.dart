@@ -6,6 +6,7 @@ import 'package:http/testing.dart';
 import 'package:finverse/api/client.dart';
 import 'package:finverse/api/session_store.dart';
 import 'package:finverse/main.dart';
+import 'package:finverse/screens/home_screen.dart';
 import 'package:finverse/screens/login_screen.dart';
 
 /// An in-memory session store keeps these tests off the platform keystore,
@@ -41,7 +42,8 @@ void main() {
     expect(find.text('At least 12 characters'), findsOneWidget);
   });
 
-  testWidgets('rejects a short password before contacting the server', (tester) async {
+  testWidgets('rejects a short password before contacting the server',
+      (tester) async {
     var requests = 0;
     final api = clientWith(MockClient((_) async {
       requests += 1;
@@ -62,7 +64,8 @@ void main() {
     expect(requests, 0);
   });
 
-  testWidgets('surfaces the server message when sign-in is rejected', (tester) async {
+  testWidgets('surfaces the server message when sign-in is rejected',
+      (tester) async {
     final api = clientWith(MockClient((_) async => http.Response(
           '{"message":"Incorrect email or password."}',
           401,
@@ -72,14 +75,16 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextFormField).first, 'sam@example.com');
-    await tester.enterText(find.byType(TextFormField).last, 'correct horse battery staple');
+    await tester.enterText(
+        find.byType(TextFormField).last, 'correct horse battery staple');
     await tester.tap(find.text('Sign in').last);
     await tester.pumpAndSettle();
 
     expect(find.text('Incorrect email or password.'), findsOneWidget);
   });
 
-  testWidgets('restores a stored session straight to the dashboard', (tester) async {
+  testWidgets('restores a stored session straight to the dashboard',
+      (tester) async {
     final store = InMemorySessionStore();
     await store.write(const SessionTokens(
       accessToken: 'stored-access',
@@ -128,7 +133,8 @@ void main() {
     expect(seenAuthorization, 'Bearer stored-access');
   });
 
-  testWidgets('refreshes once on 401, then retries the original call', (tester) async {
+  testWidgets('refreshes once on 401, then retries the original call',
+      (tester) async {
     final store = InMemorySessionStore();
     await store.write(const SessionTokens(
       accessToken: 'expired',
@@ -163,5 +169,106 @@ void main() {
     expect(calls.where((c) => c.contains('/auth/refresh')), hasLength(1));
     // Original call, refresh, retry — not an endless loop.
     expect(calls, hasLength(3));
+  });
+
+  test(
+      'account deletion is confirmed server-side before credentials are cleared',
+      () async {
+    final store = InMemorySessionStore();
+    await store.write(const SessionTokens(
+      accessToken: 'active-access',
+      refreshToken: 'active-refresh',
+      refreshExpiresAt: '',
+    ));
+
+    late http.Request seen;
+    final api = clientWith(
+      MockClient((request) async {
+        seen = request;
+        return http.Response(
+          '{"purgeScheduledFor":"2026-09-07T00:00:00.000Z"}',
+          202,
+        );
+      }),
+      store: store,
+    );
+    await api.restoreSession();
+
+    final scheduled = await api.requestAccountDeletion('my current password');
+
+    expect(seen.method, 'DELETE');
+    expect(seen.url.path, '/api/auth/account');
+    expect(seen.headers['authorization'], 'Bearer active-access');
+    expect(seen.body, contains('"confirmation":"DELETE"'));
+    expect(scheduled.toUtc().toIso8601String(), '2026-09-07T00:00:00.000Z');
+    expect(await store.read(), isNull);
+    expect(api.isAuthenticated, isFalse);
+  });
+
+  testWidgets('offers recovery for a scheduled account deletion',
+      (tester) async {
+    final api = clientWith(MockClient((_) async => http.Response('{}', 200)));
+
+    await tester.pumpWidget(FinverseApp(api: api));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancel scheduled account deletion'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Restore your account'), findsOneWidget);
+    expect(find.text('Restore account'), findsOneWidget);
+    expect(find.text('Back to sign in'), findsOneWidget);
+  });
+
+  testWidgets('navigates to transactions and budget management',
+      (tester) async {
+    final api = clientWith(MockClient((request) async {
+      final path = request.url.path;
+      if (path.endsWith('/sync')) {
+        return http.Response(
+          '{"accounts":0,"fetched":0,"inserted":0,"updated":0,"coverage":0,"needsReview":0}',
+          201,
+        );
+      }
+      if (path.endsWith('/accounts')) return http.Response('[]', 200);
+      if (path.endsWith('/health-score')) {
+        return http.Response(
+          '{"score":500,"band":"fair","components":[],"topActions":[]}',
+          200,
+        );
+      }
+      if (path.endsWith('/budgets/progress')) {
+        return http.Response('{"budgets":[],"count":0}', 200);
+      }
+      if (path.endsWith('/transactions')) {
+        return http.Response('{"transactions":[],"count":0}', 200);
+      }
+      if (path.endsWith('/insights')) {
+        return http.Response(
+          '{"headline":{"income":"\$0.00","expenses":"\$0.00","netCashFlow":"\$0.00","savingsRate":"0.0%"},"topCategories":[],"insights":[]}',
+          200,
+        );
+      }
+      return http.Response('{}', 200);
+    }));
+
+    await tester.pumpWidget(MaterialApp(
+      home: HomeScreen(
+        api: api,
+        onSignOut: () async {},
+        onAccountDeleted: () async {},
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Transactions'));
+    await tester.pumpAndSettle();
+    expect(find.text('Search merchant or description'), findsOneWidget);
+    expect(find.text('No matching transactions.'), findsOneWidget);
+
+    await tester.tap(find.text('Budgets'));
+    await tester.pumpAndSettle();
+    expect(find.text('New budget'), findsOneWidget);
+    expect(find.text('Create a budget to start tracking progress.'),
+        findsOneWidget);
   });
 }

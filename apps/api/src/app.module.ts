@@ -1,4 +1,4 @@
-import { Controller, Get, Module } from '@nestjs/common';
+import { Controller, Get, Module, ServiceUnavailableException } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
@@ -44,7 +44,7 @@ class MetaController {
       await getAppPool(config.appDatabaseUrl).query('SELECT 1');
       return { status: 'ok', ...base, database: 'reachable' };
     } catch (error) {
-      return {
+      throw new ServiceUnavailableException({
         status: 'degraded',
         ...base,
         database: 'unreachable',
@@ -53,7 +53,7 @@ class MetaController {
         ...(config.isProduction
           ? {}
           : { error: error instanceof Error ? error.message : String(error) }),
-      };
+      });
     }
   }
 

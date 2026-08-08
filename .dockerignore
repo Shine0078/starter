@@ -1,0 +1,13 @@
+.git
+.github
+.codex
+node_modules
+**/node_modules
+**/dist
+**/build
+**/.dart_tool
+apps/mobile
+docs
+scratchpad
+*.log
+.env*

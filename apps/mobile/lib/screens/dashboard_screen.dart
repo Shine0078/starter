@@ -4,6 +4,7 @@ import '../api/client.dart';
 import '../models/models.dart';
 import '../widgets/budget_tile.dart';
 import '../widgets/health_score_card.dart';
+import '../widgets/spending_chart.dart';
 import '../widgets/transaction_tile.dart';
 
 /// The home screen: net position, health score, budgets, recent activity.
@@ -12,13 +13,19 @@ import '../widgets/transaction_tile.dart';
 /// screen that is the honest choice; introducing Riverpod or Bloc here would be
 /// ceremony without payoff. Revisit when there are enough screens to justify it.
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({required this.api, this.onSignOut, super.key});
+  const DashboardScreen({
+    required this.api,
+    this.onSignOut,
+    this.onAccountDeleted,
+    super.key,
+  });
 
   final ApiClient api;
 
   /// Ends the session and returns to sign-in. Null in tests that render the
   /// dashboard on its own.
   final Future<void> Function()? onSignOut;
+  final Future<void> Function()? onAccountDeleted;
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -94,7 +101,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Sign out?'),
-        content: const Text('You will need your email and password to sign back in.'),
+        content: const Text(
+            'You will need your email and password to sign back in.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -111,6 +119,146 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (confirmed == true) await widget.onSignOut?.call();
   }
 
+  Future<void> _confirmAccountDeletion() async {
+    final password = TextEditingController();
+    final confirmation = TextEditingController();
+    final submitted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete your account?'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Access ends immediately. You have 30 days to restore the account; '
+                'after that, your profile and finance data are permanently erased.',
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: password,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Current password',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: confirmation,
+                autocorrect: false,
+                decoration: const InputDecoration(
+                  labelText: 'Type DELETE to confirm',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Keep account'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(dialogContext).colorScheme.error,
+            ),
+            child: const Text('Schedule deletion'),
+          ),
+        ],
+      ),
+    );
+
+    final passwordText = password.text;
+    final confirmationText = confirmation.text;
+    password.dispose();
+    confirmation.dispose();
+    if (submitted != true || !mounted) return;
+
+    if (passwordText.isEmpty || confirmationText != 'DELETE') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Enter your password and type DELETE exactly.')),
+      );
+      return;
+    }
+
+    try {
+      await widget.api.requestAccountDeletion(passwordText);
+      await widget.onAccountDeleted?.call();
+    } on AuthException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.displayMessage)),
+      );
+    }
+  }
+
+  Future<void> _verifyEmail() async {
+    try {
+      await widget.api.requestEmailVerification();
+    } on Object catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not send verification: $error')),
+      );
+      return;
+    }
+    if (!mounted) return;
+
+    final token = TextEditingController();
+    final submitted = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Verify your email'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+                'Enter the 24-hour verification code sent to your email.'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: token,
+              autocorrect: false,
+              decoration: const InputDecoration(
+                labelText: 'Verification code',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Later'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(token.text.trim()),
+            child: const Text('Verify'),
+          ),
+        ],
+      ),
+    );
+    token.dispose();
+    if (submitted == null || submitted.isEmpty || !mounted) return;
+
+    try {
+      await widget.api.confirmEmailVerification(submitted);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Email verified.')),
+      );
+    } on AuthException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.displayMessage)),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -125,10 +273,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
             onPressed: _loading ? null : () => _load(sync: true),
           ),
           if (widget.onSignOut != null)
-            IconButton(
-              icon: const Icon(Icons.logout),
-              tooltip: 'Sign out',
-              onPressed: _confirmSignOut,
+            PopupMenuButton<String>(
+              tooltip: 'Account menu',
+              onSelected: (value) {
+                if (value == 'sign-out') _confirmSignOut();
+                if (value == 'verify-email') _verifyEmail();
+                if (value == 'delete-account') _confirmAccountDeletion();
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'sign-out',
+                  child: ListTile(
+                    leading: Icon(Icons.logout),
+                    title: Text('Sign out'),
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'verify-email',
+                  child: ListTile(
+                    leading: Icon(Icons.mark_email_read_outlined),
+                    title: Text('Verify email'),
+                  ),
+                ),
+                if (widget.onAccountDeleted != null)
+                  PopupMenuItem(
+                    value: 'delete-account',
+                    child: ListTile(
+                      leading: Icon(
+                        Icons.delete_forever,
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                      title: const Text('Delete account'),
+                    ),
+                  ),
+              ],
             ),
         ],
       ),
@@ -195,7 +373,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             style: theme.textTheme.bodySmall,
           ),
           const SizedBox(height: 20),
-
           if (_insights != null) ...[
             _sectionLabel(theme, 'This month'),
             Card(
@@ -212,20 +389,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
             const SizedBox(height: 20),
+            if (_insights!.topCategories.isNotEmpty) ...[
+              SpendingChart(categories: _insights!.topCategories),
+              const SizedBox(height: 20),
+            ],
           ],
-
           if (_health != null) ...[
             _sectionLabel(theme, 'Financial health'),
             HealthScoreCard(score: _health!),
             const SizedBox(height: 20),
           ],
-
           if (_budgets.isNotEmpty) ...[
             _sectionLabel(theme, 'Budgets'),
             ..._budgets.map((b) => BudgetTile(progress: b)),
             const SizedBox(height: 20),
           ],
-
           if (_insights != null && _insights!.insights.isNotEmpty) ...[
             _sectionLabel(theme, 'Insights'),
             ..._insights!.insights.take(4).map(
@@ -249,7 +427,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
             const SizedBox(height: 20),
           ],
-
           _sectionLabel(theme, 'Recent transactions'),
           ..._transactions.map(
             (txn) => TransactionTile(

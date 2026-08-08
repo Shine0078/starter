@@ -98,7 +98,8 @@ class TransactionTile extends StatelessWidget {
   }
 
   Widget _badge(ThemeData theme, String label, {bool emphasis = false}) {
-    final color = emphasis ? theme.colorScheme.error : theme.colorScheme.outline;
+    final color =
+        emphasis ? theme.colorScheme.error : theme.colorScheme.outline;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
       decoration: BoxDecoration(

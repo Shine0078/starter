@@ -18,6 +18,16 @@ import {
 } from '../infra/postgres/stores';
 import { Argon2PasswordHasher } from '../infra/auth/argon2-hasher';
 import {
+  InMemoryAccountDeletionStore,
+  PostgresAccountDeletionStore,
+} from '../infra/auth/account-deletion-stores';
+import {
+  DevelopmentEmailSender,
+  InMemoryAuthActionTokenStore,
+  PostgresAuthActionTokenStore,
+  SmtpEmailSender,
+} from '../infra/auth/auth-action-stores';
+import {
   InMemoryAuthEventStore,
   InMemorySessionStore,
   InMemoryUserStore,
@@ -37,7 +47,10 @@ import {
   TRANSACTION_STORE,
 } from '../ports';
 import {
+  ACCOUNT_DELETION_STORE,
+  AUTH_ACTION_TOKEN_STORE,
   AUTH_EVENT_STORE,
+  EMAIL_SENDER,
   PASSWORD_HASHER,
   SESSION_STORE,
   TOKEN_ISSUER,
@@ -57,14 +70,33 @@ function storeProviders(): Provider[] {
 
   if (config.store === 'memory') {
     logger.warn('Using the in-memory store — all data is lost on restart. Set DATABASE_URL to persist.');
+    const accounts = new InMemoryAccountStore();
+    const transactions = new InMemoryTransactionStore();
+    const budgets = new InMemoryBudgetStore();
+    const rules = new InMemoryRuleStore();
+    const users = new InMemoryUserStore();
+    const sessions = new InMemorySessionStore();
+    const events = new InMemoryAuthEventStore();
+    const actionTokens = new InMemoryAuthActionTokenStore();
+    const deletions = new InMemoryAccountDeletionStore(
+      users,
+      sessions,
+      events,
+      accounts,
+      transactions,
+      budgets,
+      rules,
+    );
     return [
-      { provide: ACCOUNT_STORE, useClass: InMemoryAccountStore },
-      { provide: TRANSACTION_STORE, useClass: InMemoryTransactionStore },
-      { provide: BUDGET_STORE, useClass: InMemoryBudgetStore },
-      { provide: RULE_STORE, useClass: InMemoryRuleStore },
-      { provide: USER_STORE, useClass: InMemoryUserStore },
-      { provide: SESSION_STORE, useClass: InMemorySessionStore },
-      { provide: AUTH_EVENT_STORE, useClass: InMemoryAuthEventStore },
+      { provide: ACCOUNT_STORE, useValue: accounts },
+      { provide: TRANSACTION_STORE, useValue: transactions },
+      { provide: BUDGET_STORE, useValue: budgets },
+      { provide: RULE_STORE, useValue: rules },
+      { provide: USER_STORE, useValue: users },
+      { provide: SESSION_STORE, useValue: sessions },
+      { provide: AUTH_EVENT_STORE, useValue: events },
+      { provide: ACCOUNT_DELETION_STORE, useValue: deletions },
+      { provide: AUTH_ACTION_TOKEN_STORE, useValue: actionTokens },
     ];
   }
 
@@ -90,6 +122,8 @@ function storeProviders(): Provider[] {
     { provide: USER_STORE, useFactory: () => new PostgresUserStore(pool) },
     { provide: SESSION_STORE, useFactory: () => new PostgresSessionStore(pool) },
     { provide: AUTH_EVENT_STORE, useFactory: () => new PostgresAuthEventStore(pool) },
+    { provide: ACCOUNT_DELETION_STORE, useFactory: () => new PostgresAccountDeletionStore(pool) },
+    { provide: AUTH_ACTION_TOKEN_STORE, useFactory: () => new PostgresAuthActionTokenStore(pool) },
   ];
 }
 
@@ -102,6 +136,41 @@ function storeProviders(): Provider[] {
       useFactory: () => new MockAggregator({ today: new SystemClock().today() }),
     },
     { provide: PASSWORD_HASHER, useClass: Argon2PasswordHasher },
+    {
+      provide: EMAIL_SENDER,
+      useFactory: () => {
+        const smtp = {
+          host: process.env.SMTP_HOST,
+          port: Number(process.env.SMTP_PORT ?? 587),
+          secure: process.env.SMTP_SECURE === 'true',
+          user: process.env.SMTP_USER,
+          password: process.env.SMTP_PASSWORD,
+          from: process.env.EMAIL_FROM,
+        };
+        const smtpWasConfigured =
+          [smtp.host, smtp.user, smtp.password, smtp.from].some(Boolean) ||
+          process.env.SMTP_PORT !== undefined;
+        const validPort = Number.isInteger(smtp.port) && smtp.port > 0 && smtp.port <= 65_535;
+        const smtpIsComplete =
+          smtp.host && smtp.user && smtp.password && smtp.from && validPort;
+        if (smtpIsComplete) {
+          return new SmtpEmailSender({
+            host: smtp.host!,
+            port: smtp.port,
+            secure: smtp.secure,
+            user: smtp.user!,
+            password: smtp.password!,
+            from: smtp.from!,
+          });
+        }
+        if (smtpWasConfigured || loadConfig().isProduction) {
+          throw new Error(
+            'SMTP_HOST, SMTP_USER, SMTP_PASSWORD, EMAIL_FROM, and a valid SMTP_PORT are required for SMTP email.',
+          );
+        }
+        return new DevelopmentEmailSender();
+      },
+    },
     {
       provide: TOKEN_ISSUER,
       useFactory: () => new JwtTokenIssuer(loadConfig().jwtSecret),
@@ -118,6 +187,9 @@ function storeProviders(): Provider[] {
     USER_STORE,
     SESSION_STORE,
     AUTH_EVENT_STORE,
+    ACCOUNT_DELETION_STORE,
+    AUTH_ACTION_TOKEN_STORE,
+    EMAIL_SENDER,
     PASSWORD_HASHER,
     TOKEN_ISSUER,
   ],

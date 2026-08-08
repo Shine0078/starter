@@ -17,7 +17,8 @@ import 'session_store.dart';
 /// retrying. Access tokens are short-lived, so without that every screen would
 /// have to handle a 401 itself.
 class ApiClient {
-  ApiClient({http.Client? httpClient, String? baseUrl, SessionStore? sessionStore})
+  ApiClient(
+      {http.Client? httpClient, String? baseUrl, SessionStore? sessionStore})
       : _http = httpClient ?? http.Client(),
         sessionStore = sessionStore ?? SecureSessionStore(),
         baseUrl = baseUrl ??
@@ -97,7 +98,46 @@ class ApiClient {
   Future<PublicUser> signIn(String email, String password) =>
       _authenticate('/auth/login', {'email': email, 'password': password});
 
-  Future<PublicUser> _authenticate(String path, Map<String, dynamic> body) async {
+  Future<PublicUser> cancelAccountDeletion(String email, String password) =>
+      _authenticate(
+        '/auth/cancel-deletion',
+        {'email': email, 'password': password},
+      );
+
+  Future<void> requestPasswordReset(String email) =>
+      _publicAuthAction('/auth/password-reset/request', {'email': email});
+
+  Future<void> confirmPasswordReset(String token, String password) =>
+      _publicAuthAction(
+        '/auth/password-reset/confirm',
+        {'token': token, 'password': password},
+      );
+
+  Future<void> confirmEmailVerification(String token) => _publicAuthAction(
+        '/auth/email-verification/confirm',
+        {'token': token},
+      );
+
+  Future<void> requestEmailVerification() async {
+    await _send('POST', '/auth/email-verification/request');
+  }
+
+  Future<void> _publicAuthAction(String path, Map<String, dynamic> body) async {
+    final response = await _http.post(
+      _uri(path),
+      headers: {'content-type': 'application/json'},
+      body: jsonEncode(body),
+    );
+    final decoded = response.body.isEmpty
+        ? <String, dynamic>{}
+        : jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode >= 400) {
+      throw AuthException.fromResponse(response.statusCode, decoded);
+    }
+  }
+
+  Future<PublicUser> _authenticate(
+      String path, Map<String, dynamic> body) async {
     // Deliberately bypasses _perform: there is no session to attach or retry.
     final response = await _http.post(
       _uri(path),
@@ -131,7 +171,8 @@ class ApiClient {
       if (response.statusCode >= 400) return false;
 
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-      _tokens = SessionTokens.fromJson(decoded['tokens'] as Map<String, dynamic>);
+      _tokens =
+          SessionTokens.fromJson(decoded['tokens'] as Map<String, dynamic>);
       await sessionStore.write(_tokens!);
       return true;
     } catch (_) {
@@ -159,6 +200,28 @@ class ApiClient {
     await sessionStore.clear();
   }
 
+  /// Schedules irreversible erasure after a 30-day recovery window.
+  /// Credentials are cleared only after the server accepts the request.
+  Future<DateTime> requestAccountDeletion(String password) async {
+    final response = await _perform(
+      'DELETE',
+      '/auth/account',
+      {'password': password, 'confirmation': 'DELETE'},
+      true,
+    );
+    final decoded = response.body.isEmpty
+        ? <String, dynamic>{}
+        : jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode >= 400) {
+      throw AuthException.fromResponse(response.statusCode, decoded);
+    }
+
+    final scheduledFor = DateTime.parse(decoded['purgeScheduledFor'] as String);
+    _tokens = null;
+    await sessionStore.clear();
+    return scheduledFor;
+  }
+
   Future<SyncResult> sync() async {
     final json = await _send('POST', '/sync') as Map<String, dynamic>;
     return SyncResult.fromJson(json);
@@ -166,10 +229,13 @@ class ApiClient {
 
   Future<List<Account>> accounts() async {
     final json = await _get('/accounts') as List<dynamic>;
-    return json.map((e) => Account.fromJson(e as Map<String, dynamic>)).toList();
+    return json
+        .map((e) => Account.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
-  Future<List<Transaction>> transactions({int limit = 50, String? search}) async {
+  Future<List<Transaction>> transactions(
+      {int limit = 50, String? search}) async {
     final query = search == null || search.isEmpty
         ? '?limit=$limit'
         : '?limit=$limit&search=${Uri.encodeQueryComponent(search)}';
@@ -180,7 +246,8 @@ class ApiClient {
   }
 
   Future<List<Transaction>> needsReview() async {
-    final json = await _get('/transactions/needs-review') as Map<String, dynamic>;
+    final json =
+        await _get('/transactions/needs-review') as Map<String, dynamic>;
     return (json['transactions'] as List<dynamic>)
         .map((e) => Transaction.fromJson(e as Map<String, dynamic>))
         .toList();
@@ -218,6 +285,10 @@ class ApiClient {
     return Budget.fromJson(json);
   }
 
+  Future<void> deleteBudget(String budgetId) async {
+    await _send('DELETE', '/budgets/$budgetId');
+  }
+
   Future<HealthScore> healthScore() async {
     final json = await _get('/health-score') as Map<String, dynamic>;
     return HealthScore.fromJson(json);
@@ -241,10 +312,13 @@ class ApiClient {
 /// Separate from ApiException because these are the only API errors a person is
 /// expected to act on — every other failure is a bug or an outage.
 class AuthException implements Exception {
-  AuthException(this.message, {this.problems = const [], this.retryAfterSeconds});
+  AuthException(this.message,
+      {this.problems = const [], this.retryAfterSeconds});
 
-  factory AuthException.fromResponse(int statusCode, Map<String, dynamic> body) {
-    final problems = (body['problems'] as List<dynamic>?)?.cast<String>() ?? const <String>[];
+  factory AuthException.fromResponse(
+      int statusCode, Map<String, dynamic> body) {
+    final problems = (body['problems'] as List<dynamic>?)?.cast<String>() ??
+        const <String>[];
 
     // The API returns `message` as a string, or as a list when several
     // validation rules failed at once.

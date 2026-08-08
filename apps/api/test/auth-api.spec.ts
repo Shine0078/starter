@@ -13,6 +13,10 @@ import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { ACCOUNT_STORE, TRANSACTION_STORE, type AccountStore, type TransactionStore } from '../src/ports';
+import { ACCOUNT_DELETION_STORE, type AccountDeletionStore } from '../src/ports/auth';
+import { EMAIL_SENDER } from '../src/ports/auth';
+import type { DevelopmentEmailSender } from '../src/infra/auth/auth-action-stores';
 
 // Must be set before anything calls loadConfig(), which memoises.
 process.env.STORE = 'memory';
@@ -56,13 +60,15 @@ describe('auth API', () => {
   let counter = 0;
   const freshEmail = (): string => `user${(counter += 1)}-${Date.now()}@example.com`;
 
-  async function register(email = freshEmail()): Promise<{ email: string; tokens: Tokens }> {
+  async function register(
+    email = freshEmail(),
+  ): Promise<{ email: string; userId: string; tokens: Tokens }> {
     const response = await request(http)
       .post('/api/auth/register')
       .send({ email, password: PASSWORD })
       .expect(201);
 
-    return { email, tokens: response.body.tokens };
+    return { email, userId: response.body.user.id, tokens: response.body.tokens };
   }
 
   // ------------------------------------------------------------- register
@@ -404,6 +410,90 @@ describe('auth API', () => {
     });
   });
 
+  // ----------------------------------------- verification and recovery
+
+  describe('email verification', () => {
+    it('verifies an address once and rejects token replay', async () => {
+      const { email, tokens } = await register();
+      const sender = app.get<DevelopmentEmailSender>(EMAIL_SENDER);
+      const token = sender.latest(email, 'verify_email')?.token;
+      expect(token).toBeTruthy();
+
+      await request(http)
+        .post('/api/auth/email-verification/confirm')
+        .send({ token })
+        .expect(200);
+
+      const me = await request(http)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${tokens.accessToken}`)
+        .expect(200);
+      expect(me.body.emailVerified).toBe(true);
+
+      await request(http)
+        .post('/api/auth/email-verification/confirm')
+        .send({ token })
+        .expect(400);
+    });
+  });
+
+  describe('password reset', () => {
+    it('does not reveal whether an email exists', async () => {
+      const known = await register();
+      const knownResponse = await request(http)
+        .post('/api/auth/password-reset/request')
+        .send({ email: known.email })
+        .expect(202);
+      const unknownResponse = await request(http)
+        .post('/api/auth/password-reset/request')
+        .send({ email: freshEmail() })
+        .expect(202);
+      expect(unknownResponse.body).toEqual(knownResponse.body);
+    });
+
+    it('changes the password, revokes sessions, and makes the token single-use', async () => {
+      const { email, tokens } = await register();
+      await request(http)
+        .post('/api/auth/password-reset/request')
+        .send({ email })
+        .expect(202);
+
+      const sender = app.get<DevelopmentEmailSender>(EMAIL_SENDER);
+      const token = sender.latest(email, 'reset_password')?.token;
+      expect(token).toBeTruthy();
+
+      // Policy failure happens before token consumption, so the user can fix
+      // the password without requesting a second email.
+      await request(http)
+        .post('/api/auth/password-reset/confirm')
+        .send({ token, password: 'short' })
+        .expect(400);
+
+      const nextPassword = 'a completely new safe passphrase';
+      await request(http)
+        .post('/api/auth/password-reset/confirm')
+        .send({ token, password: nextPassword })
+        .expect(200);
+
+      await request(http)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${tokens.accessToken}`)
+        .expect(401);
+      await request(http)
+        .post('/api/auth/login')
+        .send({ email, password: PASSWORD })
+        .expect(401);
+      await request(http)
+        .post('/api/auth/login')
+        .send({ email, password: nextPassword })
+        .expect(200);
+      await request(http)
+        .post('/api/auth/password-reset/confirm')
+        .send({ token, password: 'yet another safe passphrase' })
+        .expect(400);
+    });
+  });
+
   // --------------------------------------------------------------- logout
 
   describe('logout', () => {
@@ -454,6 +544,87 @@ describe('auth API', () => {
       expect(response.body.length).toBeGreaterThanOrEqual(2);
       expect(response.body.filter((s: { current: boolean }) => s.current)).toHaveLength(1);
       expect(response.body[0].tokenHash).toBeUndefined();
+    });
+  });
+
+  // ---------------------------------------------------- account deletion
+
+  describe('account deletion', () => {
+    it('requires explicit confirmation and the current password', async () => {
+      const { tokens } = await register();
+
+      await request(http)
+        .delete('/api/auth/account')
+        .set('Authorization', `Bearer ${tokens.accessToken}`)
+        .send({ password: PASSWORD, confirmation: 'delete' })
+        .expect(400);
+
+      await request(http)
+        .delete('/api/auth/account')
+        .set('Authorization', `Bearer ${tokens.accessToken}`)
+        .send({ password: 'not the password', confirmation: 'DELETE' })
+        .expect(401);
+
+      // A failed attempt does not disable the account.
+      await request(http)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${tokens.accessToken}`)
+        .expect(200);
+    });
+
+    it('disables access immediately, supports recovery, then purges every row', async () => {
+      const { email, userId, tokens } = await register();
+      await request(http)
+        .post('/api/sync')
+        .set('Authorization', `Bearer ${tokens.accessToken}`)
+        .expect(201);
+
+      const scheduled = await request(http)
+        .delete('/api/auth/account')
+        .set('Authorization', `Bearer ${tokens.accessToken}`)
+        .send({ password: PASSWORD, confirmation: 'DELETE' })
+        .expect(202);
+
+      expect(new Date(scheduled.body.purgeScheduledFor).getTime()).toBeGreaterThan(Date.now());
+      await request(http)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${tokens.accessToken}`)
+        .expect(401);
+      await request(http)
+        .post('/api/auth/login')
+        .send({ email, password: PASSWORD })
+        .expect(403);
+
+      const recovered = await request(http)
+        .post('/api/auth/cancel-deletion')
+        .send({ email, password: PASSWORD })
+        .expect(200);
+      const recoveredTokens: Tokens = recovered.body.tokens;
+
+      const preserved = await request(http)
+        .get('/api/transactions?limit=1000')
+        .set('Authorization', `Bearer ${recoveredTokens.accessToken}`)
+        .expect(200);
+      expect(preserved.body.count).toBeGreaterThan(0);
+
+      await request(http)
+        .delete('/api/auth/account')
+        .set('Authorization', `Bearer ${recoveredTokens.accessToken}`)
+        .send({ password: PASSWORD, confirmation: 'DELETE' })
+        .expect(202);
+
+      const deletions = app.get<AccountDeletionStore>(ACCOUNT_DELETION_STORE);
+      expect(await deletions.purgeDue(new Date(Date.now() + 31 * 24 * 60 * 60 * 1_000))).toBe(1);
+
+      const accounts = app.get<AccountStore>(ACCOUNT_STORE);
+      const transactions = app.get<TransactionStore>(TRANSACTION_STORE);
+      expect(await accounts.list(userId)).toHaveLength(0);
+      expect((await transactions.list(userId)).length).toBe(0);
+
+      await request(http)
+        .post('/api/auth/cancel-deletion')
+        .send({ email, password: PASSWORD })
+        .expect(401);
     });
   });
 });

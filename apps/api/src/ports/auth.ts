@@ -13,6 +13,9 @@ import type { AuthEvent, Session, User } from '../domain/auth/types';
 export const USER_STORE = 'USER_STORE';
 export const SESSION_STORE = 'SESSION_STORE';
 export const AUTH_EVENT_STORE = 'AUTH_EVENT_STORE';
+export const ACCOUNT_DELETION_STORE = 'ACCOUNT_DELETION_STORE';
+export const AUTH_ACTION_TOKEN_STORE = 'AUTH_ACTION_TOKEN_STORE';
+export const EMAIL_SENDER = 'EMAIL_SENDER';
 export const PASSWORD_HASHER = 'PASSWORD_HASHER';
 export const TOKEN_ISSUER = 'TOKEN_ISSUER';
 
@@ -32,6 +35,7 @@ export interface UserStore {
   create(input: CreateUserInput): Promise<User>;
   updatePasswordHash(userId: string, passwordHash: string): Promise<void>;
   setStatus(userId: string, status: User['status']): Promise<void>;
+  markEmailVerified(userId: string, at: Date): Promise<void>;
 }
 
 export class DuplicateEmailError extends Error {
@@ -61,6 +65,27 @@ export interface AuthEventStore {
   /** Failure timestamps for one address inside a window — feeds evaluateLockout. */
   recentFailures(email: string, since: Date): Promise<Date[]>;
   listForUser(userId: string, limit: number): Promise<AuthEvent[]>;
+}
+
+export interface AccountDeletionStore {
+  /** Begins the recovery window and makes the account unusable immediately. */
+  request(userId: string, email: string, requestedAt: Date, purgeAfter: Date): Promise<void>;
+  /** Restores an account during its recovery window. */
+  cancel(userId: string): Promise<void>;
+  /** Permanently removes every account whose recovery window has elapsed. */
+  purgeDue(asOf: Date): Promise<number>;
+}
+
+export type AuthActionKind = 'verify_email' | 'reset_password';
+
+export interface AuthActionTokenStore {
+  issue(userId: string, kind: AuthActionKind, tokenHash: string, expiresAt: Date): Promise<void>;
+  /** Atomically marks a live token used and returns its owner. */
+  consume(kind: AuthActionKind, tokenHash: string, at: Date): Promise<string | null>;
+}
+
+export interface EmailSender {
+  sendAction(email: string, kind: AuthActionKind, token: string): Promise<void>;
 }
 
 export interface PasswordHasher {

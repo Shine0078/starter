@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'api/client.dart';
-import 'screens/dashboard_screen.dart';
+import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 
 void main() => runApp(FinverseApp(api: ApiClient()));
@@ -95,10 +95,13 @@ class _AuthGateState extends State<AuthGate> {
       );
     }
 
-    return DashboardScreen(
+    return HomeScreen(
       api: widget.api,
       onSignOut: () async {
         await widget.api.signOut();
+        if (mounted) setState(() => _signedIn = false);
+      },
+      onAccountDeleted: () async {
         if (mounted) setState(() => _signedIn = false);
       },
     );

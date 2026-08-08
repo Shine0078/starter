@@ -11,6 +11,7 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import type { Session } from '../src/domain/auth/types';
 import {
   DuplicateEmailError,
+  type AuthActionTokenStore,
   type AuthEventStore,
   type SessionStore,
   type UserStore,
@@ -20,6 +21,7 @@ export interface AuthStoreSet {
   users: UserStore;
   sessions: SessionStore;
   events: AuthEventStore;
+  actions: AuthActionTokenStore;
   reset(): Promise<void>;
   teardown(): Promise<void>;
 }
@@ -110,6 +112,15 @@ export function runAuthStoreContract(name: string, create: () => Promise<AuthSto
         const user = await makeUser();
         await stores.users.setStatus(user.id, 'locked');
         expect((await stores.users.findById(user.id))?.status).toBe('locked');
+      });
+
+      it('marks an email verified without changing identity', async () => {
+        const user = await makeUser();
+        await stores.users.markEmailVerified(user.id, NOW);
+
+        const found = await stores.users.findById(user.id);
+        expect(found?.emailVerifiedAt).toEqual(NOW);
+        expect(found?.email).toBe(user.email);
       });
     });
 
@@ -291,6 +302,28 @@ export function runAuthStoreContract(name: string, create: () => Promise<AuthSto
         const history = await stores.events.listForUser(user.id, 10);
         expect(history).toHaveLength(3);
         expect(history[0]?.kind).toBe('logout');
+      });
+    });
+
+    describe('action tokens', () => {
+      it('is single-use and rejects expiry', async () => {
+        const user = await makeUser();
+        await stores.actions.issue(user.id, 'reset_password', 'live-hash', new Date(NOW.getTime() + HOUR));
+        await stores.actions.issue(user.id, 'verify_email', 'expired-hash', new Date(NOW.getTime() - HOUR));
+
+        expect(await stores.actions.consume('reset_password', 'live-hash', NOW)).toBe(user.id);
+        expect(await stores.actions.consume('reset_password', 'live-hash', NOW)).toBeNull();
+        expect(await stores.actions.consume('verify_email', 'expired-hash', NOW)).toBeNull();
+      });
+
+      it('invalidates an older live token of the same kind', async () => {
+        const user = await makeUser();
+        const expiry = new Date(NOW.getTime() + HOUR);
+        await stores.actions.issue(user.id, 'verify_email', 'old-hash', expiry);
+        await stores.actions.issue(user.id, 'verify_email', 'new-hash', expiry);
+
+        expect(await stores.actions.consume('verify_email', 'old-hash', NOW)).toBeNull();
+        expect(await stores.actions.consume('verify_email', 'new-hash', NOW)).toBe(user.id);
       });
     });
   });

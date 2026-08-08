@@ -1,0 +1,72 @@
+name: Release artifacts
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  api-image:
+    name: Publish API image to GHCR
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository }}-api
+          tags: |
+            type=ref,event=tag
+            type=sha
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  android:
+    name: Build Android release APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - working-directory: apps/mobile
+        run: flutter pub get
+      - name: Configure Android upload signing
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+        run: |
+          test -n "$KEYSTORE_BASE64" && test -n "$KEY_ALIAS" && test -n "$KEY_PASSWORD" && test -n "$STORE_PASSWORD"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > apps/mobile/android/app/upload-keystore.jks
+          printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=upload-keystore.jks\n' \
+            "$STORE_PASSWORD" "$KEY_PASSWORD" "$KEY_ALIAS" > apps/mobile/android/key.properties
+      - name: Build Android release
+        working-directory: apps/mobile
+        shell: bash
+        env:
+          API_BASE_URL: ${{ vars.API_BASE_URL }}
+        run: |
+          test -n "$API_BASE_URL"
+          flutter build apk --release --dart-define=API_BASE_URL="$API_BASE_URL"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: finverse-android-${{ github.ref_name }}
+          path: apps/mobile/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error

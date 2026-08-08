@@ -42,9 +42,9 @@ async function bootstrap(): Promise<void> {
   app.setGlobalPrefix('api', { exclude: ['healthz'] });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
-  // Dev-only CORS. Phase 1 replaces this with an explicit origin allowlist —
-  // a wide-open CORS policy on a finance API is not something to ship.
-  app.enableCors({ origin: true, credentials: true });
+  // Development may allow all origins; production configuration fails closed
+  // unless CORS_ORIGINS contains an explicit allowlist.
+  app.enableCors({ origin: config.corsOrigins, credentials: true });
 
   // The developer dashboard. Not the product UI — that is the Flutter app.
   app.useStaticAssets(join(__dirname, '..', 'public'));

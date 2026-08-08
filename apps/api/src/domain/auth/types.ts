@@ -76,7 +76,13 @@ export type AuthEventKind =
   | 'refresh_reuse_detected'
   | 'session_revoked'
   | 'password_changed'
-  | 'account_locked';
+  | 'account_locked'
+  | 'account_deletion_requested'
+  | 'account_deletion_cancelled'
+  | 'email_verification_sent'
+  | 'email_verified'
+  | 'password_reset_requested'
+  | 'password_reset_completed';
 
 export interface AuthEvent {
   id: string;

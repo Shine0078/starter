@@ -1,7 +1,8 @@
 # Data Model
 
-Postgres is the system of record. The mobile client holds a SQLite subset for
-offline reads.
+Postgres is the system of record. The mobile client currently keeps only session
+credentials in the operating-system keystore; an offline SQLite cache is a target,
+not an implemented feature.
 
 The tables that exist today live in `apps/api/migrations` — numbered `.sql`
 files, applied once each inside a transaction. What follows describes the full
@@ -33,7 +34,9 @@ User ──┬── Institution Link ── Account ── Transaction ──�
 | `base_currency` | char(3) | ISO 4217; totals normalize to this |
 | `country` | char(2) | drives which aggregator and compliance layer applies |
 | `created_at` | timestamptz | |
-| `deleted_at` | timestamptz | soft delete; hard purge job runs at +30d |
+| `status` | text | `active`, `locked`, or `pending_deletion` |
+| `deletion_requested_at` | timestamptz | start of the recovery window; nullable |
+| `purge_after` | timestamptz | irreversible erasure time; nullable |
 
 ### `institution_links`
 The connection to an aggregator. **No bank credentials, ever.** We store the
@@ -144,16 +147,22 @@ Derived, not declared. Detection writes here; the user can confirm or dismiss.
 
 ## Retention and deletion
 
-The mission promises complete account deletion. That has to survive contact with
-backups and analytics:
+The implemented lifecycle is:
 
-- `DELETE /me` soft-deletes immediately and revokes all aggregator links **first** —
-  an orphaned link keeps pulling data we no longer have a right to hold.
-- A purge job hard-deletes at +30 days (the window covers accidental deletion).
-- Analytics events carry a pseudonymous id joined only through a mapping table that
-  is deleted in the same purge, which is what actually makes the deletion real.
-- Backups roll off on a 35-day cycle, chosen to sit just past the purge window so no
-  backup outlives the deletion it should have honored.
+- `DELETE /auth/account` requires the current password and the literal confirmation
+  `DELETE`. It immediately sets `pending_deletion`, records the request, and revokes
+  every session.
+- `POST /auth/cancel-deletion` re-verifies email and password during the 30-day
+  recovery window, restores the account, and issues a new session.
+- `npm run purge:accounts --workspace @finverse/api` permanently deletes due users.
+  Foreign-key cascades remove accounts, transactions, budgets, rules, and sessions;
+  the job explicitly removes identity-linked and email-linked auth events first.
+- The PostgreSQL acceptance test verifies physical absence using the schema owner,
+  not an RLS-scoped query that could return an empty result while rows still exist.
+
+The deployment platform must schedule the purge command at least daily. Aggregator
+link revocation must be added with the real bank adapter. Analytics retention and
+backup roll-off cannot be claimed until those systems exist and have been tested.
 
 ## Related
 

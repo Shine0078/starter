@@ -57,6 +57,15 @@ export class InMemoryUserStore implements UserStore {
     const user = this.byId.get(userId);
     if (user) this.byId.set(userId, { ...user, status });
   }
+
+  async markEmailVerified(userId: string, at: Date): Promise<void> {
+    const user = this.byId.get(userId);
+    if (user) this.byId.set(userId, { ...user, emailVerifiedAt: at });
+  }
+
+  purgeUser(userId: string): void {
+    this.byId.delete(userId);
+  }
 }
 
 export class InMemorySessionStore implements SessionStore {
@@ -143,10 +152,16 @@ export class InMemorySessionStore implements SessionStore {
     }
     return count;
   }
+
+  purgeUser(userId: string): void {
+    for (const [id, session] of this.byId) {
+      if (session.userId === userId) this.byId.delete(id);
+    }
+  }
 }
 
 export class InMemoryAuthEventStore implements AuthEventStore {
-  private readonly events: AuthEvent[] = [];
+  private events: AuthEvent[] = [];
 
   async record(event: AuthEvent): Promise<void> {
     this.events.push({ ...event });
@@ -169,5 +184,11 @@ export class InMemoryAuthEventStore implements AuthEventStore {
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
       .slice(0, limit)
       .map((e) => ({ ...e }));
+  }
+
+  purgeUser(userId: string, email: string): void {
+    this.events = this.events.filter(
+      (event) => event.userId !== userId && event.emailAttempted !== email,
+    );
   }
 }

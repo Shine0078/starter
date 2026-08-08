@@ -1,4 +1,4 @@
-import { IsEmail, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { Equals, IsEmail, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from '../../domain/auth/password-policy';
 
@@ -45,4 +45,34 @@ export class RefreshDto {
   @IsString()
   @MaxLength(512)
   refreshToken!: string;
+}
+
+export class DeleteAccountDto {
+  @IsString()
+  @MaxLength(MAX_PASSWORD_LENGTH)
+  password!: string;
+
+  @Equals('DELETE', { message: 'Type DELETE to confirm permanent account deletion.' })
+  confirmation!: string;
+}
+
+export class EmailDto {
+  @IsEmail({}, { message: 'Enter a valid email address.' })
+  @MaxLength(254)
+  email!: string;
+}
+
+export class ActionTokenDto {
+  @IsString()
+  @MaxLength(256)
+  token!: string;
+}
+
+export class ConfirmPasswordResetDto extends ActionTokenDto {
+  @IsString()
+  @MinLength(MIN_PASSWORD_LENGTH, {
+    message: `Use at least ${MIN_PASSWORD_LENGTH} characters.`,
+  })
+  @MaxLength(MAX_PASSWORD_LENGTH)
+  password!: string;
 }

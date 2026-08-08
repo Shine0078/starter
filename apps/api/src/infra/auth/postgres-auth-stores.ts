@@ -103,6 +103,14 @@ export class PostgresUserStore implements UserStore {
       status,
     ]);
   }
+
+  async markEmailVerified(userId: string, at: Date): Promise<void> {
+    await this.pg.query(
+      `UPDATE users SET email_verified_at = COALESCE(email_verified_at, $2), updated_at = now()
+       WHERE id = $1`,
+      [userId, at],
+    );
+  }
 }
 
 interface SessionRow {

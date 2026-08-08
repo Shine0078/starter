@@ -1,6 +1,10 @@
 import { describe, it } from 'vitest';
 
 import {
+  InMemoryAuthActionTokenStore,
+  PostgresAuthActionTokenStore,
+} from '../src/infra/auth/auth-action-stores';
+import {
   InMemoryAccountStore,
   InMemoryBudgetStore,
   InMemoryRuleStore,
@@ -33,6 +37,7 @@ runAuthStoreContract('in-memory', async (): Promise<AuthStoreSet> => {
   let users = new InMemoryUserStore();
   let sessions = new InMemorySessionStore();
   let events = new InMemoryAuthEventStore();
+  let actions = new InMemoryAuthActionTokenStore();
 
   return {
     get users() {
@@ -44,10 +49,14 @@ runAuthStoreContract('in-memory', async (): Promise<AuthStoreSet> => {
     get events() {
       return events;
     },
+    get actions() {
+      return actions;
+    },
     async reset() {
       users = new InMemoryUserStore();
       sessions = new InMemorySessionStore();
       events = new InMemoryAuthEventStore();
+      actions = new InMemoryAuthActionTokenStore();
     },
     async teardown() {},
   };
@@ -136,6 +145,7 @@ if (TEST_DATABASE_URL) {
       users: new PostgresUserStore(app),
       sessions: new PostgresSessionStore(app),
       events: new PostgresAuthEventStore(app),
+      actions: new PostgresAuthActionTokenStore(app),
       async reset() {
         // auth_events references users with ON DELETE SET NULL, so rows that
         // recorded a failure against an unknown address survive the cascade

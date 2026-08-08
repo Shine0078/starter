@@ -51,6 +51,10 @@ export class InMemoryAccountStore implements AccountStore {
       else rows.push(account);
     }
   }
+
+  purgeUser(userId: string): void {
+    this.byUser.delete(userId);
+  }
 }
 
 export class InMemoryTransactionStore implements TransactionStore {
@@ -133,6 +137,10 @@ export class InMemoryTransactionStore implements TransactionStore {
     rows[index] = next;
     return next;
   }
+
+  purgeUser(userId: string): void {
+    this.byUser.delete(userId);
+  }
 }
 
 export class InMemoryBudgetStore implements BudgetStore {
@@ -160,6 +168,10 @@ export class InMemoryBudgetStore implements BudgetStore {
     if (index < 0) return false;
     rows.splice(index, 1);
     return true;
+  }
+
+  purgeUser(userId: string): void {
+    this.byUser.delete(userId);
   }
 }
 
@@ -189,5 +201,9 @@ export class InMemoryRuleStore implements RuleStore {
     if (index < 0) return false;
     rows.splice(index, 1);
     return true;
+  }
+
+  purgeUser(userId: string): void {
+    this.byUser.delete(userId);
   }
 }

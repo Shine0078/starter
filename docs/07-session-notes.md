@@ -1,7 +1,7 @@
 # Where the project stands
 
 Written for whoever picks this up next — including a fresh agent session with no
-memory of how any of it got here. Last updated when row-level security landed.
+memory of how any of it got here. Last updated after the launch-foundation pass.
 
 Read [`MISSION.md`](../MISSION.md) for the product, [`HANDOVER.md`](../HANDOVER.md)
 for the backlog, and [`04-roadmap.md`](04-roadmap.md) for the sequence. This file
@@ -11,8 +11,8 @@ is the shortest path to being productive again.
 
 ```bash
 npm install
-npm test          # 243 tests, no database needed
-npm run test:db   # 309 tests, spins up a real PostgreSQL and tears it down
+npm test          # 251 tests, no database needed
+npm run test:db   # 321 tests, spins up a real PostgreSQL and tears it down
 npm run dev       # API + dev dashboard on http://localhost:3000
 ```
 
@@ -26,10 +26,11 @@ Every number below was produced by running the thing, not by reading the code.
 
 | Check | Result |
 |---|---|
-| API tests, in-memory | 243 passed |
-| API tests, real Postgres | 309 passed |
+| API tests, in-memory | 251 passed |
+| API tests, real Postgres | 321 passed |
 | `tsc --noEmit`, `npm run build` | clean |
-| `flutter analyze`, `flutter test` | clean, 7 passed |
+| `flutter analyze`, `flutter test` | clean, 10 passed |
+| Android release compile | `com.finverse.finance`, API 36, 49 MB APK; local artifact uses the debug key only |
 | Dashboard | register → sync → correct → logout, verified in a browser |
 | API on Postgres as `finverse_app` | two users, 183 transactions each, sync → correct → re-sync → budget, isolation confirmed against the raw tables |
 
@@ -49,9 +50,9 @@ forecast, credit-card planner, purchase simulator, CSV export.
 ledger. No bank has ever been connected, and connecting one is gated on a
 commercial agreement, not on code.
 
-**Absent, despite sounding covered:** email verification and password reset
-(both need an email provider), MFA, passkeys, OAuth. `users.email_verified_at`
-exists as a column but nothing ever sets it — an address is currently unproven.
+**Implemented but awaiting provider configuration:** email verification and
+password reset use hashed one-time tokens and SMTP in production. **Absent:**
+MFA, passkeys, OAuth, and biometric app lock.
 
 ## Last task: row-level security — done
 
@@ -79,33 +80,29 @@ The database now refuses the wrong rows even when a query forgets its filter.
 The whole store contract now runs as `finverse_app`, so all 309 tests execute
 with the policies in force.
 
-## Next task: account deletion and retention
+## Completed: account deletion and retention
 
-The last item in Phase 1 that nothing external blocks. `users.deleted_at` and
-the `pending_deletion` status exist as columns and are written by nothing;
-`UserStatus` already has the value. Export exists and is tested. Deletion does
-not exist at all.
+Implemented in migration `004_account_deletion.sql`, the auth API, both persistence
+adapters, the Flutter UI, and a PostgreSQL erasure acceptance test. The production
+deployment must run `npm run purge:accounts --workspace @finverse/api` at least daily.
 
-What it needs:
+The implemented contract is:
 
 1. **A deletion request endpoint** that sets `pending_deletion` and a grace
    period, revokes every session, and refuses to serve data in the meantime.
    Immediate hard deletion is the wrong default — an attacker with a stolen
    token should not be able to destroy someone's financial history irreversibly.
-2. **A purge that actually purges.** The FK cascade from `users` is already
-   proven by the contract suite's `reset()`. What is not covered is
-   `auth_events`, which is `ON DELETE SET NULL` on purpose so that failed logins
-   against unknown addresses survive — decide deliberately what happens to those.
-3. **Proof.** A test that creates a user with data, deletes, and then asserts
+2. **A purge that actually purges.** The FK cascade removes the financial rows,
+   while identity-linked and email-linked `auth_events` are explicitly erased.
+3. **Proof.** A test creates a user with data, deletes, and then asserts
    zero rows in every table, queried as the owner so RLS cannot make an empty
    result look like success. That last detail is the trap: as `finverse_app`
    outside a scope, *every* table reads as empty whether or not anything was
-   deleted.
+   deleted. This now passes against real PostgreSQL.
 
-After that, the unblocked options are email verification and password reset
-behind an `EmailPort` with a dev adapter that logs the link — the same shape as
-`MockAggregator`, so swapping in a real provider stays a composition-root
-change.
+Email verification and password reset now sit behind `EmailSender`: development
+captures the one-time code, while production requires complete SMTP settings.
+The same composition-root boundary keeps the delivery provider replaceable.
 
 ## Machine-specific gotchas
 
@@ -123,7 +120,7 @@ Things that cost time to rediscover:
   the `finverse_app` pool and keeps the owner's pool for truncation only. If a
   new database suite is added, follow that split.
 - **Two DB suites share one database, so `test:db` runs files sequentially.**
-  `fileParallelism` is off in `vitest.config.ts` when `TEST_DATABASE_URL` is
+  `fileParallelism` is off in `vitest.config.mts` when `TEST_DATABASE_URL` is
   set — in parallel, one suite's reset deletes the other's fixtures mid-assertion
   and the failure moves around between runs.
 - **`loadConfig()` is memoised, and must stay that way.** It generates a random
@@ -134,7 +131,7 @@ Things that cost time to rediscover:
   Note the dynamic `await import` inside `beforeAll` in the auth specs.
 - **Vitest needs SWC, not esbuild.** Nest resolves constructor dependencies from
   `design:paramtypes`, which only `emitDecoratorMetadata` produces. See
-  `vitest.config.ts`.
+  `vitest.config.mts`.
 
 ## Bugs worth not reintroducing
 
