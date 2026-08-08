@@ -2,14 +2,14 @@
 
 Flutter client for Android and iOS.
 
-> **Status: unverified scaffold.** This code was written against the API contract
-> in `apps/api` but has never been compiled — the Flutter SDK was not installed
-> on the machine where it was authored. Treat it as a starting point, not as
-> working code. Expect to fix small things on first `flutter run`.
+> **Status: verified Flutter client.** The dashboard is wired to the API contract
+> in `apps/api`, passes static analysis and widget tests, and has generated Android
+> and iOS platform projects. A debug Android APK has been built successfully.
 
 ## Setup
 
-Install the Flutter SDK (<https://docs.flutter.dev/get-started/install>), then:
+Flutter is installed on this development machine. On a fresh machine, install it
+from <https://docs.flutter.dev/get-started/install>, then:
 
 ```bash
 cd apps/mobile
@@ -18,9 +18,8 @@ flutter pub get
 flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3100
 ```
 
-`flutter create .` generates the `android/` and `ios/` platform folders, which
-are intentionally not committed here — they are large, largely generated, and
-regenerating them is a one-line command.
+`flutter create .` generates the `android/` and `ios/` platform folders. They are
+deliberately ignored because they are generated; run the command after cloning.
 
 ## Talking to a local API
 

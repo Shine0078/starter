@@ -1,9 +1,9 @@
-/// Wire models mirroring the API's response shapes.
-///
-/// Monetary fields arrive twice: an integer in minor units for arithmetic and
-/// comparison, and a preformatted display string. The client renders the
-/// string and never re-derives it, so currency formatting stays consistent
-/// across platforms and never drifts from the server's view (ADR-0003).
+// Wire models mirroring the API's response shapes.
+//
+// Monetary fields arrive twice: an integer in minor units for arithmetic and
+// comparison, and a preformatted display string. The client renders the
+// string and never re-derives it, so currency formatting stays consistent
+// across platforms and never drifts from the server's view (ADR-0003).
 
 class SyncResult {
   SyncResult({
