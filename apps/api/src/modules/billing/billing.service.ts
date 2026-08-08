@@ -12,9 +12,11 @@ import {
   bankLinkLimitFor,
   effectivePlan,
   hasEntitlement,
+  isBillingInterval,
   isPlanId,
   planFor,
   PURCHASABLE_PLANS,
+  type BillingInterval,
   type Entitlement,
   type PlanId,
 } from '../../domain/billing/plans';
@@ -43,6 +45,16 @@ export interface PlanSummary {
   trialEnd: string | null;
   /** False when billing is not configured, so clients can hide the upgrade UI. */
   purchaseAvailable: boolean;
+  /**
+   * False when this deployment does not enforce plan limits at all, so a client
+   * can say "everything is available here" rather than showing a tier
+   * comparison nobody can act on.
+   */
+  gatesEnforced: boolean;
+  /** Intervals this deployment can sell, e.g. `['month', 'year']`. */
+  intervals: BillingInterval[];
+  /** Days of free trial a new subscription gets. Zero means none. */
+  trialDays: number;
 }
 
 @Injectable()
@@ -69,24 +81,51 @@ export class BillingService {
     return effectivePlan(record, this.clock.now());
   }
 
+  /**
+   * Whether plan limits apply on this deployment at all.
+   *
+   * Tied to whether a payment provider is configured, rather than being its own
+   * flag, because the two are the same decision: nobody should be refused a
+   * feature for not paying on a deployment where paying is impossible. That
+   * would be a dead end with no way out of it — and it is the state every
+   * developer checkout, CI run, and self-hosted instance is in.
+   *
+   * Configuring Stripe is therefore what switches pricing on, and there is no
+   * second switch to forget.
+   */
+  private get gatesEnforced(): boolean {
+    return this.provider.configured;
+  }
+
   async summary(userId: string): Promise<PlanSummary> {
     const record = await this.subscriptions.get(userId);
     const plan = effectivePlan(record, this.clock.now());
+    const enforced = this.gatesEnforced;
+
+    // With gates off, the reported limits are what the user can actually do.
+    // Advertising a one-institution cap that nothing enforces would be a lie in
+    // the more embarrassing direction.
+    const effective = enforced ? plan : 'pro';
 
     return {
       plan,
       planName: planFor(plan).name,
       status: record?.status ?? 'none',
-      bankLinkLimit: bankLinkLimitFor(plan),
-      entitlements: planFor(plan).entitlements,
+      bankLinkLimit: bankLinkLimitFor(effective),
+      entitlements: planFor(effective).entitlements,
       currentPeriodEnd: record?.currentPeriodEnd?.toISOString() ?? null,
       cancelAtPeriodEnd: record?.cancelAtPeriodEnd ?? false,
       trialEnd: record?.trialEnd?.toISOString() ?? null,
       purchaseAvailable: this.provider.configured,
+      gatesEnforced: enforced,
+      intervals: this.provider.intervalsFor('pro'),
+      trialDays: this.provider.trialDays,
     };
   }
 
   async requireEntitlement(userId: string, entitlement: Entitlement): Promise<void> {
+    if (!this.gatesEnforced) return;
+
     const plan = await this.currentPlan(userId);
     if (hasEntitlement(plan, entitlement)) return;
 
@@ -100,6 +139,7 @@ export class BillingService {
 
   /** How many more institutions this user may connect. Never negative. */
   async remainingBankLinks(userId: string, connected: number): Promise<number> {
+    if (!this.gatesEnforced) return Number.MAX_SAFE_INTEGER;
     const limit = bankLinkLimitFor(await this.currentPlan(userId));
     return Math.max(0, limit - connected);
   }
@@ -114,11 +154,25 @@ export class BillingService {
    * could name a price could name a cheaper one, and this is the one place
    * where trusting the caller costs real money.
    */
-  async createCheckoutSession(userId: string, plan: string): Promise<{ url: string; expiresAt: string | null }> {
+  async createCheckoutSession(
+    userId: string,
+    plan: string,
+    interval: string,
+  ): Promise<{ url: string; expiresAt: string | null }> {
     this.requireConfigured();
 
     if (!isPlanId(plan) || !PURCHASABLE_PLANS.includes(plan)) {
       throw new BadRequestException(`Unknown or unpurchasable plan "${plan}".`);
+    }
+    if (!isBillingInterval(interval)) {
+      throw new BadRequestException(`Unknown billing interval "${interval}".`);
+    }
+    // A price this deployment has not configured cannot be sold, and failing
+    // here beats a Stripe error the user cannot act on.
+    if (!this.provider.priceIdFor(plan, interval)) {
+      throw new BadRequestException(
+        `The ${plan} plan is not sold ${interval}ly on this deployment.`,
+      );
     }
 
     const user = await this.users.findById(userId);
@@ -155,6 +209,7 @@ export class BillingService {
     const session = await this.provider.createCheckoutSession({
       customerId,
       plan,
+      interval,
       userId,
       successUrl: urls.successUrl,
       cancelUrl: urls.cancelUrl,

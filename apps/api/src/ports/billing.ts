@@ -1,4 +1,4 @@
-import type { PlanId, SubscriptionStatus } from '../domain/billing/plans';
+import type { BillingInterval, PlanId, SubscriptionStatus } from '../domain/billing/plans';
 
 export const BILLING_PROVIDER = 'BILLING_PROVIDER';
 export const SUBSCRIPTION_STORE = 'SUBSCRIPTION_STORE';
@@ -92,12 +92,17 @@ export interface CheckoutSession {
 export interface BillingProvider {
   readonly name: 'stripe';
   configured: boolean;
-  /** Price ids the provider is configured to sell, by plan. */
-  priceIdFor(plan: PlanId): string | null;
+  /** The price selling this plan at this interval, or null if not configured. */
+  priceIdFor(plan: PlanId, interval: BillingInterval): string | null;
+  /** Intervals this deployment can actually sell for a plan. */
+  intervalsFor(plan: PlanId): BillingInterval[];
+  /** Days of free trial on a new subscription. Zero means none. */
+  readonly trialDays: number;
   ensureCustomer(userId: string, email: string, existingId: string | null): Promise<string>;
   createCheckoutSession(input: {
     customerId: string;
     plan: PlanId;
+    interval: BillingInterval;
     userId: string;
     successUrl: string;
     cancelUrl: string;

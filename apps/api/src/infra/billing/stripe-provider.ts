@@ -1,6 +1,12 @@
 import Stripe from 'stripe';
 
-import { isPlanId, type PlanId, type SubscriptionStatus } from '../../domain/billing/plans';
+import {
+  BILLING_INTERVALS,
+  isPlanId,
+  type BillingInterval,
+  type PlanId,
+  type SubscriptionStatus,
+} from '../../domain/billing/plans';
 import type {
   BillingEvent,
   BillingProvider,
@@ -8,11 +14,18 @@ import type {
   ProviderSubscription,
 } from '../../ports/billing';
 
+/** Price ids keyed by plan and then by billing interval. */
+export type PriceCatalogue = Partial<
+  Record<PlanId, Partial<Record<BillingInterval, string>>>
+>;
+
 export interface StripeProviderOptions {
   secretKey?: string;
   webhookSecret?: string;
-  /** Price id per purchasable plan, from the Stripe dashboard. */
-  priceIds: Partial<Record<PlanId, string>>;
+  /** Price ids per purchasable plan and interval, from the Stripe dashboard. */
+  priceIds: PriceCatalogue;
+  /** Free-trial length on a new subscription. Zero disables the trial. */
+  trialDays?: number;
 }
 
 /**
@@ -28,15 +41,22 @@ const USER_ID_METADATA = 'finverse_user_id';
 export class StripeBillingProvider implements BillingProvider {
   readonly name = 'stripe' as const;
   readonly configured: boolean;
+  readonly trialDays: number;
   private readonly client: Stripe | null;
   private readonly webhookSecret: string | undefined;
-  private readonly priceIds: Partial<Record<PlanId, string>>;
+  private readonly priceIds: PriceCatalogue;
 
   constructor(options: StripeProviderOptions) {
     const { secretKey, webhookSecret, priceIds } = options;
     this.configured = Boolean(secretKey);
     this.webhookSecret = webhookSecret;
     this.priceIds = priceIds;
+
+    const trialDays = options.trialDays ?? 0;
+    if (!Number.isInteger(trialDays) || trialDays < 0 || trialDays > 365) {
+      throw new Error('BILLING_TRIAL_DAYS must be a whole number of days between 0 and 365.');
+    }
+    this.trialDays = trialDays;
 
     // Half-configured billing is the dangerous state: checkout would work and
     // webhooks would be rejected, so customers would be charged and never
@@ -47,8 +67,13 @@ export class StripeBillingProvider implements BillingProvider {
           'webhook is rejected, so customers would be charged and never receive their plan.',
       );
     }
-    if (this.configured && !priceIds.pro) {
-      throw new Error('STRIPE_PRICE_ID_PRO is required when Stripe is configured.');
+    // At least one sellable price, or checkout is a button that always fails.
+    // Monthly alone is a valid configuration; annual-only is unusual but legal.
+    if (this.configured && !priceIds.pro?.month && !priceIds.pro?.year) {
+      throw new Error(
+        'At least one of STRIPE_PRICE_ID_PRO_MONTHLY or STRIPE_PRICE_ID_PRO_ANNUAL ' +
+          'is required when Stripe is configured.',
+      );
     }
     if (secretKey && !/^sk_(test|live)_/.test(secretKey)) {
       // A publishable key here would fail on first use with an opaque 401.
@@ -68,8 +93,12 @@ export class StripeBillingProvider implements BillingProvider {
       : null;
   }
 
-  priceIdFor(plan: PlanId): string | null {
-    return this.priceIds[plan] ?? null;
+  priceIdFor(plan: PlanId, interval: BillingInterval): string | null {
+    return this.priceIds[plan]?.[interval] ?? null;
+  }
+
+  intervalsFor(plan: PlanId): BillingInterval[] {
+    return BILLING_INTERVALS.filter((interval) => this.priceIdFor(plan, interval) !== null);
   }
 
   async ensureCustomer(userId: string, email: string, existingId: string | null): Promise<string> {
@@ -96,13 +125,16 @@ export class StripeBillingProvider implements BillingProvider {
   async createCheckoutSession(input: {
     customerId: string;
     plan: PlanId;
+    interval: BillingInterval;
     userId: string;
     successUrl: string;
     cancelUrl: string;
   }): Promise<CheckoutSession> {
     const client = this.requireClient();
-    const price = this.priceIdFor(input.plan);
-    if (!price) throw new Error(`No configured price for plan "${input.plan}".`);
+    const price = this.priceIdFor(input.plan, input.interval);
+    if (!price) {
+      throw new Error(`No configured price for plan "${input.plan}" billed ${input.interval}ly.`);
+    }
 
     const session = await client.checkout.sessions.create({
       mode: 'subscription',
@@ -114,7 +146,10 @@ export class StripeBillingProvider implements BillingProvider {
       // itself is a filing obligation, not a flag — see docs/08.
       automatic_tax: { enabled: true },
       customer_update: { address: 'auto' },
-      subscription_data: { metadata: { [USER_ID_METADATA]: input.userId } },
+      subscription_data: {
+        metadata: { [USER_ID_METADATA]: input.userId },
+        ...(this.trialDays > 0 ? { trial_period_days: this.trialDays } : {}),
+      },
       metadata: { [USER_ID_METADATA]: input.userId },
     });
 
@@ -152,11 +187,14 @@ export class StripeBillingProvider implements BillingProvider {
     }
   }
 
-  /** Maps a Stripe price back to the plan it sells. */
+  /** Maps a Stripe price back to the plan it sells, whichever interval it is. */
   private planForPrice(priceId: string | null): PlanId | null {
     if (!priceId) return null;
-    for (const [plan, configured] of Object.entries(this.priceIds)) {
-      if (configured === priceId && isPlanId(plan)) return plan;
+    for (const [plan, byInterval] of Object.entries(this.priceIds)) {
+      if (!isPlanId(plan)) continue;
+      for (const configured of Object.values(byInterval ?? {})) {
+        if (configured === priceId) return plan;
+      }
     }
     return null;
   }

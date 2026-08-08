@@ -40,7 +40,7 @@ export class BillingController {
   @Post('checkout-session')
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   checkout(@CurrentUser() userId: string, @Body() body: CreateCheckoutSessionDto) {
-    return this.billing.createCheckoutSession(userId, body.plan);
+    return this.billing.createCheckoutSession(userId, body.plan, body.interval ?? 'month');
   }
 
   /** A link to the provider's management page: cancel, change card, invoices. */

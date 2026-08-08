@@ -15,7 +15,7 @@ import {
 } from '../src/infra/billing/subscription-stores';
 import { BillingService } from '../src/modules/billing/billing.service';
 import type { BillingProvider, ProviderSubscription } from '../src/ports/billing';
-import type { PlanId } from '../src/domain/billing/plans';
+import type { BillingInterval, PlanId } from '../src/domain/billing/plans';
 
 /**
  * A provider that never talks to Stripe.
@@ -33,15 +33,28 @@ export class FakeBillingProvider implements BillingProvider {
   customers: Array<{ userId: string; email: string }> = [];
   portalCalls = 0;
 
-  priceIdFor(plan: PlanId): string | null {
-    return plan === 'pro' ? 'price_pro_test' : null;
+  /** Which intervals this fake sells. Narrow it to test an unsold interval. */
+  intervals: BillingInterval[] = ['month', 'year'];
+  trialDays = 14;
+
+  priceIdFor(plan: PlanId, interval: BillingInterval): string | null {
+    if (plan !== 'pro' || !this.intervals.includes(interval)) return null;
+    return `price_pro_${interval}`;
+  }
+
+  intervalsFor(plan: PlanId): BillingInterval[] {
+    return plan === 'pro' ? [...this.intervals] : [];
   }
   async ensureCustomer(userId: string, email: string, existingId: string | null): Promise<string> {
     if (existingId) return existingId;
     this.customers.push({ userId, email });
     return `cus_${userId}`;
   }
-  async createCheckoutSession(input: { customerId: string }) {
+  lastCheckout: { plan: PlanId; interval: BillingInterval } | null = null;
+
+  async createCheckoutSession(
+      input: { customerId: string; plan: PlanId; interval: BillingInterval }) {
+    this.lastCheckout = { plan: input.plan, interval: input.interval };
     return { url: `https://checkout.test/${input.customerId}`, expiresAt: null };
   }
   async createPortalSession(customerId: string) {

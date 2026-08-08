@@ -47,6 +47,11 @@ class _PlanScreenState extends State<PlanScreen> {
   var _loading = true;
   var _working = false;
 
+  /// Annual is preselected where it is offered. It is the better deal for the
+  /// customer and materially better for the business, and a default nobody
+  /// changes is the most-taken path.
+  String _interval = 'year';
+
   @override
   void initState() {
     super.initState();
@@ -65,9 +70,15 @@ class _PlanScreenState extends State<PlanScreen> {
         widget.api.billingPlans(),
       ]);
       if (!mounted) return;
+      final summary = results[0] as PlanSummary;
       setState(() {
-        _summary = results[0] as PlanSummary;
+        _summary = summary;
         _plans = results[1] as List<BillingPlan>;
+        // Never leave the selection on an interval this deployment cannot sell,
+        // which would produce a checkout the server has to refuse.
+        if (!summary.intervals.contains(_interval)) {
+          _interval = summary.intervals.isEmpty ? 'month' : summary.intervals.first;
+        }
         _loading = false;
       });
     } catch (error) {
@@ -83,7 +94,7 @@ class _PlanScreenState extends State<PlanScreen> {
     if (_working) return;
     setState(() => _working = true);
     try {
-      final session = await widget.api.startCheckout(plan);
+      final session = await widget.api.startCheckout(plan, interval: _interval);
       if (!mounted) return;
       await _open(session.url, 'checkout');
       // The webhook that records the purchase arrives independently of the
@@ -180,6 +191,28 @@ class _PlanScreenState extends State<PlanScreen> {
     }
 
     final summary = _summary!;
+
+    // A deployment with no payment provider applies no limits, so a tier
+    // comparison would be describing a paywall that does not exist here.
+    if (!summary.gatesEnforced) {
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+        children: [
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.all_inclusive),
+              title: const Text('Everything is available'),
+              subtitle: Text(
+                'This server does not limit features by plan. You can connect '
+                'up to ${summary.bankLinkLimit} institutions and use every '
+                'feature.',
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       children: [
@@ -187,6 +220,7 @@ class _PlanScreenState extends State<PlanScreen> {
         if (summary.needsPaymentAttention) _paymentWarning(summary),
         const SizedBox(height: 20),
         _heading('WHAT EACH PLAN INCLUDES'),
+        if (_showsIntervalChoice(summary)) _intervalToggle(summary),
         ..._plans.map((plan) => _planCard(plan, summary)),
         const SizedBox(height: 12),
         if (summary.purchaseAvailable && !canPurchaseWith(widget.purchaseMode))
@@ -208,6 +242,30 @@ class _PlanScreenState extends State<PlanScreen> {
       ],
     );
   }
+
+  /// Only worth showing when there is a real choice and the user can act on it.
+  bool _showsIntervalChoice(PlanSummary summary) =>
+      summary.intervals.length > 1 &&
+      summary.purchaseAvailable &&
+      canPurchaseWith(widget.purchaseMode) &&
+      summary.isFree;
+
+  Widget _intervalToggle(PlanSummary summary) => Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: SegmentedButton<String>(
+          segments: [
+            for (final interval in summary.intervals)
+              ButtonSegment(
+                value: interval,
+                label: Text(interval == 'year' ? 'Yearly' : 'Monthly'),
+              ),
+          ],
+          selected: {_interval},
+          onSelectionChanged: _working
+              ? null
+              : (selection) => setState(() => _interval = selection.first),
+        ),
+      );
 
   Widget _currentPlanCard(PlanSummary summary) {
     final theme = Theme.of(context);
@@ -322,8 +380,23 @@ class _PlanScreenState extends State<PlanScreen> {
               const SizedBox(height: 12),
               FilledButton(
                 onPressed: _working ? null : () => _upgrade(plan.id),
-                child: Text('Upgrade to ${plan.name}'),
+                child: Text(summary.trialDays > 0
+                    ? 'Start ${summary.trialDays}-day free trial'
+                    : 'Upgrade to ${plan.name}'),
               ),
+              if (summary.trialDays > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    // Said plainly and up front. A trial that quietly becomes a
+                    // charge is the single most common complaint about
+                    // subscription apps, and burying it costs more in refunds
+                    // and chargebacks than it ever gains in signups.
+                    'Then billed ${_interval == 'year' ? 'yearly' : 'monthly'}. '
+                    'Cancel any time before it ends.',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
             ],
           ],
         ),

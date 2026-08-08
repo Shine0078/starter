@@ -723,9 +723,13 @@ class ApiClient {
   /// Only a plan id crosses the wire — never a price. The server resolves what
   /// to charge from its own configuration, so a tampered client cannot ask to
   /// be sold something cheaper.
-  Future<CheckoutSession> startCheckout(String plan) async {
-    final json = await _send('POST', '/billing/checkout-session', {'plan': plan})
-        as Map<String, dynamic>;
+  Future<CheckoutSession> startCheckout(String plan,
+      {String interval = 'month'}) async {
+    final json = await _send(
+      'POST',
+      '/billing/checkout-session',
+      {'plan': plan, 'interval': interval},
+    ) as Map<String, dynamic>;
     return CheckoutSession.fromJson(json);
   }
 

@@ -35,14 +35,25 @@ export interface Plan {
 }
 
 /**
+ * **The line is the past against the future.** Free answers "where did my money
+ * go" — transactions, categorisation, budgets, goals, insights, health score,
+ * subscription detection, credit-card utilisation. Pro answers "what happens
+ * next" — the cash-flow forecast, the purchase simulator, and the monthly
+ * report. That is one sentence a customer can repeat, which matters more for
+ * conversion than any individual feature placement, and it puts the paywall
+ * around the work the product is actually differentiated on.
+ *
  * The free tier is deliberately useful rather than crippled. A finance app that
  * shows you nothing until you pay cannot demonstrate that it is worth paying
- * for, and the expensive resource here is the aggregator connection — which is
- * what the link limit actually meters.
+ * for. One connected institution is a real, working product for someone who
+ * banks in one place; needing a second is the most common reason to upgrade and
+ * the point where the aggregator starts costing us per Item per month.
  *
  * Export is free on purpose. Holding someone's financial data hostage behind a
  * subscription is the opposite of the mission's "user owns their data", and in
  * several jurisdictions data portability is a right rather than a feature.
+ *
+ * See docs/09-pricing.md for the price points and the reasoning behind them.
  */
 export const PLANS: Readonly<Record<PlanId, Plan>> = {
   free: {
@@ -54,6 +65,9 @@ export const PLANS: Readonly<Record<PlanId, Plan>> = {
   pro: {
     id: 'pro',
     name: 'Pro',
+    // Not literally unlimited. A ceiling caps the aggregator bill a single
+    // compromised or automated account can run up, and 25 is far beyond any
+    // household's real institution count.
     bankLinkLimit: 25,
     entitlements: [
       'unlimited_bank_links',
@@ -63,6 +77,22 @@ export const PLANS: Readonly<Record<PlanId, Plan>> = {
     ],
   },
 };
+
+/**
+ * How often a plan can be billed.
+ *
+ * Annual exists because it is how this category actually works: it front-loads
+ * cash and cuts churn sharply, and every competitor offers it. The discount is
+ * configured in Stripe alongside the price, not here — see the note on the
+ * catalogue above about not keeping a second copy of what customers are charged.
+ */
+export type BillingInterval = 'month' | 'year';
+
+export const BILLING_INTERVALS: readonly BillingInterval[] = ['month', 'year'];
+
+export function isBillingInterval(value: unknown): value is BillingInterval {
+  return value === 'month' || value === 'year';
+}
 
 export const DEFAULT_PLAN: PlanId = 'free';
 

@@ -153,9 +153,18 @@ derived by a pure function that fails closed on a missing record, an unknown
 status, or a lapsed period, so a missed webhook downgrades rather than gives the
 product away.
 
-Only the connected-institution limit is enforced today. The tiering in
-`src/domain/billing/plans.ts` is a placeholder shape rather than a pricing
-decision — the mechanism is complete, the product decision is not.
+**Free tells you where your money went; Pro tells you what happens next.** The
+free tier keeps transactions, categorisation, budgets, goals, insights, the
+health score, subscription detection and export; Pro adds the cash-flow
+forecast, the purchase simulator, the monthly PDF report, and more than one
+connected institution. Monthly or annual, with a 14-day trial.
+See [09-pricing.md](docs/09-pricing.md) for the price points and the argument
+behind them.
+
+Gates are **inert on any deployment with no payment provider configured** —
+nobody is refused a feature for not paying where paying is impossible, which is
+the state of every developer checkout and CI run. Configuring Stripe is what
+switches pricing on; there is no second flag.
 
 The mobile client has a plan screen and a paywall sheet, and turns the API's
 `plan_upgrade_required` 403 into a typed exception so any gated route explains

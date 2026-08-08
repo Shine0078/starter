@@ -246,7 +246,13 @@ function storeProviders(): Provider[] {
         new StripeBillingProvider({
           secretKey: process.env.STRIPE_SECRET_KEY,
           webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
-          priceIds: { pro: process.env.STRIPE_PRICE_ID_PRO },
+          priceIds: {
+            pro: {
+              month: process.env.STRIPE_PRICE_ID_PRO_MONTHLY,
+              year: process.env.STRIPE_PRICE_ID_PRO_ANNUAL,
+            },
+          },
+          trialDays: Number(process.env.BILLING_TRIAL_DAYS ?? 14),
         }),
     },
     {

@@ -53,7 +53,8 @@ class FakeDeviceAuthenticator implements DeviceAuthenticator {
 /// Canned billing responses, so each test only overrides what it cares about.
 const _freePlanJson = '{"plan":"free","planName":"Free","status":"none",'
     '"bankLinkLimit":1,"entitlements":["data_export"],'
-    '"cancelAtPeriodEnd":false,"purchaseAvailable":true,'
+    '"cancelAtPeriodEnd":false,"purchaseAvailable":true,"gatesEnforced":true,'
+    '"intervals":["month","year"],"trialDays":14,'
     '"currentPeriodEnd":null,"trialEnd":null}';
 
 const _plansJson = '{"plans":['
@@ -125,15 +126,71 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    expect(find.text('Upgrade to Pro'), findsOneWidget);
-    await tester.tap(find.text('Upgrade to Pro'));
+    // Annual is preselected: the better deal for the customer, and the default
+    // nobody changes is the most-taken path.
+    expect(find.text('Start 14-day free trial'), findsOneWidget);
+    expect(find.textContaining('Then billed yearly'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Start 14-day free trial'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Start 14-day free trial'));
     await tester.pumpAndSettle();
 
-    // A plan id crosses the wire, never a price — the server decides what to
-    // charge, so a tampered client cannot ask to be sold something cheaper.
+    // A plan id and an interval cross the wire, never a price — the server
+    // decides what to charge, so a tampered client cannot ask for a cheaper one.
     expect(checkout, isNotNull);
     expect(checkout!.body, contains('"plan":"pro"'));
+    expect(checkout!.body, contains('"interval":"year"'));
     expect(checkout!.body, isNot(contains('price')));
+  });
+
+  testWidgets('sells the interval the customer picks', (tester) async {
+    http.Request? checkout;
+    final api = clientWith(MockClient((request) async {
+      final billing = _billingResponse(request);
+      if (billing != null) return billing;
+      if (request.url.path.endsWith('/billing/checkout-session')) {
+        checkout = request;
+        return http.Response('{"url":"https://checkout.test/s","expiresAt":null}', 200);
+      }
+      return http.Response('{}', 404);
+    }));
+
+    await tester.pumpWidget(MaterialApp(
+      home: PlanScreen(api: api, purchaseMode: BillingPurchaseMode.linkOut),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Monthly'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Then billed monthly'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Start 14-day free trial'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Start 14-day free trial'));
+    await tester.pumpAndSettle();
+    expect(checkout!.body, contains('"interval":"month"'));
+  });
+
+  testWidgets('says everything is available where no plan limits apply',
+      (tester) async {
+    // Every developer checkout, CI run, and self-hosted instance is in this
+    // state. Showing them a tier comparison for a paywall that does not exist
+    // would be describing someone else's deployment.
+    const ungated = '{"plan":"free","planName":"Free","status":"none",'
+        '"bankLinkLimit":25,"entitlements":["data_export","cash_flow_planning"],'
+        '"cancelAtPeriodEnd":false,"purchaseAvailable":false,'
+        '"gatesEnforced":false,"intervals":[],"trialDays":0,'
+        '"currentPeriodEnd":null,"trialEnd":null}';
+    final api = clientWith(MockClient((request) async =>
+        _billingResponse(request, subscription: ungated) ??
+        http.Response('{}', 404)));
+
+    await tester.pumpWidget(MaterialApp(home: PlanScreen(api: api)));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Everything is available'), findsOneWidget);
+    expect(find.text('WHAT EACH PLAN INCLUDES'), findsNothing);
   });
 
   testWidgets('tells a subscriber their payment failed without implying lockout',

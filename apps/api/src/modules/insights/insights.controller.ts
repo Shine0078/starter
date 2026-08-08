@@ -5,28 +5,25 @@ import { StreamableFile } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { renderMonthlyReportPdf } from '../../infra/reports/monthly-report-pdf';
 import { CurrentUser } from '../auth/auth.guard';
-import { EntitlementGuard } from '../billing/entitlement.guard';
+import { EntitlementGuard, RequiresEntitlement } from '../billing/entitlement.guard';
 import { InsightsService } from './insights.service';
 
 /**
- * No route here is gated, deliberately, and that is a decision worth recording
- * rather than an omission.
+ * Where the paywall falls, and why it falls here.
  *
- * The billing mechanism is complete and `EntitlementGuard` is wired up, so
- * turning a route into a paid feature is one `@RequiresEntitlement(...)`
- * decorator. It is not switched on because two things have to happen first:
+ * The line is **the past against the future**. `insights`, `health-score`,
+ * `subscriptions`, and `credit-cards` explain money already spent and stay free:
+ * a finance app that shows a new user nothing cannot demonstrate it is worth
+ * paying for. The forecast, the purchase simulator, and the monthly report
+ * project *forward*, which is both the expensive work and the thing this
+ * product is differentiated on — so that is what Pro buys.
  *
- *  1. Someone has to *decide* the pricing model. The entitlements in
- *     domain/billing/plans.ts are a placeholder shape, not a product decision.
- *  2. The Flutter client has to handle the resulting 403. It already calls
- *     `reports/monthly.pdf`, `cash-flow-forecast`, and `purchase-scenario` on
- *     every user, so gating any of them today would break the shipping app for
- *     everyone with no upgrade path in the UI to recover through.
+ * These gates are inert unless the deployment has a payment provider
+ * configured (see BillingService.gatesEnforced). Nobody is ever refused a
+ * feature for not paying on an instance where paying is impossible.
  *
- * The one limit that *is* enforced is the bank-link count, in BankingService —
- * because a connected institution costs real money per Item at the aggregator,
- * and it fails at connect time, which is exactly where an upgrade prompt
- * belongs.
+ * Tiering itself is decided in one place — domain/billing/plans.ts — and the
+ * price points and reasoning are in docs/09-pricing.md.
  */
 @Controller()
 @UseGuards(EntitlementGuard)
@@ -66,6 +63,7 @@ export class InsightsController {
   }
 
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @RequiresEntitlement('monthly_pdf_report')
   @Get('reports/monthly.pdf')
   async monthlyPdf(
     @CurrentUser() userId: string,
@@ -117,6 +115,7 @@ export class InsightsController {
     return this.insights.healthScore(userId, asOf);
   }
 
+  @RequiresEntitlement('cash_flow_planning')
   @Get('cash-flow-forecast')
   async cashFlowForecast(
     @CurrentUser() userId: string,
@@ -168,6 +167,7 @@ export class InsightsController {
     }));
   }
 
+  @RequiresEntitlement('cash_flow_planning')
   @Get('purchase-scenario')
   async purchaseScenario(
     @CurrentUser() userId: string,

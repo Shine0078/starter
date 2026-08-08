@@ -991,6 +991,9 @@ class PlanSummary {
     required this.entitlements,
     required this.cancelAtPeriodEnd,
     required this.purchaseAvailable,
+    this.gatesEnforced = true,
+    this.intervals = const ['month'],
+    this.trialDays = 0,
     this.currentPeriodEnd,
     this.trialEnd,
   });
@@ -1007,6 +1010,13 @@ class PlanSummary {
         // supported deployment rather than an error — the UI hides buying
         // instead of offering something that would 503.
         purchaseAvailable: json['purchaseAvailable'] as bool? ?? false,
+        // Defaults to true so an older server that does not send the field is
+        // treated as enforcing. Assuming the permissive case would show a free
+        // user a "everything included" screen that the API then contradicts.
+        gatesEnforced: json['gatesEnforced'] as bool? ?? true,
+        intervals:
+            (json['intervals'] as List<dynamic>? ?? const ['month']).cast<String>(),
+        trialDays: json['trialDays'] as int? ?? 0,
         currentPeriodEnd: _parseDate(json['currentPeriodEnd']),
         trialEnd: _parseDate(json['trialEnd']),
       );
@@ -1021,6 +1031,18 @@ class PlanSummary {
   final List<String> entitlements;
   final bool cancelAtPeriodEnd;
   final bool purchaseAvailable;
+
+  /// False when this deployment applies no plan limits, so the UI says
+  /// "everything is available here" rather than showing a tier comparison
+  /// nobody can act on.
+  final bool gatesEnforced;
+
+  /// Billing intervals this deployment can sell, e.g. `['month', 'year']`.
+  final List<String> intervals;
+
+  /// Days of free trial on a new subscription. Zero means none.
+  final int trialDays;
+
   final DateTime? currentPeriodEnd;
   final DateTime? trialEnd;
 

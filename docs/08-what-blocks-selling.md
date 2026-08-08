@@ -165,7 +165,7 @@ and a second integration for the mobile stores.
 
 | # | Item | State | Effort |
 |---|---|---|---|
-| 6.1 | **Pricing model decided** — tiers, trial, what belongs behind the paywall | **Outstanding, and it blocks 6.7.** The tiering in `domain/billing/plans.ts` is a placeholder shape chosen to exercise the mechanism, not a product decision | product decision |
+| 6.1 | **Pricing model decided** — tiers, trial, what belongs behind the paywall | **Completed and implemented.** Free/Pro split on "the past is free, the future is paid", monthly and annual billing, 14-day trial, and gates that are inert until a payment provider is configured. Price points are a recommendation argued from competitor pricing and this product's aggregator costs — see [09-pricing.md](09-pricing.md) | Owner to confirm the numbers |
 | 6.2 | **Payment integration** via hosted checkout | **Completed.** Stripe Checkout and Billing Portal; no card data reaches this system, so PCI scope stays out | Stripe account required |
 | 6.3 | **Subscription lifecycle** — trials, upgrades, cancellation, dunning, refunds | **Completed** by delegating to the provider's hosted portal and reacting to its webhooks. `past_due` deliberately stays entitled while dunning runs | — |
 | 6.4 | **Entitlement enforcement** | **Completed.** `effectivePlan()` derives the plan and fails closed on a missing record, unknown status, lapsed period, or unrecognised price. `EntitlementGuard` gates any route with one decorator | — |

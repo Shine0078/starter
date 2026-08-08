@@ -17,6 +17,7 @@ the traps that cost time to rediscover.
 | [06-cheap-launch-path.md](06-cheap-launch-path.md) | The lowest-cost route to a personal beta |
 | [07-session-notes.md](07-session-notes.md) | Where work stopped and how to pick it up |
 | [08-what-blocks-selling.md](08-what-blocks-selling.md) | Everything between this repo and charging money for it |
+| [09-pricing.md](09-pricing.md) | The tiers, the price points, and the reasoning behind both |
 | [09-launch-operations.md](09-launch-operations.md) | Release order, database operations, backups, monitoring, and infrastructure gates |
 | [10-threat-model.md](10-threat-model.md) | Assets, trust boundaries, abuse cases, threat register, and production security gates |
 | [adr/](adr/) | Decisions with consequences, recorded |

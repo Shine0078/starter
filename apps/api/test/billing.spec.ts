@@ -220,15 +220,46 @@ describe('checkout', () => {
 
     // The client sends a plan id, never a price. A client that could name a
     // price could name a cheaper one.
-    await expect(h.billing.createCheckoutSession('user-1', 'enterprise')).rejects.toThrow(/Unknown or unpurchasable/);
-    await expect(h.billing.createCheckoutSession('user-1', 'free')).rejects.toThrow(/Unknown or unpurchasable/);
+    await expect(h.billing.createCheckoutSession('user-1', 'enterprise', 'month'))
+        .rejects.toThrow(/Unknown or unpurchasable/);
+    await expect(h.billing.createCheckoutSession('user-1', 'free', 'month'))
+        .rejects.toThrow(/Unknown or unpurchasable/);
+  });
+
+  it('refuses an interval the client made up', async () => {
+    const h = billingHarness();
+    await h.users.create({ id: 'user-1', email: 'a@example.com', passwordHash: 'x', displayName: null });
+
+    // The annual discount lives on the annual price in Stripe, so naming an
+    // interval is naming a price. Anything unrecognised has to be refused.
+    await expect(h.billing.createCheckoutSession('user-1', 'pro', 'decade'))
+        .rejects.toThrow(/Unknown billing interval/);
+  });
+
+  it('refuses an interval this deployment does not sell', async () => {
+    const h = billingHarness();
+    h.provider.intervals = ['month'];
+    await h.users.create({ id: 'user-1', email: 'a@example.com', passwordHash: 'x', displayName: null });
+
+    // Better a clear refusal than a Stripe error about a missing price, which
+    // the user can do nothing about.
+    await expect(h.billing.createCheckoutSession('user-1', 'pro', 'year'))
+        .rejects.toThrow(/not sold yearly/);
+  });
+
+  it('sells the interval the customer chose', async () => {
+    const h = billingHarness();
+    await h.users.create({ id: 'user-1', email: 'a@example.com', passwordHash: 'x', displayName: null });
+
+    await h.billing.createCheckoutSession('user-1', 'pro', 'year');
+    expect(h.provider.lastCheckout).toEqual({ plan: 'pro', interval: 'year' });
   });
 
   it('stores the customer handle before sending the user to pay', async () => {
     const h = billingHarness();
     await h.users.create({ id: 'user-1', email: 'a@example.com', passwordHash: 'x', displayName: null });
 
-    await h.billing.createCheckoutSession('user-1', 'pro');
+    await h.billing.createCheckoutSession('user-1', 'pro', 'month');
 
     // If this write had not happened, a completed payment would arrive naming a
     // customer we have never heard of, and the money would strand.
@@ -244,7 +275,8 @@ describe('checkout', () => {
       trialEnd: null, updatedAt: NOW,
     });
 
-    await expect(h.billing.createCheckoutSession('user-1', 'pro')).rejects.toThrow(/already subscribed/);
+    await expect(h.billing.createCheckoutSession('user-1', 'pro', 'month'))
+        .rejects.toThrow(/already subscribed/);
   });
 
   it('reports billing as unavailable when it is not configured', async () => {
@@ -252,7 +284,8 @@ describe('checkout', () => {
     h.provider.configured = false;
     await h.users.create({ id: 'user-1', email: 'a@example.com', passwordHash: 'x', displayName: null });
 
-    await expect(h.billing.createCheckoutSession('user-1', 'pro')).rejects.toThrow(/not configured/);
+    await expect(h.billing.createCheckoutSession('user-1', 'pro', 'month'))
+        .rejects.toThrow(/not configured/);
     expect((await h.billing.summary('user-1')).purchaseAvailable).toBe(false);
   });
 
@@ -287,6 +320,79 @@ describe('entitlement gates', () => {
     expect(await h.billing.remainingBankLinks('user-1', 0)).toBe(bankLinkLimitFor('free'));
     expect(await h.billing.remainingBankLinks('user-1', 1)).toBe(0);
     expect(await h.billing.remainingBankLinks('user-1', 99)).toBe(0);
+  });
+
+  // The single most important behaviour in this file. A deployment with no
+  // payment provider cannot sell anything, so refusing a feature there would be
+  // a dead end with no way out — and that is the state of every developer
+  // checkout, CI run, and self-hosted instance.
+  describe('when the deployment cannot take payment', () => {
+    it('refuses nothing', async () => {
+      const h = billingHarness();
+      h.provider.configured = false;
+
+      await expect(h.billing.requireEntitlement('user-1', 'monthly_pdf_report'))
+          .resolves.toBeUndefined();
+      await expect(h.billing.requireEntitlement('user-1', 'cash_flow_planning'))
+          .resolves.toBeUndefined();
+      expect(await h.billing.remainingBankLinks('user-1', 50)).toBeGreaterThan(0);
+    });
+
+    it('reports the limits it actually applies, not the ones it does not', async () => {
+      const h = billingHarness();
+      h.provider.configured = false;
+      const summary = await h.billing.summary('user-1');
+
+      // Advertising a cap nothing enforces is a lie in the more embarrassing
+      // direction, so the summary describes reality.
+      expect(summary.gatesEnforced).toBe(false);
+      expect(summary.bankLinkLimit).toBe(bankLinkLimitFor('pro'));
+      expect(summary.entitlements).toContain('cash_flow_planning');
+      // …while still reporting honestly which plan they are actually on.
+      expect(summary.plan).toBe('free');
+    });
+  });
+
+  it('enforces the plan once payment is possible', async () => {
+    const h = billingHarness();
+    const summary = await h.billing.summary('user-1');
+
+    expect(summary.gatesEnforced).toBe(true);
+    expect(summary.bankLinkLimit).toBe(bankLinkLimitFor('free'));
+    await expect(h.billing.requireEntitlement('user-1', 'cash_flow_planning')).rejects.toThrow();
+  });
+});
+
+// ------------------------------------------------------------------- pricing
+
+describe('plan composition', () => {
+  // These assertions encode the pricing decision recorded in docs/09-pricing.md.
+  // Changing them is fine; changing them by accident is not.
+  it('keeps the "where did my money go" features free', () => {
+    // Insights, health score, subscription detection and the credit-card
+    // planner are not entitlements at all — they are ungated by construction.
+    // What this pins is that the paid list does not quietly grow to include the
+    // free tier's reason to exist.
+    expect(PLANS.free.entitlements).toEqual(['data_export']);
+  });
+
+  it('puts the forward-looking features behind Pro', () => {
+    for (const paid of ['cash_flow_planning', 'monthly_pdf_report'] as const) {
+      expect(hasEntitlement('pro', paid)).toBe(true);
+      expect(hasEntitlement('free', paid)).toBe(false);
+    }
+  });
+
+  it('caps even the paid tier, so one account cannot run up an unbounded bill', () => {
+    // Each connected institution costs a per-Item fee at the aggregator every
+    // month. "Unlimited" is a marketing word, not a billing strategy.
+    expect(bankLinkLimitFor('pro')).toBeLessThanOrEqual(25);
+    expect(bankLinkLimitFor('pro')).toBeGreaterThan(bankLinkLimitFor('free'));
+  });
+
+  it('offers both billing intervals', () => {
+    const h = billingHarness();
+    expect(h.provider.intervalsFor('pro')).toEqual(['month', 'year']);
   });
 });
 
