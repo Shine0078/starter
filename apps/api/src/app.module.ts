@@ -10,7 +10,9 @@ import { AuthModule } from './modules/auth/auth.module';
 import { BudgetsModule } from './modules/budgets/budgets.module';
 import { CoreModule } from './modules/core.module';
 import { InsightsModule } from './modules/insights/insights.module';
+import { GoalsModule } from './modules/goals/goals.module';
 import { LedgerModule } from './modules/ledger/ledger.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Controller()
 class MetaController {
@@ -82,6 +84,8 @@ class MetaController {
     AuthModule,
     LedgerModule,
     BudgetsModule,
+    GoalsModule,
+    NotificationsModule,
     InsightsModule,
   ],
   controllers: [MetaController],

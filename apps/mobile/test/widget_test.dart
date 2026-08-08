@@ -219,8 +219,7 @@ void main() {
     expect(find.text('Back to sign in'), findsOneWidget);
   });
 
-  testWidgets('navigates to transactions and budget management',
-      (tester) async {
+  testWidgets('navigates to transactions, budgets, and goals', (tester) async {
     final api = clientWith(MockClient((request) async {
       final path = request.url.path;
       if (path.endsWith('/sync')) {
@@ -241,6 +240,9 @@ void main() {
       }
       if (path.endsWith('/transactions')) {
         return http.Response('{"transactions":[],"count":0}', 200);
+      }
+      if (path.endsWith('/goals')) {
+        return http.Response('{"goals":[],"count":0}', 200);
       }
       if (path.endsWith('/insights')) {
         return http.Response(
@@ -269,6 +271,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('New budget'), findsOneWidget);
     expect(find.text('Create a budget to start tracking progress.'),
+        findsOneWidget);
+
+    await tester.tap(find.text('Goals'));
+    await tester.pumpAndSettle();
+    expect(find.text('New goal'), findsOneWidget);
+    expect(find.text('Create a goal and turn saving into a plan.'),
         findsOneWidget);
   });
 }

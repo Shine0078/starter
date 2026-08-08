@@ -14,7 +14,11 @@ import type {
   Budget,
   CategorizationRule,
   DateRange,
+  GoalContribution,
+  NotificationPreferences,
   RawTransaction,
+  SavingsGoal,
+  UserNotification,
   Transaction,
 } from '../domain/types';
 
@@ -22,6 +26,8 @@ export const ACCOUNT_STORE = 'ACCOUNT_STORE';
 export const TRANSACTION_STORE = 'TRANSACTION_STORE';
 export const BUDGET_STORE = 'BUDGET_STORE';
 export const RULE_STORE = 'RULE_STORE';
+export const GOAL_STORE = 'GOAL_STORE';
+export const NOTIFICATION_STORE = 'NOTIFICATION_STORE';
 export const AGGREGATOR = 'AGGREGATOR';
 export const CLOCK = 'CLOCK';
 
@@ -62,6 +68,26 @@ export interface BudgetStore {
   get(userId: string, id: string): Promise<Budget | null>;
   create(userId: string, budget: Budget): Promise<Budget>;
   remove(userId: string, id: string): Promise<boolean>;
+}
+
+export interface GoalStore {
+  list(userId: string): Promise<SavingsGoal[]>;
+  get(userId: string, id: string): Promise<SavingsGoal | null>;
+  create(userId: string, goal: SavingsGoal): Promise<SavingsGoal>;
+  remove(userId: string, id: string): Promise<boolean>;
+  listContributions(userId: string, goalId: string): Promise<GoalContribution[]>;
+  addContribution(userId: string, contribution: GoalContribution): Promise<GoalContribution>;
+}
+
+export interface NotificationStore {
+  list(userId: string): Promise<UserNotification[]>;
+  upsert(userId: string, notification: UserNotification): Promise<boolean>;
+  markRead(userId: string, id: string, at: string): Promise<boolean>;
+  getPreferences(userId: string): Promise<NotificationPreferences>;
+  updatePreferences(
+    userId: string,
+    preferences: NotificationPreferences,
+  ): Promise<NotificationPreferences>;
 }
 
 export interface RuleStore {

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api/client.dart';
 import 'budgets_screen.dart';
 import 'dashboard_screen.dart';
+import 'goals_screen.dart';
 import 'transactions_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -36,6 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             TransactionsScreen(api: widget.api),
             BudgetsScreen(api: widget.api),
+            GoalsScreen(api: widget.api),
           ],
         ),
         bottomNavigationBar: NavigationBar(
@@ -48,6 +50,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 icon: Icon(Icons.receipt_long_outlined), label: 'Transactions'),
             NavigationDestination(
                 icon: Icon(Icons.pie_chart_outline), label: 'Budgets'),
+            NavigationDestination(
+                icon: Icon(Icons.flag_outlined), label: 'Goals'),
           ],
         ),
       );

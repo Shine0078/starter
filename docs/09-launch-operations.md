@@ -34,6 +34,7 @@ DATABASE_APP_URL=postgresql://finverse-app:...@.../finverse
 JWT_SECRET=<at least 32 random characters>
 CORS_ORIGINS=https://your-domain.example
 MIGRATE_ON_BOOT=false
+TRUST_PROXY_HOPS=1
 SMTP_HOST=smtp.your-provider.example
 SMTP_PORT=587
 SMTP_SECURE=false
@@ -41,6 +42,11 @@ SMTP_USER=<provider username>
 SMTP_PASSWORD=<provider secret>
 EMAIL_FROM=FINVERSE <no-reply@your-domain.example>
 ```
+
+The production API refuses to start with the in-memory store, without the
+restricted `DATABASE_APP_URL`, or with migrations enabled on boot. The runtime
+container does not need the schema-owner `DATABASE_URL`; provide that credential
+only to the separate migration job.
 
 GitHub release variables/secrets:
 

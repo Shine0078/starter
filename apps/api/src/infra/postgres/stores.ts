@@ -17,10 +17,21 @@
 
 import type { Pool, PoolClient } from 'pg';
 
-import type { Account, Budget, CategorizationRule, Transaction } from '../../domain/types';
+import type {
+  Account,
+  Budget,
+  CategorizationRule,
+  GoalContribution,
+  NotificationPreferences,
+  SavingsGoal,
+  UserNotification,
+  Transaction,
+} from '../../domain/types';
 import type {
   AccountStore,
   BudgetStore,
+  GoalStore,
+  NotificationStore,
   RuleStore,
   TransactionQuery,
   TransactionStore,
@@ -31,10 +42,18 @@ import {
   placeholders,
   toAccount,
   toBudget,
+  toGoal,
+  toGoalContribution,
+  toNotification,
+  toNotificationPreferences,
   toRule,
   toTransaction,
   type AccountRow,
   type BudgetRow,
+  type GoalContributionRow,
+  type GoalRow,
+  type NotificationPreferenceRow,
+  type NotificationRow,
   type RuleRow,
   type TransactionRow,
 } from './rows';
@@ -404,6 +423,207 @@ export class PostgresBudgetStore implements BudgetStore {
         id,
       ]);
       return (result.rowCount ?? 0) > 0;
+    });
+  }
+}
+
+// -------------------------------------------------------------------- goals
+
+const GOAL_COLUMNS = 'id, name, target_amount, currency, target_date, created_at';
+const CONTRIBUTION_COLUMNS = 'id, goal_id, amount, contributed_at';
+
+export class PostgresGoalStore implements GoalStore {
+  constructor(private readonly pg: Pool) {}
+
+  async list(userId: string): Promise<SavingsGoal[]> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const { rows } = await client.query<GoalRow>(
+        `SELECT ${GOAL_COLUMNS} FROM goals WHERE user_id = $1 ORDER BY created_at, id`,
+        [userId],
+      );
+      return rows.map(toGoal);
+    });
+  }
+
+  async get(userId: string, id: string): Promise<SavingsGoal | null> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const { rows } = await client.query<GoalRow>(
+        `SELECT ${GOAL_COLUMNS} FROM goals WHERE user_id = $1 AND id = $2`,
+        [userId, id],
+      );
+      return rows[0] ? toGoal(rows[0]) : null;
+    });
+  }
+
+  async create(userId: string, goal: SavingsGoal): Promise<SavingsGoal> {
+    return withUserScope(this.pg, userId, async (client) => {
+      await ensureUser(client, userId);
+      const { rows } = await client.query<GoalRow>(
+        `INSERT INTO goals
+           (id, user_id, name, target_amount, currency, target_date, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING ${GOAL_COLUMNS}`,
+        [
+          goal.id,
+          userId,
+          goal.name,
+          goal.targetAmount,
+          goal.currency,
+          goal.targetDate,
+          goal.createdAt,
+        ],
+      );
+      return toGoal(rows[0]!);
+    });
+  }
+
+  async remove(userId: string, id: string): Promise<boolean> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const result = await client.query('DELETE FROM goals WHERE user_id = $1 AND id = $2', [
+        userId,
+        id,
+      ]);
+      return (result.rowCount ?? 0) > 0;
+    });
+  }
+
+  async listContributions(userId: string, goalId: string): Promise<GoalContribution[]> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const { rows } = await client.query<GoalContributionRow>(
+        `SELECT ${CONTRIBUTION_COLUMNS} FROM goal_contributions
+         WHERE user_id = $1 AND goal_id = $2 ORDER BY contributed_at, id`,
+        [userId, goalId],
+      );
+      return rows.map(toGoalContribution);
+    });
+  }
+
+  async addContribution(
+    userId: string,
+    contribution: GoalContribution,
+  ): Promise<GoalContribution> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const { rows } = await client.query<GoalContributionRow>(
+        `INSERT INTO goal_contributions (id, user_id, goal_id, amount, contributed_at)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING ${CONTRIBUTION_COLUMNS}`,
+        [
+          contribution.id,
+          userId,
+          contribution.goalId,
+          contribution.amount,
+          contribution.contributedAt,
+        ],
+      );
+      return toGoalContribution(rows[0]!);
+    });
+  }
+}
+
+// ------------------------------------------------------------ notifications
+
+const NOTIFICATION_COLUMNS =
+  'id, kind, title, message, severity, dedupe_key, read_at, created_at';
+const PREFERENCE_COLUMNS =
+  'budget, bills, credit_utilization, subscriptions, low_balance, unusual_transactions, bank_sync, security';
+
+export class PostgresNotificationStore implements NotificationStore {
+  constructor(private readonly pg: Pool) {}
+
+  async list(userId: string): Promise<UserNotification[]> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const { rows } = await client.query<NotificationRow>(
+        `SELECT ${NOTIFICATION_COLUMNS} FROM notifications
+         WHERE user_id = $1 ORDER BY created_at DESC, id DESC LIMIT 200`,
+        [userId],
+      );
+      return rows.map(toNotification);
+    });
+  }
+
+  async upsert(userId: string, notification: UserNotification): Promise<boolean> {
+    return withUserScope(this.pg, userId, async (client) => {
+      await ensureUser(client, userId);
+      const result = await client.query(
+        `INSERT INTO notifications
+           (id, user_id, kind, title, message, severity, dedupe_key, read_at, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         ON CONFLICT (user_id, dedupe_key) DO NOTHING`,
+        [
+          notification.id,
+          userId,
+          notification.kind,
+          notification.title,
+          notification.message,
+          notification.severity,
+          notification.dedupeKey,
+          notification.readAt,
+          notification.createdAt,
+        ],
+      );
+      return (result.rowCount ?? 0) > 0;
+    });
+  }
+
+  async markRead(userId: string, id: string, at: string): Promise<boolean> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const result = await client.query(
+        `UPDATE notifications SET read_at = COALESCE(read_at, $3)
+         WHERE user_id = $1 AND id = $2`,
+        [userId, id, at],
+      );
+      return (result.rowCount ?? 0) > 0;
+    });
+  }
+
+  async getPreferences(userId: string): Promise<NotificationPreferences> {
+    return withUserScope(this.pg, userId, async (client) => {
+      await ensureUser(client, userId);
+      const { rows } = await client.query<NotificationPreferenceRow>(
+        `INSERT INTO notification_preferences (user_id) VALUES ($1)
+         ON CONFLICT (user_id) DO UPDATE SET user_id = EXCLUDED.user_id
+         RETURNING ${PREFERENCE_COLUMNS}`,
+        [userId],
+      );
+      return toNotificationPreferences(rows[0]!);
+    });
+  }
+
+  async updatePreferences(
+    userId: string,
+    preferences: NotificationPreferences,
+  ): Promise<NotificationPreferences> {
+    return withUserScope(this.pg, userId, async (client) => {
+      await ensureUser(client, userId);
+      const { rows } = await client.query<NotificationPreferenceRow>(
+        `INSERT INTO notification_preferences
+           (user_id, budget, bills, credit_utilization, subscriptions, low_balance,
+            unusual_transactions, bank_sync, security)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+         ON CONFLICT (user_id) DO UPDATE SET
+           budget = EXCLUDED.budget,
+           bills = EXCLUDED.bills,
+           credit_utilization = EXCLUDED.credit_utilization,
+           subscriptions = EXCLUDED.subscriptions,
+           low_balance = EXCLUDED.low_balance,
+           unusual_transactions = EXCLUDED.unusual_transactions,
+           bank_sync = EXCLUDED.bank_sync,
+           security = EXCLUDED.security,
+           updated_at = now()
+         RETURNING ${PREFERENCE_COLUMNS}`,
+        [
+          userId,
+          preferences.budget,
+          preferences.bills,
+          preferences.creditUtilization,
+          preferences.subscriptions,
+          preferences.lowBalance,
+          preferences.unusualTransactions,
+          preferences.bankSync,
+          preferences.security,
+        ],
+      );
+      return toNotificationPreferences(rows[0]!);
     });
   }
 }

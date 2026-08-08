@@ -7,7 +7,16 @@
  * what ADR-0002 is trying to prevent. The mapping is boring and it stays boring.
  */
 
-import type { Account, Budget, CategorizationRule, Transaction } from '../../domain/types';
+import type {
+  Account,
+  Budget,
+  CategorizationRule,
+  GoalContribution,
+  NotificationPreferences,
+  SavingsGoal,
+  UserNotification,
+  Transaction,
+} from '../../domain/types';
 
 export interface AccountRow {
   id: string;
@@ -91,6 +100,90 @@ export function toBudget(row: BudgetRow): Budget {
     currency: row.currency,
     period: row.period as Budget['period'],
     rollover: row.rollover,
+  };
+}
+
+export interface GoalRow {
+  id: string;
+  name: string;
+  target_amount: number;
+  currency: string;
+  target_date: string | null;
+  created_at: string;
+}
+
+export function toGoal(row: GoalRow): SavingsGoal {
+  return {
+    id: row.id,
+    name: row.name,
+    targetAmount: row.target_amount,
+    currency: row.currency,
+    targetDate: row.target_date,
+    createdAt: row.created_at,
+  };
+}
+
+export interface GoalContributionRow {
+  id: string;
+  goal_id: string;
+  amount: number;
+  contributed_at: string;
+}
+
+export function toGoalContribution(row: GoalContributionRow): GoalContribution {
+  return {
+    id: row.id,
+    goalId: row.goal_id,
+    amount: row.amount,
+    contributedAt: row.contributed_at,
+  };
+}
+
+export interface NotificationRow {
+  id: string;
+  kind: string;
+  title: string;
+  message: string;
+  severity: string;
+  dedupe_key: string;
+  read_at: Date | null;
+  created_at: Date;
+}
+
+export function toNotification(row: NotificationRow): UserNotification {
+  return {
+    id: row.id,
+    kind: row.kind as UserNotification['kind'],
+    title: row.title,
+    message: row.message,
+    severity: row.severity as UserNotification['severity'],
+    dedupeKey: row.dedupe_key,
+    readAt: row.read_at?.toISOString() ?? null,
+    createdAt: row.created_at.toISOString(),
+  };
+}
+
+export interface NotificationPreferenceRow {
+  budget: boolean;
+  bills: boolean;
+  credit_utilization: boolean;
+  subscriptions: boolean;
+  low_balance: boolean;
+  unusual_transactions: boolean;
+  bank_sync: boolean;
+  security: boolean;
+}
+
+export function toNotificationPreferences(row: NotificationPreferenceRow): NotificationPreferences {
+  return {
+    budget: row.budget,
+    bills: row.bills,
+    creditUtilization: row.credit_utilization,
+    subscriptions: row.subscriptions,
+    lowBalance: row.low_balance,
+    unusualTransactions: row.unusual_transactions,
+    bankSync: row.bank_sync,
+    security: row.security,
   };
 }
 

@@ -1,7 +1,14 @@
 import type { Pool } from 'pg';
 
 import type { AccountDeletionStore } from '../../ports/auth';
-import { InMemoryAccountStore, InMemoryBudgetStore, InMemoryRuleStore, InMemoryTransactionStore } from '../in-memory-store';
+import {
+  InMemoryAccountStore,
+  InMemoryBudgetStore,
+  InMemoryGoalStore,
+  InMemoryNotificationStore,
+  InMemoryRuleStore,
+  InMemoryTransactionStore,
+} from '../in-memory-store';
 import { withTransaction } from '../postgres/pool';
 import { InMemoryAuthEventStore, InMemorySessionStore, InMemoryUserStore } from './in-memory-auth-stores';
 
@@ -21,6 +28,8 @@ export class InMemoryAccountDeletionStore implements AccountDeletionStore {
     private readonly transactions: InMemoryTransactionStore,
     private readonly budgets: InMemoryBudgetStore,
     private readonly rules: InMemoryRuleStore,
+    private readonly goals: InMemoryGoalStore,
+    private readonly notifications: InMemoryNotificationStore,
   ) {}
 
   async request(userId: string, email: string, _requestedAt: Date, purgeAfter: Date): Promise<void> {
@@ -47,6 +56,8 @@ export class InMemoryAccountDeletionStore implements AccountDeletionStore {
       this.transactions.purgeUser(userId);
       this.budgets.purgeUser(userId);
       this.rules.purgeUser(userId);
+      this.goals.purgeUser(userId);
+      this.notifications.purgeUser(userId);
       this.sessions.purgeUser(userId);
       this.events.purgeUser(userId, deletion.email);
       this.users.purgeUser(userId);

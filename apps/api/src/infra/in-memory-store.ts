@@ -13,12 +13,18 @@ import type {
   Account,
   Budget,
   CategorizationRule,
+  GoalContribution,
+  NotificationPreferences,
+  SavingsGoal,
+  UserNotification,
   Transaction,
 } from '../domain/types';
 import { isWithin } from '../domain/dates';
 import type {
   AccountStore,
   BudgetStore,
+  GoalStore,
+  NotificationStore,
   RuleStore,
   TransactionQuery,
   TransactionStore,
@@ -172,6 +178,110 @@ export class InMemoryBudgetStore implements BudgetStore {
 
   purgeUser(userId: string): void {
     this.byUser.delete(userId);
+  }
+}
+
+export class InMemoryGoalStore implements GoalStore {
+  private readonly goals = new Map<string, SavingsGoal[]>();
+  private readonly contributions = new Map<string, GoalContribution[]>();
+
+  async list(userId: string): Promise<SavingsGoal[]> {
+    return [...bucket(this.goals, userId)].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  }
+
+  async get(userId: string, id: string): Promise<SavingsGoal | null> {
+    return bucket(this.goals, userId).find((goal) => goal.id === id) ?? null;
+  }
+
+  async create(userId: string, goal: SavingsGoal): Promise<SavingsGoal> {
+    const rows = bucket(this.goals, userId);
+    const index = rows.findIndex((candidate) => candidate.id === goal.id);
+    if (index >= 0) rows[index] = goal;
+    else rows.push(goal);
+    return goal;
+  }
+
+  async remove(userId: string, id: string): Promise<boolean> {
+    const rows = bucket(this.goals, userId);
+    const index = rows.findIndex((goal) => goal.id === id);
+    if (index < 0) return false;
+    rows.splice(index, 1);
+    const contributionRows = bucket(this.contributions, userId);
+    for (let i = contributionRows.length - 1; i >= 0; i -= 1) {
+      if (contributionRows[i]?.goalId === id) contributionRows.splice(i, 1);
+    }
+    return true;
+  }
+
+  async listContributions(userId: string, goalId: string): Promise<GoalContribution[]> {
+    return bucket(this.contributions, userId)
+      .filter((row) => row.goalId === goalId)
+      .sort((a, b) => a.contributedAt.localeCompare(b.contributedAt) || a.id.localeCompare(b.id));
+  }
+
+  async addContribution(
+    userId: string,
+    contribution: GoalContribution,
+  ): Promise<GoalContribution> {
+    if (!(await this.get(userId, contribution.goalId))) throw new Error('Goal does not exist.');
+    bucket(this.contributions, userId).push(contribution);
+    return contribution;
+  }
+
+  purgeUser(userId: string): void {
+    this.goals.delete(userId);
+    this.contributions.delete(userId);
+  }
+}
+
+export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
+  budget: true,
+  bills: true,
+  creditUtilization: true,
+  subscriptions: true,
+  lowBalance: true,
+  unusualTransactions: true,
+  bankSync: true,
+  security: true,
+};
+
+export class InMemoryNotificationStore implements NotificationStore {
+  private readonly rows = new Map<string, UserNotification[]>();
+  private readonly preferences = new Map<string, NotificationPreferences>();
+
+  async list(userId: string): Promise<UserNotification[]> {
+    return [...bucket(this.rows, userId)].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  async upsert(userId: string, notification: UserNotification): Promise<boolean> {
+    const rows = bucket(this.rows, userId);
+    if (rows.some((row) => row.dedupeKey === notification.dedupeKey)) return false;
+    rows.push(notification);
+    return true;
+  }
+
+  async markRead(userId: string, id: string, at: string): Promise<boolean> {
+    const row = bucket(this.rows, userId).find((candidate) => candidate.id === id);
+    if (!row) return false;
+    row.readAt ??= at;
+    return true;
+  }
+
+  async getPreferences(userId: string): Promise<NotificationPreferences> {
+    return { ...(this.preferences.get(userId) ?? DEFAULT_NOTIFICATION_PREFERENCES) };
+  }
+
+  async updatePreferences(
+    userId: string,
+    preferences: NotificationPreferences,
+  ): Promise<NotificationPreferences> {
+    this.preferences.set(userId, { ...preferences });
+    return { ...preferences };
+  }
+
+  purgeUser(userId: string): void {
+    this.rows.delete(userId);
+    this.preferences.delete(userId);
   }
 }
 

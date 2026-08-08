@@ -11,6 +11,7 @@
 import { ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ACCOUNT_STORE, TRANSACTION_STORE, type AccountStore, type TransactionStore } from '../src/ports';
@@ -45,7 +46,10 @@ describe('auth API', () => {
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
 
-    app = moduleRef.createNestApplication();
+    app = moduleRef.createNestApplication<NestExpressApplication>();
+    const { loadConfig } = await import('../src/config');
+    const { installHttpControls } = await import('../src/infra/http/controls');
+    installHttpControls(app as NestExpressApplication, loadConfig());
     app.setGlobalPrefix('api', { exclude: ['healthz'] });
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
     await app.init();
@@ -214,6 +218,8 @@ describe('auth API', () => {
       '/api/insights',
       '/api/subscriptions',
       '/api/health-score',
+      '/api/goals',
+      '/api/notifications',
       '/api/cash-flow-forecast',
       '/api/credit-cards',
       '/api/transactions/needs-review',
@@ -240,6 +246,18 @@ describe('auth API', () => {
     it('allows health and categories without a token', async () => {
       await request(http).get('/healthz').expect(200);
       await request(http).get('/api/categories').expect(200);
+    });
+
+    it('adds safe headers and a correlation id without accepting an unsafe id', async () => {
+      const response = await request(http)
+        .get('/api/categories')
+        .set('x-request-id', 'unsafe id with spaces')
+        .expect(200);
+
+      expect(response.headers['x-content-type-options']).toBe('nosniff');
+      expect(response.headers['x-frame-options']).toBe('DENY');
+      expect(response.headers['cache-control']).toBe('no-store');
+      expect(response.headers['x-request-id']).toMatch(/^[0-9a-f-]{36}$/);
     });
 
     it('accepts a valid token', async () => {
@@ -318,6 +336,110 @@ describe('auth API', () => {
         .expect(200);
 
       expect(bobBudgets.body).toHaveLength(0);
+    });
+
+    it('keeps savings goals separate', async () => {
+      const alice = await register();
+      const bob = await register();
+      const created = await request(http)
+        .post('/api/goals')
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .send({
+          name: 'Emergency fund',
+          targetAmount: 500_000,
+          initialAmount: 25_000,
+          targetDate: '2027-08-08',
+        })
+        .expect(201);
+      expect(created.body.savedAmount).toBe(25_000);
+
+      const updated = await request(http)
+        .post(`/api/goals/${created.body.goal.id}/contributions`)
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .send({ amount: 15_000 })
+        .expect(201);
+      expect(updated.body.savedAmount).toBe(40_000);
+
+      const bobGoals = await request(http)
+        .get('/api/goals')
+        .set('Authorization', `Bearer ${bob.tokens.accessToken}`)
+        .expect(200);
+      expect(bobGoals.body.count).toBe(0);
+
+      await request(http)
+        .post(`/api/goals/${created.body.goal.id}/contributions`)
+        .set('Authorization', `Bearer ${bob.tokens.accessToken}`)
+        .send({ amount: 100 })
+        .expect(404);
+    });
+
+    it('validates goal money and dates before persistence', async () => {
+      const user = await register();
+      const auth = { Authorization: `Bearer ${user.tokens.accessToken}` };
+      await request(http)
+        .post('/api/goals')
+        .set(auth)
+        .send({ name: '', targetAmount: -1 })
+        .expect(400);
+      await request(http)
+        .post('/api/goals')
+        .set(auth)
+        .send({ name: 'Past target', targetAmount: 1000, targetDate: '2020-01-01' })
+        .expect(400);
+    });
+
+    it('generates deduplicated in-app alerts and keeps them isolated', async () => {
+      const alice = await register();
+      const bob = await register();
+      await request(http)
+        .post('/api/sync')
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .expect(201);
+      const ledger = await request(http)
+        .get('/api/transactions?limit=1000')
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .expect(200);
+      const budgetable = ledger.body.transactions.find(
+        (row: { postedAt: string; amount: number; categorySlug: string; pending: boolean }) =>
+          row.postedAt.startsWith('2026-08') &&
+          row.amount < 0 &&
+          !row.pending &&
+          !['unknown', 'transfer', 'income', 'salary', 'refund'].includes(row.categorySlug),
+      );
+      expect(budgetable).toBeTruthy();
+      await request(http)
+        .post('/api/budgets')
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .send({ categorySlug: budgetable.categorySlug, limitAmount: 1 })
+        .expect(201);
+      const progress = await request(http)
+        .get('/api/budgets/progress')
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .expect(200);
+      expect(progress.body.budgets[0].spentAmount).toBeGreaterThan(0);
+
+      const first = await request(http)
+        .get('/api/notifications')
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .expect(200);
+      expect(first.body.unread).toBeGreaterThan(0);
+      const notificationId = first.body.notifications[0].id as string;
+
+      const second = await request(http)
+        .get('/api/notifications')
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .expect(200);
+      expect(second.body.count).toBe(first.body.count);
+
+      await request(http)
+        .patch(`/api/notifications/${notificationId}/read`)
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .expect(204);
+      const bobRows = await request(http)
+        .get('/api/notifications')
+        .set('Authorization', `Bearer ${bob.tokens.accessToken}`)
+        .expect(200);
+      expect(bobRows.body.count).toBe(0);
     });
 
     it('will not let one user revoke another session', async () => {

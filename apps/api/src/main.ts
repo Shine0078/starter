@@ -7,6 +7,7 @@ import { join } from 'node:path';
 
 import { AppModule } from './app.module';
 import { loadConfig } from './config';
+import { installHttpControls } from './infra/http/controls';
 import { parseAppRole, provisionAppRole } from './infra/postgres/app-role';
 import { closePool, getPool } from './infra/postgres/pool';
 import { runMigrations } from './infra/postgres/migrate';
@@ -39,6 +40,7 @@ async function bootstrap(): Promise<void> {
     logger: ['log', 'warn', 'error'],
   });
 
+  installHttpControls(app, config);
   app.setGlobalPrefix('api', { exclude: ['healthz'] });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 

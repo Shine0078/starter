@@ -56,15 +56,10 @@ export const CurrentSessionId = createParamDecorator(
 export const ReqContext = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext): RequestContext => {
     const request = ctx.switchToHttp().getRequest<AuthenticatedRequest>();
-    const forwarded = request.headers['x-forwarded-for'];
-
-    // Only trusted when a proxy is in front; behind none, it is client-supplied
-    // and is recorded for the audit trail rather than relied upon for security.
-    const ip =
-      (typeof forwarded === 'string' ? forwarded.split(',')[0]?.trim() : undefined) ??
-      request.ip ??
-      request.socket?.remoteAddress ??
-      null;
+    // Express derives this from the socket and only honours X-Forwarded-For
+    // when TRUST_PROXY_HOPS explicitly says a known proxy is in front. Parsing
+    // the header here would let a direct client forge the security audit IP.
+    const ip = request.ip ?? request.socket?.remoteAddress ?? null;
 
     const agent = request.headers['user-agent'];
 

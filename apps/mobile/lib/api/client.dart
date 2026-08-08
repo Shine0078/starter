@@ -289,6 +289,41 @@ class ApiClient {
     await _send('DELETE', '/budgets/$budgetId');
   }
 
+  Future<List<GoalProgress>> goals() async {
+    final json = await _get('/goals') as Map<String, dynamic>;
+    return (json['goals'] as List<dynamic>)
+        .map((e) => GoalProgress.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<GoalProgress> createGoal({
+    required String name,
+    required int targetAmount,
+    int initialAmount = 0,
+    String? targetDate,
+  }) async {
+    final json = await _send('POST', '/goals', {
+      'name': name,
+      'targetAmount': targetAmount,
+      'initialAmount': initialAmount,
+      if (targetDate != null && targetDate.isNotEmpty) 'targetDate': targetDate,
+    }) as Map<String, dynamic>;
+    return GoalProgress.fromJson(json);
+  }
+
+  Future<GoalProgress> addGoalContribution(String goalId, int amount) async {
+    final json = await _send(
+      'POST',
+      '/goals/$goalId/contributions',
+      {'amount': amount},
+    ) as Map<String, dynamic>;
+    return GoalProgress.fromJson(json);
+  }
+
+  Future<void> deleteGoal(String goalId) async {
+    await _send('DELETE', '/goals/$goalId');
+  }
+
   Future<HealthScore> healthScore() async {
     final json = await _get('/health-score') as Map<String, dynamic>;
     return HealthScore.fromJson(json);

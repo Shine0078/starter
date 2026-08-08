@@ -86,6 +86,56 @@ export interface Budget {
   rollover: boolean;
 }
 
+export interface SavingsGoal {
+  id: string;
+  name: string;
+  /** Positive target in minor units. */
+  targetAmount: number;
+  currency: string;
+  targetDate: IsoDate | null;
+  createdAt: IsoDate;
+}
+
+export interface GoalContribution {
+  id: string;
+  goalId: string;
+  /** Positive contribution in minor units. */
+  amount: number;
+  contributedAt: IsoDate;
+}
+
+export type NotificationKind =
+  | 'budget'
+  | 'bill'
+  | 'credit_utilization'
+  | 'subscription'
+  | 'low_balance'
+  | 'unusual_transaction'
+  | 'bank_sync'
+  | 'security';
+
+export interface UserNotification {
+  id: string;
+  kind: NotificationKind;
+  title: string;
+  message: string;
+  severity: 'info' | 'warning' | 'critical';
+  dedupeKey: string;
+  readAt: string | null;
+  createdAt: string;
+}
+
+export interface NotificationPreferences {
+  budget: boolean;
+  bills: boolean;
+  creditUtilization: boolean;
+  subscriptions: boolean;
+  lowBalance: boolean;
+  unusualTransactions: boolean;
+  bankSync: boolean;
+  security: boolean;
+}
+
 export interface DateRange {
   start: IsoDate;
   /** Inclusive. */

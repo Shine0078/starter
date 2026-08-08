@@ -13,12 +13,21 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 
 import type { Transaction } from '../src/domain/types';
-import type { AccountStore, BudgetStore, RuleStore, TransactionStore } from '../src/ports';
+import type {
+  AccountStore,
+  BudgetStore,
+  GoalStore,
+  NotificationStore,
+  RuleStore,
+  TransactionStore,
+} from '../src/ports';
 
 export interface StoreSet {
   accounts: AccountStore;
   transactions: TransactionStore;
   budgets: BudgetStore;
+  goals: GoalStore;
+  notifications: NotificationStore;
   rules: RuleStore;
   /** Wipe all data between tests. */
   reset(): Promise<void>;
@@ -346,6 +355,90 @@ export function runStoreContract(name: string, create: () => Promise<StoreSet>):
       it('keeps users apart', async () => {
         await stores.rules.create(USER, rule);
         expect(await stores.rules.list(OTHER)).toHaveLength(0);
+      });
+    });
+
+    describe('goals', () => {
+      const goal = {
+        id: 'goal_emergency',
+        name: 'Emergency fund',
+        targetAmount: 500_000,
+        currency: 'USD',
+        targetDate: '2027-08-01',
+        createdAt: '2026-08-01',
+      };
+
+      it('round-trips goals and ordered contributions', async () => {
+        await stores.goals.create(USER, goal);
+        await stores.goals.addContribution(USER, {
+          id: 'contribution_2',
+          goalId: goal.id,
+          amount: 20_000,
+          contributedAt: '2026-08-10',
+        });
+        await stores.goals.addContribution(USER, {
+          id: 'contribution_1',
+          goalId: goal.id,
+          amount: 10_000,
+          contributedAt: '2026-08-05',
+        });
+
+        expect(await stores.goals.get(USER, goal.id)).toEqual(goal);
+        expect((await stores.goals.listContributions(USER, goal.id)).map((row) => row.id)).toEqual([
+          'contribution_1',
+          'contribution_2',
+        ]);
+      });
+
+      it('cascades contributions when a goal is removed', async () => {
+        await stores.goals.create(USER, goal);
+        await stores.goals.addContribution(USER, {
+          id: 'contribution_1',
+          goalId: goal.id,
+          amount: 10_000,
+          contributedAt: '2026-08-05',
+        });
+        expect(await stores.goals.remove(USER, goal.id)).toBe(true);
+        expect(await stores.goals.listContributions(USER, goal.id)).toHaveLength(0);
+      });
+
+      it('keeps users apart', async () => {
+        await stores.goals.create(USER, goal);
+        expect(await stores.goals.list(OTHER)).toHaveLength(0);
+        expect(await stores.goals.get(OTHER, goal.id)).toBeNull();
+      });
+    });
+
+    describe('notifications', () => {
+      const notification = {
+        id: 'notification_1',
+        kind: 'budget' as const,
+        title: 'Budget warning',
+        message: 'You have used 75% of your budget.',
+        severity: 'warning' as const,
+        dedupeKey: 'budget:coffee:2026-08:75',
+        readAt: null,
+        createdAt: '2026-08-08T12:00:00.000Z',
+      };
+
+      it('deduplicates and marks notifications read', async () => {
+        expect(await stores.notifications.upsert(USER, notification)).toBe(true);
+        expect(await stores.notifications.upsert(USER, { ...notification, id: 'other' })).toBe(false);
+        expect(await stores.notifications.markRead(USER, notification.id, '2026-08-08T13:00:00.000Z')).toBe(true);
+        expect((await stores.notifications.list(USER))[0]?.readAt).toBe('2026-08-08T13:00:00.000Z');
+      });
+
+      it('persists preferences without touching another user', async () => {
+        const defaults = await stores.notifications.getPreferences(USER);
+        expect(Object.values(defaults).every(Boolean)).toBe(true);
+        await stores.notifications.updatePreferences(USER, { ...defaults, budget: false });
+        expect((await stores.notifications.getPreferences(USER)).budget).toBe(false);
+        expect((await stores.notifications.getPreferences(OTHER)).budget).toBe(true);
+      });
+
+      it('keeps notification rows isolated', async () => {
+        await stores.notifications.upsert(USER, notification);
+        expect(await stores.notifications.list(OTHER)).toHaveLength(0);
       });
     });
   });

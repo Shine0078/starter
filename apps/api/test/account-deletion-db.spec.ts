@@ -35,6 +35,26 @@ if (ownerUrl) {
          VALUES ('account-1', $1, 'Checking', 'checking', '1234', 'CAD', 10000)`,
         [userId],
       );
+      await harness.owner.query('INSERT INTO notification_preferences (user_id) VALUES ($1)', [
+        userId,
+      ]);
+      await harness.owner.query(
+        `INSERT INTO notifications
+           (id, user_id, kind, title, message, severity, dedupe_key, created_at)
+         VALUES ('notification-1', $1, 'budget', 'Budget', 'Warning', 'warning',
+                 'budget:coffee', now())`,
+        [userId],
+      );
+      await harness.owner.query(
+        `INSERT INTO goals (id, user_id, name, target_amount, currency, created_at)
+         VALUES ('goal-1', $1, 'Emergency fund', 500000, 'CAD', '2026-08-01')`,
+        [userId],
+      );
+      await harness.owner.query(
+        `INSERT INTO goal_contributions (id, user_id, goal_id, amount, contributed_at)
+         VALUES ('goal-contribution-1', $1, 'goal-1', 25000, '2026-08-02')`,
+        [userId],
+      );
       await harness.owner.query(
         `INSERT INTO transactions
            (id, user_id, account_id, provider_txn_id, posted_at, amount, currency,
@@ -85,6 +105,10 @@ if (ownerUrl) {
         'transactions',
         'budgets',
         'categorization_rules',
+        'goals',
+        'goal_contributions',
+        'notification_preferences',
+        'notifications',
         'sessions',
       ]) {
         const column = table === 'users' ? 'id' : 'user_id';

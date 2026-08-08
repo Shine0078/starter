@@ -22,8 +22,17 @@ import { OWNER_URL, startPgHarness, type PgHarness } from './pg-harness';
 const ALICE = 'user_rls_alice';
 const BOB = 'user_rls_bob';
 
-/** The four tables 003_rls.sql covers. */
-const PROTECTED_TABLES = ['accounts', 'transactions', 'budgets', 'categorization_rules'];
+/** Every user-owned table protected by row-level security. */
+const PROTECTED_TABLES = [
+  'accounts',
+  'transactions',
+  'budgets',
+  'categorization_rules',
+  'goals',
+  'goal_contributions',
+  'notification_preferences',
+  'notifications',
+];
 
 /** Seeds one account and one transaction for a user, as the owner. */
 async function seed(owner: Pool, userId: string, amount: number): Promise<void> {
@@ -50,6 +59,23 @@ async function seed(owner: Pool, userId: string, amount: number): Promise<void> 
     `INSERT INTO categorization_rules (id, user_id, match_type, pattern, category_slug)
      VALUES ($1, $2, 'contains', 'rent', 'housing')`,
     [`rule_${userId}`, userId],
+  );
+  await owner.query(
+    `INSERT INTO goals (id, user_id, name, target_amount, currency, created_at)
+     VALUES ($1, $2, 'Emergency fund', 500000, 'USD', '2026-08-01')`,
+    [`goal_${userId}`, userId],
+  );
+  await owner.query(
+    `INSERT INTO goal_contributions (id, user_id, goal_id, amount, contributed_at)
+     VALUES ($1, $2, $3, 10000, '2026-08-02')`,
+    [`contribution_${userId}`, userId, `goal_${userId}`],
+  );
+  await owner.query('INSERT INTO notification_preferences (user_id) VALUES ($1)', [userId]);
+  await owner.query(
+    `INSERT INTO notifications
+       (id, user_id, kind, title, message, severity, dedupe_key, created_at)
+     VALUES ($1, $2, 'budget', 'Budget', 'Budget warning', 'warning', $3, now())`,
+    [`notification_${userId}`, userId, `budget:${userId}`],
   );
 }
 

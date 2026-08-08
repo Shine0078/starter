@@ -5,6 +5,8 @@ import { SystemClock } from '../infra/clock';
 import {
   InMemoryAccountStore,
   InMemoryBudgetStore,
+  InMemoryGoalStore,
+  InMemoryNotificationStore,
   InMemoryRuleStore,
   InMemoryTransactionStore,
 } from '../infra/in-memory-store';
@@ -13,6 +15,8 @@ import { getAppPool } from '../infra/postgres/pool';
 import {
   PostgresAccountStore,
   PostgresBudgetStore,
+  PostgresGoalStore,
+  PostgresNotificationStore,
   PostgresRuleStore,
   PostgresTransactionStore,
 } from '../infra/postgres/stores';
@@ -43,6 +47,8 @@ import {
   AGGREGATOR,
   BUDGET_STORE,
   CLOCK,
+  GOAL_STORE,
+  NOTIFICATION_STORE,
   RULE_STORE,
   TRANSACTION_STORE,
 } from '../ports';
@@ -74,6 +80,8 @@ function storeProviders(): Provider[] {
     const transactions = new InMemoryTransactionStore();
     const budgets = new InMemoryBudgetStore();
     const rules = new InMemoryRuleStore();
+    const goals = new InMemoryGoalStore();
+    const notifications = new InMemoryNotificationStore();
     const users = new InMemoryUserStore();
     const sessions = new InMemorySessionStore();
     const events = new InMemoryAuthEventStore();
@@ -86,12 +94,16 @@ function storeProviders(): Provider[] {
       transactions,
       budgets,
       rules,
+      goals,
+      notifications,
     );
     return [
       { provide: ACCOUNT_STORE, useValue: accounts },
       { provide: TRANSACTION_STORE, useValue: transactions },
       { provide: BUDGET_STORE, useValue: budgets },
       { provide: RULE_STORE, useValue: rules },
+      { provide: GOAL_STORE, useValue: goals },
+      { provide: NOTIFICATION_STORE, useValue: notifications },
       { provide: USER_STORE, useValue: users },
       { provide: SESSION_STORE, useValue: sessions },
       { provide: AUTH_EVENT_STORE, useValue: events },
@@ -119,6 +131,8 @@ function storeProviders(): Provider[] {
     { provide: TRANSACTION_STORE, useFactory: () => new PostgresTransactionStore(pool) },
     { provide: BUDGET_STORE, useFactory: () => new PostgresBudgetStore(pool) },
     { provide: RULE_STORE, useFactory: () => new PostgresRuleStore(pool) },
+    { provide: GOAL_STORE, useFactory: () => new PostgresGoalStore(pool) },
+    { provide: NOTIFICATION_STORE, useFactory: () => new PostgresNotificationStore(pool) },
     { provide: USER_STORE, useFactory: () => new PostgresUserStore(pool) },
     { provide: SESSION_STORE, useFactory: () => new PostgresSessionStore(pool) },
     { provide: AUTH_EVENT_STORE, useFactory: () => new PostgresAuthEventStore(pool) },
@@ -183,6 +197,8 @@ function storeProviders(): Provider[] {
     TRANSACTION_STORE,
     BUDGET_STORE,
     RULE_STORE,
+    GOAL_STORE,
+    NOTIFICATION_STORE,
     AGGREGATOR,
     USER_STORE,
     SESSION_STORE,

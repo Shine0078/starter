@@ -7,6 +7,8 @@ import {
 import {
   InMemoryAccountStore,
   InMemoryBudgetStore,
+  InMemoryGoalStore,
+  InMemoryNotificationStore,
   InMemoryRuleStore,
   InMemoryTransactionStore,
 } from '../src/infra/in-memory-store';
@@ -14,6 +16,8 @@ import { closePool } from '../src/infra/postgres/pool';
 import {
   PostgresAccountStore,
   PostgresBudgetStore,
+  PostgresGoalStore,
+  PostgresNotificationStore,
   PostgresRuleStore,
   PostgresTransactionStore,
 } from '../src/infra/postgres/stores';
@@ -69,6 +73,8 @@ runStoreContract('in-memory', async (): Promise<StoreSet> => {
   let transactions = new InMemoryTransactionStore();
   let budgets = new InMemoryBudgetStore();
   let rules = new InMemoryRuleStore();
+  let goals = new InMemoryGoalStore();
+  let notifications = new InMemoryNotificationStore();
 
   const set: StoreSet = {
     get accounts() {
@@ -83,11 +89,19 @@ runStoreContract('in-memory', async (): Promise<StoreSet> => {
     get rules() {
       return rules;
     },
+    get goals() {
+      return goals;
+    },
+    get notifications() {
+      return notifications;
+    },
     async reset() {
       accounts = new InMemoryAccountStore();
       transactions = new InMemoryTransactionStore();
       budgets = new InMemoryBudgetStore();
       rules = new InMemoryRuleStore();
+      goals = new InMemoryGoalStore();
+      notifications = new InMemoryNotificationStore();
     },
     async teardown() {},
   };
@@ -122,6 +136,8 @@ if (TEST_DATABASE_URL) {
       transactions: new PostgresTransactionStore(app),
       budgets: new PostgresBudgetStore(app),
       rules: new PostgresRuleStore(app),
+      goals: new PostgresGoalStore(app),
+      notifications: new PostgresNotificationStore(app),
       async reset() {
         // Deleting the users cascades to everything else, which also proves
         // the FK cascade that account deletion depends on actually works.

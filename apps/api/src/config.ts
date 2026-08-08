@@ -22,6 +22,8 @@ export interface AppConfig {
   isProduction: boolean;
   /** Origins allowed to call the API from a browser. */
   corsOrigins: string[] | true;
+  /** Number of reverse-proxy hops Express may trust when deriving the client IP. */
+  trustedProxyHops: number;
 }
 
 /**
@@ -87,7 +89,15 @@ function readStoreDriver(): StoreDriver {
   // connection string is present, memory otherwise. This keeps `npm run dev`
   // working on a machine with no database while making persistence the norm
   // once one is configured.
-  return process.env.DATABASE_URL ? 'postgres' : 'memory';
+  return process.env.DATABASE_URL || process.env.DATABASE_APP_URL ? 'postgres' : 'memory';
+}
+
+function integerInRange(name: string, raw: string | undefined, fallback: number, max: number): number {
+  const value = Number(raw ?? fallback);
+  if (!Number.isInteger(value) || value < 0 || value > max) {
+    throw new Error(`${name} must be an integer between 0 and ${max}.`);
+  }
+  return value;
 }
 
 /**
@@ -113,21 +123,51 @@ export function resetConfigForTests(): void {
 
 function buildConfig(): AppConfig {
   const store = readStoreDriver();
+  const isProduction = process.env.NODE_ENV === 'production';
+  const databaseUrl = process.env.DATABASE_URL;
+  const appDatabaseUrl = process.env.DATABASE_APP_URL;
+  const migrateOnBoot = process.env.MIGRATE_ON_BOOT !== 'false';
 
-  if (store === 'postgres' && !process.env.DATABASE_URL) {
-    throw new Error('STORE=postgres requires DATABASE_URL. Try `npm run infra:up`.');
+  if (store === 'postgres' && !databaseUrl && !appDatabaseUrl) {
+    throw new Error(
+      'STORE=postgres requires DATABASE_APP_URL for runtime or DATABASE_URL for local migrations.',
+    );
   }
 
-  const isProduction = process.env.NODE_ENV === 'production';
+  if (migrateOnBoot && store === 'postgres' && !databaseUrl) {
+    throw new Error('MIGRATE_ON_BOOT=true requires the schema-owner DATABASE_URL.');
+  }
+
+  if (isProduction) {
+    if (store !== 'postgres') {
+      throw new Error('Production requires STORE=postgres; the in-memory store loses user data.');
+    }
+    if (!appDatabaseUrl) {
+      throw new Error(
+        'Production requires DATABASE_APP_URL for the least-privileged RLS runtime role.',
+      );
+    }
+    if (migrateOnBoot) {
+      throw new Error(
+        'Production requires MIGRATE_ON_BOOT=false; run migrations as a separate release step.',
+      );
+    }
+  }
 
   return {
-    port: Number(process.env.PORT ?? 3000),
+    port: integerInRange('PORT', process.env.PORT, 3000, 65_535),
     store,
-    databaseUrl: process.env.DATABASE_URL,
-    appDatabaseUrl: process.env.DATABASE_APP_URL,
-    migrateOnBoot: process.env.MIGRATE_ON_BOOT !== 'false',
+    databaseUrl,
+    appDatabaseUrl,
+    migrateOnBoot,
     jwtSecret: resolveJwtSecret(isProduction),
     isProduction,
     corsOrigins: resolveCorsOrigins(isProduction),
+    trustedProxyHops: integerInRange(
+      'TRUST_PROXY_HOPS',
+      process.env.TRUST_PROXY_HOPS,
+      0,
+      10,
+    ),
   };
 }

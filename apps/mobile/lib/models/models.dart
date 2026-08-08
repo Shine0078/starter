@@ -206,6 +206,56 @@ class BudgetProgress {
   bool get isExceeded => status == 'exceeded';
 }
 
+class GoalProgress {
+  GoalProgress({
+    required this.id,
+    required this.name,
+    required this.targetAmount,
+    required this.savedAmount,
+    required this.remainingAmount,
+    required this.targetFormatted,
+    required this.savedFormatted,
+    required this.remainingFormatted,
+    required this.percentComplete,
+    this.targetDate,
+    this.suggestedMonthlyFormatted,
+    this.projectedCompletionDate,
+  });
+
+  factory GoalProgress.fromJson(Map<String, dynamic> json) {
+    final goal = json['goal'] as Map<String, dynamic>;
+    return GoalProgress(
+      id: goal['id'] as String,
+      name: goal['name'] as String,
+      targetAmount: goal['targetAmount'] as int,
+      savedAmount: json['savedAmount'] as int,
+      remainingAmount: json['remainingAmount'] as int,
+      targetFormatted: json['targetFormatted'] as String,
+      savedFormatted: json['savedFormatted'] as String,
+      remainingFormatted: json['remainingFormatted'] as String,
+      percentComplete: (json['percentComplete'] as num).toDouble(),
+      targetDate: goal['targetDate'] as String?,
+      suggestedMonthlyFormatted: json['suggestedMonthlyFormatted'] as String?,
+      projectedCompletionDate: json['projectedCompletionDate'] as String?,
+    );
+  }
+
+  final String id;
+  final String name;
+  final int targetAmount;
+  final int savedAmount;
+  final int remainingAmount;
+  final String targetFormatted;
+  final String savedFormatted;
+  final String remainingFormatted;
+  final double percentComplete;
+  final String? targetDate;
+  final String? suggestedMonthlyFormatted;
+  final String? projectedCompletionDate;
+
+  bool get complete => remainingAmount == 0;
+}
+
 class ScoreComponent {
   ScoreComponent({
     required this.key,

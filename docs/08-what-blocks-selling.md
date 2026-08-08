@@ -25,7 +25,7 @@ Stated so the rest of this document is not read as "nothing works".
 | Authentication | Argon2id, rotating refresh tokens with reuse detection, email verification, password reset, recoverable deletion, global guard, per-account lockout, session list, audit trail |
 | Persistence | Postgres behind ports, contract-tested against both adapters, migrations |
 | Isolation | Row-level security, app connects as a non-superuser role, 21 dedicated tests |
-| Tests | 251 without a database, 321 against real Postgres, 10 Flutter tests; all passing |
+| Tests | 273 without a database, 357 against real Postgres, 10 Flutter tests; all passing |
 | CI | GitHub Actions: API typecheck/test/build/image + Flutter analyze/test/Android compile; tagged API/APK releases |
 
 That is a solid Phase-0 foundation. It is not a product.
@@ -119,7 +119,7 @@ has a `docker-compose.yml` for local development and a CI workflow. That is all.
 | 4.4 | **No managed database** | No provisioning, no connection pooling at scale, no read replicas | days |
 | 4.5 | **Backups not scheduled** | Backup and guarded restore-drill scripts now exist; storage, encryption policy, schedule, and a real drill need a production database | external account + drill |
 | 4.6 | **No monitoring, metrics, or alerting** | `/healthz` now fails with HTTP 503 when PostgreSQL is down; nothing external scrapes or alerts on it | 1 week |
-| 4.7 | **No error tracking or structured logging** | Console logging only. No log aggregation, and no scrubbing to keep financial data out of logs | 1 week |
+| 4.7 | **External error tracking absent** | Structured request logs now carry correlation ids and deliberately omit headers, bodies, queries, users, merchants, and amounts; no external log/error service is configured | external account + days |
 | 4.8 | **No rate limiting beyond in-process** | `@nestjs/throttler` keeps counters in memory, so limits reset on restart and are per-instance. Redis is in `docker-compose.yml` and the API does not reference it once | days |
 | 4.9 | **No job queue or scheduler** | Needed for sync, purge jobs, monthly reports, and notifications. The mission names RabbitMQ/Kafka; nothing exists | 1–2 weeks |
 | 4.10 | **No load or performance testing** | "Scalable to millions" is currently an aspiration with no measurement behind it | 1 week |
@@ -137,7 +137,7 @@ MISSION.md product and still lacks the externally gated bank-linking experience.
 
 | # | Item | Detail | Effort |
 |---|---|---|---|
-| 5.1 | **Core navigation started** | Home, transactions, and budgets are implemented. No transaction detail, goals, subscription screen, full settings/privacy dashboard, onboarding, or account linking | 6–10 weeks |
+| 5.1 | **Core navigation started** | Home, transactions, budgets, and persistent savings goals are implemented. No transaction detail, subscription/notification screen, full settings/privacy dashboard, onboarding, or account linking | 6–10 weeks |
 | 5.2 | **No offline mode** | Mission requires offline-first. There is no local database — every screen is a live API call | 3–4 weeks |
 | 5.3 | **No state management** | `setState` only. Honest at one screen, unworkable at twenty | with 5.1 |
 | 5.4 | **No push notifications** | The mission's entire notification and alert surface — bills, due dates, fraud, budgets — does not exist on either end | 2–3 weeks |
@@ -191,9 +191,9 @@ features them.
 - Conversational AI assistant (needs a zero-retention LLM agreement first)
 - ML categoriser trained on user corrections — rules-only today
 - Monthly PDF report — the mission specifies ~25 sections; CSV export is all that exists
-- Goals and savings targets — no model, no endpoint, no screen
+- Goals and savings targets — persistent model, progress math, contribution history, API, RLS, and Flutter screen are complete
 - Net worth dashboard — no investments, loans, or property
-- Notifications and smart reminders — the entire surface
+- Notifications and smart reminders — persistent preferences and deduplicated in-app budget, credit-utilization, and low-balance alerts exist; mobile center, push delivery, bills, unusual-spend and bank-sync alerts remain
 - Fraud and anomaly detection — duplicates, abnormal purchases, foreign spending
 - Receipt OCR
 
