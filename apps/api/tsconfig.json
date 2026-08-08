@@ -15,6 +15,14 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
+    // embedded-postgres publishes its types through an "exports" map, which
+    // classic "node" resolution cannot follow. Pointing at the declaration file
+    // directly keeps real types for the one dev script that uses it, without
+    // moving the whole CommonJS/Nest build onto node16 resolution.
+    "baseUrl": ".",
+    "paths": {
+      "embedded-postgres": ["../../node_modules/embedded-postgres/dist/index.d.ts"]
+    },
     "sourceMap": true,
     "declaration": false
   },
