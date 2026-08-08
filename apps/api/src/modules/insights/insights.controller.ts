@@ -1,7 +1,7 @@
-import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
+﻿import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
 
 import { formatMoney, money } from '../../domain/money';
-import { CurrentUser } from '../current-user';
+import { CurrentUser } from '../auth/auth.guard';
 import { InsightsService } from './insights.service';
 
 @Controller()

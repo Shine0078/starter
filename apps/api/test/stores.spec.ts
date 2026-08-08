@@ -14,7 +14,44 @@ import {
   PostgresRuleStore,
   PostgresTransactionStore,
 } from '../src/infra/postgres/stores';
+import {
+  InMemoryAuthEventStore,
+  InMemorySessionStore,
+  InMemoryUserStore,
+} from '../src/infra/auth/in-memory-auth-stores';
+import {
+  PostgresAuthEventStore,
+  PostgresSessionStore,
+  PostgresUserStore,
+} from '../src/infra/auth/postgres-auth-stores';
+import { runAuthStoreContract, type AuthStoreSet } from './auth-store-contract';
 import { runStoreContract, type StoreSet } from './store-contract';
+
+// ------------------------------------------------- in-memory identity stores
+
+runAuthStoreContract('in-memory', async (): Promise<AuthStoreSet> => {
+  let users = new InMemoryUserStore();
+  let sessions = new InMemorySessionStore();
+  let events = new InMemoryAuthEventStore();
+
+  return {
+    get users() {
+      return users;
+    },
+    get sessions() {
+      return sessions;
+    },
+    get events() {
+      return events;
+    },
+    async reset() {
+      users = new InMemoryUserStore();
+      sessions = new InMemorySessionStore();
+      events = new InMemoryAuthEventStore();
+    },
+    async teardown() {},
+  };
+});
 
 // ---------------------------------------------------------------- in-memory
 
@@ -83,8 +120,28 @@ if (TEST_DATABASE_URL) {
       },
     };
   });
+  runAuthStoreContract('postgres', async (): Promise<AuthStoreSet> => {
+    const pool = getPool(TEST_DATABASE_URL);
+    await runMigrations(pool);
+
+    return {
+      users: new PostgresUserStore(pool),
+      sessions: new PostgresSessionStore(pool),
+      events: new PostgresAuthEventStore(pool),
+      async reset() {
+        // auth_events references users with ON DELETE SET NULL, so rows that
+        // recorded a failure against an unknown address survive the cascade
+        // and have to be cleared explicitly.
+        await pool.query('DELETE FROM auth_events');
+        await pool.query('DELETE FROM users');
+      },
+      async teardown() {
+        await closePool();
+      },
+    };
+  });
 } else {
   describe('store contract: postgres', () => {
-    it.skip('needs TEST_DATABASE_URL — run `npm run infra:up` first', () => {});
+    it.skip('needs TEST_DATABASE_URL — run `npm run test:db`', () => {});
   });
 }

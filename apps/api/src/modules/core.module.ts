@@ -16,6 +16,18 @@ import {
   PostgresRuleStore,
   PostgresTransactionStore,
 } from '../infra/postgres/stores';
+import { Argon2PasswordHasher } from '../infra/auth/argon2-hasher';
+import {
+  InMemoryAuthEventStore,
+  InMemorySessionStore,
+  InMemoryUserStore,
+} from '../infra/auth/in-memory-auth-stores';
+import { JwtTokenIssuer } from '../infra/auth/jwt-issuer';
+import {
+  PostgresAuthEventStore,
+  PostgresSessionStore,
+  PostgresUserStore,
+} from '../infra/auth/postgres-auth-stores';
 import {
   ACCOUNT_STORE,
   AGGREGATOR,
@@ -24,6 +36,13 @@ import {
   RULE_STORE,
   TRANSACTION_STORE,
 } from '../ports';
+import {
+  AUTH_EVENT_STORE,
+  PASSWORD_HASHER,
+  SESSION_STORE,
+  TOKEN_ISSUER,
+  USER_STORE,
+} from '../ports/auth';
 
 /**
  * Composition root. The only file that decides which adapter satisfies which
@@ -43,6 +62,9 @@ function storeProviders(): Provider[] {
       { provide: TRANSACTION_STORE, useClass: InMemoryTransactionStore },
       { provide: BUDGET_STORE, useClass: InMemoryBudgetStore },
       { provide: RULE_STORE, useClass: InMemoryRuleStore },
+      { provide: USER_STORE, useClass: InMemoryUserStore },
+      { provide: SESSION_STORE, useClass: InMemorySessionStore },
+      { provide: AUTH_EVENT_STORE, useClass: InMemoryAuthEventStore },
     ];
   }
 
@@ -54,6 +76,9 @@ function storeProviders(): Provider[] {
     { provide: TRANSACTION_STORE, useFactory: () => new PostgresTransactionStore(pool) },
     { provide: BUDGET_STORE, useFactory: () => new PostgresBudgetStore(pool) },
     { provide: RULE_STORE, useFactory: () => new PostgresRuleStore(pool) },
+    { provide: USER_STORE, useFactory: () => new PostgresUserStore(pool) },
+    { provide: SESSION_STORE, useFactory: () => new PostgresSessionStore(pool) },
+    { provide: AUTH_EVENT_STORE, useFactory: () => new PostgresAuthEventStore(pool) },
   ];
 }
 
@@ -65,8 +90,25 @@ function storeProviders(): Provider[] {
       provide: AGGREGATOR,
       useFactory: () => new MockAggregator({ today: new SystemClock().today() }),
     },
+    { provide: PASSWORD_HASHER, useClass: Argon2PasswordHasher },
+    {
+      provide: TOKEN_ISSUER,
+      useFactory: () => new JwtTokenIssuer(loadConfig().jwtSecret),
+    },
     ...storeProviders(),
   ],
-  exports: [CLOCK, ACCOUNT_STORE, TRANSACTION_STORE, BUDGET_STORE, RULE_STORE, AGGREGATOR],
+  exports: [
+    CLOCK,
+    ACCOUNT_STORE,
+    TRANSACTION_STORE,
+    BUDGET_STORE,
+    RULE_STORE,
+    AGGREGATOR,
+    USER_STORE,
+    SESSION_STORE,
+    AUTH_EVENT_STORE,
+    PASSWORD_HASHER,
+    TOKEN_ISSUER,
+  ],
 })
 export class CoreModule {}

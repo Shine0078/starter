@@ -1,8 +1,12 @@
 import { Controller, Get, Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
 import { loadConfig } from './config';
 import { CATEGORIES } from './domain/categories';
 import { getPool } from './infra/postgres/pool';
+import { AuthGuard, Public } from './modules/auth/auth.guard';
+import { AuthModule } from './modules/auth/auth.module';
 import { BudgetsModule } from './modules/budgets/budgets.module';
 import { CoreModule } from './modules/core.module';
 import { InsightsModule } from './modules/insights/insights.module';
@@ -15,7 +19,11 @@ class MetaController {
    * a query rather than reporting "ok" because the process is up — a health
    * check that cannot fail tells you nothing, and an API that has lost its
    * database should not be receiving traffic.
+   *
+   * Public: a load balancer has no credentials, and the response deliberately
+   * carries no user data.
    */
+  @Public()
   @Get('healthz')
   async health() {
     const config = loadConfig();
@@ -37,11 +45,17 @@ class MetaController {
         status: 'degraded',
         ...base,
         database: 'unreachable',
-        error: error instanceof Error ? error.message : String(error),
+        // In production the message could name the host or credentials, so it
+        // is withheld; locally it is the fastest way to see what is wrong.
+        ...(config.isProduction
+          ? {}
+          : { error: error instanceof Error ? error.message : String(error) }),
       };
     }
   }
 
+  /** Public: a static reference list with nothing user-specific in it. */
+  @Public()
   @Get('categories')
   categories() {
     return { count: CATEGORIES.length, categories: CATEGORIES };
@@ -49,7 +63,31 @@ class MetaController {
 }
 
 @Module({
-  imports: [CoreModule, LedgerModule, BudgetsModule, InsightsModule],
+  imports: [
+    CoreModule,
+    // Coarse per-IP limit in front of everything. The auth routes tighten it
+    // further; account lockout is separate and counts per-account, because
+    // per-IP alone is bypassed with a proxy pool.
+    ThrottlerModule.forRoot({
+      throttlers: [{ name: 'default', ttl: 60_000, limit: 120 }],
+      // Test suites drive hundreds of requests from one address and would
+      // otherwise fail on 429 for reasons unrelated to what they assert.
+      // Throttling itself is covered by test/auth-throttle.spec.ts, which
+      // leaves this unset. Never set it outside a test run.
+      skipIf: () => process.env.THROTTLE_DISABLED === 'true',
+    }),
+    AuthModule,
+    LedgerModule,
+    BudgetsModule,
+    InsightsModule,
+  ],
   controllers: [MetaController],
+  providers: [
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    // Registered globally so routes are authenticated by default. Anything
+    // genuinely public must say so with @Public(). The reverse arrangement
+    // fails open: forget a decorator and data leaks with nothing looking wrong.
+    { provide: APP_GUARD, useClass: AuthGuard },
+  ],
 })
 export class AppModule {}

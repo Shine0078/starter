@@ -1,8 +1,8 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post, Query } from '@nestjs/common';
+﻿import { Body, Controller, Delete, Get, HttpCode, Param, Post, Query } from '@nestjs/common';
 
 import { formatMoney, money } from '../../domain/money';
 import { displayName } from '../../domain/categories';
-import { CurrentUser } from '../current-user';
+import { CurrentUser } from '../auth/auth.guard';
 import { BudgetsService, type CreateBudgetInput } from './budgets.service';
 
 @Controller('budgets')

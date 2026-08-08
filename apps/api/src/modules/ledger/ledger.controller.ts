@@ -1,13 +1,13 @@
-import { Body, Controller, Get, Header, Param, Patch, Post, Query } from '@nestjs/common';
+﻿import { Body, Controller, Get, Header, Param, Patch, Post, Query } from '@nestjs/common';
 
 import { transactionsToCsv } from '../../domain/exports/transactions-csv';
 import { formatMoney, money } from '../../domain/money';
 import type { Transaction } from '../../domain/types';
-import { CurrentUser } from '../current-user';
+import { CurrentUser } from '../auth/auth.guard';
 import { LedgerService } from './ledger.service';
 
 /** Adds a display string alongside the integer. The client never does money
- *  math on the formatted value — it is for rendering only (ADR-0003). */
+ *  math on the formatted value â€” it is for rendering only (ADR-0003). */
 function present(txn: Transaction) {
   return {
     ...txn,
