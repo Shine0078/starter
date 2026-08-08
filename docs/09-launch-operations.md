@@ -109,6 +109,19 @@ remain SHA-256 hashes and cannot be recovered from the database.
 7. Schedule daily backups and a recurring restore drill to a disposable
    `_restore_test` database.
 
+## Load-smoke gate
+
+`npm run load:smoke` boots the real Nest application, registers an isolated
+test account, imports the deterministic ledger, and exercises authenticated
+accounts, transactions, budgets, insights, subscriptions, health, forecast, and
+notification routes concurrently. It reports throughput and p50/p95/p99 latency
+and exits non-zero on any HTTP failure or when `LOAD_P95_MS` is exceeded.
+
+The command defaults to the memory adapter. If a database URL is present it
+refuses to run without `LOAD_TEST_DATABASE=true`; non-local database hosts also
+require `LOAD_TEST_REMOTE=true`. Use only an isolated staging database. CI runs
+160 requests at concurrency 8 against PostgreSQL with a 750 ms p95 ceiling.
+
 ## Still external
 
 The workflow creates release artifacts; it does not select or mutate a hosting

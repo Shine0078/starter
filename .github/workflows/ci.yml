@@ -63,6 +63,18 @@ jobs:
           DATABASE_URL: postgresql://finverse:finverse_dev_only@localhost:5432/finverse
           DATABASE_APP_URL: postgresql://finverse_app:finverse_app_dev_only@localhost:5432/finverse
 
+      - name: Authenticated PostgreSQL load smoke
+        run: npm run load:smoke
+        env:
+          STORE: postgres
+          MIGRATE_ON_BOOT: "false"
+          DATABASE_URL: postgresql://finverse:finverse_dev_only@localhost:5432/finverse
+          DATABASE_APP_URL: postgresql://finverse_app:finverse_app_dev_only@localhost:5432/finverse
+          LOAD_TEST_DATABASE: "true"
+          LOAD_REQUESTS: "160"
+          LOAD_CONCURRENCY: "8"
+          LOAD_P95_MS: "750"
+
       - run: npm run build
 
       - name: Build deployable API image

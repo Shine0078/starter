@@ -2,8 +2,8 @@
 
 Written for whoever picks this up next — including a fresh agent session with no
 memory of how any of it got here. Last updated after the MFA, professional
-monthly-report, smart-alert, core-accessibility, and shared-rate-limit milestones
-on 2026-08-08.
+monthly-report, smart-alert, core-accessibility, shared-rate-limit, and load-smoke
+milestones on 2026-08-08.
 
 Read [`MISSION.md`](../MISSION.md) for the product, [`HANDOVER.md`](../HANDOVER.md)
 for the backlog, and [`04-roadmap.md`](04-roadmap.md) for the sequence. This file
@@ -33,11 +33,18 @@ Every number below was produced by running the thing, not by reading the code.
 | `tsc --noEmit`, `npm run build` | clean |
 | `flutter analyze`, `flutter test` | clean, 21 passed |
 | Android debug compile | `com.finverse.finance`, API 36, 170.9 MB APK; debug-only artifact built successfully |
+| Authenticated load smoke, memory | 250 requests, concurrency 10, 0 failures, 43.3 ms p95, 298.5 req/s |
+| Authenticated load smoke, real Postgres | 250 requests, concurrency 10, 0 failures, 229.1 ms p95, 146.8 req/s |
 | Dashboard | register → sync → correct → logout, verified in a browser |
 | API on Postgres as `finverse_app` | two users, 183 transactions each, sync → correct → re-sync → budget, isolation confirmed against the raw tables |
 
 A previous version of this table said 225 and 288. Those were stale on the day
 they were written; the counts above were re-measured.
+
+The load figures are a repeatable regression baseline from this workstation,
+not a capacity promise. CI runs 160 requests at concurrency 8 and fails above a
+750 ms p95 or on any HTTP error. Staging soak tests still belong on the selected
+hosting platform.
 
 ## What is real, and what only looks real
 

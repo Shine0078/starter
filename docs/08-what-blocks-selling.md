@@ -122,7 +122,7 @@ has a `docker-compose.yml` for local development and a CI workflow. That is all.
 | 4.7 | **External error tracking absent** | Structured request logs now carry correlation ids and deliberately omit headers, bodies, queries, users, merchants, and amounts; no external log/error service is configured | external account + days |
 | 4.8 | **Shared rate limiting** | **Completed for the PostgreSQL launch path:** opaque fixed-window counters and block state are atomic across API instances and survive restarts. The memory development path remains process-local by design | production load testing remains |
 | 4.9 | **No general scheduler** | Plaid webhooks use a durable PostgreSQL retry queue, but scheduled purge, proactive notification refresh, and recurring report delivery still need platform jobs | external host + days |
-| 4.10 | **No load or performance testing** | "Scalable to millions" is currently an aspiration with no measurement behind it | 1 week |
+| 4.10 | **Production capacity not established** | A guarded authenticated smoke now runs in CI against PostgreSQL and fails on any error or p95 above 750 ms. Local 250-request/concurrency-10 baseline: 0 failures, 229.1 ms p95, 146.8 req/s. Staging soak and provider-limit tests remain | selected host + days |
 | 4.11 | **No staging environment** | Nowhere to verify a release before users get it | with 4.2 |
 | 4.12 | **Production migration orchestration** | Idempotence is tested and the image defaults `MIGRATE_ON_BOOT=false`; the release guide defines the step | Must wire into selected host |
 

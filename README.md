@@ -187,6 +187,16 @@ runs the suite against them, and throws the data directory away afterwards:
 npm run test:db
 ```
 
+Run the guarded authenticated load smoke against the in-memory development path:
+
+```bash
+npm run load:smoke
+```
+
+CI runs the same benchmark against PostgreSQL. A database target requires the
+explicit `LOAD_TEST_DATABASE=true` safety flag, and remote targets require a
+second confirmation so this command is not accidentally aimed at production.
+
 `npm test` on its own skips the Postgres half and runs the in-memory adapter
 only — that is what a contributor without a database gets, and it must keep
 passing on its own.

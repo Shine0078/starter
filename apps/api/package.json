@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:db": "ts-node scripts/with-postgres.ts vitest run",
+    "load:smoke": "ts-node scripts/load-smoke.ts",
     "db:start": "ts-node scripts/with-postgres.ts --serve",
     "demo": "ts-node src/seed/demo.ts",
     "migrate": "ts-node src/infra/postgres/migrate.ts",

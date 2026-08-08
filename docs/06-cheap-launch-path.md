@@ -16,8 +16,8 @@ longer.
 - The Flutter dashboard passes `flutter analyze` and `flutter test`.
 - The Android toolchain is installed, licensed, and has produced a verified
   debug APK at `apps/mobile/build/app/outputs/flutter-apk/app-debug.apk`.
-- `.github/workflows/ci.yml` checks API tests/build plus Flutter analysis/tests
-  on every push and pull request.
+- `.github/workflows/ci.yml` checks API tests/build, an authenticated PostgreSQL
+  load-smoke threshold, plus Flutter analysis/tests on every push and pull request.
 - The API has Postgres migrations and a database contract test. Development can
   use the free in-memory store when a database is not available.
 - Users can download their transaction ledger as CSV and model a one-off

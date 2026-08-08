@@ -16,6 +16,7 @@
     "build": "npm run build --workspace @finverse/api",
     "test": "npm run test --workspace @finverse/api",
     "test:db": "npm run test:db --workspace @finverse/api",
+    "load:smoke": "npm run load:smoke --workspace @finverse/api",
     "db:start": "npm run db:start --workspace @finverse/api",
     "demo": "npm run demo --workspace @finverse/api",
     "infra:up": "docker compose -f infra/docker-compose.yml up -d",
