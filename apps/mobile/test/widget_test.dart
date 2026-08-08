@@ -11,6 +11,7 @@ import 'package:finverse/api/session_store.dart';
 import 'package:finverse/main.dart';
 import 'package:finverse/models/models.dart';
 import 'package:finverse/screens/home_screen.dart';
+import 'package:finverse/screens/bank_connections_screen.dart';
 import 'package:finverse/screens/login_screen.dart';
 import 'package:finverse/screens/transaction_detail_screen.dart';
 
@@ -196,6 +197,36 @@ void main() {
     await tester.pump();
     create = tester.widget(find.widgetWithText(FilledButton, 'Create account'));
     expect(create.onPressed, isNotNull);
+  });
+
+  testWidgets('bank linking requires FINVERSE password step-up',
+      (tester) async {
+    http.Request? linkRequest;
+    final api = clientWith(MockClient((request) async {
+      if (request.method == 'GET' && request.url.path.endsWith('/bank-links')) {
+        return http.Response('{"count":0,"links":[]}', 200);
+      }
+      if (request.url.path.endsWith('/bank-links/link-token')) {
+        linkRequest = request;
+        return http.Response('{"message":"not configured"}', 503);
+      }
+      return http.Response('{}', 200);
+    }));
+
+    await tester.pumpWidget(MaterialApp(home: BankConnectionsScreen(api: api)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Connect bank'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Confirm it’s you'), findsOneWidget);
+    expect(find.text('FINVERSE password'), findsOneWidget);
+    await tester.enterText(
+        find.byType(TextField).last, 'correct horse battery staple');
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+
+    expect(linkRequest, isNotNull);
+    expect(linkRequest!.body, contains('correct horse battery staple'));
   });
 
   testWidgets('surfaces the server message when sign-in is rejected',

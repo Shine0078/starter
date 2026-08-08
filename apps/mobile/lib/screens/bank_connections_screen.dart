@@ -68,12 +68,19 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
 
   Future<void> _connect([BankLink? existing]) async {
     if (_working) return;
+    final password = await _confirmPassword(
+      existing == null ? 'connect a bank' : 'reconnect this bank',
+    );
+    if (password == null) return;
     setState(() {
       _working = true;
       _error = null;
     });
     try {
-      final token = await widget.api.createBankLinkToken(linkId: existing?.id);
+      final token = await widget.api.createBankLinkToken(
+        password: password,
+        linkId: existing?.id,
+      );
       final result = await widget.plaidLink.open(token);
       if (!result.succeeded) {
         if (result.errorCode != null) {
@@ -92,6 +99,50 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
     } finally {
       if (mounted) setState(() => _working = false);
     }
+  }
+
+  Future<String?> _confirmPassword(String action) async {
+    var enteredPassword = '';
+    final value = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Confirm it’s you'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Enter your FINVERSE password to $action. Plaid handles your bank sign-in separately.',
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              autofocus: true,
+              obscureText: true,
+              autofillHints: const [AutofillHints.password],
+              textInputAction: TextInputAction.done,
+              onChanged: (value) => enteredPassword = value,
+              onSubmitted: (value) => Navigator.pop(dialogContext, value),
+              decoration: const InputDecoration(
+                labelText: 'FINVERSE password',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, enteredPassword),
+            child: const Text('Continue'),
+          ),
+        ],
+      ),
+    );
+    if (value == null || value.isEmpty) return null;
+    return value;
   }
 
   Future<void> _exchange(PlaidLinkResult result) async {

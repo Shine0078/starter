@@ -1,6 +1,12 @@
 import { IsOptional, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
 
+import { MAX_PASSWORD_LENGTH } from '../../domain/auth/password-policy';
+
 export class CreateLinkTokenDto {
+  @IsString()
+  @MaxLength(MAX_PASSWORD_LENGTH)
+  password!: string;
+
   @IsOptional()
   @IsUUID()
   linkId?: string;

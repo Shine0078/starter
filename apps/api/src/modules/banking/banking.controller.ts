@@ -1,13 +1,18 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Post } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 
 import type { BankLink } from '../../ports/banking';
-import { CurrentUser } from '../auth/auth.guard';
+import { CurrentUser, ReqContext } from '../auth/auth.guard';
+import { AuthService, type RequestContext } from '../auth/auth.service';
 import { CreateLinkTokenDto, ExchangeBankTokenDto } from './banking.dto';
 import { BankingService } from './banking.service';
 
 @Controller('bank-links')
 export class BankingController {
-  constructor(private readonly banking: BankingService) {}
+  constructor(
+    private readonly banking: BankingService,
+    private readonly auth: AuthService,
+  ) {}
 
   @Get()
   async list(@CurrentUser() userId: string) {
@@ -16,7 +21,13 @@ export class BankingController {
   }
 
   @Post('link-token')
-  linkToken(@CurrentUser() userId: string, @Body() body: CreateLinkTokenDto) {
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  async linkToken(
+    @CurrentUser() userId: string,
+    @Body() body: CreateLinkTokenDto,
+    @ReqContext() context: RequestContext,
+  ) {
+    await this.auth.verifyBankLinkStepUp(userId, body.password, context);
     return this.banking.createLinkToken(userId, body.linkId);
   }
 

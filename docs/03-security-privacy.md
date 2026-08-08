@@ -53,6 +53,7 @@ routes are authenticated by default:
 | Email verification with hashed, single-use, 24-hour tokens | Implemented with development and SMTP delivery adapters |
 | Password reset with hashed, single-use, one-hour tokens | Implemented API, mobile flow, and SMTP delivery adapter |
 | Password reset revokes every existing session | Implemented |
+| Password step-up before new/reconnected bank Link sessions | Implemented, rate-limited, and audited |
 
 Password rules follow NIST SP 800-63B — length plus a blocklist, no composition
 requirements. Composition rules produce `Password1!` and get reused everywhere.
@@ -61,10 +62,10 @@ requirements. Composition rules produce `Password1!` and get reused everywhere.
 
 - MFA/TOTP, passkeys (WebAuthn), and OAuth 2.0 + PKCE. Passkeys need a
   registered domain for the relying-party id.
-- Step-up authentication for linking an account. Account deletion and portable
-  data export re-verify the current password; deletion also requires explicit typed
-  confirmation.
 - Biometric app lock on the device.
+
+Account deletion, portable data export, and new/reconnected bank Link sessions
+re-verify the current password; deletion also requires explicit typed confirmation.
 
 The blocklist is a small built-in set. Production should check a real corpus —
 the Have I Been Pwned k-anonymity range API never receives the password itself.

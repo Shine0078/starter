@@ -25,7 +25,7 @@ Stated so the rest of this document is not read as "nothing works".
 | Authentication | Argon2id, rotating refresh tokens with reuse detection, email verification, password reset, recoverable deletion, global guard, per-account lockout, session list, audit trail |
 | Persistence | Postgres behind ports, contract-tested against both adapters, migrations |
 | Isolation | Row-level security, app connects as a non-superuser role, 21 dedicated tests |
-| Tests | 289 without a database, 384 against real Postgres, 16 Flutter tests; all passing |
+| Tests | 289 without a database, 384 against real Postgres, 17 Flutter tests; all passing |
 | CI | GitHub Actions: API typecheck/test/build/image + Flutter analyze/test/Android compile; tagged API/APK releases |
 
 That is a solid Phase-0 foundation. It is not a product.
@@ -94,7 +94,7 @@ environment before they can be claimed.
 | 3.2.3 | **Password reset** | Enumeration-safe request, one-time reset, password policy, session revocation, mobile flow, and SMTP adapter are complete | Real email provider credentials remain |
 | 3.2.4 | **MFA / TOTP** | The mission names it explicitly. Absent | 1 week |
 | 3.2.5 | **Passkeys / WebAuthn, OAuth2 + PKCE** | Mission names both. Absent. Needs 1.4 | 2–3 weeks |
-| 3.2.6 | **Step-up auth** for linking and export | Deletion and full-data export re-verify the current password. Bank linking still relies on the active session plus Plaid Link authentication | days |
+| 3.2.6 | **Step-up auth** for linking and export | **Completed:** deletion, portable export, and every new/update Plaid Link session re-verify the current password; bank-link attempts are rate-limited and added to the security activity trail | Hardware/production institution verification remains |
 | 3.2.7 | **Biometric app lock** | Mission names it. Absent | days |
 | 3.2.8 | **Password blocklist is a small built-in set** | Should check a real corpus via HIBP k-anonymity | days |
 | 3.2.9 | **CORS is wide open in development** | Correctly fails closed in production, but the production allowlist has never been exercised | days |
@@ -132,7 +132,8 @@ has a `docker-compose.yml` for local development and a CI workflow. That is all.
 
 The app now has authentication/recovery, a dashboard, category-spending chart,
 searchable transactions, category corrections, budgets, goals, email verification,
-recoverable deletion, and Android bank connection/reconnect/sync/revoke. It remains
+recoverable deletion, password-confirmed Android bank connection/reconnect,
+sync/revoke, versioned legal acceptance, and privacy controls. It remains
 smaller than the complete MISSION.md product.
 
 | # | Item | Detail | Effort |
@@ -241,7 +242,7 @@ is pure calendar time.
 2. Keep the documentation honest as production controls land
 3. Select hosting, wire deployment, schedule backups, and add monitoring (§4)
 4. Mobile app past the prototype (§1 of §5) — the longest single track, start early
-5. MFA, step-up auth, secrets management (3.2.4, 3.2.6, 3.2.10)
+5. MFA and secrets management (3.2.4, 3.2.10)
 6. Billing (§6) — only once there is something worth paying for
 
 **Blocked until §1 lands:** everything in §2, passkeys (needs the domain), the

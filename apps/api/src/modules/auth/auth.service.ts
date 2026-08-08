@@ -495,6 +495,28 @@ export class AuthService {
     return toPublicUser(user);
   }
 
+  /** Password step-up for opening or reconnecting a financial-data source. */
+  async verifyBankLinkStepUp(
+    userId: string,
+    password: string,
+    context: RequestContext,
+  ): Promise<void> {
+    const user = await this.users.findById(userId);
+    if (!user || user.status !== 'active') {
+      throw new UnauthorizedException('Session is no longer valid. Sign in again.');
+    }
+    const verified = await this.hasher.verify(user.passwordHash, password);
+    await this.record(
+      'bank_link_step_up',
+      verified,
+      user.id,
+      user.email,
+      context,
+      verified ? null : 'password re-verification failed',
+    );
+    if (!verified) throw new UnauthorizedException('Password is incorrect.');
+  }
+
   /** Used by the guard. Verifies signature, then confirms the session still exists. */
   async resolveAccessToken(
     token: string,

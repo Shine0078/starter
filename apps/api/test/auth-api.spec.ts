@@ -330,6 +330,16 @@ describe('auth API', () => {
         .post('/api/bank-links/link-token')
         .set('Authorization', authorization)
         .send({})
+        .expect(400);
+      await request(http)
+        .post('/api/bank-links/link-token')
+        .set('Authorization', authorization)
+        .send({ password: 'wrong password' })
+        .expect(401);
+      await request(http)
+        .post('/api/bank-links/link-token')
+        .set('Authorization', authorization)
+        .send({ password: PASSWORD })
         .expect(503);
     });
   });

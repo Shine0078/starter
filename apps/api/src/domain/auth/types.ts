@@ -83,6 +83,7 @@ export type AuthEventKind =
   | 'email_verified'
   | 'password_reset_requested'
   | 'password_reset_completed'
+  | 'bank_link_step_up'
   | 'data_exported';
 
 export interface AuthEvent {

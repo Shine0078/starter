@@ -112,7 +112,7 @@ last 15 minutes; exchange the refresh token at `/api/auth/refresh` for a new pai
 | `PATCH` | `/privacy/consents/:kind` | Append a grant/withdrawal event for analytics or product updates |
 | `POST` | `/sync` | Pull from the aggregator, categorize, persist |
 | `GET` | `/bank-links` | List connected institutions and sync health |
-| `POST` | `/bank-links/link-token` | Create a Plaid Link token (new or update mode) |
+| `POST` | `/bank-links/link-token` | Password-confirmed Plaid Link token (new or update mode) |
 | `POST` | `/bank-links/exchange` | Exchange a temporary public token and begin sync |
 | `POST` | `/bank-links/:id/sync` | Incrementally reconcile one institution |
 | `DELETE` | `/bank-links/:id` | Revoke Plaid access and remove the stored token |

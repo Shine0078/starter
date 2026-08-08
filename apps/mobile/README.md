@@ -29,6 +29,8 @@ Plaid secrets and permanent access tokens never enter Flutter.
 
 The Accounts tab supports new connections, update mode when credentials need
 attention, manual sync, webhook-driven background sync, and disconnect/revoke.
+Opening Plaid Link or reconnecting requires the current FINVERSE password first;
+the API rate-limits and records every successful or failed step-up attempt.
 
 ## Customer workflows
 

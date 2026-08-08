@@ -494,11 +494,14 @@ class ApiClient {
         .toList();
   }
 
-  Future<String> createBankLinkToken({String? linkId}) async {
+  Future<String> createBankLinkToken({
+    required String password,
+    String? linkId,
+  }) async {
     final json = await _send(
       'POST',
       '/bank-links/link-token',
-      {if (linkId != null) 'linkId': linkId},
+      {'password': password, if (linkId != null) 'linkId': linkId},
     ) as Map<String, dynamic>;
     return json['token'] as String;
   }
