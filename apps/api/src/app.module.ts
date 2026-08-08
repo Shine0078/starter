@@ -10,6 +10,7 @@ import { AuthGuard, Public } from './modules/auth/auth.guard';
 import { AuthModule } from './modules/auth/auth.module';
 import { BudgetsModule } from './modules/budgets/budgets.module';
 import { BankingModule } from './modules/banking/banking.module';
+import { BillingModule } from './modules/billing/billing.module';
 import { CoreModule } from './modules/core.module';
 import { InsightsModule } from './modules/insights/insights.module';
 import { GoalsModule } from './modules/goals/goals.module';
@@ -100,6 +101,7 @@ class MetaController {
     }),
     AuthModule,
     BankingModule,
+    BillingModule,
     LedgerModule,
     BudgetsModule,
     GoalsModule,

@@ -14,6 +14,7 @@ import { AesGcmBankTokenCipher } from '../src/infra/banking/token-cipher';
 import { verifyPlaidWebhookJwt } from '../src/infra/banking/plaid-provider';
 import { BankingService } from '../src/modules/banking/banking.service';
 import type { BankProvider, BankSyncPage } from '../src/ports/banking';
+import { billingHarness } from './billing-fixtures';
 
 class FakeProvider implements BankProvider {
   readonly name = 'plaid' as const;
@@ -69,6 +70,7 @@ describe('banking integration', () => {
     const service = new BankingService(
       links, provider, new AesGcmBankTokenCipher(randomBytes(32)), new InMemoryBankWebhookStore(), accounts,
       transactions, new InMemoryRuleStore(), new InMemoryNotificationStore(), new FixedClock('2026-08-08'),
+      billingHarness().billing,
     );
 
     const link = await service.exchange('user-1', 'public-sandbox', 'First Platypus Bank', 'ins_109508');
@@ -149,6 +151,7 @@ describe('banking integration', () => {
       new InMemoryRuleStore(),
       notifications,
       new FixedClock('2026-08-08'),
+      billingHarness().billing,
     );
 
     const link = await service.exchange('user-1', 'public-sandbox', 'First Platypus Bank', null);

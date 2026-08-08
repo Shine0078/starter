@@ -52,6 +52,13 @@ import {
 } from '../infra/banking/bank-link-stores';
 import { PlaidBankProvider } from '../infra/banking/plaid-provider';
 import { AesGcmBankTokenCipher } from '../infra/banking/token-cipher';
+import { StripeBillingProvider } from '../infra/billing/stripe-provider';
+import {
+  InMemoryBillingEventStore,
+  InMemorySubscriptionStore,
+  PostgresBillingEventStore,
+  PostgresSubscriptionStore,
+} from '../infra/billing/subscription-stores';
 import { InMemoryConsentStore, PostgresConsentStore } from '../infra/privacy/consent-stores';
 import {
   BANK_LINK_STORE,
@@ -59,6 +66,7 @@ import {
   BANK_TOKEN_CIPHER,
   BANK_WEBHOOK_STORE,
 } from '../ports/banking';
+import { BILLING_EVENT_STORE, BILLING_PROVIDER, SUBSCRIPTION_STORE } from '../ports/billing';
 import {
   PostgresAuthEventStore,
   PostgresSessionStore,
@@ -117,6 +125,7 @@ function storeProviders(): Provider[] {
     const consents = new InMemoryConsentStore();
     const registrations = new InMemoryRegistrationStore(users, consents);
     const mfa = new InMemoryMfaStore();
+    const subscriptions = new InMemorySubscriptionStore();
     const deletions = new InMemoryAccountDeletionStore(
       users,
       sessions,
@@ -131,6 +140,7 @@ function storeProviders(): Provider[] {
       bankWebhooks,
       consents,
       mfa,
+      subscriptions,
     );
     return [
       { provide: ACCOUNT_STORE, useValue: accounts },
@@ -149,6 +159,8 @@ function storeProviders(): Provider[] {
       { provide: CONSENT_STORE, useValue: consents },
       { provide: REGISTRATION_STORE, useValue: registrations },
       { provide: MFA_STORE, useValue: mfa },
+      { provide: SUBSCRIPTION_STORE, useValue: subscriptions },
+      { provide: BILLING_EVENT_STORE, useValue: new InMemoryBillingEventStore() },
     ];
   }
 
@@ -183,6 +195,8 @@ function storeProviders(): Provider[] {
     { provide: CONSENT_STORE, useFactory: () => new PostgresConsentStore(pool) },
     { provide: REGISTRATION_STORE, useFactory: () => new PostgresRegistrationStore(pool) },
     { provide: MFA_STORE, useFactory: () => new PostgresMfaStore(pool) },
+    { provide: SUBSCRIPTION_STORE, useFactory: () => new PostgresSubscriptionStore(pool) },
+    { provide: BILLING_EVENT_STORE, useFactory: () => new PostgresBillingEventStore(pool) },
   ];
 }
 
@@ -225,6 +239,15 @@ function storeProviders(): Provider[] {
           ? AesGcmBankTokenCipher.fromBase64(key)
           : new AesGcmBankTokenCipher(randomBytes(32));
       },
+    },
+    {
+      provide: BILLING_PROVIDER,
+      useFactory: () =>
+        new StripeBillingProvider({
+          secretKey: process.env.STRIPE_SECRET_KEY,
+          webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+          priceIds: { pro: process.env.STRIPE_PRICE_ID_PRO },
+        }),
     },
     {
       provide: EMAIL_SENDER,
@@ -292,6 +315,9 @@ function storeProviders(): Provider[] {
     REGISTRATION_STORE,
     MFA_STORE,
     MFA_SECRET_CIPHER,
+    BILLING_PROVIDER,
+    SUBSCRIPTION_STORE,
+    BILLING_EVENT_STORE,
   ],
 })
 export class CoreModule {}

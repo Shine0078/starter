@@ -1,13 +1,35 @@
-﻿import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
+﻿import { BadRequestException, Controller, Get, Query, UseGuards } from '@nestjs/common';
 
 import { formatMoney, money } from '../../domain/money';
 import { StreamableFile } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { renderMonthlyReportPdf } from '../../infra/reports/monthly-report-pdf';
 import { CurrentUser } from '../auth/auth.guard';
+import { EntitlementGuard } from '../billing/entitlement.guard';
 import { InsightsService } from './insights.service';
 
+/**
+ * No route here is gated, deliberately, and that is a decision worth recording
+ * rather than an omission.
+ *
+ * The billing mechanism is complete and `EntitlementGuard` is wired up, so
+ * turning a route into a paid feature is one `@RequiresEntitlement(...)`
+ * decorator. It is not switched on because two things have to happen first:
+ *
+ *  1. Someone has to *decide* the pricing model. The entitlements in
+ *     domain/billing/plans.ts are a placeholder shape, not a product decision.
+ *  2. The Flutter client has to handle the resulting 403. It already calls
+ *     `reports/monthly.pdf`, `cash-flow-forecast`, and `purchase-scenario` on
+ *     every user, so gating any of them today would break the shipping app for
+ *     everyone with no upgrade path in the UI to recover through.
+ *
+ * The one limit that *is* enforced is the bank-link count, in BankingService —
+ * because a connected institution costs real money per Item at the aggregator,
+ * and it fails at connect time, which is exactly where an upgrade prompt
+ * belongs.
+ */
 @Controller()
+@UseGuards(EntitlementGuard)
 export class InsightsController {
   constructor(private readonly insights: InsightsService) {}
 

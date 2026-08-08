@@ -133,8 +133,33 @@ last 15 minutes; exchange the refresh token at `/api/auth/refresh` for a new pai
 | `GET` | `/cash-flow-forecast?days=7|30|90&currency=CAD` | Currency-specific conservative liquid-cash outlook from repeatable income and bills |
 | `GET` | `/purchase-scenario?days=7|30|90&amount=<minor>&date=YYYY-MM-DD&currency=CAD` | One-off purchase impact against the same currency-specific outlook |
 | `GET` | `/credit-cards` | Utilization, pay-down target, and an early payment window |
+| `GET` | `/billing/subscription` | Current plan, entitlements, and renewal state |
+| `POST` | `/billing/checkout-session` | Start hosted checkout for a plan. Returns a URL; no card data reaches this API |
+| `POST` | `/billing/portal-session` | Link to the provider's page for cancellation, card changes, and invoices |
+| `POST` | `/billing-webhooks/stripe` | **Public.** Signature-verified over the raw body |
+| `GET` | `/billing/plans` | **Public.** The tier catalogue |
 | `GET` | `/categories` | **Public.** The seeded category tree |
 | `GET` | `/healthz` | **Public.** Liveness and database readiness |
+
+## Billing
+
+Off unless `STRIPE_SECRET_KEY` is set, and it says so rather than half-working:
+`/billing/subscription` reports everyone as free with `purchaseAvailable: false`,
+and checkout returns 503.
+
+Card details never reach this API — checkout and card management are the
+provider's hosted pages, which is what keeps PCI DSS out of scope. Entitlement is
+derived by a pure function that fails closed on a missing record, an unknown
+status, or a lapsed period, so a missed webhook downgrades rather than gives the
+product away.
+
+Only the connected-institution limit is enforced today. The tiering in
+`src/domain/billing/plans.ts` is a placeholder shape rather than a pricing
+decision, and the mobile client has no upgrade UI yet — gating a route it
+already calls would break the app for every user. See
+[ADR-0007](docs/adr/0007-billing-and-entitlements.md), which also explains why
+selling subscriptions *inside* the mobile app needs StoreKit and Play Billing
+rather than this flow.
 
 ## Persistence
 

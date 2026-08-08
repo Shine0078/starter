@@ -11,6 +11,7 @@ import {
 } from '../in-memory-store';
 import { withTransaction } from '../postgres/pool';
 import { InMemoryBankLinkStore, InMemoryBankWebhookStore } from '../banking/bank-link-stores';
+import { InMemorySubscriptionStore } from '../billing/subscription-stores';
 import { InMemoryConsentStore } from '../privacy/consent-stores';
 import { InMemoryAuthEventStore, InMemorySessionStore, InMemoryUserStore } from './in-memory-auth-stores';
 import { InMemoryMfaStore } from './mfa-stores';
@@ -37,6 +38,7 @@ export class InMemoryAccountDeletionStore implements AccountDeletionStore {
     private readonly bankWebhooks: InMemoryBankWebhookStore,
     private readonly consents: InMemoryConsentStore,
     private readonly mfa: InMemoryMfaStore,
+    private readonly subscriptions: InMemorySubscriptionStore,
   ) {}
 
   async request(userId: string, email: string, _requestedAt: Date, purgeAfter: Date): Promise<void> {
@@ -69,6 +71,10 @@ export class InMemoryAccountDeletionStore implements AccountDeletionStore {
       this.bankWebhooks.purgeUser(userId);
       this.consents.purgeUser(userId);
       this.mfa.purgeUser(userId);
+      // The Postgres adapter gets this from the FK cascade on `users`; the
+      // in-memory one has to be told, and a missed store here is how an
+      // "erased" account keeps a row nobody looks at again.
+      this.subscriptions.purgeUser(userId);
       this.sessions.purgeUser(userId);
       this.events.purgeUser(userId, deletion.email);
       this.users.purgeUser(userId);

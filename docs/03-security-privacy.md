@@ -147,6 +147,13 @@ Keeping PCI out of scope is worth defending. The moment the app accepts a card n
 directly — even for its own subscription billing — scope explodes. Subscription
 billing goes through a hosted processor (Stripe Checkout), never our own form.
 
+**As implemented:** the API creates a checkout session and returns a URL. It never
+receives a PAN, CVC, expiry, or billing address. The `Subscription` port and the
+`subscriptions` table hold opaque provider handles and entitlement state only, and
+both say so in a comment — the pressure to store "just the last four for the UI"
+will come, and the last four is enough to bring this back into scope. See
+[ADR-0007](adr/0007-billing-and-entitlements.md).
+
 ## Threat model, abbreviated
 
 | Threat | Mitigation |

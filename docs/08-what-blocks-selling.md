@@ -153,18 +153,25 @@ smaller than the complete MISSION.md product.
 
 ---
 
-## 6. You cannot take money
+## 6. Taking money — mechanism built, decisions and accounts outstanding
 
-Completely absent from the repository. There is no billing code of any kind.
+The web billing path is implemented and tested: hosted checkout, the management
+portal, signed webhooks that survive redelivery and out-of-order arrival,
+subscription persistence under RLS, and entitlement that fails closed. See
+[ADR-0007](adr/0007-billing-and-entitlements.md).
 
-| # | Item | Effort |
-|---|---|---|
-| 6.1 | **Pricing model decided** — free tier, trial, subscription tiers | product decision |
-| 6.2 | **Payment integration** via hosted checkout. Keep card entry out of your own forms or PCI scope explodes — the docs are right about this and it is worth defending | 1–2 weeks |
-| 6.3 | **Subscription lifecycle** — trials, upgrades, downgrades, dunning, cancellation, refunds | 2 weeks |
-| 6.4 | **Entitlement enforcement** — nothing in the API knows what a user has paid for | 1 week |
-| 6.5 | **Tax handling** — sales tax / VAT / GST registration and collection | counsel + 1 week |
-| 6.6 | **In-app purchase rules** — Apple and Google take a cut and have specific requirements for subscriptions sold in-app | 1–2 weeks |
+What remains is a product decision, an external account, a filing obligation,
+and a second integration for the mobile stores.
+
+| # | Item | State | Effort |
+|---|---|---|---|
+| 6.1 | **Pricing model decided** — tiers, trial, what belongs behind the paywall | **Outstanding, and it blocks 6.7.** The tiering in `domain/billing/plans.ts` is a placeholder shape chosen to exercise the mechanism, not a product decision | product decision |
+| 6.2 | **Payment integration** via hosted checkout | **Completed.** Stripe Checkout and Billing Portal; no card data reaches this system, so PCI scope stays out | Stripe account required |
+| 6.3 | **Subscription lifecycle** — trials, upgrades, cancellation, dunning, refunds | **Completed** by delegating to the provider's hosted portal and reacting to its webhooks. `past_due` deliberately stays entitled while dunning runs | — |
+| 6.4 | **Entitlement enforcement** | **Completed.** `effectivePlan()` derives the plan and fails closed on a missing record, unknown status, lapsed period, or unrecognised price. `EntitlementGuard` gates any route with one decorator | — |
+| 6.5 | **Tax handling** — sales tax / VAT / GST | Stripe Tax is enabled on checkout, which computes and collects. **Registering** in each jurisdiction is a filing obligation, not a flag | counsel + registration |
+| 6.6 | **In-app purchase rules** | **Not started, and not a variant of 6.2.** Apple and Google require their own purchase systems for digital subscriptions sold inside an app and take a cut; pointing a "Subscribe" button in the Flutter app at Stripe Checkout would likely be rejected by both stores. StoreKit and Play Billing are a separate integration with their own receipt validation. `Subscription` is provider-shaped so a second adapter fits behind the same port | 2–3 weeks |
+| 6.7 | **Upgrade UI in the mobile client** | Not started. Until it exists, gating any route the app already calls breaks the app for every user — which is why only the bank-link limit is enforced today | 1 week, after 6.1 |
 
 ---
 

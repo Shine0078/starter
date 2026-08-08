@@ -14,6 +14,15 @@ export interface LegalConfig {
   privacyNotice: LegalDocumentConfig | null;
 }
 
+export interface BillingConfig {
+  /** Where the hosted checkout returns a customer who paid. */
+  successUrl: string;
+  /** …and one who backed out. */
+  cancelUrl: string;
+  /** Where the provider's management portal returns them. */
+  portalReturnUrl: string;
+}
+
 export interface AppConfig {
   port: number;
   store: StoreDriver;
@@ -38,6 +47,8 @@ export interface AppConfig {
   trustedProxyHops: number;
   /** Versioned legal documents whose exact versions must be accepted at registration. */
   legal: LegalConfig;
+  /** Return URLs for hosted checkout and the billing portal. */
+  billing: BillingConfig;
 }
 
 /**
@@ -171,6 +182,56 @@ function resolveLegalConfig(isProduction: boolean): LegalConfig {
 }
 
 /**
+ * Return URLs for the hosted checkout.
+ *
+ * These are validated rather than passed through because the provider will
+ * redirect a browser to whatever we hand it. An unvalidated value from the
+ * environment is one misconfiguration away from an open redirect that carries
+ * the trust of a payment flow — the worst possible place to land a user on an
+ * attacker's page.
+ *
+ * HTTPS is required in production and `http://localhost` is allowed outside it,
+ * because a developer has no certificate and a real deployment has no excuse.
+ */
+function billingUrl(name: string, fallback: string, requireHttps: boolean): string {
+  const raw = process.env[name]?.trim() || fallback;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    throw new Error(`${name} must be a valid absolute URL.`);
+  }
+
+  const isLocalhost = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1';
+  if (parsed.protocol === 'https:') return parsed.toString();
+  if (parsed.protocol === 'http:' && isLocalhost && !requireHttps) return parsed.toString();
+
+  throw new Error(
+    `${name} must use HTTPS${requireHttps ? '' : ' (or http://localhost in development)'}.`,
+  );
+}
+
+/**
+ * HTTPS is demanded only when billing is actually switched on, and the
+ * localhost defaults stand otherwise.
+ *
+ * A deployment that sells nothing has no checkout to return from, and forcing
+ * it to invent three URLs to boot would be configuration for its own sake. The
+ * moment STRIPE_SECRET_KEY is present these become real redirect targets that a
+ * browser is sent to after a payment, and then nothing but HTTPS will do.
+ */
+function resolveBillingConfig(isProduction: boolean, port: number, billingEnabled: boolean): BillingConfig {
+  const base = `http://localhost:${port}`;
+  const requireHttps = isProduction && billingEnabled;
+  return {
+    successUrl: billingUrl('BILLING_SUCCESS_URL', `${base}/billing/success`, requireHttps),
+    cancelUrl: billingUrl('BILLING_CANCEL_URL', `${base}/billing/cancel`, requireHttps),
+    portalReturnUrl: billingUrl('BILLING_PORTAL_RETURN_URL', `${base}/billing`, requireHttps),
+  };
+}
+
+/**
  * Memoised, and it has to be.
  *
  * loadConfig() is called from the composition root, the health endpoint, and
@@ -235,8 +296,21 @@ function buildConfig(): AppConfig {
     }
   }
 
+  const port = integerInRange('PORT', process.env.PORT, 3000, 65_535);
+
+  // Half-configured billing charges customers and never entitles them, so the
+  // adapter refuses to construct in that state. Checking here as well means the
+  // process fails at boot rather than on the first checkout attempt.
+  const stripeKey = process.env.STRIPE_SECRET_KEY;
+  if (stripeKey && !process.env.STRIPE_WEBHOOK_SECRET) {
+    throw new Error('STRIPE_SECRET_KEY requires STRIPE_WEBHOOK_SECRET.');
+  }
+  if (isProduction && stripeKey?.startsWith('sk_test_')) {
+    throw new Error('Production must not run on a Stripe test key.');
+  }
+
   return {
-    port: integerInRange('PORT', process.env.PORT, 3000, 65_535),
+    port,
     store,
     databaseUrl,
     appDatabaseUrl,
@@ -251,5 +325,6 @@ function buildConfig(): AppConfig {
       10,
     ),
     legal: resolveLegalConfig(isProduction),
+    billing: resolveBillingConfig(isProduction, port, Boolean(stripeKey)),
   };
 }

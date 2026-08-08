@@ -51,6 +51,12 @@ if (ownerUrl) {
         userId,
       ]);
       await harness.owner.query(
+        `INSERT INTO subscriptions
+           (user_id, plan, status, provider_customer_id, provider_subscription_id, current_period_end)
+         VALUES ($1, 'pro', 'active', 'cus_deleted', 'sub_deleted', now() + interval '30 days')`,
+        [userId],
+      );
+      await harness.owner.query(
         `INSERT INTO notifications
            (id, user_id, kind, title, message, severity, dedupe_key, created_at)
          VALUES ('notification-1', $1, 'budget', 'Budget', 'Warning', 'warning',
@@ -148,6 +154,7 @@ if (ownerUrl) {
         'user_mfa',
         'mfa_recovery_codes',
         'mfa_login_challenges',
+        'subscriptions',
       ]) {
         const column = table === 'users' ? 'id' : 'user_id';
         const result = await harness.owner.query(

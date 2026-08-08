@@ -38,6 +38,7 @@ import {
   type BankTokenCipher,
   type BankWebhookStore,
 } from '../../ports/banking';
+import { BillingService } from '../billing/billing.service';
 
 @Injectable()
 export class BankingService implements OnModuleInit, OnModuleDestroy {
@@ -55,6 +56,7 @@ export class BankingService implements OnModuleInit, OnModuleDestroy {
     @Inject(RULE_STORE) private readonly rules: RuleStore,
     @Inject(NOTIFICATION_STORE) private readonly notifications: NotificationStore,
     @Inject(CLOCK) private readonly clock: ClockPort,
+    private readonly billing: BillingService,
   ) {}
 
   onModuleInit(): void {
@@ -90,6 +92,20 @@ export class BankingService implements OnModuleInit, OnModuleDestroy {
   ): Promise<BankLink> {
     this.requireConfigured();
     if (!publicToken || publicToken.length > 500) throw new BadRequestException('Invalid public token.');
+
+    // Checked *before* the exchange, deliberately. Exchanging first would
+    // create a live Plaid Item that we then refuse to store — an orphan that
+    // keeps pulling data we have no record of and no way to revoke.
+    const connected = (await this.links.list(userId)).filter((link) => link.status !== 'revoked');
+    if ((await this.billing.remainingBankLinks(userId, connected.length)) <= 0) {
+      throw new ForbiddenException({
+        error: 'plan_upgrade_required',
+        message: `Your plan allows ${connected.length} connected institution(s).`,
+        entitlement: 'unlimited_bank_links',
+        requiredPlan: 'pro',
+      });
+    }
+
     const exchanged = await this.provider.exchangePublicToken(publicToken);
     const now = this.clock.now().toISOString();
     const link = await this.links.create(userId, {
