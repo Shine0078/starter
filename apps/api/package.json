@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "demo": "ts-node src/seed/demo.ts",
+    "migrate": "ts-node src/infra/postgres/migrate.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -18,11 +19,13 @@
     "@nestjs/platform-express": "^10.4.15",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
+    "pg": "^8.13.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",
+    "@types/pg": "^8.11.10",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.3",
     "vitest": "^2.1.8"

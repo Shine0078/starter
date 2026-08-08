@@ -1,6 +1,6 @@
 # The Vertical Slice
 
-One path through the system, end to end, with no bank and no database:
+One path through the system, end to end, with no real bank:
 
 ```
 mock aggregator -> categorize -> store -> budgets -> insights -> health score
@@ -51,8 +51,9 @@ category; the rest lands in a review queue rather than being guessed at.
 
 ### 3. Store
 
-`InMemoryTransactionStore` is keyed on `(accountId, providerTxnId)` — the same
-uniqueness the Postgres index will enforce. Re-running sync reports
+`InMemoryTransactionStore` and `PostgresTransactionStore` are keyed on
+`(accountId, providerTxnId)`, enforced by a matching Postgres unique index.
+Re-running sync reports
 `inserted: 0, updated: 182` and the row count does not move.
 
 ### 4. Correct
@@ -99,13 +100,13 @@ Run against the mock ledger on 2026-08-07:
 | Correction backfill | one fix cleared 5 review-queue rows |
 | Subscriptions detected | 8, including a 16% Netflix price rise |
 | False positives | 0 — no habit misreported as a subscription |
-| Unit tests | 123 passing |
+| 30-day cash-flow outlook | $9,965.12 liquid cash projected to $17,772.35 from known recurring income and bills |
+| Credit-card plan | 28.5% utilization, with a payment window three days before the due date |
+| Full test suite | 184 passing against real PostgreSQL |
 
 ## What this slice is not
 
 - **Not connected to a real bank.** Gated on commercial agreements, not code.
-- **Not persistent.** Restarting the API empties the store. The Postgres adapter
-  is the next task in Phase 0.
 - **Not authenticated.** `x-user-id` is a development header and must not survive
   into a deployed build.
 - **Not the product UI.** The page at `localhost:3000` is a developer dashboard.

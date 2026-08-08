@@ -61,7 +61,13 @@ export class BudgetsService {
     }
 
     const budget: Budget = {
-      id: `bud_${input.categorySlug}_${Date.now()}`,
+      // Derived from the category, not from a timestamp. One budget per
+      // category is the domain rule — two budgets on Restaurants would each
+      // report a different "remaining" and neither would be right. A
+      // deterministic id makes re-creating one an edit in both the in-memory
+      // and Postgres adapters, rather than a duplicate in one and a unique
+      // -constraint violation in the other.
+      id: `bud_${input.categorySlug}`,
       categorySlug: input.categorySlug,
       limitAmount: input.limitAmount,
       currency: (input.currency ?? 'USD').toUpperCase(),

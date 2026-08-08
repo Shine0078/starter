@@ -166,12 +166,20 @@ export class InMemoryBudgetStore implements BudgetStore {
 export class InMemoryRuleStore implements RuleStore {
   private readonly byUser = new Map<string, CategorizationRule[]>();
 
+  /** Priority order, ties broken by id — the same ordering the Postgres
+   *  adapter's index gives. Returning insertion order here would make rule
+   *  precedence depend on which store happened to be running. */
   async list(userId: string): Promise<CategorizationRule[]> {
-    return [...bucket(this.byUser, userId)];
+    return [...bucket(this.byUser, userId)].sort(
+      (a, b) => a.priority - b.priority || a.id.localeCompare(b.id),
+    );
   }
 
   async create(userId: string, rule: CategorizationRule): Promise<CategorizationRule> {
-    bucket(this.byUser, userId).push(rule);
+    const rows = bucket(this.byUser, userId);
+    const index = rows.findIndex((r) => r.id === rule.id);
+    if (index >= 0) rows[index] = rule;
+    else rows.push(rule);
     return rule;
   }
 

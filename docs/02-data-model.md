@@ -3,6 +3,13 @@
 Postgres is the system of record. The mobile client holds a SQLite subset for
 offline reads.
 
+The tables that exist today live in `apps/api/migrations` — numbered `.sql`
+files, applied once each inside a transaction. What follows describes the full
+target model; the migrations are deliberately narrower, covering only what the
+store ports currently need. Migrating an empty table later is cheaper than
+maintaining one nothing writes to. See [ADR-0006](adr/0006-sql-over-orm.md) for
+why the schema is hand-written SQL.
+
 ## Entities
 
 ```

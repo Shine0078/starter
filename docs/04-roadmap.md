@@ -11,9 +11,10 @@ the code does.
 - [x] Mock aggregator + in-memory store
 - [x] Vertical slice API: import → categorize → budget → insights → score
 - [x] Unit tests over the financial math
-- [ ] Postgres persistence adapter + migrations
-- [ ] Flutter shell wired to the slice endpoints
-- [ ] CI (needs `workflow` scope on the GitHub token)
+- [x] Postgres persistence adapter + migrations
+- [x] Store contract suite run against both adapters
+- [x] Flutter shell wired to the slice endpoints
+- [x] CI workflow for API and Flutter checks (runs after the repository is pushed)
 
 **Exit:** a developer clones the repo and gets a running API with realistic seeded
 data in under five minutes, on one command, with no bank involved.
@@ -50,10 +51,12 @@ your banking app.
 
 - [ ] ML categorizer trained on accumulated user corrections
 - [ ] Conversational assistant over aggregates (zero-retention LLM contract required)
-- [ ] Credit-card engine: statement/due dates, utilization alerts, safe payment window
+- [x] Credit-card payment planner: statement/due dates, utilization alerts, safe payment window
 - [ ] Financial health score surfaced with actionable steps
-- [ ] Monthly report with PDF/CSV export
-- [ ] Cash-flow forecasting (7/30/90 day)
+- [x] User-owned ledger CSV export (formula-injection safe)
+- [ ] Professional monthly PDF report
+- [x] Conservative cash-flow forecasting (7/30/90 day; repeatable income and bills only)
+- [x] One-off purchase simulator against the conservative cash-flow forecast
 - [ ] Receipt OCR, on-device
 - [ ] Fraud/anomaly detection
 

@@ -46,7 +46,7 @@ apps/
     src/modules/  controllers and services — thin wiring
     public/       developer dashboard
     test/         123 unit tests over the domain
-  mobile/       Flutter client (scaffold — see note below)
+  mobile/       Flutter client (dashboard, analysis, and widget test)
 packages/
   contracts/    shared API types
 infra/          docker-compose: Postgres + Redis
@@ -74,6 +74,7 @@ defaults to a demo account.
 | `POST` | `/sync` | Pull from the aggregator, categorize, persist |
 | `GET` | `/accounts` | Balances and credit utilization |
 | `GET` | `/transactions` | `?search=&category=&account=&from=&to=&limit=` |
+| `GET` | `/transactions/export.csv` | Download the user-owned ledger as a CSV; spreadsheet-formula-safe text fields |
 | `GET` | `/transactions/needs-review` | What we refused to guess at |
 | `PATCH` | `/transactions/:id/category` | Correct a category, optionally create a rule |
 | `GET`/`POST` | `/budgets` | List / create |
@@ -81,28 +82,65 @@ defaults to a demo account.
 | `GET` | `/insights` | Month-to-date vs. the same window last month |
 | `GET` | `/subscriptions` | Detected recurring charges and price rises |
 | `GET` | `/health-score` | 0–1000 with per-component actions |
+| `GET` | `/cash-flow-forecast?days=7|30|90` | Conservative liquid-cash outlook from repeatable income and bills |
+| `GET` | `/purchase-scenario?days=7|30|90&amount=<minor>&date=YYYY-MM-DD` | One-off purchase impact against the same conservative outlook |
+| `GET` | `/credit-cards` | Utilization, pay-down target, and an early payment window |
 | `GET` | `/healthz` | Liveness |
 
-## Postgres and Redis
+## Persistence
 
-Not required for the slice, but wired up:
+Two adapters implement the same store ports. Which one runs is decided in one
+place — `src/modules/core.module.ts` — and nothing in the domain, the services,
+or the controllers knows the difference.
+
+| `STORE` | Behaviour |
+|---|---|
+| `postgres` | Persists. Requires `DATABASE_URL`. |
+| `memory` | Fast, zero-dependency, **lost on restart**. |
+
+The default is `postgres` when `DATABASE_URL` is set and `memory` otherwise, so
+the repo works on a machine with no database but persists as soon as one exists.
 
 ```bash
-npm run infra:up
+npm run infra:up                        # Postgres + Redis via docker compose
+cd apps/api && cp .env.example .env     # DATABASE_URL is already filled in
+npm run dev
 ```
 
-The Postgres persistence adapter is the next task in Phase 0 — today the API
-stores everything in memory and forgets it on restart.
+Migrations live in `apps/api/migrations` as numbered `.sql` files, applied once
+each inside a transaction. They run automatically on boot in development; set
+`MIGRATE_ON_BOOT=false` in production and run them as a deploy step, so two
+instances starting together cannot race.
+
+```bash
+npm run migrate --workspace @finverse/api
+```
+
+`GET /healthz` reports `status: "degraded"` when the database is unreachable
+rather than claiming success because the process is alive.
+
+### Testing against Postgres
+
+The store contract suite runs against both adapters — the same assertions, twice —
+so a divergence between them fails a test rather than surfacing as a wrong number
+in production. The Postgres half is skipped unless you point it at a database:
+
+```bash
+TEST_DATABASE_URL=postgresql://finverse:finverse_dev_only@localhost:5432/finverse npm test
+```
 
 ## Notes on what is and isn't verified
 
-- **The API and its domain logic run and are tested.** 123 unit tests, plus the
-  slice exercised end to end over HTTP.
-- **The Flutter app has never been compiled.** The Flutter SDK was not installed
-  on the machine where it was written. It is a scaffold written against the API
-  contract, not working code — see [apps/mobile/README.md](apps/mobile/README.md).
-- **There is no CI yet.** Adding a GitHub Actions workflow needs the `workflow`
-  scope on your token: `gh auth refresh -s workflow`.
+- **The API and its domain logic run and are tested.** 162 tests run with no
+  database; the full suite is **189 passing** against real PostgreSQL, including
+  the store contract shared by both adapters. The slice is also exercised end to
+  end over HTTP.
+- **The Flutter app is verified by static analysis, a widget test, and a real
+  Android debug APK build.** Android and iOS platform projects can be generated
+  locally. See the
+  [cheap launch path](docs/06-cheap-launch-path.md).
+- **CI is ready in `.github/workflows/ci.yml`.** It starts automatically after a
+  commit is pushed to GitHub and requires no secrets for its default checks.
 
 ## Where to read next
 
@@ -110,6 +148,8 @@ stores everything in memory and forgets it on restart.
 2. [docs/05-vertical-slice.md](docs/05-vertical-slice.md) — what runs today
 3. [docs/adr/](docs/adr/) — the decisions, including where the mission's
    zero-knowledge goal collides with its AI goals
+4. [docs/06-cheap-launch-path.md](docs/06-cheap-launch-path.md) — the cheapest
+   safe route to a personal Android beta
 
 ## License
 
