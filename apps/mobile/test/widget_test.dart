@@ -17,6 +17,7 @@ import 'package:finverse/screens/login_screen.dart';
 import 'package:finverse/screens/transaction_detail_screen.dart';
 import 'package:finverse/widgets/budget_tile.dart';
 import 'package:finverse/widgets/health_score_card.dart';
+import 'package:finverse/widgets/net_position_card.dart';
 import 'package:finverse/widgets/spending_chart.dart';
 
 /// An in-memory session store keeps these tests off the platform keystore,
@@ -48,6 +49,62 @@ class FakeDeviceAuthenticator implements DeviceAuthenticator {
 }
 
 void main() {
+  testWidgets('net position never mixes currencies and exposes chart semantics',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: NetPositionCard(accounts: [
+          Account(
+            id: 'cad-chequing',
+            name: 'Chequing',
+            type: 'checking',
+            mask: '1234',
+            currency: 'CAD',
+            balanceCurrent: 250000,
+            balanceFormatted: r'$2,500.00',
+          ),
+          Account(
+            id: 'cad-card',
+            name: 'Card',
+            type: 'credit_card',
+            mask: '4321',
+            currency: 'CAD',
+            balanceCurrent: -50000,
+            balanceFormatted: r'-$500.00',
+          ),
+          Account(
+            id: 'usd-savings',
+            name: 'US savings',
+            type: 'savings',
+            mask: '9876',
+            currency: 'USD',
+            balanceCurrent: 100000,
+            balanceFormatted: r'$1,000.00',
+          ),
+        ]),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('CAD'), findsOneWidget);
+    expect(find.text('USD'), findsOneWidget);
+    expect(
+      find.text(
+          'Currencies are shown separately; no estimated exchange rate is applied.'),
+      findsOneWidget,
+    );
+    expect(
+      find.bySemanticsLabel(RegExp(r'^CAD net position')),
+      findsOneWidget,
+    );
+    expect(
+      find.bySemanticsLabel(RegExp(r'^USD net position')),
+      findsOneWidget,
+    );
+    semantics.dispose();
+  });
+
   testWidgets(
       'financial visuals have spoken equivalents and survive 200% text scaling',
       (tester) async {

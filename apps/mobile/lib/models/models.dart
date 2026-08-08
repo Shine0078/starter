@@ -249,6 +249,7 @@ class Account {
     required this.name,
     required this.type,
     required this.mask,
+    required this.currency,
     required this.balanceCurrent,
     required this.balanceFormatted,
     this.utilization,
@@ -259,6 +260,9 @@ class Account {
         name: json['name'] as String,
         type: json['type'] as String,
         mask: json['mask'] as String,
+        // Older offline-cache entries predate the currency field. Keep those
+        // readable, then replace them on the next successful API refresh.
+        currency: json['currency'] as String? ?? 'USD',
         balanceCurrent: json['balanceCurrent'] as int,
         balanceFormatted: json['balanceFormatted'] as String,
         utilization: (json['utilization'] as num?)?.toDouble(),
@@ -268,6 +272,7 @@ class Account {
   final String name;
   final String type;
   final String mask;
+  final String currency;
   final int balanceCurrent;
   final String balanceFormatted;
 

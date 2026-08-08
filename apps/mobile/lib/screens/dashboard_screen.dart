@@ -5,6 +5,7 @@ import '../api/app_lock.dart';
 import '../models/models.dart';
 import '../widgets/budget_tile.dart';
 import '../widgets/health_score_card.dart';
+import '../widgets/net_position_card.dart';
 import '../widgets/spending_chart.dart';
 import '../widgets/transaction_tile.dart';
 import 'notifications_screen.dart';
@@ -90,20 +91,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _loading = false;
       });
     }
-  }
-
-  /// Liquid balances minus what is owed on cards.
-  String get _netPosition {
-    var net = 0;
-    for (final account in _accounts) {
-      net += account.balanceCurrent;
-    }
-    // Reuse the server's formatting for a single account's currency rather than
-    // reimplementing it; a mixed-currency portfolio needs real FX conversion
-    // and is deliberately out of scope here.
-    final sign = net < 0 ? '-' : '';
-    final absolute = (net.abs() / 100).toStringAsFixed(2);
-    return '$sign\$$absolute';
   }
 
   Future<void> _confirmSignOut() async {
@@ -406,18 +393,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
-          _sectionLabel(theme, 'Net position'),
-          Text(
-            _netPosition,
-            style: theme.textTheme.displaySmall?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '${_accounts.length} accounts connected',
-            style: theme.textTheme.bodySmall,
-          ),
+          NetPositionCard(accounts: _accounts),
           const SizedBox(height: 20),
           if (_insights != null) ...[
             _sectionLabel(theme, 'This month'),
