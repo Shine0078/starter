@@ -2,7 +2,7 @@
 
 Written for whoever picks this up next — including a fresh agent session with no
 memory of how any of it got here. Last updated after the MFA, professional
-monthly-report, and smart-alert milestones on 2026-08-08.
+monthly-report, smart-alert, and core-accessibility milestones on 2026-08-08.
 
 Read [`MISSION.md`](../MISSION.md) for the product, [`HANDOVER.md`](../HANDOVER.md)
 for the backlog, and [`04-roadmap.md`](04-roadmap.md) for the sequence. This file
@@ -30,7 +30,7 @@ Every number below was produced by running the thing, not by reading the code.
 | API tests, in-memory | 303 passed |
 | API tests, real Postgres | 399 passed |
 | `tsc --noEmit`, `npm run build` | clean |
-| `flutter analyze`, `flutter test` | clean, 20 passed |
+| `flutter analyze`, `flutter test` | clean, 21 passed |
 | Android debug compile | `com.finverse.finance`, API 36, 170.9 MB APK; debug-only artifact built successfully |
 | Dashboard | register → sync → correct → logout, verified in a browser |
 | API on Postgres as `finverse_app` | two users, 183 transactions each, sync → correct → re-sync → budget, isolation confirmed against the raw tables |

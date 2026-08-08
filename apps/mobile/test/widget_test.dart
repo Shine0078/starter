@@ -15,6 +15,9 @@ import 'package:finverse/screens/home_screen.dart';
 import 'package:finverse/screens/bank_connections_screen.dart';
 import 'package:finverse/screens/login_screen.dart';
 import 'package:finverse/screens/transaction_detail_screen.dart';
+import 'package:finverse/widgets/budget_tile.dart';
+import 'package:finverse/widgets/health_score_card.dart';
+import 'package:finverse/widgets/spending_chart.dart';
 
 /// An in-memory session store keeps these tests off the platform keystore,
 /// which has no implementation in the widget-test host.
@@ -45,6 +48,87 @@ class FakeDeviceAuthenticator implements DeviceAuthenticator {
 }
 
 void main() {
+  testWidgets(
+      'financial visuals have spoken equivalents and survive 200% text scaling',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    await tester.binding.setSurfaceSize(const Size(400, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(MaterialApp(
+      home: MediaQuery(
+        data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+        child: Scaffold(
+          body: SingleChildScrollView(
+            child: Column(children: [
+              SpendingChart(categories: [
+                CategorySpend(
+                  categorySlug: 'groceries',
+                  categoryName: 'Groceries',
+                  total: 12550,
+                  totalFormatted: r'$125.50',
+                  transactionCount: 4,
+                ),
+              ]),
+              BudgetTile(
+                progress: BudgetProgress(
+                  budgetId: 'budget-groceries',
+                  categorySlug: 'groceries',
+                  categoryName: 'Groceries',
+                  spentFormatted: r'$125.50',
+                  limitFormatted: r'$300.00',
+                  remainingFormatted: r'$174.50',
+                  percentUsed: 41.8,
+                  status: 'on_track',
+                  daysRemaining: 12,
+                  projectedToExceed: false,
+                ),
+              ),
+              HealthScoreCard(
+                score: HealthScore(
+                  score: 742,
+                  band: 'good',
+                  components: [
+                    ScoreComponent(
+                      key: 'cash_flow',
+                      label: 'Cash flow',
+                      points: 160,
+                      maxPoints: 200,
+                      detail: 'Income is above expenses.',
+                    ),
+                  ],
+                  topActions: const [],
+                ),
+              ),
+            ]),
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(
+      find.bySemanticsLabel(r'Groceries: $125.50 across 4 transactions.'),
+      findsOneWidget,
+    );
+    expect(
+      find.bySemanticsLabel(
+          r'Groceries budget. $125.50 spent of $300.00. 42 percent used. $174.50 left. 12 days left.'),
+      findsOneWidget,
+    );
+    expect(
+      find.bySemanticsLabel('Financial health score 742 out of 1000, good.'),
+      findsOneWidget,
+    );
+    expect(
+      find.bySemanticsLabel(
+          'Cash flow: 160 of 200 points. Income is above expenses.'),
+      findsOneWidget,
+    );
+    semantics.dispose();
+  });
+
   test('device app lock authenticates before enable and after backgrounding',
       () async {
     final authenticator = FakeDeviceAuthenticator();

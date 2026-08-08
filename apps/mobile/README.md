@@ -37,10 +37,15 @@ the API rate-limits and records every successful or failed step-up attempt.
 The app includes a financial dashboard with charts, searchable transactions and
 auditable transaction details, editable budgets, savings goals and contributions,
 bank connections, subscription
-detection and price-change warnings, an in-app notification centre, notification
+detection and price-change warnings, evidence-based upcoming-bill, duplicate-charge,
+and unusual-spending prompts, an in-app notification centre, notification
 preferences, first-launch onboarding, and a settings/privacy area with active-device
 session revocation and password-confirmed portable data export through the native
 share sheet.
+
+Core spending, budget, and financial-health visuals expose complete spoken
+equivalents and are regression-tested at 200% text scaling. Physical TalkBack and
+VoiceOver validation is still required before store submission.
 
 Privacy settings also show recent security activity and default-off analytics and
 product-update choices. Every grant or withdrawal is kept as versioned, append-only

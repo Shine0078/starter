@@ -23,19 +23,37 @@ class SpendingChart extends StatelessWidget {
             Text('Spending by category', style: theme.textTheme.titleMedium),
             const SizedBox(height: 14),
             for (final row in rows) ...[
-              Row(
-                children: [
-                  Expanded(child: Text(row.categoryName)),
-                  Text(row.totalFormatted, style: theme.textTheme.labelLarge),
-                ],
-              ),
-              const SizedBox(height: 5),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(99),
-                child: LinearProgressIndicator(
-                  value: row.total / maximum,
-                  minHeight: 10,
-                  backgroundColor: theme.colorScheme.surfaceContainerHighest,
+              Semantics(
+                container: true,
+                label:
+                    '${row.categoryName}: ${row.totalFormatted} across ${row.transactionCount} transaction${row.transactionCount == 1 ? '' : 's'}.',
+                child: ExcludeSemantics(
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(child: Text(row.categoryName)),
+                          Flexible(
+                            child: Text(
+                              row.totalFormatted,
+                              style: theme.textTheme.labelLarge,
+                              textAlign: TextAlign.end,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 5),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(99),
+                        child: LinearProgressIndicator(
+                          value: row.total / maximum,
+                          minHeight: 10,
+                          backgroundColor:
+                              theme.colorScheme.surfaceContainerHighest,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 11),

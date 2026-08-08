@@ -32,57 +32,75 @@ class HealthScoreCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                Text(
-                  '${score.score}',
-                  style: theme.textTheme.displaySmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: color,
-                  ),
+            Semantics(
+              container: true,
+              label:
+                  'Financial health score ${score.score} out of 1000, ${score.band}.',
+              child: ExcludeSemantics(
+                child: Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 4,
+                  runSpacing: 4,
+                  children: [
+                    Text(
+                      '${score.score}',
+                      style: theme.textTheme.displaySmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: color,
+                      ),
+                    ),
+                    Text('/ 1000', style: theme.textTheme.bodySmall),
+                    Chip(
+                      label: Text(score.band),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 4),
-                Text('/ 1000', style: theme.textTheme.bodySmall),
-                const Spacer(),
-                Chip(
-                  label: Text(score.band),
-                  visualDensity: VisualDensity.compact,
-                ),
-              ],
+              ),
             ),
             const SizedBox(height: 12),
             ...score.components.map(
-              (component) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              (component) => Semantics(
+                container: true,
+                label:
+                    '${component.label}: ${component.points} of ${component.maxPoints} points. ${component.detail}',
+                child: ExcludeSemantics(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(component.label,
-                            style: theme.textTheme.bodyMedium),
-                        Text(
-                          '${component.points}/${component.maxPoints}',
-                          style: theme.textTheme.bodySmall,
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(component.label,
+                                  style: theme.textTheme.bodyMedium),
+                            ),
+                            Flexible(
+                              child: Text(
+                                '${component.points}/${component.maxPoints}',
+                                style: theme.textTheme.bodySmall,
+                                textAlign: TextAlign.end,
+                              ),
+                            ),
+                          ],
                         ),
+                        const SizedBox(height: 4),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(99),
+                          child: LinearProgressIndicator(
+                            value: component.ratio,
+                            minHeight: 5,
+                            backgroundColor:
+                                theme.colorScheme.surfaceContainerHighest,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(component.detail,
+                            style: theme.textTheme.bodySmall),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(99),
-                      child: LinearProgressIndicator(
-                        value: component.ratio,
-                        minHeight: 5,
-                        backgroundColor:
-                            theme.colorScheme.surfaceContainerHighest,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(component.detail, style: theme.textTheme.bodySmall),
-                  ],
+                  ),
                 ),
               ),
             ),

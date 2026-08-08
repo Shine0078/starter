@@ -25,7 +25,7 @@ Stated so the rest of this document is not read as "nothing works".
 | Authentication | Argon2id, rotating refresh tokens with reuse detection, email verification, password reset, TOTP MFA/recovery codes, device app lock, recoverable deletion, global guard, per-account lockout, session list, audit trail |
 | Persistence | Postgres behind ports, contract-tested against both adapters, migrations |
 | Isolation | Row-level security, app connects as a non-superuser role, 21 dedicated tests |
-| Tests | 303 without a database, 399 against real PostgreSQL, 20 Flutter tests, and an Android debug APK build; all passing |
+| Tests | 303 without a database, 399 against real PostgreSQL, 21 Flutter tests, and an Android debug APK build; all passing |
 | CI | GitHub Actions: API typecheck/test/build/image + Flutter analyze/test/Android compile; tagged API/APK releases |
 
 That is a solid Phase-0 foundation. It is not a product.
@@ -146,7 +146,7 @@ smaller than the complete MISSION.md product.
 | 5.6 | **Release signing credentials** | Gradle and the release workflow are wired for an upload key and refuse a distributable release without secrets | User must generate and protect the upload key |
 | 5.7 | **iOS never built** | Requires a Mac. Untested and unverified | 1 week |
 | 5.8 | **Mobile testing is still thin** | 10 tests cover auth protocol, recovery, deletion, and navigation. No device integration or golden tests | 2 weeks |
-| 5.9 | **No accessibility work** | Mission requires VoiceOver, TalkBack, dynamic text, colour-blind modes, high contrast, one-handed use. None verified | 2–3 weeks |
+| 5.9 | **Accessibility audit incomplete** | Core spending, budget, and health visuals now have spoken equivalents and an automated 200% text-scaling overflow test. Physical VoiceOver/TalkBack, contrast, colour-blind, and one-handed audits remain | device testing + 1–2 weeks |
 | 5.10 | **No localisation** | Mission asks for multiple languages. Single hardcoded locale | 1–2 weeks |
 | 5.11 | **No crash reporting** | "Crash-free above 99.9%" cannot be claimed without measuring it | days |
 | 5.12 | **No app store assets** | Screenshots, descriptions, privacy nutrition labels, data-safety declarations | 1 week |

@@ -113,6 +113,8 @@ can answer the six questions listed in `MISSION.md` without hallucinating a numb
 - [ ] Business mode: tax categories, mileage, invoices
 - [ ] Web dashboard
 - [ ] Gamification: streaks, challenges, milestones
+- [x] Spoken equivalents for core financial charts, budget bars, and health
+      components, with automated 200% text-scaling overflow coverage
 - [ ] Full accessibility audit (VoiceOver, TalkBack, contrast, one-handed)
 
 ## Phase 4 — The ambitious end of the mission
