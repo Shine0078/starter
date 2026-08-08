@@ -1,5 +1,9 @@
 # Security & Privacy
 
+The repository threat analysis and production acceptance gates are maintained in
+[`10-threat-model.md`](10-threat-model.md). This document describes controls;
+the threat model states what they mitigate and which deployment risks remain.
+
 The mission names privacy as the biggest selling point. That only means something if
 it constrains engineering decisions that would otherwise go the other way. This
 document is the list of those constraints.

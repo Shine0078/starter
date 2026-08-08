@@ -102,7 +102,7 @@ environment before they can be claimed.
 | 3.2.11 | **Portable data export** | **Completed technically:** password-confirmed JSON includes profile, sessions, security activity, accounts, transactions, budgets, rules, goals/contributions, notifications/preferences, consent history, and sanitized bank metadata; no password hashes, session-token hashes, or Plaid secrets | Counsel must approve DSAR procedure and scope |
 | 3.2.12 | **Consent and retention records** | **Consent wiring is complete technically:** analytics/product-update choices default off; grants/withdrawals are append-only; registration requires exact configured Terms/Privacy versions; the user and legal evidence commit atomically; records are RLS-isolated, exported, visible, and erased with the account. Production fails closed without four `LEGAL_*` settings | Counsel must supply/approve the actual legal text, immutable version ids, URLs, and retention evidence |
 | 3.2.13 | **No penetration test** | A finance product should not take its first real user without one | 2–4 weeks + fixes |
-| 3.2.14 | **No threat model document** | The abbreviated table in the docs is a sketch, not a threat model | 1 week |
+| 3.2.14 | **Threat model** | **Completed at repository level:** assets, trust boundaries, entry points, a 20-item threat register, abuse regressions, review triggers, and production acceptance gates are in `10-threat-model.md` | Independent security review and deployment-specific update remain |
 
 ---
 
