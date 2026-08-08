@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
 
 import { formatMoney, money } from '../../domain/money';
 import { CurrentUser } from '../current-user';
@@ -72,5 +72,80 @@ export class InsightsController {
   @Get('health-score')
   async healthScore(@CurrentUser() userId: string, @Query('asOf') asOf?: string) {
     return this.insights.healthScore(userId, asOf);
+  }
+
+  @Get('cash-flow-forecast')
+  async cashFlowForecast(
+    @CurrentUser() userId: string,
+    @Query('days') days = '30',
+    @Query('asOf') asOf?: string,
+  ) {
+    const parsedDays = Number(days);
+    if (![7, 30, 90].includes(parsedDays)) {
+      // These are deliberately curated product horizons, not an arbitrary
+      // graph length a client can accidentally turn into a false forecast.
+      throw new BadRequestException('days must be one of 7, 30, or 90');
+    }
+
+    const forecast = await this.insights.cashFlowForecast(userId, parsedDays, asOf);
+    return {
+      ...forecast,
+      startingBalanceFormatted: formatMoney(money(forecast.startingBalance, forecast.currency)),
+      endingBalanceFormatted: formatMoney(
+        money(forecast.points[forecast.points.length - 1]?.balance ?? forecast.startingBalance, forecast.currency),
+      ),
+      events: forecast.events.map((event) => ({
+        ...event,
+        amountFormatted: formatMoney(money(event.amount, forecast.currency)),
+      })),
+      points: forecast.points.map((point) => ({
+        ...point,
+        balanceFormatted: formatMoney(money(point.balance, forecast.currency)),
+      })),
+    };
+  }
+
+  @Get('credit-cards')
+  async creditCards(@CurrentUser() userId: string, @Query('asOf') asOf?: string) {
+    const plans = await this.insights.creditCardPlans(userId, asOf);
+    return plans.map((plan) => ({
+      ...plan,
+      utilizationPercent: Math.round(plan.utilization * 1000) / 10,
+      balanceOwedFormatted: formatMoney(money(plan.balanceOwed, plan.currency)),
+      creditLimitFormatted: formatMoney(money(plan.creditLimit, plan.currency)),
+      payDownToThirtyPercentFormatted: formatMoney(money(plan.payDownToThirtyPercent, plan.currency)),
+      recommendedPaymentFormatted: formatMoney(money(plan.recommendedPayment, plan.currency)),
+    }));
+  }
+
+  @Get('purchase-scenario')
+  async purchaseScenario(
+    @CurrentUser() userId: string,
+    @Query('amount') amount: string | undefined,
+    @Query('date') date: string | undefined,
+    @Query('days') days = '30',
+    @Query('asOf') asOf?: string,
+  ) {
+    const parsedDays = Number(days);
+    const parsedAmount = Number(amount);
+    if (![7, 30, 90].includes(parsedDays)) {
+      throw new BadRequestException('days must be one of 7, 30, or 90');
+    }
+    if (!Number.isSafeInteger(parsedAmount) || parsedAmount <= 0) {
+      throw new BadRequestException('amount must be a positive integer in minor units');
+    }
+    if (!date) throw new BadRequestException('date is required as YYYY-MM-DD');
+
+    const scenario = await this.insights.purchaseScenario(userId, parsedDays, parsedAmount, date, asOf);
+    return {
+      ...scenario,
+      purchase: {
+        ...scenario.purchase,
+        amountFormatted: formatMoney(money(scenario.purchase.amount, scenario.currency)),
+      },
+      balanceBeforePurchaseFormatted: formatMoney(money(scenario.balanceBeforePurchase, scenario.currency)),
+      balanceAfterPurchaseFormatted: formatMoney(money(scenario.balanceAfterPurchase, scenario.currency)),
+      endingBalanceFormatted: formatMoney(money(scenario.endingBalance, scenario.currency)),
+    };
   }
 }

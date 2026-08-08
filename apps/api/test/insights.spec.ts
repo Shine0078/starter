@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import { cashFlowInsight, compareCategoryTotals, summarizePeriod } from '../src/domain/insights/insights';
 import { computeHealthScore } from '../src/domain/health-score/score';
+import { detectRecurringIncome, forecastCashFlow } from '../src/domain/insights/cash-flow-forecast';
+import { buildCreditCardPlans } from '../src/domain/credit-cards/payment-plan';
+import { simulatePurchase } from '../src/domain/insights/purchase-simulator';
 import type { Account, DateRange, Transaction } from '../src/domain/types';
 
 const AUGUST: DateRange = { start: '2026-08-01', end: '2026-08-31' };
@@ -177,6 +180,144 @@ describe('cashFlowInsight', () => {
       txn({ amount: -20_000, categorySlug: 'rent' }),
     ];
     expect(cashFlowInsight(summarizePeriod(rows, AUGUST, 'USD'))).toBeNull();
+  });
+});
+
+describe('cash-flow forecast', () => {
+  const liquidAccounts: Account[] = [
+    { id: 'checking', name: 'Checking', type: 'checking', mask: '0001', currency: 'USD', balanceCurrent: 100_000 },
+    // Credit limits are not cash and must never make an outlook look safer.
+    { id: 'visa', name: 'Visa', type: 'credit_card', mask: '0002', currency: 'USD', balanceCurrent: -50_000, creditLimit: 500_000 },
+  ];
+
+  const regularRows = [
+    txn({ amount: 50_000, categorySlug: 'salary', normalizedDescriptor: 'acme payroll', merchant: 'Acme', postedAt: '2026-07-17' }),
+    txn({ amount: 50_000, categorySlug: 'salary', normalizedDescriptor: 'acme payroll', merchant: 'Acme', postedAt: '2026-07-24' }),
+    txn({ amount: 50_000, categorySlug: 'salary', normalizedDescriptor: 'acme payroll', merchant: 'Acme', postedAt: '2026-07-31' }),
+    txn({ amount: 50_000, categorySlug: 'salary', normalizedDescriptor: 'acme payroll', merchant: 'Acme', postedAt: '2026-08-07' }),
+    txn({ amount: -80_000, categorySlug: 'rent', normalizedDescriptor: 'landlord rent', merchant: 'Landlord', postedAt: '2026-05-01' }),
+    txn({ amount: -80_000, categorySlug: 'rent', normalizedDescriptor: 'landlord rent', merchant: 'Landlord', postedAt: '2026-06-01' }),
+    txn({ amount: -80_000, categorySlug: 'rent', normalizedDescriptor: 'landlord rent', merchant: 'Landlord', postedAt: '2026-07-01' }),
+  ];
+
+  it('projects only repeatable income and bills, with a daily liquid-cash series', () => {
+    const forecast = forecastCashFlow(liquidAccounts, regularRows, '2026-08-07', 30);
+
+    expect(forecast.startingBalance).toBe(100_000);
+    expect(forecast.points).toHaveLength(30);
+    expect(forecast.events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ date: '2026-08-14', amount: 50_000, kind: 'income', merchant: 'Acme' }),
+        expect.objectContaining({ date: '2026-09-01', amount: -80_000, kind: 'expense', merchant: 'Landlord' }),
+      ]),
+    );
+    expect(forecast.points.find((point) => point.date === '2026-08-14')?.balance).toBe(150_000);
+    expect(forecast.points.find((point) => point.date === '2026-09-01')?.balance).toBe(170_000);
+  });
+
+  it('does not treat irregular deposits as a dependable pay cheque', () => {
+    const rows = [
+      txn({ amount: 30_000, categorySlug: 'freelance', normalizedDescriptor: 'side work', postedAt: '2026-06-02' }),
+      txn({ amount: 45_000, categorySlug: 'freelance', normalizedDescriptor: 'side work', postedAt: '2026-06-19' }),
+      txn({ amount: 12_000, categorySlug: 'freelance', normalizedDescriptor: 'side work', postedAt: '2026-07-28' }),
+    ];
+    expect(detectRecurringIncome(rows)).toEqual([]);
+  });
+
+  it('keeps semimonthly payroll on the first and fifteenth instead of drifting by days', () => {
+    const payroll = [
+      txn({ amount: 250_000, categorySlug: 'salary', normalizedDescriptor: 'payroll', postedAt: '2026-06-01' }),
+      txn({ amount: 250_000, categorySlug: 'salary', normalizedDescriptor: 'payroll', postedAt: '2026-06-15' }),
+      txn({ amount: 250_000, categorySlug: 'salary', normalizedDescriptor: 'payroll', postedAt: '2026-07-01' }),
+      txn({ amount: 250_000, categorySlug: 'salary', normalizedDescriptor: 'payroll', postedAt: '2026-07-15' }),
+      txn({ amount: 250_000, categorySlug: 'salary', normalizedDescriptor: 'payroll', postedAt: '2026-08-01' }),
+    ];
+    const forecast = forecastCashFlow([], payroll, '2026-08-07', 30);
+
+    expect(forecast.events.map((event) => event.date)).toEqual(['2026-08-15', '2026-09-01']);
+  });
+
+  it('rejects horizons outside the supported 7/30/90-day range', () => {
+    expect(() => forecastCashFlow([], [], '2026-08-07', 0)).toThrow('1 through 90');
+    expect(() => forecastCashFlow([], [], '2026-08-07', 91)).toThrow('1 through 90');
+  });
+});
+
+describe('credit-card payment plans', () => {
+  it('gives an early payment window and the exact amount needed for 30% utilization', () => {
+    const [plan] = buildCreditCardPlans(
+      [
+        {
+          id: 'visa', name: 'Visa', type: 'credit_card', mask: '0001', currency: 'USD',
+          balanceCurrent: -200_000, creditLimit: 500_000, statementDay: 18, paymentDueDay: 12,
+        },
+      ],
+      '2026-08-07',
+    );
+
+    expect(plan).toMatchObject({
+      utilization: 0.4,
+      payDownToThirtyPercent: 50_000,
+      recommendedPayment: 200_000,
+      nextStatementDate: '2026-08-18',
+      paymentDueDate: '2026-08-12',
+      safePaymentWindow: { start: '2026-08-07', end: '2026-08-09' },
+    });
+    expect(plan?.alerts).toContain('Utilization is above the 30% target.');
+  });
+
+  it('recognizes semimonthly dates across short months and never offers a due-date window', () => {
+    const [plan] = buildCreditCardPlans(
+      [
+        {
+          id: 'visa', name: 'Visa', type: 'credit_card', mask: '0001', currency: 'USD',
+          balanceCurrent: -1, creditLimit: 100_000, paymentDueDay: 1,
+        },
+      ],
+      '2026-02-28',
+    );
+
+    expect(plan?.paymentDueDate).toBe('2026-03-01');
+    expect(plan?.safePaymentWindow).toBeNull();
+    expect(plan?.alerts[0]).toContain('due in 1 day');
+  });
+
+  it('does not create a payment plan for cash accounts or cards without a limit', () => {
+    expect(
+      buildCreditCardPlans(
+        [{ id: 'cash', name: 'Cash', type: 'checking', mask: '0001', currency: 'USD', balanceCurrent: 1 }],
+        '2026-08-07',
+      ),
+    ).toEqual([]);
+  });
+});
+
+describe('purchase scenarios', () => {
+  const accounts: Account[] = [
+    { id: 'cash', name: 'Checking', type: 'checking', mask: '0001', currency: 'USD', balanceCurrent: 100_000 },
+  ];
+
+  it('shows the balance impact without calling a purchase affordable', () => {
+    const scenario = simulatePurchase(accounts, [], '2026-08-07', 7, 25_000, '2026-08-10');
+
+    expect(scenario.balanceBeforePurchase).toBe(100_000);
+    expect(scenario.balanceAfterPurchase).toBe(75_000);
+    expect(scenario.endingBalance).toBe(75_000);
+    expect(scenario.lowBalanceDates).toEqual([]);
+    expect(scenario.warnings[0]).toContain('Known recurring commitments remain covered');
+    expect(scenario.warnings[1]).toContain('does not predict everyday discretionary spending');
+  });
+
+  it('warns when a planned purchase creates a known cash shortfall', () => {
+    const scenario = simulatePurchase(accounts, [], '2026-08-07', 7, 125_000, '2026-08-10');
+
+    expect(scenario.lowBalanceDates).toContain('2026-08-10');
+    expect(scenario.warnings[0]).toContain('cash shortfall on its purchase date');
+  });
+
+  it('rejects a purchase date outside the selected forecast horizon', () => {
+    expect(() => simulatePurchase(accounts, [], '2026-08-07', 7, 1, '2026-08-07')).toThrow('2026-08-08');
+    expect(() => simulatePurchase(accounts, [], '2026-08-07', 7, 1, '2026-08-15')).toThrow('2026-08-14');
   });
 });
 

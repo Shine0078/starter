@@ -14,6 +14,9 @@ import {
   totalAnnualSubscriptionCost,
   type DetectedSubscription,
 } from '../../domain/insights/subscriptions';
+import { forecastCashFlow, type CashFlowForecast } from '../../domain/insights/cash-flow-forecast';
+import { simulatePurchase, type PurchaseScenario } from '../../domain/insights/purchase-simulator';
+import { buildCreditCardPlans, type CreditCardPlan } from '../../domain/credit-cards/payment-plan';
 import { computeHealthScore, type HealthScore } from '../../domain/health-score/score';
 import {
   ACCOUNT_STORE,
@@ -99,5 +102,37 @@ export class InsightsService {
       transactions,
       budgetAdherenceRatio: adherence,
     });
+  }
+
+  /**
+   * A conservative 7/30/90-day outlook based only on recurring income and
+   * recurring charges.  It deliberately does not invent discretionary spend.
+   */
+  async cashFlowForecast(userId: string, days: number, asOf?: string): Promise<CashFlowForecast> {
+    const today = asOf ?? this.clock.today();
+    const [transactions, accounts] = await Promise.all([
+      this.transactions.list(userId),
+      this.accounts.list(userId),
+    ]);
+    return forecastCashFlow(accounts, transactions, today, days);
+  }
+
+  async creditCardPlans(userId: string, asOf?: string): Promise<CreditCardPlan[]> {
+    return buildCreditCardPlans(await this.accounts.list(userId), asOf ?? this.clock.today());
+  }
+
+  async purchaseScenario(
+    userId: string,
+    days: number,
+    amount: number,
+    purchaseDate: string,
+    asOf?: string,
+  ): Promise<PurchaseScenario> {
+    const today = asOf ?? this.clock.today();
+    const [transactions, accounts] = await Promise.all([
+      this.transactions.list(userId),
+      this.accounts.list(userId),
+    ]);
+    return simulatePurchase(accounts, transactions, today, days, amount, purchaseDate);
   }
 }
