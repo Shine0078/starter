@@ -1,5 +1,6 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Header, Param, Patch, Post, Query } from '@nestjs/common';
 
+import { transactionsToCsv } from '../../domain/exports/transactions-csv';
 import { formatMoney, money } from '../../domain/money';
 import type { Transaction } from '../../domain/types';
 import { CurrentUser } from '../current-user';
@@ -54,6 +55,21 @@ export class LedgerController {
       limit: limit ? Number(limit) : 50,
     });
     return { count: rows.length, transactions: rows.map(present) };
+  }
+
+  @Get('transactions/export.csv')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header('Content-Disposition', 'attachment; filename="finverse-transactions.csv"')
+  async exportTransactions(
+    @CurrentUser() userId: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    const rows = await this.ledger.listTransactions(userId, {
+      range: from && to ? { start: from, end: to } : undefined,
+      limit: 100_000,
+    });
+    return transactionsToCsv(rows);
   }
 
   /** The review queue: everything the categorizer refused to guess at. */
