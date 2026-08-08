@@ -123,11 +123,29 @@ rather than claiming success because the process is alive.
 
 The store contract suite runs against both adapters — the same assertions, twice —
 so a divergence between them fails a test rather than surfacing as a wrong number
-in production. The Postgres half is skipped unless you point it at a database:
+in production.
+
+One command, no Docker required. It unpacks the official PostgreSQL binaries,
+runs the suite against them, and throws the data directory away afterwards:
 
 ```bash
-TEST_DATABASE_URL=postgresql://finverse:finverse_dev_only@localhost:5432/finverse npm test
+npm run test:db
 ```
+
+`npm test` on its own skips the Postgres half and runs the in-memory adapter
+only — that is what a contributor without a database gets, and it must keep
+passing on its own.
+
+To leave a database running for `npm run dev`:
+
+```bash
+npm run db:start
+```
+
+If you prefer containers, `npm run infra:up` brings up the same thing via
+docker compose. Docker is never required: it does not start reliably on every
+machine, and a database test that silently skips is one nobody notices has
+stopped running.
 
 ## Notes on what is and isn't verified
 

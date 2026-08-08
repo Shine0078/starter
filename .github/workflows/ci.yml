@@ -9,16 +9,56 @@ permissions:
 
 jobs:
   api:
-    name: API tests and build
+    name: API typecheck, tests and build
     runs-on: ubuntu-latest
+
+    # CI gets a real Postgres from a service container rather than the
+    # embedded-postgres harness used locally. Both set TEST_DATABASE_URL, so the
+    # store contract suite cannot tell them apart — see apps/api/scripts/with-postgres.ts.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: finverse
+          POSTGRES_PASSWORD: finverse_dev_only
+          POSTGRES_DB: finverse
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U finverse -d finverse"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+
       - run: npm ci
-      - run: npm test
+
+      - name: Typecheck
+        run: npm run typecheck --workspace @finverse/api
+
+      # Runs first without a database, proving the in-memory path still stands
+      # on its own — that is what a contributor without Postgres will run.
+      - name: Tests (in-memory only)
+        run: npm test
+
+      - name: Tests (with Postgres)
+        run: npm test
+        env:
+          TEST_DATABASE_URL: postgresql://finverse:finverse_dev_only@localhost:5432/finverse
+
+      - name: Migrations apply cleanly and are idempotent
+        run: |
+          npm run migrate --workspace @finverse/api
+          npm run migrate --workspace @finverse/api
+        env:
+          DATABASE_URL: postgresql://finverse:finverse_dev_only@localhost:5432/finverse
+
       - run: npm run build
 
   mobile:
