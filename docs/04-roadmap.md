@@ -28,8 +28,9 @@ of the difficulty is technical.
       detection, global auth guard, per-account lockout, session/device
       management, security audit trail
 - [x] Cross-user isolation regression tests
-- [ ] **Row-level security** — isolation is enforced by application code today.
-      See the note below; this is the next task.
+- [x] **Row-level security** — the database refuses the wrong rows even when a
+      query forgets its filter. See the note below and
+      [ADR-0006](adr/0006-row-level-security.md)
 - [ ] Email verification and password reset (both need an email provider)
 - [ ] Passkeys, OAuth2 + PKCE, MFA, step-up auth
 - [ ] Aggregator contract signed (Plaid US / Flinks CA — pick one, not both)
@@ -54,31 +55,34 @@ Write code during these. Do not schedule as if they are instant.
 **Exit:** you personally run your own finances in the app for a month and stop opening
 your banking app.
 
-### Why row-level security is its own task
+### Why row-level security was its own task
 
-Every store method already takes `userId` and every query filters on it, and
-there are tests that attempt cross-user reads and writes. What is missing is the
-database refusing to serve the wrong rows *even if a query forgets its filter* —
-defence against a future missing `WHERE`, not against today's code.
+Every store method already took `userId` and every query filtered on it, with
+tests attempting cross-user reads and writes. What was missing is the database
+refusing to serve the wrong rows *even if a query forgets its filter* — defence
+against a future missing `WHERE`, not against today's code.
 
-It is not a one-line migration, which is why it is not bundled into the auth
-work:
+It was never a one-line migration, which is why it was not bundled into the auth
+work. Three prerequisites, each of which fails **open**:
 
 1. **Policies need a user in scope.** `current_setting('finverse.user_id')` has
    to be set per request, which means `SET LOCAL` inside a transaction — so the
-   Postgres stores must route their queries through a per-call transaction
-   rather than borrowing a pooled connection directly.
+   Postgres stores now route every call through `withUserScope` rather than
+   borrowing a pooled connection directly.
 2. **The app must not be a superuser.** Superusers bypass RLS entirely, and both
-   the docker-compose and embedded-postgres setups currently connect as one. A
-   dedicated `finverse_app` role has to be created, granted, and adopted by
-   `DATABASE_URL` — otherwise the policies exist but never apply, and the tests
-   proving they work would pass against nothing.
+   the docker-compose and embedded-postgres setups connect as one. `finverse_app`
+   is created by the migration step and adopted by `DATABASE_APP_URL`; without
+   it the policies exist but never apply, and the tests proving they work would
+   pass against nothing.
 3. **Only the four user-owned tables qualify.** `users`, `sessions`, and
    `auth_events` are read before a user is known (login, refresh, lockout
    counting), so they stay under application control by necessity.
 
-Doing (1) and (2) badly is worse than not doing them: policies that silently do
-not apply read as protection that is not there.
+Doing (1) and (2) badly would have been worse than not doing them: policies that
+silently do not apply read as protection that is not there. `test/rls.spec.ts`
+therefore asserts the preconditions themselves — not a superuser, no `BYPASSRLS`,
+every table both `ENABLE`d and `FORCE`d — before asserting anything about rows.
+ADR-0006 records the shape and what it costs.
 
 ## Phase 2 — Intelligence
 

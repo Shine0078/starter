@@ -6,8 +6,7 @@ import {
   InMemoryRuleStore,
   InMemoryTransactionStore,
 } from '../src/infra/in-memory-store';
-import { runMigrations } from '../src/infra/postgres/migrate';
-import { closePool, getPool } from '../src/infra/postgres/pool';
+import { closePool } from '../src/infra/postgres/pool';
 import {
   PostgresAccountStore,
   PostgresBudgetStore,
@@ -25,6 +24,7 @@ import {
   PostgresUserStore,
 } from '../src/infra/auth/postgres-auth-stores';
 import { runAuthStoreContract, type AuthStoreSet } from './auth-store-contract';
+import { startPgHarness } from './pg-harness';
 import { runStoreContract, type StoreSet } from './store-contract';
 
 // ------------------------------------------------- in-memory identity stores
@@ -101,41 +101,50 @@ runStoreContract('in-memory', async (): Promise<StoreSet> => {
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
 
 if (TEST_DATABASE_URL) {
+  // Note which pool goes where: the stores under test get the restricted
+  // runtime role, so the whole contract runs with the RLS policies in force,
+  // while reset() uses the owner. Handing the stores the owner's pool would
+  // make this suite pass just as happily against a database with no policies.
   runStoreContract('postgres', async (): Promise<StoreSet> => {
-    const pool = getPool(TEST_DATABASE_URL);
-    await runMigrations(pool);
+    const { owner, app, close } = await startPgHarness(TEST_DATABASE_URL);
 
     return {
-      accounts: new PostgresAccountStore(pool),
-      transactions: new PostgresTransactionStore(pool),
-      budgets: new PostgresBudgetStore(pool),
-      rules: new PostgresRuleStore(pool),
+      accounts: new PostgresAccountStore(app),
+      transactions: new PostgresTransactionStore(app),
+      budgets: new PostgresBudgetStore(app),
+      rules: new PostgresRuleStore(app),
       async reset() {
         // Deleting the users cascades to everything else, which also proves
         // the FK cascade that account deletion depends on actually works.
-        await pool.query('DELETE FROM users');
+        // Cascades run as referential integrity checks, which bypass RLS —
+        // otherwise this would silently clear nothing.
+        await owner.query('DELETE FROM users');
       },
       async teardown() {
+        await close();
         await closePool();
       },
     };
   });
   runAuthStoreContract('postgres', async (): Promise<AuthStoreSet> => {
-    const pool = getPool(TEST_DATABASE_URL);
-    await runMigrations(pool);
+    // Identity carries no policies — login and lockout counting have to read
+    // these tables before there is a user to scope to — but the runtime role
+    // still has to hold the right grants, so it is used here too.
+    const { owner, app, close } = await startPgHarness(TEST_DATABASE_URL);
 
     return {
-      users: new PostgresUserStore(pool),
-      sessions: new PostgresSessionStore(pool),
-      events: new PostgresAuthEventStore(pool),
+      users: new PostgresUserStore(app),
+      sessions: new PostgresSessionStore(app),
+      events: new PostgresAuthEventStore(app),
       async reset() {
         // auth_events references users with ON DELETE SET NULL, so rows that
         // recorded a failure against an unknown address survive the cascade
         // and have to be cleared explicitly.
-        await pool.query('DELETE FROM auth_events');
-        await pool.query('DELETE FROM users');
+        await owner.query('DELETE FROM auth_events');
+        await owner.query('DELETE FROM users');
       },
       async teardown() {
+        await close();
         await closePool();
       },
     };

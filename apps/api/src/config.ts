@@ -5,7 +5,14 @@ export type StoreDriver = 'postgres' | 'memory';
 export interface AppConfig {
   port: number;
   store: StoreDriver;
+  /** The schema owner. Migrations and role provisioning only. */
   databaseUrl: string | undefined;
+  /** The least-privileged runtime connection, subject to the RLS policies in
+   *  003_rls.sql. Absent means requests are served by the owner, which on most
+   *  installs is a superuser — and a superuser bypasses every policy without
+   *  saying so. core.module warns rather than failing, because a single-URL
+   *  setup is a reasonable way to run locally. */
+  appDatabaseUrl: string | undefined;
   /** Apply pending migrations on boot. Convenient in development; in
    *  production migrations should be a deploy step, not a startup side effect,
    *  so that two instances starting at once cannot race each other. */
@@ -117,6 +124,7 @@ function buildConfig(): AppConfig {
     port: Number(process.env.PORT ?? 3000),
     store,
     databaseUrl: process.env.DATABASE_URL,
+    appDatabaseUrl: process.env.DATABASE_APP_URL,
     migrateOnBoot: process.env.MIGRATE_ON_BOOT !== 'false',
     jwtSecret: resolveJwtSecret(isProduction),
     isProduction,

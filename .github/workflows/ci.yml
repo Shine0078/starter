@@ -47,10 +47,13 @@ jobs:
       - name: Tests (in-memory only)
         run: npm test
 
+      # TEST_DATABASE_APP_URL is the restricted role the store contract and the
+      # RLS suite connect as. The suite creates it; only the URL has to agree.
       - name: Tests (with Postgres)
         run: npm test
         env:
           TEST_DATABASE_URL: postgresql://finverse:finverse_dev_only@localhost:5432/finverse
+          TEST_DATABASE_APP_URL: postgresql://finverse_app:finverse_app_dev_only@localhost:5432/finverse
 
       - name: Migrations apply cleanly and are idempotent
         run: |
@@ -58,6 +61,7 @@ jobs:
           npm run migrate --workspace @finverse/api
         env:
           DATABASE_URL: postgresql://finverse:finverse_dev_only@localhost:5432/finverse
+          DATABASE_APP_URL: postgresql://finverse_app:finverse_app_dev_only@localhost:5432/finverse
 
       - run: npm run build
 

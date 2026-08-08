@@ -2,6 +2,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { Pool } from 'pg';
 
+import { parseAppRole, provisionAppRole } from './app-role';
 import { getPool, withTransaction } from './pool';
 
 /**
@@ -56,7 +57,7 @@ export async function runMigrations(pg: Pool = getPool()): Promise<string[]> {
   return ran;
 }
 
-/** `npm run migrate` */
+/** `npm run migrate` — the deploy step, when MIGRATE_ON_BOOT=false. */
 async function main(): Promise<void> {
   const pool = getPool();
   try {
@@ -65,6 +66,20 @@ async function main(): Promise<void> {
       console.log('Schema is up to date.');
     } else {
       for (const name of ran) console.log(`Applied ${name}`);
+    }
+
+    // The runtime role belongs to the same step: the policies applied above are
+    // inert against a superuser, and this connection is the only one privileged
+    // enough to create the role they do apply to.
+    const appUrl = process.env.DATABASE_APP_URL;
+    if (appUrl) {
+      await provisionAppRole(pool, appUrl);
+      console.log(`Runtime role ${parseAppRole(appUrl).role} provisioned.`);
+    } else {
+      console.log(
+        'DATABASE_APP_URL is not set — no runtime role provisioned, and row-level ' +
+          'security will not apply to a connection made with DATABASE_URL.',
+      );
     }
   } finally {
     await pool.end();

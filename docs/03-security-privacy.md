@@ -70,8 +70,17 @@ the Have I Been Pwned k-anonymity range API never receives the password itself.
 ## Access control
 
 Every query is scoped by `user_id` at the repository layer, not the controller. Postgres
-row-level security is enabled as a second line so that a missing `WHERE` clause fails
-closed instead of leaking another user's transactions.
+row-level security is enabled underneath as a second, independent line: a missing
+`WHERE` clause fails closed instead of leaking another user's transactions. Both have to
+be wrong before anything leaks.
+
+Requests are served by `finverse_app`, a role that is explicitly not a superuser and
+holds no `BYPASSRLS` — either of those would bypass every policy without reporting
+anything. The schema owner in `DATABASE_URL` is used for migrations and nothing else.
+Policies are `FORCE`d, so they apply to the owner too. `accounts`, `transactions`,
+`budgets` and `categorization_rules` are covered; `users`, `sessions` and `auth_events`
+are read before a user is known and cannot be, which is a real limit rather than an
+omission. See [ADR-0006](adr/0006-row-level-security.md).
 
 Engineers do not have standing production data access. Break-glass access is
 time-boxed, requires a second approver, and emits an audit event the user can see in

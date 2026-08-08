@@ -30,9 +30,10 @@ the traps that cost time to rediscover.
 Phase 1, partway. Authentication is real: Argon2id, rotating refresh tokens with
 reuse detection, a globally registered guard, per-account lockout, and cross-user
 regression tests. Persistence is Postgres behind ports, with a contract suite run
-against both adapters.
+against both adapters — and, since [ADR-0006](adr/0006-row-level-security.md),
+row-level security underneath it, with the API connecting as a role that cannot
+bypass the policies.
 
 The aggregator is still a mock — no bank has been connected, and connecting one
-is gated on a commercial agreement rather than on code. Row-level security is the
-next task; see [04-roadmap.md](04-roadmap.md) for why it is not a one-line
-migration.
+is gated on a commercial agreement rather than on code. Account deletion and
+retention is the next task, and is the last Phase 1 item nothing external blocks.

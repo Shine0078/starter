@@ -4,7 +4,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
 import { loadConfig } from './config';
 import { CATEGORIES } from './domain/categories';
-import { getPool } from './infra/postgres/pool';
+import { getAppPool } from './infra/postgres/pool';
 import { AuthGuard, Public } from './modules/auth/auth.guard';
 import { AuthModule } from './modules/auth/auth.module';
 import { BudgetsModule } from './modules/budgets/budgets.module';
@@ -38,7 +38,10 @@ class MetaController {
     }
 
     try {
-      await getPool(config.databaseUrl).query('SELECT 1');
+      // The runtime pool, not the owner's. Readiness is about the connection
+      // that actually serves requests — the owner's could be fine while the
+      // application role's password is stale and every request fails.
+      await getAppPool(config.appDatabaseUrl).query('SELECT 1');
       return { status: 'ok', ...base, database: 'reachable' };
     } catch (error) {
       return {

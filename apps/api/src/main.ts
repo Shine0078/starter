@@ -7,6 +7,7 @@ import { join } from 'node:path';
 
 import { AppModule } from './app.module';
 import { loadConfig } from './config';
+import { parseAppRole, provisionAppRole } from './infra/postgres/app-role';
 import { closePool, getPool } from './infra/postgres/pool';
 import { runMigrations } from './infra/postgres/migrate';
 
@@ -21,10 +22,17 @@ async function bootstrap(): Promise<void> {
   // set MIGRATE_ON_BOOT=false there, since two instances starting together
   // would otherwise race.
   if (config.store === 'postgres' && config.migrateOnBoot) {
-    const applied = await runMigrations(getPool(config.databaseUrl));
+    const admin = getPool(config.databaseUrl);
+    const applied = await runMigrations(admin);
     logger.log(
       applied.length === 0 ? 'Schema up to date.' : `Applied migrations: ${applied.join(', ')}`,
     );
+
+    // After the migrations, because the grants cover the tables they create.
+    if (config.appDatabaseUrl) {
+      await provisionAppRole(admin, config.appDatabaseUrl);
+      logger.log(`Runtime role ${parseAppRole(config.appDatabaseUrl).role} provisioned.`);
+    }
   }
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {

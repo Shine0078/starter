@@ -9,7 +9,7 @@ import {
   InMemoryTransactionStore,
 } from '../infra/in-memory-store';
 import { MockAggregator } from '../infra/mock-aggregator';
-import { getPool } from '../infra/postgres/pool';
+import { getAppPool } from '../infra/postgres/pool';
 import {
   PostgresAccountStore,
   PostgresBudgetStore,
@@ -69,7 +69,18 @@ function storeProviders(): Provider[] {
   }
 
   logger.log('Using Postgres for persistence.');
-  const pool = getPool(config.databaseUrl);
+
+  // Requests are served by the least-privileged role, never by the schema
+  // owner. That distinction is what makes the RLS policies in 003_rls.sql do
+  // anything: a superuser bypasses every one of them, and says nothing.
+  if (!config.appDatabaseUrl) {
+    logger.warn(
+      'DATABASE_APP_URL is not set — serving requests as the schema owner. ' +
+        'Row-level security does not apply to a superuser, so user isolation ' +
+        'rests on application code alone.',
+    );
+  }
+  const pool = getAppPool(config.appDatabaseUrl);
 
   return [
     { provide: ACCOUNT_STORE, useFactory: () => new PostgresAccountStore(pool) },

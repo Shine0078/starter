@@ -122,9 +122,17 @@ the repo works on a machine with no database but persists as soon as one exists.
 
 ```bash
 npm run infra:up                        # Postgres + Redis via docker compose
-cd apps/api && cp .env.example .env     # DATABASE_URL is already filled in
+cd apps/api && cp .env.example .env     # both URLs are already filled in
 npm run dev
 ```
+
+Two connection strings, deliberately. `DATABASE_URL` is the schema owner and is
+used for migrations only; `DATABASE_APP_URL` is the restricted role that serves
+requests, and it is the one row-level security applies to — a superuser bypasses
+every policy without saying so. The role is created by the migration step from
+the credentials in that URL, so it does not have to exist beforehand. Leaving it
+unset still runs, and logs on every boot that isolation is resting on
+application code alone. See [ADR-0006](docs/adr/0006-row-level-security.md).
 
 Migrations live in `apps/api/migrations` as numbered `.sql` files, applied once
 each inside a transaction. They run automatically on boot in development; set
@@ -155,11 +163,17 @@ npm run test:db
 only — that is what a contributor without a database gets, and it must keep
 passing on its own.
 
+The suite creates the restricted `finverse_app` role itself and connects the
+stores through it, so both halves of row-level security — the policies and the
+role they apply to — are exercised on every run rather than only in production.
+
 To leave a database running for `npm run dev`:
 
 ```bash
 npm run db:start
 ```
+
+It prints both connection strings to paste into `.env`.
 
 If you prefer containers, `npm run infra:up` brings up the same thing via
 docker compose. Docker is never required: it does not start reliably on every
@@ -168,10 +182,12 @@ stopped running.
 
 ## Notes on what is and isn't verified
 
-- **The API and its domain logic run and are tested.** 162 tests run with no
-  database; the full suite is **189 passing** against real PostgreSQL, including
-  the store contract shared by both adapters. The slice is also exercised end to
-  end over HTTP.
+- **The API and its domain logic run and are tested.** 243 tests run with no
+  database; the full suite is **309 passing** against real PostgreSQL, including
+  the store contract — which runs as the restricted role, so it executes with the
+  row-level security policies in force — and a suite that issues deliberately
+  unfiltered SQL to prove the database withholds other users' rows on its own.
+  The slice is also exercised end to end over HTTP.
 - **The Flutter app is verified by static analysis, a widget test, and a real
   Android debug APK build.** Android and iOS platform projects can be generated
   locally. See the

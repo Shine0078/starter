@@ -7,8 +7,9 @@ The tables that exist today live in `apps/api/migrations` — numbered `.sql`
 files, applied once each inside a transaction. What follows describes the full
 target model; the migrations are deliberately narrower, covering only what the
 store ports currently need. Migrating an empty table later is cheaper than
-maintaining one nothing writes to. See [ADR-0006](adr/0006-sql-over-orm.md) for
-why the schema is hand-written SQL.
+maintaining one nothing writes to. See [ADR-0002](adr/0002-pure-domain-layer.md)
+for why the schema and its row mappers are hand-written SQL rather than an ORM's
+output.
 
 ## Entities
 
@@ -157,4 +158,6 @@ backups and analytics:
 ## Related
 
 - [ADR-0003](adr/0003-integer-minor-units.md) — why `bigint` and not `numeric`
+- [ADR-0006](adr/0006-row-level-security.md) — which tables carry isolation
+  policies, and why `users`, `sessions` and `auth_events` cannot
 - [03-security-privacy.md](03-security-privacy.md) — encryption and access

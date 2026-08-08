@@ -11,6 +11,12 @@ export default defineConfig({
     // are only meaningful against the real thing.
     testTimeout: 30_000,
     hookTimeout: 30_000,
+    // Two suites share one database when TEST_DATABASE_URL is set, and both
+    // truncate between tests. Run files one at a time in that case: in
+    // parallel, one suite's reset deletes the other's fixtures mid-assertion,
+    // and the failure moves around between runs. Without a database there is
+    // nothing shared, so the common `npm test` path stays fully parallel.
+    fileParallelism: !process.env.TEST_DATABASE_URL,
   },
   plugins: [
     // Nest resolves constructor dependencies from `design:paramtypes`, which

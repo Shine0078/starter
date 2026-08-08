@@ -30,8 +30,16 @@ const USER = 'finverse';
 const PASSWORD = 'finverse_dev_only';
 const DATABASE = 'finverse';
 
-function connectionString(port: number): string {
-  return `postgresql://${USER}:${PASSWORD}@localhost:${port}/${DATABASE}`;
+/**
+ * The least-privileged runtime role. It is not created here — the migration
+ * step is, so `provisionAppRole` runs where the schema does — but the URL has to
+ * agree with test/pg-harness.ts, which is what creates it.
+ */
+const APP_USER = 'finverse_app';
+const APP_PASSWORD = 'finverse_app_dev_only';
+
+function connectionString(port: number, user = USER, password = PASSWORD): string {
+  return `postgresql://${user}:${password}@localhost:${port}/${DATABASE}`;
 }
 
 /** Asks the OS for a free port by binding one and immediately releasing it. */
@@ -74,6 +82,7 @@ async function main(): Promise<void> {
   }
 
   const CONNECTION_STRING = connectionString(PORT);
+  const APP_CONNECTION_STRING = connectionString(PORT, APP_USER, APP_PASSWORD);
 
   // A fresh data directory per run. Tests that depend on state left behind by a
   // previous run pass locally and fail in CI; making that impossible is worth
@@ -116,6 +125,12 @@ async function main(): Promise<void> {
   console.log(`PostgreSQL ready: ${CONNECTION_STRING}`);
 
   if (serveOnly) {
+    console.log('');
+    console.log('For `npm run dev`, set both — the second is the role row-level');
+    console.log('security applies to, and the API creates it on boot:');
+    console.log(`  DATABASE_URL=${CONNECTION_STRING}`);
+    console.log(`  DATABASE_APP_URL=${APP_CONNECTION_STRING}`);
+    console.log('');
     console.log('Leave this running; press Ctrl+C to stop and discard the data.');
     // Hold the process open without spinning.
     await new Promise(() => {});
@@ -134,7 +149,9 @@ async function main(): Promise<void> {
     env: {
       ...process.env,
       TEST_DATABASE_URL: CONNECTION_STRING,
+      TEST_DATABASE_APP_URL: APP_CONNECTION_STRING,
       DATABASE_URL: CONNECTION_STRING,
+      DATABASE_APP_URL: APP_CONNECTION_STRING,
     },
   });
 

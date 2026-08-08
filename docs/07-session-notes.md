@@ -1,7 +1,7 @@
 # Where the project stands
 
-Written at commit `04b0570` for whoever picks this up next — including a fresh
-agent session with no memory of how any of it got here.
+Written for whoever picks this up next — including a fresh agent session with no
+memory of how any of it got here. Last updated when row-level security landed.
 
 Read [`MISSION.md`](../MISSION.md) for the product, [`HANDOVER.md`](../HANDOVER.md)
 for the backlog, and [`04-roadmap.md`](04-roadmap.md) for the sequence. This file
@@ -11,8 +11,8 @@ is the shortest path to being productive again.
 
 ```bash
 npm install
-npm test          # 225 tests, no database needed
-npm run test:db   # 288 tests, spins up a real PostgreSQL and tears it down
+npm test          # 243 tests, no database needed
+npm run test:db   # 309 tests, spins up a real PostgreSQL and tears it down
 npm run dev       # API + dev dashboard on http://localhost:3000
 ```
 
@@ -26,17 +26,22 @@ Every number below was produced by running the thing, not by reading the code.
 
 | Check | Result |
 |---|---|
-| API tests, in-memory | 225 passed |
-| API tests, real Postgres | 288 passed |
+| API tests, in-memory | 243 passed |
+| API tests, real Postgres | 309 passed |
 | `tsc --noEmit`, `npm run build` | clean |
 | `flutter analyze`, `flutter test` | clean, 7 passed |
 | Dashboard | register → sync → correct → logout, verified in a browser |
+| API on Postgres as `finverse_app` | two users, 183 transactions each, sync → correct → re-sync → budget, isolation confirmed against the raw tables |
+
+A previous version of this table said 225 and 288. Those were stale on the day
+they were written; the counts above were re-measured.
 
 ## What is real, and what only looks real
 
 **Real:** authentication (Argon2id, rotating refresh tokens with reuse
 detection, global guard, per-account lockout, session list, audit trail);
 Postgres persistence behind ports with a contract suite covering both adapters;
+row-level security, with the API connecting as a role that cannot bypass it;
 categorisation, budgets, insights, subscriptions, health score, cash-flow
 forecast, credit-card planner, purchase simulator, CSV export.
 
@@ -48,32 +53,59 @@ commercial agreement, not on code.
 (both need an email provider), MFA, passkeys, OAuth. `users.email_verified_at`
 exists as a column but nothing ever sets it — an address is currently unproven.
 
-## Next task: row-level security
+## Last task: row-level security — done
 
-Isolation today is enforced by application code. Every store method takes
-`userId`, every query filters on it, and `test/auth-api.spec.ts` attempts
-cross-user reads and writes and is refused. What is missing is the database
-refusing to serve the wrong rows *even if a query forgets its filter*.
+The database now refuses the wrong rows even when a query forgets its filter.
+[ADR-0006](adr/0006-row-level-security.md) has the reasoning; the short version:
 
-Three prerequisites, in order. Skipping either of the first two produces
-policies that silently never apply, which is worse than none — the tests
-"proving" isolation would pass against nothing:
+- `003_rls.sql` enables **and forces** policies on `accounts`, `transactions`,
+  `budgets`, `categorization_rules`, keyed on `current_setting('finverse.user_id')`.
+- Every Postgres store call goes through `withUserScope` in
+  `infra/postgres/pool.ts` — a transaction that pins that setting. It has to be
+  transaction-local; session-local would follow the pooled connection to the
+  next request.
+- There are now **two connection strings**. `DATABASE_URL` is the schema owner
+  and runs migrations. `DATABASE_APP_URL` is `finverse_app`, `NOSUPERUSER` and
+  `NOBYPASSRLS`, and serves every request. This distinction is the whole thing:
+  a superuser bypasses every policy and reports nothing.
+- The role is created by the migration step from the credentials in
+  `DATABASE_APP_URL`, so it does not have to exist first, and CI and the
+  embedded harness both provision it automatically.
+- `test/rls.spec.ts` asserts the preconditions (not a superuser, no BYPASSRLS,
+  every table enabled *and* forced) before asserting anything about rows, then
+  issues deliberately unfiltered SQL. Disabling the policies fails 16 of its 21
+  tests — checked by temporarily disabling them, not assumed.
 
-1. **A non-superuser role.** Superusers bypass RLS entirely, and both
-   docker-compose and the embedded harness connect as one. Create
-   `finverse_app`, grant it, and point `DATABASE_URL` at it.
-2. **A user in scope per request.** Policies need
-   `current_setting('finverse.user_id')`, which means `SET LOCAL` inside a
-   transaction — so the Postgres stores in `src/infra/postgres/stores.ts` must
-   route each call through a transaction rather than borrowing a pooled
-   connection directly. Every method already receives `userId`, so no signature
-   changes.
-3. **Only four tables qualify.** `accounts`, `transactions`, `budgets`,
-   `categorization_rules`. `users`, `sessions`, and `auth_events` are read
-   before a user is known — login, refresh, lockout counting — so they stay
-   under application control by necessity.
+The whole store contract now runs as `finverse_app`, so all 309 tests execute
+with the policies in force.
 
-Then add tests that set the session variable to user A and try to read user B.
+## Next task: account deletion and retention
+
+The last item in Phase 1 that nothing external blocks. `users.deleted_at` and
+the `pending_deletion` status exist as columns and are written by nothing;
+`UserStatus` already has the value. Export exists and is tested. Deletion does
+not exist at all.
+
+What it needs:
+
+1. **A deletion request endpoint** that sets `pending_deletion` and a grace
+   period, revokes every session, and refuses to serve data in the meantime.
+   Immediate hard deletion is the wrong default — an attacker with a stolen
+   token should not be able to destroy someone's financial history irreversibly.
+2. **A purge that actually purges.** The FK cascade from `users` is already
+   proven by the contract suite's `reset()`. What is not covered is
+   `auth_events`, which is `ON DELETE SET NULL` on purpose so that failed logins
+   against unknown addresses survive — decide deliberately what happens to those.
+3. **Proof.** A test that creates a user with data, deletes, and then asserts
+   zero rows in every table, queried as the owner so RLS cannot make an empty
+   result look like success. That last detail is the trap: as `finverse_app`
+   outside a scope, *every* table reads as empty whether or not anything was
+   deleted.
+
+After that, the unblocked options are email verification and password reset
+behind an `EmailPort` with a dev adapter that logs the link — the same shape as
+`MockAggregator`, so swapping in a real provider stays a composition-root
+change.
 
 ## Machine-specific gotchas
 
@@ -86,6 +118,14 @@ Things that cost time to rediscover:
 - **`preview_start` reads `.claude/launch.json` from the primary working
   directory.** If a session is rooted at `portfolio`, it will start *that*
   project's Next.js server instead of this API. Root sessions at `starter`.
+- **A store contract that connects as the owner proves nothing about RLS.**
+  Superusers bypass policies silently, so `test/pg-harness.ts` hands the stores
+  the `finverse_app` pool and keeps the owner's pool for truncation only. If a
+  new database suite is added, follow that split.
+- **Two DB suites share one database, so `test:db` runs files sequentially.**
+  `fileParallelism` is off in `vitest.config.ts` when `TEST_DATABASE_URL` is
+  set — in parallel, one suite's reset deletes the other's fixtures mid-assertion
+  and the failure moves around between runs.
 - **`loadConfig()` is memoised, and must stay that way.** It generates a random
   JWT secret in development; if each call produced a fresh one, tokens signed by
   the issuer would fail verification in the guard and every request would 401

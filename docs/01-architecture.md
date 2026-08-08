@@ -126,3 +126,4 @@ what makes the app feel fast enough to open daily.
 - [ADR-0003](adr/0003-integer-minor-units.md) — integer money
 - [ADR-0004](adr/0004-categorization-tiers.md) — rules before ML
 - [ADR-0005](adr/0005-zero-knowledge-tension.md) — where zero-knowledge and AI collide
+- [ADR-0006](adr/0006-row-level-security.md) — isolation enforced by the database
