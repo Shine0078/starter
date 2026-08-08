@@ -1,5 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../api/client.dart';
 import '../models/models.dart';
@@ -32,6 +36,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   List<AppSession> _sessions = const [];
   String? _error;
   var _loading = true;
+  var _exporting = false;
 
   @override
   void initState() {
@@ -114,6 +119,71 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (confirmed != true) return;
     await widget.api.signOutEverywhere();
     await widget.onSignedOutEverywhere();
+  }
+
+  Future<void> _exportData() async {
+    final password = TextEditingController();
+    final submitted = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Export your data'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'FINVERSE will create a portable JSON file containing your profile, finance records, settings, and security activity. Confirm your current password.',
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: password,
+              obscureText: true,
+              autofillHints: const [AutofillHints.password],
+              decoration: const InputDecoration(
+                labelText: 'Current password',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Create export'),
+          ),
+        ],
+      ),
+    );
+    final currentPassword = password.text;
+    password.dispose();
+    if (submitted != true) return;
+
+    setState(() => _exporting = true);
+    try {
+      final json = await widget.api.exportData(currentPassword);
+      final directory = await getTemporaryDirectory();
+      final stamp = DateFormat('yyyyMMdd-HHmmss').format(DateTime.now());
+      final file = File(
+          '${directory.path}${Platform.pathSeparator}finverse-data-$stamp.json');
+      await file.writeAsString(json, flush: true);
+      await SharePlus.instance.share(ShareParams(
+        files: [XFile(file.path, mimeType: 'application/json')],
+        title: 'FINVERSE data export',
+        subject: 'My FINVERSE data export',
+      ));
+    } catch (error) {
+      if (!mounted) return;
+      final message =
+          error is AuthException ? error.displayMessage : error.toString();
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
   }
 
   @override
@@ -221,6 +291,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         const SizedBox(height: 20),
         _heading('PRIVACY & ACCESS'),
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.download_outlined),
+            title: const Text('Export my data'),
+            subtitle: const Text(
+              'Password-confirmed portable JSON without passwords or bank tokens',
+            ),
+            trailing: _exporting
+                ? const SizedBox.square(
+                    dimension: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.chevron_right),
+            onTap: _exporting ? null : _exportData,
+          ),
+        ),
         const Card(
           child: ListTile(
             leading: Icon(Icons.security_outlined),

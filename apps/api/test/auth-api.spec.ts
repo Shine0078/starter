@@ -230,6 +230,10 @@ describe('auth API', () => {
       await request(http).get(path).expect(401);
     });
 
+    it('POST /api/privacy/export requires a token', async () => {
+      await request(http).post('/api/privacy/export').send({ password: PASSWORD }).expect(401);
+    });
+
     it('rejects a malformed or tampered token', async () => {
       const { tokens } = await register();
       const tampered = `${tokens.accessToken.slice(0, -4)}AAAA`;
@@ -351,6 +355,44 @@ describe('auth API', () => {
         .expect(200);
 
       expect(bobBudgets.body).toHaveLength(0);
+    });
+
+    it('exports portable user data after password confirmation without credential material', async () => {
+      const alice = await register();
+      await request(http)
+        .post('/api/sync')
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .expect(201);
+
+      await request(http)
+        .post('/api/privacy/export')
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .send({ password: 'wrong password that is long enough' })
+        .expect(401);
+
+      const exported = await request(http)
+        .post('/api/privacy/export')
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .send({ password: PASSWORD })
+        .expect(200);
+
+      expect(exported.body.format).toBe('finverse-portable-export');
+      expect(exported.body.formatVersion).toBe(1);
+      expect(exported.body.user.email).toBe(alice.email);
+      expect(exported.body.transactions.length).toBeGreaterThan(0);
+      expect(exported.body.sessions.some((session: { current: boolean }) => session.current)).toBe(
+        true,
+      );
+      expect(exported.body.securityActivity.some((event: { kind: string }) => event.kind === 'data_exported')).toBe(
+        true,
+      );
+
+      const serialized = JSON.stringify(exported.body);
+      expect(serialized).not.toContain('passwordHash');
+      expect(serialized).not.toContain('tokenHash');
+      expect(serialized).not.toContain('refreshToken');
+      expect(serialized).not.toContain('encryptedAccessToken');
+      expect(serialized).not.toContain('providerItemId');
     });
 
     it('keeps savings goals separate', async () => {

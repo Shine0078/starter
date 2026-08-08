@@ -80,6 +80,29 @@ void main() {
     expect(await cache.read('user-1', '/accounts'), isNull);
   });
 
+  test('portable export confirms the password and attaches the active session',
+      () async {
+    final store = InMemorySessionStore();
+    await store.write(const SessionTokens(
+      accessToken: 'active-access',
+      refreshToken: 'active-refresh',
+      refreshExpiresAt: '2026-09-08T00:00:00.000Z',
+      userId: 'user-1',
+    ));
+    late http.Request seen;
+    final api = clientWith(MockClient((request) async {
+      seen = request;
+      return http.Response('{"format":"finverse-portable-export"}', 200);
+    }), store: store);
+    await api.restoreSession();
+
+    final exported = await api.exportData('correct horse battery staple');
+
+    expect(exported, contains('finverse-portable-export'));
+    expect(seen.headers['authorization'], 'Bearer active-access');
+    expect(seen.body, contains('correct horse battery staple'));
+  });
+
   testWidgets('first launch explains the product before sign-in',
       (tester) async {
     final api = clientWith(MockClient((_) async => http.Response('{}', 200)));
@@ -425,6 +448,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('sam@example.com'), findsOneWidget);
     expect(find.text('This device'), findsOneWidget);
+    expect(find.text('Export my data'), findsOneWidget);
     await tester.pageBack();
     await tester.pumpAndSettle();
 

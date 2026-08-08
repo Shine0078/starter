@@ -14,6 +14,7 @@ import { InsightsModule } from './modules/insights/insights.module';
 import { GoalsModule } from './modules/goals/goals.module';
 import { LedgerModule } from './modules/ledger/ledger.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { PrivacyModule } from './modules/privacy/privacy.module';
 
 @Controller()
 class MetaController {
@@ -89,6 +90,7 @@ class MetaController {
     GoalsModule,
     NotificationsModule,
     InsightsModule,
+    PrivacyModule,
   ],
   controllers: [MetaController],
   providers: [

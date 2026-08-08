@@ -37,7 +37,8 @@ auditable transaction details, editable budgets, savings goals and contributions
 bank connections, subscription
 detection and price-change warnings, an in-app notification centre, notification
 preferences, first-launch onboarding, and a settings/privacy area with active-device
-session revocation.
+session revocation and password-confirmed portable data export through the native
+share sheet.
 
 Successful authenticated reads are cached locally for offline fallback. Payloads
 are AES-256-GCM encrypted with a key in the platform keystore, scoped per user,

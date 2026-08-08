@@ -57,7 +57,7 @@ class SecureSessionStore implements SessionStore {
   SecureSessionStore({FlutterSecureStorage? storage})
       : _storage = storage ??
             const FlutterSecureStorage(
-              aOptions: AndroidOptions(encryptedSharedPreferences: true),
+              aOptions: AndroidOptions(migrateWithBackup: true),
               iOptions: IOSOptions(
                 // Not available until the device has been unlocked once after
                 // boot, and never synced to iCloud or a device backup.

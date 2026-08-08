@@ -25,7 +25,7 @@ Stated so the rest of this document is not read as "nothing works".
 | Authentication | Argon2id, rotating refresh tokens with reuse detection, email verification, password reset, recoverable deletion, global guard, per-account lockout, session list, audit trail |
 | Persistence | Postgres behind ports, contract-tested against both adapters, migrations |
 | Isolation | Row-level security, app connects as a non-superuser role, 21 dedicated tests |
-| Tests | 280 without a database, 371 against real Postgres, 10 Flutter tests; all passing |
+| Tests | 282 without a database, 373 against real Postgres, 15 Flutter tests; all passing |
 | CI | GitHub Actions: API typecheck/test/build/image + Flutter analyze/test/Android compile; tagged API/APK releases |
 
 That is a solid Phase-0 foundation. It is not a product.
@@ -94,13 +94,13 @@ environment before they can be claimed.
 | 3.2.3 | **Password reset** | Enumeration-safe request, one-time reset, password policy, session revocation, mobile flow, and SMTP adapter are complete | Real email provider credentials remain |
 | 3.2.4 | **MFA / TOTP** | The mission names it explicitly. Absent | 1 week |
 | 3.2.5 | **Passkeys / WebAuthn, OAuth2 + PKCE** | Mission names both. Absent. Needs 1.4 | 2–3 weeks |
-| 3.2.6 | **Step-up auth** for linking and export | Deletion password re-verification is complete; linking and export still rely only on a valid access token | 1 week |
+| 3.2.6 | **Step-up auth** for linking and export | Deletion and full-data export re-verify the current password. Bank linking still relies on the active session plus Plaid Link authentication | days |
 | 3.2.7 | **Biometric app lock** | Mission names it. Absent | days |
 | 3.2.8 | **Password blocklist is a small built-in set** | Should check a real corpus via HIBP k-anonymity | days |
 | 3.2.9 | **CORS is wide open in development** | Correctly fails closed in production, but the production allowlist has never been exercised | days |
 | 3.2.10 | **Secrets management** | `JWT_SECRET` and DB passwords come from env vars. No KMS, no rotation, no vault | 1 week |
-| 3.2.11 | **Data export is CSV only** | GDPR portability expects a complete export, not just the ledger | days |
-| 3.2.12 | **Consent and retention records** | Mission asks for consent management and a privacy dashboard. Neither exists | 2 weeks |
+| 3.2.11 | **Portable data export** | **Completed technically:** password-confirmed JSON includes profile, sessions, security activity, accounts, transactions, budgets, rules, goals/contributions, notifications/preferences, and sanitized bank metadata; no password hashes, session-token hashes, or Plaid secrets | Counsel must approve DSAR procedure and scope |
+| 3.2.12 | **Consent and retention records** | Settings now exposes sessions, bank access, notification choices, deletion, and export. Versioned legal acknowledgements, optional-consent history, and retention-policy evidence do not exist yet | 1–2 weeks plus counsel-approved policy versions |
 | 3.2.13 | **No penetration test** | A finance product should not take its first real user without one | 2–4 weeks + fixes |
 | 3.2.14 | **No threat model document** | The abbreviated table in the docs is a sketch, not a threat model | 1 week |
 
@@ -137,7 +137,7 @@ smaller than the complete MISSION.md product.
 
 | # | Item | Detail | Effort |
 |---|---|---|---|
-| 5.1 | **Core navigation started** | Onboarding, home, transaction search/detail/correction, budgets, goals, bank accounts, subscriptions, notifications, and basic settings/session controls are implemented. No consent/privacy-access dashboard | 3–4 weeks |
+| 5.1 | **Core navigation started** | Onboarding, home, transaction search/detail/correction, budgets, goals, bank accounts, subscriptions, notifications, settings/session controls, and password-confirmed data export are implemented. No consent-management dashboard | 2–4 weeks |
 | 5.2 | **Read-only offline cache implemented** | Authenticated GET responses can fall back to a 30-day, user-scoped encrypted cache with a visible stale-data banner. Offline writes, background reconciliation, and conflict handling remain | 2–3 weeks |
 | 5.3 | **No state management** | `setState` only. Honest at one screen, unworkable at twenty | with 5.1 |
 | 5.4 | **No push notifications** | Persistent preferences, a mobile notification centre, and deduplicated budget, utilization, low-balance, and bank-sync alerts exist. Device push delivery, bill reminders, and unusual-spend detection remain | 2–3 weeks |

@@ -61,8 +61,9 @@ requirements. Composition rules produce `Password1!` and get reused everywhere.
 
 - MFA/TOTP, passkeys (WebAuthn), and OAuth 2.0 + PKCE. Passkeys need a
   registered domain for the relying-party id.
-- Step-up authentication for linking an account or exporting. Account deletion now
-  re-verifies the current password and requires explicit typed confirmation.
+- Step-up authentication for linking an account. Account deletion and portable
+  data export re-verify the current password; deletion also requires explicit typed
+  confirmation.
 - Biometric app lock on the device.
 
 The blocklist is a small built-in set. Production should check a real corpus —
@@ -126,7 +127,7 @@ aggregates only, or self-hosted.
 
 | Framework | Status | Blocker |
 |---|---|---|
-| GDPR / CCPA / PIPEDA | Account request, recovery, purge, and CSV ledger export implemented; consent and full DSAR path absent | Counsel review plus missing product work |
+| GDPR / CCPA / PIPEDA | Account request, recovery, purge, CSV ledger export, and a password-confirmed portable JSON export are implemented. The JSON includes profile, security activity, sessions, finance records, preferences, and sanitized bank-link metadata | Consent records, identity-verification procedure, response operations, and counsel review remain |
 | SOC 2 Type II | Not ready; several production controls do not exist | Requires implemented controls, evidence window, and auditor |
 | PCI DSS | Mostly **out of scope by design** — we never touch card PANs | Stays true only if we never accept card entry |
 | Open Banking (PSD2, CDR, UK OBIE) | Handled via aggregator | Their license, not ours, in most regions |

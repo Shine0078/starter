@@ -82,7 +82,8 @@ export type AuthEventKind =
   | 'email_verification_sent'
   | 'email_verified'
   | 'password_reset_requested'
-  | 'password_reset_completed';
+  | 'password_reset_completed'
+  | 'data_exported';
 
 export interface AuthEvent {
   id: string;

@@ -322,6 +322,22 @@ class ApiClient {
     return scheduledFor;
   }
 
+  Future<String> exportData(String password) async {
+    final response = await _perform(
+      'POST',
+      '/privacy/export',
+      {'password': password},
+      true,
+    );
+    if (response.statusCode >= 400) {
+      final decoded = response.body.isEmpty
+          ? <String, dynamic>{}
+          : jsonDecode(response.body) as Map<String, dynamic>;
+      throw AuthException.fromResponse(response.statusCode, decoded);
+    }
+    return response.body;
+  }
+
   Future<SyncResult> sync() async {
     final json = await _send('POST', '/sync') as Map<String, dynamic>;
     return SyncResult.fromJson(json);

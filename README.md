@@ -101,6 +101,7 @@ last 15 minutes; exchange the refresh token at `/api/auth/refresh` for a new pai
 | `GET` | `/auth/me` | The signed-in user |
 | `GET` | `/auth/sessions` | Active sessions, with the current one marked |
 | `DELETE` | `/auth/sessions/:id` | Revoke one session |
+| `POST` | `/privacy/export` | Password-confirmed portable JSON export of user-owned data and security activity |
 | `POST` | `/sync` | Pull from the aggregator, categorize, persist |
 | `GET` | `/bank-links` | List connected institutions and sync health |
 | `POST` | `/bank-links/link-token` | Create a Plaid Link token (new or update mode) |
@@ -199,8 +200,8 @@ stopped running.
 
 ## Notes on what is and isn't verified
 
-- **The API and its domain logic run and are tested.** 280 tests run with no
-  database; the full suite is **371 passing** against real PostgreSQL, including
+- **The API and its domain logic run and are tested.** 282 tests run with no
+  database; the full suite is **373 passing** against real PostgreSQL, including
   the store contract — which runs as the restricted role, so it executes with the
   row-level security policies in force — and a suite that issues deliberately
   unfiltered SQL to prove the database withholds other users' rows on its own.
