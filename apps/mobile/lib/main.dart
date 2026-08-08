@@ -1,15 +1,25 @@
 import 'package:flutter/material.dart';
 
 import 'api/client.dart';
+import 'api/onboarding_store.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/onboarding_screen.dart';
 
-void main() => runApp(FinverseApp(api: ApiClient()));
+void main() => runApp(FinverseApp(
+      api: ApiClient(),
+      onboardingStore: SecureOnboardingStore(),
+    ));
 
 class FinverseApp extends StatelessWidget {
-  const FinverseApp({required this.api, super.key});
+  FinverseApp({
+    required this.api,
+    OnboardingStore? onboardingStore,
+    super.key,
+  }) : onboardingStore = onboardingStore ?? CompletedOnboardingStore();
 
   final ApiClient api;
+  final OnboardingStore onboardingStore;
 
   @override
   Widget build(BuildContext context) {
@@ -31,8 +41,56 @@ class FinverseApp extends StatelessWidget {
       ),
       // Follow the OS. A finance app opened at night should not flashbang you.
       themeMode: ThemeMode.system,
-      home: AuthGate(api: api),
+      home: OnboardingGate(api: api, store: onboardingStore),
     );
+  }
+}
+
+class OnboardingGate extends StatefulWidget {
+  const OnboardingGate({required this.api, required this.store, super.key});
+
+  final ApiClient api;
+  final OnboardingStore store;
+
+  @override
+  State<OnboardingGate> createState() => _OnboardingGateState();
+}
+
+class _OnboardingGateState extends State<OnboardingGate> {
+  bool? _complete;
+
+  @override
+  void initState() {
+    super.initState();
+    _check();
+  }
+
+  Future<void> _check() async {
+    bool complete;
+    try {
+      complete = await widget.store.isComplete();
+    } catch (_) {
+      // A keystore failure should not lock the user out of the app.
+      complete = false;
+    }
+    if (mounted) setState(() => _complete = complete);
+  }
+
+  Future<void> _finish() async {
+    try {
+      await widget.store.complete();
+    } finally {
+      if (mounted) setState(() => _complete = true);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_complete == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    if (!_complete!) return OnboardingScreen(onComplete: _finish);
+    return AuthGate(api: widget.api);
   }
 }
 

@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 import 'package:finverse/api/client.dart';
+import 'package:finverse/api/onboarding_store.dart';
 import 'package:finverse/api/session_store.dart';
 import 'package:finverse/main.dart';
 import 'package:finverse/models/models.dart';
@@ -20,6 +21,23 @@ ApiClient clientWith(MockClient http, {SessionStore? store}) => ApiClient(
     );
 
 void main() {
+  testWidgets('first launch explains the product before sign-in',
+      (tester) async {
+    final api = clientWith(MockClient((_) async => http.Response('{}', 200)));
+    final onboarding = InMemoryOnboardingStore();
+
+    await tester.pumpWidget(
+      FinverseApp(api: api, onboardingStore: onboarding),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('See your money clearly'), findsOneWidget);
+    await tester.tap(find.text('Skip'));
+    await tester.pumpAndSettle();
+    expect(find.text('Sign in'), findsWidgets);
+    expect(await onboarding.isComplete(), isTrue);
+  });
+
   testWidgets('shows sign-in when there is no stored session', (tester) async {
     final api = clientWith(MockClient((_) async => http.Response('{}', 200)));
 
