@@ -106,6 +106,20 @@ if (ownerUrl) {
          VALUES ('consent-' || $1,$1,'analytics',true,'preference-v1','user_settings',now())`,
         [userId],
       );
+      await harness.owner.query(
+        `INSERT INTO user_mfa (user_id,encrypted_secret,enabled_at)
+         VALUES ($1,'encrypted-secret',now())`,
+        [userId],
+      );
+      await harness.owner.query(
+        `INSERT INTO mfa_recovery_codes (user_id,code_hash) VALUES ($1,'recovery-hash')`,
+        [userId],
+      );
+      await harness.owner.query(
+        `INSERT INTO mfa_login_challenges (token_hash,user_id,expires_at)
+         VALUES ('challenge-hash',$1,now() + interval '5 minutes')`,
+        [userId],
+      );
 
       const deletions = new PostgresAccountDeletionStore(harness.app);
       const requestedAt = new Date('2026-08-01T00:00:00.000Z');
@@ -131,6 +145,9 @@ if (ownerUrl) {
         'bank_webhook_jobs',
         'consent_events',
         'sessions',
+        'user_mfa',
+        'mfa_recovery_codes',
+        'mfa_login_challenges',
       ]) {
         const column = table === 'users' ? 'id' : 'user_id';
         const result = await harness.owner.query(

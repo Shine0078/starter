@@ -31,15 +31,16 @@ of the difficulty is technical.
 - [x] **Row-level security** — the database refuses the wrong rows even when a
       query forgets its filter. See the note below and
       [ADR-0006](adr/0006-row-level-security.md)
-- [ ] Email verification and password reset (both need an email provider)
-- [ ] Passkeys, OAuth2 + PKCE, MFA, step-up auth
+- [x] Email verification and password reset adapters and mobile flows (production delivery still needs an email provider)
+- [x] TOTP MFA and password step-up auth
+- [ ] Passkeys and OAuth2 + PKCE
 - [ ] Aggregator contract signed (Plaid US / Flinks CA — pick one, not both)
-- [ ] Link flow, token storage, reauth handling
-- [ ] Sync engine: cursor-based, idempotent, handles pending → posted transitions
+- [x] Plaid Link flow, encrypted token storage, and reauth handling (Sandbox dashboard allowlist/device acceptance remains)
+- [x] Sync engine: cursor-based, idempotent, handles pending → posted transitions
 - [ ] Merchant lexicon seeded (top ~2,000 merchants covers most volume)
-- [ ] Budgets, goals, subscription detection on real data
-- [ ] Flutter app: dashboard, transactions, budget, one insight surface
-- [ ] Deletion + export, actually verified end to end
+- [x] Budgets, goals, and subscription detection (real-bank acceptance remains)
+- [x] Flutter app: dashboard, transactions, budgets, goals, and insight surfaces
+- [x] Deletion + export, verified through API, mobile, and PostgreSQL erasure tests
 
 **External blockers — start these first, they gate everything:**
 

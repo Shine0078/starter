@@ -6,7 +6,8 @@ automated.
 [`MISSION.md`](MISSION.md) is the product brief. [`docs/`](docs/) turns it into
 a plan. This README tells you how to run what exists.
 
-**Status: launch engineering in progress.** The API and Android app include real
+**Status: launch engineering in progress.** The API and Android app include
+TOTP multi-factor authentication, device app lock, real
 Plaid Sandbox Link, encrypted token storage, incremental sync, budgets, goals,
 notifications, insights, and account lifecycle controls. Production Plaid access,
 hosting, legal review, store approval, and billing remain external launch gates
@@ -208,13 +209,13 @@ stopped running.
 
 ## Notes on what is and isn't verified
 
-- **The API and its domain logic run and are tested.** 289 tests run with no
-  database; the full suite is **384 passing** against real PostgreSQL, including
+- **The API and its domain logic run and are tested.** 295 tests run with no
+  database; the full suite is **391 passing** against real PostgreSQL, including
   the store contract — which runs as the restricted role, so it executes with the
   row-level security policies in force — and a suite that issues deliberately
   unfiltered SQL to prove the database withholds other users' rows on its own.
   The slice is also exercised end to end over HTTP.
-- **The Flutter app is verified by static analysis, a widget test, and a real
+- **The Flutter app is verified by static analysis, 20 tests, and a real
   Android debug APK build.** Android and iOS platform projects can be generated
   locally. See the
   [cheap launch path](docs/06-cheap-launch-path.md).

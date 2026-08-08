@@ -18,6 +18,7 @@ import { ACCOUNT_STORE, TRANSACTION_STORE, type AccountStore, type TransactionSt
 import { ACCOUNT_DELETION_STORE, type AccountDeletionStore } from '../src/ports/auth';
 import { EMAIL_SENDER } from '../src/ports/auth';
 import type { DevelopmentEmailSender } from '../src/infra/auth/auth-action-stores';
+import { totpAt } from '../src/domain/auth/totp';
 
 // Must be set before anything calls loadConfig(), which memoises.
 process.env.STORE = 'memory';
@@ -26,6 +27,7 @@ process.env.LEGAL_TERMS_VERSION = 'terms-test-v1';
 process.env.LEGAL_TERMS_URL = 'https://finverse.example/legal/terms-test-v1';
 process.env.LEGAL_PRIVACY_VERSION = 'privacy-test-v1';
 process.env.LEGAL_PRIVACY_URL = 'https://finverse.example/legal/privacy-test-v1';
+process.env.MFA_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString('base64');
 // This suite drives hundreds of requests from one address. Per-IP throttling is
 // real and is exercised in auth-throttle.spec.ts; here it would only produce
 // 429s unrelated to what each test is checking. Account lockout — the control
@@ -252,6 +254,94 @@ describe('auth API', () => {
     });
   });
 
+  describe('authenticator MFA', () => {
+    it('gates login, rejects replay, supports one-time recovery, and can be disabled', async () => {
+      const account = await register();
+      const authorization = `Bearer ${account.tokens.accessToken}`;
+
+      const initial = await request(http)
+        .get('/api/auth/mfa')
+        .set('Authorization', authorization)
+        .expect(200);
+      expect(initial.body).toEqual({ enabled: false, available: true, recoveryCodesRemaining: 0 });
+
+      await request(http)
+        .post('/api/auth/mfa/enroll')
+        .set('Authorization', authorization)
+        .send({ password: 'wrong password' })
+        .expect(401);
+
+      const enrollment = await request(http)
+        .post('/api/auth/mfa/enroll')
+        .set('Authorization', authorization)
+        .send({ password: PASSWORD })
+        .expect(201);
+      expect(enrollment.body.secret).toMatch(/^[A-Z2-7]{32}$/);
+      expect(enrollment.body.otpauthUri).toContain('otpauth://totp/');
+
+      const code = totpAt(enrollment.body.secret, new Date()).code;
+      const enabled = await request(http)
+        .post('/api/auth/mfa/enable')
+        .set('Authorization', authorization)
+        .send({ code })
+        .expect(200);
+      expect(enabled.body.recoveryCodes).toHaveLength(10);
+
+      const challenged = await request(http)
+        .post('/api/auth/login')
+        .send({ email: account.email, password: PASSWORD })
+        .expect(200);
+      expect(challenged.body.mfaRequired).toBe(true);
+      expect(challenged.body.tokens).toBeUndefined();
+
+      await request(http)
+        .post('/api/auth/mfa/verify')
+        .send({ challengeToken: challenged.body.challengeToken, code: '000000' })
+        .expect(401);
+
+      const verified = await request(http)
+        .post('/api/auth/mfa/verify')
+        .send({ challengeToken: challenged.body.challengeToken, code: totpAt(enrollment.body.secret, new Date()).code })
+        .expect(200);
+      expect(verified.body.tokens.accessToken).toBeTruthy();
+
+      await request(http)
+        .post('/api/auth/mfa/verify')
+        .send({ challengeToken: challenged.body.challengeToken, code: totpAt(enrollment.body.secret, new Date()).code })
+        .expect(401);
+
+      const recoveryChallenge = await request(http)
+        .post('/api/auth/login')
+        .send({ email: account.email, password: PASSWORD })
+        .expect(200);
+      await request(http)
+        .post('/api/auth/mfa/verify')
+        .send({ challengeToken: recoveryChallenge.body.challengeToken, code: enabled.body.recoveryCodes[0] })
+        .expect(200);
+
+      const replayChallenge = await request(http)
+        .post('/api/auth/login')
+        .send({ email: account.email, password: PASSWORD })
+        .expect(200);
+      await request(http)
+        .post('/api/auth/mfa/verify')
+        .send({ challengeToken: replayChallenge.body.challengeToken, code: enabled.body.recoveryCodes[0] })
+        .expect(401);
+
+      await request(http)
+        .delete('/api/auth/mfa')
+        .set('Authorization', authorization)
+        .send({ password: PASSWORD, code: enabled.body.recoveryCodes[1] })
+        .expect(200, { enabled: false });
+
+      const ordinaryLogin = await request(http)
+        .post('/api/auth/login')
+        .send({ email: account.email, password: PASSWORD })
+        .expect(200);
+      expect(ordinaryLogin.body.tokens.accessToken).toBeTruthy();
+    });
+  });
+
   // ------------------------------------------------------- protected routes
 
   describe('route protection', () => {
@@ -435,6 +525,10 @@ describe('auth API', () => {
       expect(exported.body.format).toBe('finverse-portable-export');
       expect(exported.body.formatVersion).toBe(1);
       expect(exported.body.user.email).toBe(alice.email);
+      expect(exported.body.authentication).toEqual({
+        mfaEnabled: false,
+        recoveryCodesRemaining: 0,
+      });
       expect(exported.body.transactions.length).toBeGreaterThan(0);
       expect(exported.body.sessions.some((session: { current: boolean }) => session.current)).toBe(
         true,
@@ -449,6 +543,7 @@ describe('auth API', () => {
       expect(serialized).not.toContain('refreshToken');
       expect(serialized).not.toContain('encryptedAccessToken');
       expect(serialized).not.toContain('providerItemId');
+      expect(serialized).not.toContain('encryptedSecret');
     });
 
     it('keeps an append-only history of optional consent choices per user', async () => {

@@ -1,7 +1,8 @@
 # Where the project stands
 
 Written for whoever picks this up next — including a fresh agent session with no
-memory of how any of it got here. Last updated after the launch-foundation pass.
+memory of how any of it got here. Last updated after the MFA security milestone
+on 2026-08-08.
 
 Read [`MISSION.md`](../MISSION.md) for the product, [`HANDOVER.md`](../HANDOVER.md)
 for the backlog, and [`04-roadmap.md`](04-roadmap.md) for the sequence. This file
@@ -11,8 +12,8 @@ is the shortest path to being productive again.
 
 ```bash
 npm install
-npm test          # 251 tests, no database needed
-npm run test:db   # 321 tests, spins up a real PostgreSQL and tears it down
+npm test          # 295 tests, no database needed
+npm run test:db   # 391 tests, spins up a real PostgreSQL and tears it down
 npm run dev       # API + dev dashboard on http://localhost:3000
 ```
 
@@ -26,11 +27,11 @@ Every number below was produced by running the thing, not by reading the code.
 
 | Check | Result |
 |---|---|
-| API tests, in-memory | 251 passed |
-| API tests, real Postgres | 321 passed |
+| API tests, in-memory | 295 passed |
+| API tests, real Postgres | 391 passed |
 | `tsc --noEmit`, `npm run build` | clean |
-| `flutter analyze`, `flutter test` | clean, 10 passed |
-| Android release compile | `com.finverse.finance`, API 36, 49 MB APK; local artifact uses the debug key only |
+| `flutter analyze`, `flutter test` | clean, 20 passed |
+| Android debug compile | `com.finverse.finance`, API 36, 170.9 MB APK; debug-only artifact built successfully |
 | Dashboard | register → sync → correct → logout, verified in a browser |
 | API on Postgres as `finverse_app` | two users, 183 transactions each, sync → correct → re-sync → budget, isolation confirmed against the raw tables |
 
@@ -50,9 +51,10 @@ forecast, credit-card planner, purchase simulator, CSV export.
 ledger. No bank has ever been connected, and connecting one is gated on a
 commercial agreement, not on code.
 
-**Implemented but awaiting provider configuration:** email verification and
-password reset use hashed one-time tokens and SMTP in production. **Absent:**
-MFA, passkeys, OAuth, and biometric app lock.
+**Implemented but awaiting provider/device configuration:** email verification
+and password reset use hashed one-time tokens and SMTP in production; TOTP MFA
+uses encrypted secrets and one-time recovery codes; Android app lock uses system
+device authentication. **Absent:** passkeys and OAuth.
 
 ## Last task: row-level security — done
 

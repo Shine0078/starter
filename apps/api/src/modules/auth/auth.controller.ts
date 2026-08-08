@@ -7,6 +7,10 @@ import {
   DeleteAccountDto,
   EmailDto,
   LoginDto,
+  MfaChallengeDto,
+  MfaCodeDto,
+  MfaDisableDto,
+  MfaEnrollDto,
   RefreshDto,
   RegisterDto,
 } from './auth.dto';
@@ -51,6 +55,39 @@ export class AuthController {
   @Post('login')
   login(@Body() body: LoginDto, @ReqContext() context: RequestContext) {
     return this.auth.login(body.email, body.password, context);
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @HttpCode(200)
+  @Post('mfa/verify')
+  verifyMfa(@Body() body: MfaChallengeDto, @ReqContext() context: RequestContext) {
+    return this.auth.verifyMfaChallenge(body.challengeToken, body.code, context);
+  }
+
+  @Get('mfa')
+  mfaStatus(@CurrentUser() userId: string) {
+    return this.auth.mfaStatus(userId);
+  }
+
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Post('mfa/enroll')
+  enrollMfa(@CurrentUser() userId: string, @Body() body: MfaEnrollDto, @ReqContext() context: RequestContext) {
+    return this.auth.enrollMfa(userId, body.password, context);
+  }
+
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @HttpCode(200)
+  @Post('mfa/enable')
+  enableMfa(@CurrentUser() userId: string, @Body() body: MfaCodeDto, @ReqContext() context: RequestContext) {
+    return this.auth.enableMfa(userId, body.code, context);
+  }
+
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @HttpCode(200)
+  @Delete('mfa')
+  disableMfa(@CurrentUser() userId: string, @Body() body: MfaDisableDto, @ReqContext() context: RequestContext) {
+    return this.auth.disableMfa(userId, body.password, body.code, context);
   }
 
   @Public()

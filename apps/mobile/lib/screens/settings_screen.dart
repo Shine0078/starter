@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -38,10 +39,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   PublicUser? _user;
   List<AppSession> _sessions = const [];
   PrivacyDashboard? _privacy;
+  MfaStatus? _mfa;
   String? _error;
   var _loading = true;
   var _exporting = false;
   var _appLockBusy = false;
+  var _mfaBusy = false;
 
   @override
   void initState() {
@@ -91,12 +94,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
         widget.api.me(),
         widget.api.sessions(),
         widget.api.privacyDashboard(),
+        widget.api.mfaStatus(),
       ]);
       if (!mounted) return;
       setState(() {
         _user = results[0] as PublicUser;
         _sessions = results[1] as List<AppSession>;
         _privacy = results[2] as PrivacyDashboard;
+        _mfa = results[3] as MfaStatus;
         _loading = false;
       });
     } catch (error) {
@@ -105,6 +110,189 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _error = error.toString();
         _loading = false;
       });
+    }
+  }
+
+  Future<void> _configureMfa() async {
+    if (_mfaBusy) return;
+    var password = '';
+    final submitted = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add authenticator security'),
+        content: TextField(
+          onChanged: (value) => password = value,
+          obscureText: true,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Current password',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Continue')),
+        ],
+      ),
+    );
+    final currentPassword = password;
+    if (submitted != true || currentPassword.isEmpty || !mounted) return;
+
+    setState(() => _mfaBusy = true);
+    try {
+      final enrollment = await widget.api.enrollMfa(currentPassword);
+      if (!mounted) return;
+      var code = '';
+      final confirmation = await showDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: const Text('Set up your authenticator'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                    'In Google Authenticator, Microsoft Authenticator, 1Password, or another TOTP app, add an account using this setup key:'),
+                const SizedBox(height: 12),
+                SelectableText(enrollment.secret,
+                    style: const TextStyle(
+                        fontFamily: 'monospace', fontWeight: FontWeight.bold)),
+                TextButton.icon(
+                  onPressed: () =>
+                      Clipboard.setData(ClipboardData(text: enrollment.secret)),
+                  icon: const Icon(Icons.copy),
+                  label: const Text('Copy setup key'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  onChanged: (value) => code = value,
+                  keyboardType: TextInputType.number,
+                  maxLength: 6,
+                  decoration: const InputDecoration(
+                      labelText: '6-digit code', border: OutlineInputBorder()),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel')),
+            FilledButton(
+                onPressed: () => Navigator.pop(context, code.trim()),
+                child: const Text('Enable')),
+          ],
+        ),
+      );
+      if (confirmation == null || confirmation.isEmpty || !mounted) return;
+      final recoveryCodes = await widget.api.enableMfa(confirmation);
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: const Text('Save your recovery codes'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                    'Each code works once if you lose your authenticator. Store them in a password manager. They will not be shown again.'),
+                const SizedBox(height: 12),
+                SelectableText(recoveryCodes.join('\n'),
+                    style: const TextStyle(fontFamily: 'monospace')),
+                TextButton.icon(
+                  onPressed: () => Clipboard.setData(
+                      ClipboardData(text: recoveryCodes.join('\n'))),
+                  icon: const Icon(Icons.copy_all),
+                  label: const Text('Copy all codes'),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            FilledButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('I saved them'))
+          ],
+        ),
+      );
+      await _load();
+    } on AuthException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.displayMessage)));
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.toString())));
+      }
+    } finally {
+      if (mounted) setState(() => _mfaBusy = false);
+    }
+  }
+
+  Future<void> _disableMfa() async {
+    var password = '';
+    var code = '';
+    final values = await showDialog<List<String>>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remove authenticator security?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Future sign-ins will require only your password.'),
+            const SizedBox(height: 12),
+            TextField(
+                onChanged: (value) => password = value,
+                obscureText: true,
+                decoration: const InputDecoration(
+                    labelText: 'Current password',
+                    border: OutlineInputBorder())),
+            const SizedBox(height: 12),
+            TextField(
+                onChanged: (value) => code = value,
+                decoration: const InputDecoration(
+                    labelText: 'Authenticator or recovery code',
+                    border: OutlineInputBorder())),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(context, [password, code.trim()]),
+              child: const Text('Remove')),
+        ],
+      ),
+    );
+    if (values == null || !mounted) return;
+    setState(() => _mfaBusy = true);
+    try {
+      await widget.api.disableMfa(values[0], values[1]);
+      await _load();
+    } on AuthException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.displayMessage)));
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.toString())));
+      }
+    } finally {
+      if (mounted) setState(() => _mfaBusy = false);
     }
   }
 
@@ -378,6 +566,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         const SizedBox(height: 20),
         _heading('PRIVACY & ACCESS'),
+        if (_mfa != null)
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.phonelink_lock_outlined),
+              title: const Text('Authenticator security'),
+              subtitle: Text(
+                !_mfa!.available
+                    ? 'Not configured on this server'
+                    : _mfa!.enabled
+                        ? 'Enabled • ${_mfa!.recoveryCodesRemaining} recovery codes remaining'
+                        : 'Require a one-time code when signing in',
+              ),
+              trailing: _mfaBusy
+                  ? const SizedBox.square(
+                      dimension: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : TextButton(
+                      onPressed: !_mfa!.available
+                          ? null
+                          : (_mfa!.enabled ? _disableMfa : _configureMfa),
+                      child: Text(_mfa!.enabled ? 'Remove' : 'Set up'),
+                    ),
+            ),
+          ),
         if (widget.appLockController != null)
           Card(
             child: SwitchListTile(

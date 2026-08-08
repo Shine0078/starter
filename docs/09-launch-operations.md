@@ -32,6 +32,7 @@ STORE=postgres
 DATABASE_URL=postgresql://schema-owner:...@.../finverse
 DATABASE_APP_URL=postgresql://finverse-app:...@.../finverse
 JWT_SECRET=<at least 32 random characters>
+MFA_ENCRYPTION_KEY=<32 random bytes, base64 encoded>
 CORS_ORIGINS=https://your-domain.example
 MIGRATE_ON_BOOT=false
 TRUST_PROXY_HOPS=1
@@ -84,6 +85,11 @@ Plaid access tokens are encrypted with AES-256-GCM before persistence. Treat
 secret manager, back it up separately, and plan rotation before launch. Webhooks are
 verified against Plaid's ES256 JWK, bound to the exact raw request body, deduplicated
 within a delivery-retry window, and processed through a durable PostgreSQL queue.
+
+Treat `MFA_ENCRYPTION_KEY` with the same care, but keep it distinct from the bank
+token key. Losing it prevents MFA-enabled users from signing in; disclosing it
+exposes authenticator seeds if the database is also compromised. Recovery codes
+remain SHA-256 hashes and cannot be recovered from the database.
 
 ## Release sequence
 

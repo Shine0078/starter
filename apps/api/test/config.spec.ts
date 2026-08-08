@@ -16,6 +16,7 @@ const KEYS = [
   'LEGAL_TERMS_URL',
   'LEGAL_PRIVACY_VERSION',
   'LEGAL_PRIVACY_URL',
+  'MFA_ENCRYPTION_KEY',
 ] as const;
 const original = Object.fromEntries(KEYS.map((key) => [key, process.env[key]]));
 
@@ -31,6 +32,7 @@ function productionBase(): void {
   process.env.LEGAL_TERMS_URL = 'https://finverse.example/legal/terms';
   process.env.LEGAL_PRIVACY_VERSION = 'privacy-2026-08';
   process.env.LEGAL_PRIVACY_URL = 'https://finverse.example/legal/privacy';
+  process.env.MFA_ENCRYPTION_KEY = Buffer.alloc(32, 9).toString('base64');
 }
 
 afterEach(() => {
@@ -87,6 +89,18 @@ describe.sequential('production configuration', () => {
     productionBase();
     delete process.env.LEGAL_PRIVACY_URL;
     expect(() => loadConfig()).toThrow(/LEGAL_PRIVACY/);
+  });
+
+  it('refuses production without an MFA encryption key', () => {
+    productionBase();
+    delete process.env.MFA_ENCRYPTION_KEY;
+    expect(() => loadConfig()).toThrow(/MFA_ENCRYPTION_KEY/);
+  });
+
+  it('refuses a malformed MFA encryption key', () => {
+    productionBase();
+    process.env.MFA_ENCRYPTION_KEY = 'not-a-key';
+    expect(() => loadConfig()).toThrow(/exactly 32 bytes/);
   });
 
   it('refuses non-HTTPS legal document URLs', () => {

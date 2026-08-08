@@ -803,3 +803,32 @@ class PrivacyDashboard {
   final int accountDeletionRecoveryDays;
   final int offlineCacheMaximumDays;
 }
+
+class MfaStatus {
+  const MfaStatus(
+      {required this.enabled,
+      required this.available,
+      required this.recoveryCodesRemaining});
+
+  factory MfaStatus.fromJson(Map<String, dynamic> json) => MfaStatus(
+        enabled: json['enabled'] as bool,
+        available: json['available'] as bool,
+        recoveryCodesRemaining: json['recoveryCodesRemaining'] as int,
+      );
+
+  final bool enabled;
+  final bool available;
+  final int recoveryCodesRemaining;
+}
+
+class MfaEnrollment {
+  const MfaEnrollment({required this.secret, required this.otpauthUri});
+
+  factory MfaEnrollment.fromJson(Map<String, dynamic> json) => MfaEnrollment(
+        secret: json['secret'] as String,
+        otpauthUri: json['otpauthUri'] as String,
+      );
+
+  final String secret;
+  final String otpauthUri;
+}

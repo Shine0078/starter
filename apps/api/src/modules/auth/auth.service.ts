@@ -18,6 +18,7 @@ import {
   normalizeEmail,
 } from '../../domain/auth/password-policy';
 import { evaluateRefresh } from '../../domain/auth/session';
+import { generateTotpSecret, otpauthUri, verifyTotp } from '../../domain/auth/totp';
 import {
   toPublicUser,
   type AuthEvent,
@@ -39,6 +40,8 @@ import {
   DuplicateEmailError,
   PASSWORD_HASHER,
   REGISTRATION_STORE,
+  MFA_SECRET_CIPHER,
+  MFA_STORE,
   SESSION_STORE,
   TOKEN_ISSUER,
   USER_STORE,
@@ -49,6 +52,8 @@ import {
   type EmailSender,
   type PasswordHasher,
   type RegistrationStore,
+  type MfaSecretCipher,
+  type MfaStore,
   type SessionStore,
   type TokenIssuer,
   type UserStore,
@@ -73,6 +78,12 @@ export interface LegalAcceptanceInput {
   privacyVersion: string | null;
 }
 
+export interface MfaRequiredResult {
+  mfaRequired: true;
+  challengeToken: string;
+  expiresAt: string;
+}
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -88,6 +99,8 @@ export class AuthService {
     @Inject(PASSWORD_HASHER) private readonly hasher: PasswordHasher,
     @Inject(TOKEN_ISSUER) private readonly tokens: TokenIssuer,
     @Inject(CLOCK) private readonly clock: ClockPort,
+    @Inject(MFA_STORE) private readonly mfa: MfaStore,
+    @Inject(MFA_SECRET_CIPHER) private readonly mfaCipher: MfaSecretCipher,
   ) {}
 
   // ------------------------------------------------------------- register
@@ -195,7 +208,7 @@ export class AuthService {
 
   // ---------------------------------------------------------------- login
 
-  async login(email: string, password: string, context: RequestContext): Promise<AuthResult> {
+  async login(email: string, password: string, context: RequestContext): Promise<AuthResult | MfaRequiredResult> {
     const normalized = normalizeEmail(email);
     const now = this.clock.now();
 
@@ -245,9 +258,95 @@ export class AuthService {
       this.logger.log(`Upgraded password hash parameters for user ${user.id}`);
     }
 
+    const mfa = await this.mfa.get(user.id);
+    if (mfa?.enabledAt) {
+      const challengeToken = randomBytes(32).toString('base64url');
+      const expiresAt = new Date(now.getTime() + 5 * 60 * 1_000);
+      await this.mfa.createChallenge(this.hashOpaque(challengeToken), user.id, expiresAt, now);
+      await this.record('mfa_challenge', true, user.id, normalized, context, 'password verified');
+      return { mfaRequired: true, challengeToken, expiresAt: expiresAt.toISOString() };
+    }
+
     await this.record('login', true, user.id, normalized, context, null);
 
     return { user: toPublicUser(user), tokens: await this.issueSession(user, null, context) };
+  }
+
+  // ------------------------------------------------------ multi-factor auth
+
+  async mfaStatus(userId: string): Promise<{ enabled: boolean; available: boolean; recoveryCodesRemaining: number }> {
+    const record = await this.mfa.get(userId);
+    const enabled = record?.enabledAt != null;
+    return {
+      enabled,
+      available: this.mfaCipher.available,
+      recoveryCodesRemaining: enabled ? await this.mfa.recoveryCodesRemaining(userId) : 0,
+    };
+  }
+
+  async enrollMfa(userId: string, password: string, context: RequestContext): Promise<{ secret: string; otpauthUri: string }> {
+    if (!this.mfaCipher.available) {
+      throw new HttpException('Authenticator security is not configured on this server.', HttpStatus.SERVICE_UNAVAILABLE);
+    }
+    const user = await this.requirePassword(userId, password);
+    const current = await this.mfa.get(user.id);
+    if (current?.enabledAt) throw new BadRequestException('Authenticator security is already enabled.');
+    const secret = generateTotpSecret();
+    await this.mfa.savePending(user.id, this.mfaCipher.encrypt(secret), this.clock.now());
+    await this.record('mfa_enrolled', true, user.id, user.email, context, 'enrollment started');
+    return { secret, otpauthUri: otpauthUri(secret, user.email) };
+  }
+
+  async enableMfa(userId: string, code: string, context: RequestContext): Promise<{ enabled: true; recoveryCodes: string[] }> {
+    const user = await this.users.findById(userId);
+    const record = await this.mfa.get(userId);
+    if (!user || user.status !== 'active' || !record || record.enabledAt) {
+      throw new BadRequestException('Start authenticator setup again.');
+    }
+    const secret = this.decryptMfaSecret(record.encryptedSecret);
+    if (verifyTotp(secret, code.trim(), this.clock.now()) === null) {
+      await this.record('mfa_enrolled', false, user.id, user.email, context, 'invalid confirmation code');
+      throw new UnauthorizedException('Authenticator code is incorrect.');
+    }
+    const recoveryCodes = Array.from({ length: 10 }, () => this.generateRecoveryCode());
+    const enabled = await this.mfa.enable(user.id, recoveryCodes.map((value) => this.hashRecoveryCode(value)), this.clock.now());
+    if (!enabled) throw new BadRequestException('Start authenticator setup again.');
+    await this.record('mfa_enrolled', true, user.id, user.email, context, 'enabled');
+    return { enabled: true, recoveryCodes };
+  }
+
+  async verifyMfaChallenge(challengeToken: string, code: string, context: RequestContext): Promise<AuthResult> {
+    const now = this.clock.now();
+    const tokenHash = this.hashOpaque(challengeToken);
+    const challenge = await this.mfa.findChallenge(tokenHash, now);
+    if (!challenge) throw new UnauthorizedException('This sign-in challenge is invalid or expired.');
+    const user = await this.users.findById(challenge.userId);
+    if (!user || user.status !== 'active' || !(await this.verifyMfaFactor(user.id, code, now))) {
+      const remaining = await this.mfa.failChallenge(tokenHash, now);
+      await this.record('mfa_verified', false, user?.id ?? challenge.userId, user?.email ?? null, context, 'invalid second factor');
+      throw new UnauthorizedException(
+        remaining === 0
+          ? 'Too many incorrect codes. Sign in again.'
+          : 'Authenticator or recovery code is incorrect.',
+      );
+    }
+    if (!(await this.mfa.consumeChallenge(tokenHash, now))) {
+      throw new UnauthorizedException('This sign-in challenge is invalid or expired.');
+    }
+    await this.record('mfa_verified', true, user.id, user.email, context, null);
+    await this.record('login', true, user.id, user.email, context, 'MFA verified');
+    return { user: toPublicUser(user), tokens: await this.issueSession(user, null, context) };
+  }
+
+  async disableMfa(userId: string, password: string, code: string, context: RequestContext): Promise<{ enabled: false }> {
+    const user = await this.requirePassword(userId, password);
+    if (!(await this.verifyMfaFactor(user.id, code, this.clock.now()))) {
+      await this.record('mfa_disabled', false, user.id, user.email, context, 'invalid second factor');
+      throw new UnauthorizedException('Authenticator or recovery code is incorrect.');
+    }
+    await this.mfa.disable(user.id);
+    await this.record('mfa_disabled', true, user.id, user.email, context, null);
+    return { enabled: false };
   }
 
   // ---------------------------------------------------- account deletion
@@ -555,6 +654,44 @@ export class AuthService {
 
   private hashActionToken(token: string): string {
     return createHash('sha256').update(token).digest('hex');
+  }
+
+  private hashOpaque(value: string): string {
+    return createHash('sha256').update(value).digest('hex');
+  }
+
+  private hashRecoveryCode(value: string): string {
+    return this.hashOpaque(value.replace(/[^A-Za-z0-9]/g, '').toUpperCase());
+  }
+
+  private generateRecoveryCode(): string {
+    return randomBytes(10).toString('hex').toUpperCase().match(/.{1,4}/g)!.join('-');
+  }
+
+  private decryptMfaSecret(ciphertext: string): string {
+    try { return this.mfaCipher.decrypt(ciphertext); }
+    catch (error) {
+      this.logger.error('Could not decrypt an MFA secret.', error as Error);
+      throw new HttpException('Authenticator security is temporarily unavailable.', HttpStatus.SERVICE_UNAVAILABLE);
+    }
+  }
+
+  private async verifyMfaFactor(userId: string, candidate: string, at: Date): Promise<boolean> {
+    const record = await this.mfa.get(userId);
+    if (!record?.enabledAt) return false;
+    const normalized = candidate.trim();
+    if (/^\d{6}$/.test(normalized)) {
+      const step = verifyTotp(this.decryptMfaSecret(record.encryptedSecret), normalized, at);
+      return step !== null && this.mfa.acceptTotpStep(userId, step);
+    }
+    return this.mfa.consumeRecoveryCode(userId, this.hashRecoveryCode(normalized), at);
+  }
+
+  private async requirePassword(userId: string, password: string): Promise<User> {
+    const user = await this.users.findById(userId);
+    if (!user || user.status !== 'active') throw new UnauthorizedException('Session is no longer valid. Sign in again.');
+    if (!(await this.hasher.verify(user.passwordHash, password))) throw new UnauthorizedException('Password is incorrect.');
+    return user;
   }
 
   /**

@@ -102,3 +102,27 @@ export class ConfirmPasswordResetDto extends ActionTokenDto {
   @MaxLength(MAX_PASSWORD_LENGTH)
   password!: string;
 }
+
+export class MfaEnrollDto {
+  @IsString()
+  @MaxLength(MAX_PASSWORD_LENGTH)
+  password!: string;
+}
+
+export class MfaCodeDto {
+  @IsString()
+  @MaxLength(64)
+  code!: string;
+}
+
+export class MfaChallengeDto extends MfaCodeDto {
+  @IsString()
+  @MaxLength(256)
+  challengeToken!: string;
+}
+
+export class MfaDisableDto extends MfaCodeDto {
+  @IsString()
+  @MaxLength(MAX_PASSWORD_LENGTH)
+  password!: string;
+}

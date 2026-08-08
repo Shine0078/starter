@@ -55,14 +55,21 @@ routes are authenticated by default:
 | Password reset with hashed, single-use, one-hour tokens | Implemented API, mobile flow, and SMTP delivery adapter |
 | Password reset revokes every existing session | Implemented |
 | Password step-up before new/reconnected bank Link sessions | Implemented, rate-limited, and audited |
+| TOTP authenticator MFA with encrypted secrets and one-time recovery codes | Implemented in API and mobile; physical-device enrollment validation remains |
 
 Password rules follow NIST SP 800-63B — length plus a blocklist, no composition
 requirements. Composition rules produce `Password1!` and get reused everywhere.
 
 **Not yet implemented**, and named here so the gap is not mistaken for coverage:
 
-- MFA/TOTP, passkeys (WebAuthn), and OAuth 2.0 + PKCE. Passkeys need a
-  registered domain for the relying-party id.
+- Passkeys (WebAuthn) and OAuth 2.0 + PKCE. Passkeys need a registered domain
+  for the relying-party id.
+
+TOTP secrets are encrypted with a distinct AES-256-GCM key. Login challenges
+are opaque, expire after five minutes, allow at most five attempts, and are stored only as SHA-256 hashes.
+Accepted TOTP time steps cannot be replayed; recovery codes are high-entropy,
+hashed, shown once, and consumed atomically. Production refuses to start without
+`MFA_ENCRYPTION_KEY`.
 Account deletion, portable data export, and new/reconnected bank Link sessions
 re-verify the current password; deletion also requires explicit typed confirmation.
 

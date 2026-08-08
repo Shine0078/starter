@@ -20,6 +20,8 @@ export const EMAIL_SENDER = 'EMAIL_SENDER';
 export const PASSWORD_HASHER = 'PASSWORD_HASHER';
 export const TOKEN_ISSUER = 'TOKEN_ISSUER';
 export const REGISTRATION_STORE = 'REGISTRATION_STORE';
+export const MFA_STORE = 'MFA_STORE';
+export const MFA_SECRET_CIPHER = 'MFA_SECRET_CIPHER';
 
 export interface CreateUserInput {
   id: string;
@@ -113,4 +115,38 @@ export interface TokenIssuer {
   /** A fresh high-entropy refresh token plus the SHA-256 stored alongside it. */
   generateRefreshToken(): { token: string; tokenHash: string };
   hashRefreshToken(token: string): string;
+}
+
+export interface MfaRecord {
+  userId: string;
+  encryptedSecret: string;
+  enabledAt: Date | null;
+  lastUsedStep: number | null;
+}
+
+export interface MfaLoginChallenge {
+  userId: string;
+  expiresAt: Date;
+}
+
+export interface MfaStore {
+  get(userId: string): Promise<MfaRecord | null>;
+  savePending(userId: string, encryptedSecret: string, at: Date): Promise<void>;
+  enable(userId: string, recoveryCodeHashes: string[], at: Date): Promise<boolean>;
+  disable(userId: string): Promise<void>;
+  acceptTotpStep(userId: string, step: number): Promise<boolean>;
+  consumeRecoveryCode(userId: string, codeHash: string, at: Date): Promise<boolean>;
+  recoveryCodesRemaining(userId: string): Promise<number>;
+  createChallenge(tokenHash: string, userId: string, expiresAt: Date, at: Date): Promise<void>;
+  findChallenge(tokenHash: string, at: Date): Promise<MfaLoginChallenge | null>;
+  /** Records a bad factor and invalidates the challenge after five failures. */
+  failChallenge(tokenHash: string, at: Date): Promise<number | null>;
+  consumeChallenge(tokenHash: string, at: Date): Promise<boolean>;
+  purgeUser(userId: string): void;
+}
+
+export interface MfaSecretCipher {
+  readonly available: boolean;
+  encrypt(plaintext: string): string;
+  decrypt(ciphertext: string): string;
 }

@@ -78,6 +78,60 @@ class _LoginScreenState extends State<LoginScreen> {
       }
       if (!mounted) return;
       widget.onSignedIn();
+    } on MfaRequiredException catch (challenge) {
+      if (!mounted) return;
+      var code = '';
+      final submitted = await showDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Verify it\'s you'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Enter the 6-digit code from your authenticator app, or one of your recovery codes.',
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                onChanged: (value) => code = value,
+                autofocus: true,
+                autocorrect: false,
+                textInputAction: TextInputAction.done,
+                decoration: const InputDecoration(
+                  labelText: 'Authenticator or recovery code',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, code.trim()),
+              child: const Text('Verify'),
+            ),
+          ],
+        ),
+      );
+      if (submitted == null || submitted.isEmpty || !mounted) return;
+      try {
+        await widget.api.verifyMfa(challenge.challengeToken, submitted);
+        if (mounted) {
+          widget.onSignedIn();
+        }
+      } on AuthException catch (error) {
+        if (mounted) {
+          setState(() => _error = error.displayMessage);
+        }
+      } catch (error) {
+        if (mounted) {
+          setState(() => _error = 'Verification failed. Try signing in again.');
+        }
+      }
     } on AuthException catch (error) {
       if (!mounted) return;
       setState(() => _error = error.displayMessage);

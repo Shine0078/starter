@@ -38,6 +38,8 @@ import {
   InMemoryUserStore,
 } from '../infra/auth/in-memory-auth-stores';
 import { JwtTokenIssuer } from '../infra/auth/jwt-issuer';
+import { AesGcmMfaSecretCipher, UnavailableMfaSecretCipher } from '../infra/auth/mfa-cipher';
+import { InMemoryMfaStore, PostgresMfaStore } from '../infra/auth/mfa-stores';
 import {
   InMemoryRegistrationStore,
   PostgresRegistrationStore,
@@ -79,6 +81,8 @@ import {
   EMAIL_SENDER,
   PASSWORD_HASHER,
   REGISTRATION_STORE,
+  MFA_SECRET_CIPHER,
+  MFA_STORE,
   SESSION_STORE,
   TOKEN_ISSUER,
   USER_STORE,
@@ -112,6 +116,7 @@ function storeProviders(): Provider[] {
     const actionTokens = new InMemoryAuthActionTokenStore();
     const consents = new InMemoryConsentStore();
     const registrations = new InMemoryRegistrationStore(users, consents);
+    const mfa = new InMemoryMfaStore();
     const deletions = new InMemoryAccountDeletionStore(
       users,
       sessions,
@@ -125,6 +130,7 @@ function storeProviders(): Provider[] {
       bankLinks,
       bankWebhooks,
       consents,
+      mfa,
     );
     return [
       { provide: ACCOUNT_STORE, useValue: accounts },
@@ -142,6 +148,7 @@ function storeProviders(): Provider[] {
       { provide: AUTH_ACTION_TOKEN_STORE, useValue: actionTokens },
       { provide: CONSENT_STORE, useValue: consents },
       { provide: REGISTRATION_STORE, useValue: registrations },
+      { provide: MFA_STORE, useValue: mfa },
     ];
   }
 
@@ -175,6 +182,7 @@ function storeProviders(): Provider[] {
     { provide: AUTH_ACTION_TOKEN_STORE, useFactory: () => new PostgresAuthActionTokenStore(pool) },
     { provide: CONSENT_STORE, useFactory: () => new PostgresConsentStore(pool) },
     { provide: REGISTRATION_STORE, useFactory: () => new PostgresRegistrationStore(pool) },
+    { provide: MFA_STORE, useFactory: () => new PostgresMfaStore(pool) },
   ];
 }
 
@@ -187,6 +195,12 @@ function storeProviders(): Provider[] {
       useFactory: () => new MockAggregator({ today: new SystemClock().today() }),
     },
     { provide: PASSWORD_HASHER, useClass: Argon2PasswordHasher },
+    {
+      provide: MFA_SECRET_CIPHER,
+      useFactory: () => process.env.MFA_ENCRYPTION_KEY
+        ? AesGcmMfaSecretCipher.fromBase64(process.env.MFA_ENCRYPTION_KEY)
+        : new UnavailableMfaSecretCipher(),
+    },
     {
       provide: BANK_PROVIDER,
       useFactory: () =>
@@ -276,6 +290,8 @@ function storeProviders(): Provider[] {
     TOKEN_ISSUER,
     CONSENT_STORE,
     REGISTRATION_STORE,
+    MFA_STORE,
+    MFA_SECRET_CIPHER,
   ],
 })
 export class CoreModule {}

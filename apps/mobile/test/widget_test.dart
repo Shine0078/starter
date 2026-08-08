@@ -319,6 +319,46 @@ void main() {
     expect(find.text('Incorrect email or password.'), findsOneWidget);
   });
 
+  testWidgets('completes an authenticator challenge before signing in',
+      (tester) async {
+    var signedIn = false;
+    http.Request? verification;
+    final api = clientWith(MockClient((request) async {
+      if (request.url.path.endsWith('/auth/login')) {
+        return http.Response(
+          '{"mfaRequired":true,"challengeToken":"opaque-challenge","expiresAt":"2026-08-08T13:00:00.000Z"}',
+          200,
+        );
+      }
+      verification = request;
+      return http.Response(
+        '{"user":{"id":"user-1","email":"sam@example.com","emailVerified":true},"tokens":{"accessToken":"access","refreshToken":"refresh","refreshExpiresAt":"2026-09-08T00:00:00.000Z"}}',
+        200,
+      );
+    }));
+
+    await tester.pumpWidget(MaterialApp(
+      home: LoginScreen(api: api, onSignedIn: () => signedIn = true),
+    ));
+    await tester.enterText(find.byType(TextFormField).first, 'sam@example.com');
+    await tester.enterText(
+        find.byType(TextFormField).last, 'correct horse battery staple');
+    await tester.tap(find.text('Sign in').last);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(find.text('Verify it\'s you'), findsOneWidget);
+    expect(signedIn, isFalse);
+    await tester.enterText(find.byType(TextField).last, '123456');
+    await tester.tap(find.text('Verify'));
+    await tester.pumpAndSettle();
+
+    expect(signedIn, isTrue);
+    expect(verification?.url.path, endsWith('/auth/mfa/verify'));
+    expect(verification?.body, contains('opaque-challenge'));
+    expect(verification?.body, contains('123456'));
+  });
+
   testWidgets('restores a stored session straight to the dashboard',
       (tester) async {
     final store = InMemorySessionStore();
@@ -546,6 +586,12 @@ void main() {
           200,
         );
       }
+      if (path.endsWith('/auth/mfa')) {
+        return http.Response(
+          '{"enabled":false,"available":true,"recoveryCodesRemaining":0}',
+          200,
+        );
+      }
       if (path.endsWith('/privacy')) {
         return http.Response(
           '{"user":{"id":"user-1","email":"sam@example.com","emailVerified":true},"optionalConsents":{"analytics":{"granted":false,"policyVersion":"preference-v1","updatedAt":null},"productUpdates":{"granted":false,"policyVersion":"preference-v1","updatedAt":null}},"consentHistory":[],"securityActivity":[{"id":"event-1","kind":"login","succeeded":true,"ipAddress":"127.0.0.1","userAgent":"FINVERSE Android","detail":null,"createdAt":"2026-08-08T00:00:00.000Z"}],"retention":{"accountDeletionRecoveryDays":30,"offlineCacheMaximumDays":30}}',
@@ -594,6 +640,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('sam@example.com'), findsOneWidget);
     expect(find.text('This device'), findsOneWidget);
+    expect(find.text('Authenticator security'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('Device app lock'),
       300,

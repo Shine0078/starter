@@ -197,6 +197,44 @@ class ApiClient {
   Future<PublicUser> signIn(String email, String password) =>
       _authenticate('/auth/login', {'email': email, 'password': password});
 
+  Future<PublicUser> verifyMfa(String challengeToken, String code) =>
+      _authenticate('/auth/mfa/verify', {
+        'challengeToken': challengeToken,
+        'code': code,
+      });
+
+  Future<MfaStatus> mfaStatus() async =>
+      MfaStatus.fromJson(await _get('/auth/mfa') as Map<String, dynamic>);
+
+  Future<MfaEnrollment> enrollMfa(String password) async =>
+      MfaEnrollment.fromJson(await _authSend(
+        'POST',
+        '/auth/mfa/enroll',
+        {'password': password},
+      ) as Map<String, dynamic>);
+
+  Future<List<String>> enableMfa(String code) async {
+    final json = await _authSend('POST', '/auth/mfa/enable', {'code': code})
+        as Map<String, dynamic>;
+    return (json['recoveryCodes'] as List<dynamic>).cast<String>();
+  }
+
+  Future<void> disableMfa(String password, String code) async {
+    await _authSend(
+        'DELETE', '/auth/mfa', {'password': password, 'code': code});
+  }
+
+  Future<dynamic> _authSend(String method, String path, Object body) async {
+    final response = await _perform(method, path, body, true);
+    final decoded = response.body.isEmpty
+        ? <String, dynamic>{}
+        : jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode >= 400) {
+      throw AuthException.fromResponse(response.statusCode, decoded);
+    }
+    return decoded;
+  }
+
   Future<PublicUser> cancelAccountDeletion(String email, String password) =>
       _authenticate(
         '/auth/cancel-deletion',
@@ -250,6 +288,13 @@ class ApiClient {
 
     if (response.statusCode >= 400) {
       throw AuthException.fromResponse(response.statusCode, decoded);
+    }
+
+    if (decoded['mfaRequired'] == true) {
+      throw MfaRequiredException(
+        decoded['challengeToken'] as String,
+        DateTime.parse(decoded['expiresAt'] as String),
+      );
     }
 
     final user = PublicUser.fromJson(decoded['user'] as Map<String, dynamic>);
@@ -628,6 +673,12 @@ class AuthException implements Exception {
 
   @override
   String toString() => displayMessage;
+}
+
+class MfaRequiredException implements Exception {
+  const MfaRequiredException(this.challengeToken, this.expiresAt);
+  final String challengeToken;
+  final DateTime expiresAt;
 }
 
 class ApiException implements Exception {

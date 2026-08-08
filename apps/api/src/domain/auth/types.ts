@@ -84,6 +84,10 @@ export type AuthEventKind =
   | 'password_reset_requested'
   | 'password_reset_completed'
   | 'bank_link_step_up'
+  | 'mfa_enrolled'
+  | 'mfa_challenge'
+  | 'mfa_verified'
+  | 'mfa_disabled'
   | 'data_exported';
 
 export interface AuthEvent {

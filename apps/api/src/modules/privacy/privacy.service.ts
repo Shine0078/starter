@@ -25,10 +25,12 @@ import {
 } from '../../ports';
 import {
   AUTH_EVENT_STORE,
+  MFA_STORE,
   PASSWORD_HASHER,
   SESSION_STORE,
   USER_STORE,
   type AuthEventStore,
+  type MfaStore,
   type PasswordHasher,
   type SessionStore,
   type UserStore,
@@ -57,6 +59,7 @@ export class PrivacyService {
     @Inject(NOTIFICATION_STORE) private readonly notifications: NotificationStore,
     @Inject(BANK_LINK_STORE) private readonly bankLinks: BankLinkStore,
     @Inject(CONSENT_STORE) private readonly consents: ConsentStore,
+    @Inject(MFA_STORE) private readonly mfa: MfaStore,
   ) {}
 
   async dashboard(userId: string) {
@@ -177,12 +180,20 @@ export class PrivacyService {
         contributions: await this.goals.listContributions(userId, goal.id),
       })),
     );
+    const mfaRecord = await this.mfa.get(userId);
+    const mfaEnabled = mfaRecord?.enabledAt != null;
 
     return {
       format: 'finverse-portable-export',
       formatVersion: 1,
       generatedAt: new Date().toISOString(),
       user: toPublicUser(user),
+      authentication: {
+        mfaEnabled,
+        recoveryCodesRemaining: mfaEnabled
+          ? await this.mfa.recoveryCodesRemaining(userId)
+          : 0,
+      },
       sessions: sessions.map((session) => ({
         id: session.id,
         issuedAt: session.issuedAt.toISOString(),

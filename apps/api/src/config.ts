@@ -198,6 +198,17 @@ function buildConfig(): AppConfig {
   const appDatabaseUrl = process.env.DATABASE_APP_URL;
   const migrateOnBoot = process.env.MIGRATE_ON_BOOT !== 'false';
 
+  const mfaKey = process.env.MFA_ENCRYPTION_KEY;
+  if (isProduction && !mfaKey) {
+    throw new Error('Production requires MFA_ENCRYPTION_KEY for encrypted authenticator secrets.');
+  }
+  if (mfaKey) {
+    const decoded = Buffer.from(mfaKey, 'base64');
+    if (decoded.length !== 32 || decoded.toString('base64') !== mfaKey) {
+      throw new Error('MFA_ENCRYPTION_KEY must be canonical base64 encoding exactly 32 bytes.');
+    }
+  }
+
   if (store === 'postgres' && !databaseUrl && !appDatabaseUrl) {
     throw new Error(
       'STORE=postgres requires DATABASE_APP_URL for runtime or DATABASE_URL for local migrations.',
