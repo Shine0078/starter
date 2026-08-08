@@ -39,6 +39,10 @@ import {
 } from '../infra/auth/in-memory-auth-stores';
 import { JwtTokenIssuer } from '../infra/auth/jwt-issuer';
 import {
+  InMemoryRegistrationStore,
+  PostgresRegistrationStore,
+} from '../infra/auth/registration-stores';
+import {
   InMemoryBankLinkStore,
   InMemoryBankWebhookStore,
   PostgresBankLinkStore,
@@ -74,6 +78,7 @@ import {
   AUTH_EVENT_STORE,
   EMAIL_SENDER,
   PASSWORD_HASHER,
+  REGISTRATION_STORE,
   SESSION_STORE,
   TOKEN_ISSUER,
   USER_STORE,
@@ -106,6 +111,7 @@ function storeProviders(): Provider[] {
     const events = new InMemoryAuthEventStore();
     const actionTokens = new InMemoryAuthActionTokenStore();
     const consents = new InMemoryConsentStore();
+    const registrations = new InMemoryRegistrationStore(users, consents);
     const deletions = new InMemoryAccountDeletionStore(
       users,
       sessions,
@@ -135,6 +141,7 @@ function storeProviders(): Provider[] {
       { provide: ACCOUNT_DELETION_STORE, useValue: deletions },
       { provide: AUTH_ACTION_TOKEN_STORE, useValue: actionTokens },
       { provide: CONSENT_STORE, useValue: consents },
+      { provide: REGISTRATION_STORE, useValue: registrations },
     ];
   }
 
@@ -167,6 +174,7 @@ function storeProviders(): Provider[] {
     { provide: ACCOUNT_DELETION_STORE, useFactory: () => new PostgresAccountDeletionStore(pool) },
     { provide: AUTH_ACTION_TOKEN_STORE, useFactory: () => new PostgresAuthActionTokenStore(pool) },
     { provide: CONSENT_STORE, useFactory: () => new PostgresConsentStore(pool) },
+    { provide: REGISTRATION_STORE, useFactory: () => new PostgresRegistrationStore(pool) },
   ];
 }
 
@@ -267,6 +275,7 @@ function storeProviders(): Provider[] {
     PASSWORD_HASHER,
     TOKEN_ISSUER,
     CONSENT_STORE,
+    REGISTRATION_STORE,
   ],
 })
 export class CoreModule {}

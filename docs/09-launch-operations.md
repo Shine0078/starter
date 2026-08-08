@@ -41,6 +41,10 @@ SMTP_SECURE=false
 SMTP_USER=<provider username>
 SMTP_PASSWORD=<provider secret>
 EMAIL_FROM=FINVERSE <no-reply@your-domain.example>
+LEGAL_TERMS_VERSION=<immutable reviewed version id>
+LEGAL_TERMS_URL=https://your-domain.example/legal/terms/<version>
+LEGAL_PRIVACY_VERSION=<immutable reviewed version id>
+LEGAL_PRIVACY_URL=https://your-domain.example/legal/privacy/<version>
 PLAID_CLIENT_ID=<Plaid production client id>
 PLAID_SECRET=<Plaid production secret from a secret manager>
 PLAID_ENVIRONMENT=production
@@ -70,6 +74,10 @@ access-controlled locations. Losing it can prevent future app updates.
 Production uses the SMTP `EmailSender` adapter and refuses to start when its required
 settings are absent. Development prints one-time codes locally. Run a deliverability
 test (SPF, DKIM, DMARC, inbox and spam placement) before inviting users.
+
+Production also refuses to start without both reviewed legal documents, immutable
+version ids, and HTTPS URLs. The mobile app fetches these through `GET /api/legal`,
+requires both acknowledgements, and the API commits them atomically with the user.
 
 Plaid access tokens are encrypted with AES-256-GCM before persistence. Treat
 `BANK_TOKEN_ENCRYPTION_KEY` as a production encryption key: store it in the host's

@@ -31,7 +31,18 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post('register')
   register(@Body() body: RegisterDto, @ReqContext() context: RequestContext) {
-    return this.auth.register(body.email, body.password, body.displayName ?? null, context);
+    return this.auth.register(
+      body.email,
+      body.password,
+      body.displayName ?? null,
+      {
+        acceptedTerms: body.acceptedTerms ?? false,
+        termsVersion: body.termsVersion ?? null,
+        acceptedPrivacyNotice: body.acceptedPrivacyNotice ?? false,
+        privacyVersion: body.privacyVersion ?? null,
+      },
+      context,
+    );
   }
 
   @Public()

@@ -2,6 +2,18 @@ import { randomBytes } from 'node:crypto';
 
 export type StoreDriver = 'postgres' | 'memory';
 
+export interface LegalDocumentConfig {
+  version: string;
+  url: string;
+}
+
+export interface LegalConfig {
+  /** Registration is gated only when both reviewed documents are configured. */
+  registrationRequired: boolean;
+  terms: LegalDocumentConfig | null;
+  privacyNotice: LegalDocumentConfig | null;
+}
+
 export interface AppConfig {
   port: number;
   store: StoreDriver;
@@ -24,6 +36,8 @@ export interface AppConfig {
   corsOrigins: string[] | true;
   /** Number of reverse-proxy hops Express may trust when deriving the client IP. */
   trustedProxyHops: number;
+  /** Versioned legal documents whose exact versions must be accepted at registration. */
+  legal: LegalConfig;
 }
 
 /**
@@ -100,6 +114,62 @@ function integerInRange(name: string, raw: string | undefined, fallback: number,
   return value;
 }
 
+function legalDocument(
+  versionName: string,
+  urlName: string,
+): LegalDocumentConfig | null {
+  const version = process.env[versionName]?.trim();
+  const url = process.env[urlName]?.trim();
+
+  if (!version && !url) return null;
+  if (!version || !url) {
+    throw new Error(`${versionName} and ${urlName} must be configured together.`);
+  }
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(version)) {
+    throw new Error(
+      `${versionName} must be 1-100 characters using letters, numbers, dot, underscore, or dash.`,
+    );
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error(`${urlName} must be a valid absolute HTTPS URL.`);
+  }
+  if (parsed.protocol !== 'https:') {
+    throw new Error(`${urlName} must use HTTPS.`);
+  }
+
+  return { version, url: parsed.toString() };
+}
+
+function resolveLegalConfig(isProduction: boolean): LegalConfig {
+  const terms = legalDocument('LEGAL_TERMS_VERSION', 'LEGAL_TERMS_URL');
+  const privacyNotice = legalDocument(
+    'LEGAL_PRIVACY_VERSION',
+    'LEGAL_PRIVACY_URL',
+  );
+
+  if ((terms === null) !== (privacyNotice === null)) {
+    throw new Error(
+      'Terms and privacy notice must be configured together: set all four LEGAL_* variables.',
+    );
+  }
+  if (isProduction && (!terms || !privacyNotice)) {
+    throw new Error(
+      'Production requires reviewed terms and privacy notice versions and HTTPS URLs ' +
+        '(LEGAL_TERMS_VERSION, LEGAL_TERMS_URL, LEGAL_PRIVACY_VERSION, LEGAL_PRIVACY_URL).',
+    );
+  }
+
+  return {
+    registrationRequired: terms !== null && privacyNotice !== null,
+    terms,
+    privacyNotice,
+  };
+}
+
 /**
  * Memoised, and it has to be.
  *
@@ -169,5 +239,6 @@ function buildConfig(): AppConfig {
       0,
       10,
     ),
+    legal: resolveLegalConfig(isProduction),
   };
 }

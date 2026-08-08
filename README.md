@@ -88,12 +88,18 @@ curl -X POST localhost:3000/api/auth/register \
   -d '{"email":"you@example.com","password":"correct horse battery staple"}'
 ```
 
+When reviewed legal documents are configured, first read `GET /api/legal` and
+send both acceptance booleans plus the exact returned `termsVersion` and
+`privacyVersion`. Production refuses to boot until versioned HTTPS Terms and
+Privacy Notice URLs are configured; the mobile client handles this handshake.
+
 Then send `Authorization: Bearer <accessToken>` on everything else. Access tokens
 last 15 minutes; exchange the refresh token at `/api/auth/refresh` for a new pair.
 
 | Method | Path | Purpose |
 |---|---|---|
 | `POST` | `/auth/register` | **Public.** Create an account, returns a session |
+| `GET` | `/legal` | **Public.** Current Terms/Privacy versions and URLs required at registration |
 | `POST` | `/auth/login` | **Public.** Exchange credentials for a session |
 | `POST` | `/auth/refresh` | **Public.** Rotate the refresh token |
 | `POST` | `/auth/logout` | End this session |
@@ -202,8 +208,8 @@ stopped running.
 
 ## Notes on what is and isn't verified
 
-- **The API and its domain logic run and are tested.** 285 tests run with no
-  database; the full suite is **379 passing** against real PostgreSQL, including
+- **The API and its domain logic run and are tested.** 289 tests run with no
+  database; the full suite is **384 passing** against real PostgreSQL, including
   the store contract — which runs as the restricted role, so it executes with the
   row-level security policies in force — and a suite that issues deliberately
   unfiltered SQL to prove the database withholds other users' rows on its own.

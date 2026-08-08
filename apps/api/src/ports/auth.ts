@@ -9,6 +9,7 @@
  */
 
 import type { AuthEvent, Session, User } from '../domain/auth/types';
+import type { ConsentEvent } from './privacy';
 
 export const USER_STORE = 'USER_STORE';
 export const SESSION_STORE = 'SESSION_STORE';
@@ -18,6 +19,7 @@ export const AUTH_ACTION_TOKEN_STORE = 'AUTH_ACTION_TOKEN_STORE';
 export const EMAIL_SENDER = 'EMAIL_SENDER';
 export const PASSWORD_HASHER = 'PASSWORD_HASHER';
 export const TOKEN_ISSUER = 'TOKEN_ISSUER';
+export const REGISTRATION_STORE = 'REGISTRATION_STORE';
 
 export interface CreateUserInput {
   id: string;
@@ -36,6 +38,11 @@ export interface UserStore {
   updatePasswordHash(userId: string, passwordHash: string): Promise<void>;
   setStatus(userId: string, status: User['status']): Promise<void>;
   markEmailVerified(userId: string, at: Date): Promise<void>;
+}
+
+export interface RegistrationStore {
+  /** Atomically creates the user and immutable legal-acceptance evidence. */
+  create(input: CreateUserInput, consents: ConsentEvent[]): Promise<User>;
 }
 
 export class DuplicateEmailError extends Error {

@@ -12,6 +12,10 @@ const KEYS = [
   'CORS_ORIGINS',
   'PORT',
   'TRUST_PROXY_HOPS',
+  'LEGAL_TERMS_VERSION',
+  'LEGAL_TERMS_URL',
+  'LEGAL_PRIVACY_VERSION',
+  'LEGAL_PRIVACY_URL',
 ] as const;
 const original = Object.fromEntries(KEYS.map((key) => [key, process.env[key]]));
 
@@ -23,6 +27,10 @@ function productionBase(): void {
   process.env.MIGRATE_ON_BOOT = 'false';
   process.env.JWT_SECRET = 'a-production-secret-that-is-longer-than-thirty-two-characters';
   process.env.CORS_ORIGINS = 'https://app.finverse.example';
+  process.env.LEGAL_TERMS_VERSION = 'terms-2026-08';
+  process.env.LEGAL_TERMS_URL = 'https://finverse.example/legal/terms';
+  process.env.LEGAL_PRIVACY_VERSION = 'privacy-2026-08';
+  process.env.LEGAL_PRIVACY_URL = 'https://finverse.example/legal/privacy';
 }
 
 afterEach(() => {
@@ -73,5 +81,17 @@ describe.sequential('production configuration', () => {
     productionBase();
     process.env[key] = value;
     expect(() => loadConfig()).toThrow(new RegExp(key));
+  });
+
+  it('refuses production without reviewed legal documents', () => {
+    productionBase();
+    delete process.env.LEGAL_PRIVACY_URL;
+    expect(() => loadConfig()).toThrow(/LEGAL_PRIVACY/);
+  });
+
+  it('refuses non-HTTPS legal document URLs', () => {
+    productionBase();
+    process.env.LEGAL_TERMS_URL = 'http://finverse.example/legal/terms';
+    expect(() => loadConfig()).toThrow(/LEGAL_TERMS_URL must use HTTPS/);
   });
 });

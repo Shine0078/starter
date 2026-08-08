@@ -35,6 +35,10 @@ import { runAuthStoreContract, type AuthStoreSet } from './auth-store-contract';
 import { startPgHarness } from './pg-harness';
 import { runStoreContract, type StoreSet } from './store-contract';
 import { InMemoryConsentStore, PostgresConsentStore } from '../src/infra/privacy/consent-stores';
+import {
+  InMemoryRegistrationStore,
+  PostgresRegistrationStore,
+} from '../src/infra/auth/registration-stores';
 
 // ------------------------------------------------- in-memory identity stores
 
@@ -139,6 +143,39 @@ describe('consent store: in-memory', () => {
     expect((await store.list('alice')).map((event) => event.granted)).toEqual([false, true]);
     expect(await store.list('bob')).toEqual([]);
   });
+
+  it('creates a user with legal evidence and rolls both back on failure', async () => {
+    const users = new InMemoryUserStore();
+    const registrations = new InMemoryRegistrationStore(users, store);
+    const input = {
+      id: 'registered-alice',
+      email: 'registered@example.com',
+      passwordHash: 'hash',
+      displayName: null,
+    };
+    const event = {
+      id: 'registration-consent-1',
+      userId: input.id,
+      kind: 'terms' as const,
+      granted: true,
+      policyVersion: 'terms-v1',
+      source: 'registration' as const,
+      createdAt: new Date('2026-08-08T00:00:00Z'),
+    };
+
+    await registrations.create(input, [event]);
+    expect(await users.findByEmail(input.email)).not.toBeNull();
+    expect(await store.list(input.id)).toHaveLength(1);
+
+    await expect(
+      registrations.create(
+        { ...input, id: 'rolled-back', email: 'rollback@example.com' },
+        [{ ...event, id: 'bad-owner', userId: 'someone-else' }],
+      ),
+    ).rejects.toThrow(/owner/i);
+    expect(await users.findByEmail('rollback@example.com')).toBeNull();
+    expect(await store.list('rolled-back')).toEqual([]);
+  });
 });
 
 // ----------------------------------------------------------------- postgres
@@ -159,10 +196,12 @@ if (TEST_DATABASE_URL) {
   describe('consent store: postgres', () => {
     let harness: Awaited<ReturnType<typeof startPgHarness>>;
     let store: PostgresConsentStore;
+    let registrations: PostgresRegistrationStore;
 
     beforeAll(async () => {
       harness = await startPgHarness(TEST_DATABASE_URL);
       store = new PostgresConsentStore(harness.app);
+      registrations = new PostgresRegistrationStore(harness.app);
     });
 
     afterAll(async () => {
@@ -172,6 +211,7 @@ if (TEST_DATABASE_URL) {
 
     beforeEach(async () => {
       await harness.owner.query("DELETE FROM users WHERE id IN ('consent_alice','consent_bob')");
+      await harness.owner.query("DELETE FROM users WHERE email IN ('registered-pg@example.com','rollback-pg@example.com')");
       await harness.owner.query("INSERT INTO users (id) VALUES ('consent_alice'),('consent_bob')");
     });
 
@@ -187,6 +227,53 @@ if (TEST_DATABASE_URL) {
       });
       expect((await store.list('consent_alice'))[0]?.granted).toBe(true);
       expect(await store.list('consent_bob')).toEqual([]);
+    });
+
+    it('atomically creates the user and legal evidence through the restricted role', async () => {
+      const input = {
+        id: 'registered-pg',
+        email: 'registered-pg@example.com',
+        passwordHash: 'hash',
+        displayName: null,
+      };
+      await registrations.create(input, [
+        {
+          id: 'registration-pg-consent',
+          userId: input.id,
+          kind: 'privacy_notice',
+          granted: true,
+          policyVersion: 'privacy-v1',
+          source: 'registration',
+          createdAt: new Date('2026-08-08T00:00:00Z'),
+        },
+      ]);
+      expect((await store.list(input.id))[0]?.policyVersion).toBe('privacy-v1');
+
+      await expect(
+        registrations.create(
+          {
+            id: 'rollback-pg',
+            email: 'rollback-pg@example.com',
+            passwordHash: 'hash',
+            displayName: null,
+          },
+          [
+            {
+              id: 'registration-pg-bad-owner',
+              userId: 'someone-else',
+              kind: 'terms',
+              granted: true,
+              policyVersion: 'terms-v1',
+              source: 'registration',
+              createdAt: new Date('2026-08-08T00:00:00Z'),
+            },
+          ],
+        ),
+      ).rejects.toThrow(/owner/i);
+      const rolledBack = await harness.owner.query(
+        "SELECT id FROM users WHERE email = 'rollback-pg@example.com'",
+      );
+      expect(rolledBack.rowCount).toBe(0);
     });
   });
 

@@ -165,8 +165,34 @@ class ApiClient {
 
   // ------------------------------------------------------------------ auth
 
-  Future<PublicUser> register(String email, String password) =>
-      _authenticate('/auth/register', {'email': email, 'password': password});
+  Future<LegalPolicies> legalPolicies() async {
+    final response =
+        await _http.get(_uri('/legal')).timeout(const Duration(seconds: 20));
+    if (response.statusCode >= 400) {
+      throw ApiException('/legal', response.statusCode, response.body);
+    }
+    return LegalPolicies.fromJson(
+        jsonDecode(response.body) as Map<String, dynamic>);
+  }
+
+  Future<PublicUser> register(
+    String email,
+    String password, {
+    required LegalPolicies policies,
+    required bool acceptedTerms,
+    required bool acceptedPrivacyNotice,
+  }) {
+    final body = <String, dynamic>{'email': email, 'password': password};
+    if (policies.registrationRequired) {
+      body.addAll({
+        'acceptedTerms': acceptedTerms,
+        'termsVersion': policies.terms!.version,
+        'acceptedPrivacyNotice': acceptedPrivacyNotice,
+        'privacyVersion': policies.privacyNotice!.version,
+      });
+    }
+    return _authenticate('/auth/register', body);
+  }
 
   Future<PublicUser> signIn(String email, String password) =>
       _authenticate('/auth/login', {'email': email, 'password': password});

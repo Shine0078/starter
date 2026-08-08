@@ -22,6 +22,10 @@ import type { DevelopmentEmailSender } from '../src/infra/auth/auth-action-store
 // Must be set before anything calls loadConfig(), which memoises.
 process.env.STORE = 'memory';
 process.env.JWT_SECRET ??= 'test-secret-at-least-32-characters-long-for-hs256';
+process.env.LEGAL_TERMS_VERSION = 'terms-test-v1';
+process.env.LEGAL_TERMS_URL = 'https://finverse.example/legal/terms-test-v1';
+process.env.LEGAL_PRIVACY_VERSION = 'privacy-test-v1';
+process.env.LEGAL_PRIVACY_URL = 'https://finverse.example/legal/privacy-test-v1';
 // This suite drives hundreds of requests from one address. Per-IP throttling is
 // real and is exercised in auth-throttle.spec.ts; here it would only produce
 // 429s unrelated to what each test is checking. Account lockout — the control
@@ -29,6 +33,12 @@ process.env.JWT_SECRET ??= 'test-secret-at-least-32-characters-long-for-hs256';
 process.env.THROTTLE_DISABLED = 'true';
 
 const PASSWORD = 'correct horse battery staple';
+const LEGAL_ACCEPTANCE = {
+  acceptedTerms: true,
+  termsVersion: 'terms-test-v1',
+  acceptedPrivacyNotice: true,
+  privacyVersion: 'privacy-test-v1',
+};
 
 interface Tokens {
   accessToken: string;
@@ -69,7 +79,7 @@ describe('auth API', () => {
   ): Promise<{ email: string; userId: string; tokens: Tokens }> {
     const response = await request(http)
       .post('/api/auth/register')
-      .send({ email, password: PASSWORD })
+      .send({ email, password: PASSWORD, ...LEGAL_ACCEPTANCE })
       .expect(201);
 
     return { email, userId: response.body.user.id, tokens: response.body.tokens };
@@ -82,7 +92,7 @@ describe('auth API', () => {
       const email = freshEmail();
       const response = await request(http)
         .post('/api/auth/register')
-        .send({ email, password: PASSWORD })
+        .send({ email, password: PASSWORD, ...LEGAL_ACCEPTANCE })
         .expect(201);
 
       expect(response.body.user.email).toBe(email);
@@ -94,7 +104,7 @@ describe('auth API', () => {
     it('never returns the password hash', async () => {
       const response = await request(http)
         .post('/api/auth/register')
-        .send({ email: freshEmail(), password: PASSWORD })
+        .send({ email: freshEmail(), password: PASSWORD, ...LEGAL_ACCEPTANCE })
         .expect(201);
 
       expect(JSON.stringify(response.body)).not.toContain('argon2');
@@ -105,12 +115,12 @@ describe('auth API', () => {
       const email = freshEmail();
       await request(http)
         .post('/api/auth/register')
-        .send({ email: email.toUpperCase(), password: PASSWORD })
+        .send({ email: email.toUpperCase(), password: PASSWORD, ...LEGAL_ACCEPTANCE })
         .expect(201);
 
       await request(http)
         .post('/api/auth/register')
-        .send({ email, password: PASSWORD })
+        .send({ email, password: PASSWORD, ...LEGAL_ACCEPTANCE })
         .expect(409);
     });
 
@@ -136,10 +146,45 @@ describe('auth API', () => {
       const email = freshEmail();
       const response = await request(http)
         .post('/api/auth/register')
-        .send({ email, password: PASSWORD, id: 'attacker-chosen', status: 'admin' })
+        .send({
+          email,
+          password: PASSWORD,
+          ...LEGAL_ACCEPTANCE,
+          id: 'attacker-chosen',
+          status: 'admin',
+        })
         .expect(201);
 
       expect(response.body.user.id).not.toBe('attacker-chosen');
+    });
+
+    it('publishes policy metadata and rejects missing or stale acceptance', async () => {
+      const legal = await request(http).get('/api/legal').expect(200);
+      expect(legal.body).toEqual({
+        registrationRequired: true,
+        terms: {
+          version: 'terms-test-v1',
+          url: 'https://finverse.example/legal/terms-test-v1',
+        },
+        privacyNotice: {
+          version: 'privacy-test-v1',
+          url: 'https://finverse.example/legal/privacy-test-v1',
+        },
+      });
+
+      await request(http)
+        .post('/api/auth/register')
+        .send({ email: freshEmail(), password: PASSWORD })
+        .expect(400);
+      await request(http)
+        .post('/api/auth/register')
+        .send({
+          email: freshEmail(),
+          password: PASSWORD,
+          ...LEGAL_ACCEPTANCE,
+          privacyVersion: 'privacy-stale',
+        })
+        .expect(400);
     });
   });
 
@@ -418,7 +463,10 @@ describe('auth API', () => {
         .set('Authorization', `Bearer ${bob.tokens.accessToken}`)
         .expect(200);
       expect(bobDashboard.body.optionalConsents.analytics.granted).toBe(false);
-      expect(bobDashboard.body.consentHistory).toHaveLength(0);
+      expect(bobDashboard.body.consentHistory).toHaveLength(2);
+      expect(
+        bobDashboard.body.consentHistory.map((row: { kind: string }) => row.kind).sort(),
+      ).toEqual(['privacy_notice', 'terms']);
 
       await request(http)
         .patch('/api/privacy/consents/terms')

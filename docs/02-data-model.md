@@ -40,16 +40,18 @@ User ──┬── Institution Link ── Account ── Transaction ──�
 | `purge_after` | timestamptz | irreversible erasure time; nullable |
 
 ### `consent_events`
-Append-only evidence for user-controlled optional processing. A new row is
-created for every grant or withdrawal; history is never overwritten. The current
-choice is the newest event for a kind. PostgreSQL RLS scopes rows to the user and
-the user foreign key cascades during permanent account erasure.
+Append-only evidence for user-controlled processing and legal acknowledgement.
+A new row is created for every optional grant or withdrawal; history is never
+overwritten. Required Terms and Privacy Notice acknowledgements are inserted in
+the same transaction as the user, so registration cannot leave an active account
+without exact-version evidence. PostgreSQL RLS scopes rows to the user and the
+user foreign key cascades during permanent account erasure.
 
 | Column | Type | Notes |
 |---|---|---|
 | `id` | text | pk |
 | `user_id` | text | fk to users, delete cascade |
-| `kind` | text | `analytics`, `product_updates`, or a future versioned legal acknowledgement |
+| `kind` | text | `analytics`, `product_updates`, `terms`, or `privacy_notice` |
 | `granted` | boolean | false records withdrawal rather than deleting evidence |
 | `policy_version` | text | version presented when the choice was made |
 | `source` | text | registration, user settings, or an audited migration |

@@ -67,6 +67,14 @@ class MetaController {
   categories() {
     return { count: CATEGORIES.length, categories: CATEGORIES };
   }
+
+  /** Public so a client can show the exact documents before account creation. */
+  @Public()
+  @Get('legal')
+  legal() {
+    const { legal } = loadConfig();
+    return legal;
+  }
 }
 
 @Module({

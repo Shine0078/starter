@@ -29,6 +29,7 @@ import {
   type User,
 } from '../../domain/auth/types';
 import { REFRESH_TOKEN_TTL_MS } from '../../infra/auth/jwt-issuer';
+import { loadConfig } from '../../config';
 import { CLOCK, type ClockPort } from '../../ports';
 import {
   ACCOUNT_DELETION_STORE,
@@ -37,6 +38,7 @@ import {
   EMAIL_SENDER,
   DuplicateEmailError,
   PASSWORD_HASHER,
+  REGISTRATION_STORE,
   SESSION_STORE,
   TOKEN_ISSUER,
   USER_STORE,
@@ -46,10 +48,12 @@ import {
   type AuthEventStore,
   type EmailSender,
   type PasswordHasher,
+  type RegistrationStore,
   type SessionStore,
   type TokenIssuer,
   type UserStore,
 } from '../../ports/auth';
+import type { ConsentEvent } from '../../ports/privacy';
 
 /** Where the request came from, for the audit trail and the device list. */
 export interface RequestContext {
@@ -62,12 +66,20 @@ export interface AuthResult {
   tokens: TokenPair;
 }
 
+export interface LegalAcceptanceInput {
+  acceptedTerms: boolean;
+  termsVersion: string | null;
+  acceptedPrivacyNotice: boolean;
+  privacyVersion: string | null;
+}
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
   constructor(
     @Inject(USER_STORE) private readonly users: UserStore,
+    @Inject(REGISTRATION_STORE) private readonly registrations: RegistrationStore,
     @Inject(SESSION_STORE) private readonly sessions: SessionStore,
     @Inject(AUTH_EVENT_STORE) private readonly events: AuthEventStore,
     @Inject(ACCOUNT_DELETION_STORE) private readonly deletions: AccountDeletionStore,
@@ -84,6 +96,7 @@ export class AuthService {
     email: string,
     password: string,
     displayName: string | null,
+    legalAcceptance: LegalAcceptanceInput,
     context: RequestContext,
   ): Promise<AuthResult> {
     const normalized = normalizeEmail(email);
@@ -97,16 +110,57 @@ export class AuthService {
       throw new BadRequestException({ message: 'Password rejected.', problems: check.problems });
     }
 
+    const legal = loadConfig().legal;
+    if (
+      legal.registrationRequired &&
+      (!legalAcceptance.acceptedTerms ||
+        legalAcceptance.termsVersion !== legal.terms!.version ||
+        !legalAcceptance.acceptedPrivacyNotice ||
+        legalAcceptance.privacyVersion !== legal.privacyNotice!.version)
+    ) {
+      throw new BadRequestException(
+        'Accept the current Terms of Service and Privacy Notice to create an account.',
+      );
+    }
+
     const passwordHash = await this.hasher.hash(password);
+
+    const userId = randomUUID();
+    const acceptedAt = this.clock.now();
+    const legalEvents: ConsentEvent[] = legal.registrationRequired
+      ? [
+          {
+            id: randomUUID(),
+            userId,
+            kind: 'terms',
+            granted: true,
+            policyVersion: legal.terms!.version,
+            source: 'registration',
+            createdAt: acceptedAt,
+          },
+          {
+            id: randomUUID(),
+            userId,
+            kind: 'privacy_notice',
+            granted: true,
+            policyVersion: legal.privacyNotice!.version,
+            source: 'registration',
+            createdAt: acceptedAt,
+          },
+        ]
+      : [];
 
     let user: User;
     try {
-      user = await this.users.create({
-        id: randomUUID(),
-        email: normalized,
-        passwordHash,
-        displayName: displayName?.trim() || null,
-      });
+      user = await this.registrations.create(
+        {
+          id: userId,
+          email: normalized,
+          passwordHash,
+          displayName: displayName?.trim() || null,
+        },
+        legalEvents,
+      );
     } catch (error) {
       if (error instanceof DuplicateEmailError) {
         await this.record('register', false, null, normalized, context, 'duplicate email');

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../api/client.dart';
+import '../models/models.dart';
 
 /// Sign in or create an account.
 ///
@@ -26,6 +28,10 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _recovering = false;
   bool _busy = false;
   bool _obscure = true;
+  bool _legalLoading = false;
+  bool _acceptedTerms = false;
+  bool _acceptedPrivacyNotice = false;
+  LegalPolicies? _legal;
   String? _error;
 
   @override
@@ -37,6 +43,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
+    if (_registering && _legal == null) {
+      setState(
+          () => _error = 'Legal documents could not be loaded. Try again.');
+      return;
+    }
+    if (_registering &&
+        _legal!.registrationRequired &&
+        (!_acceptedTerms || !_acceptedPrivacyNotice)) {
+      setState(() => _error =
+          'Accept the Terms of Service and Privacy Notice to continue.');
+      return;
+    }
 
     setState(() {
       _busy = true;
@@ -46,7 +64,13 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final email = _email.text.trim();
       if (_registering) {
-        await widget.api.register(email, _password.text);
+        await widget.api.register(
+          email,
+          _password.text,
+          policies: _legal!,
+          acceptedTerms: _acceptedTerms,
+          acceptedPrivacyNotice: _acceptedPrivacyNotice,
+        );
       } else if (_recovering) {
         await widget.api.cancelAccountDeletion(email, _password.text);
       } else {
@@ -64,6 +88,54 @@ class _LoginScreenState extends State<LoginScreen> {
       debugPrint('Sign-in failed: $error');
     } finally {
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _toggleRegistration() async {
+    final entering = !_registering;
+    setState(() {
+      _registering = entering;
+      _recovering = false;
+      _error = null;
+      _legal = null;
+      _legalLoading = entering;
+      _acceptedTerms = false;
+      _acceptedPrivacyNotice = false;
+    });
+    if (!entering) return;
+
+    try {
+      final legal = await widget.api.legalPolicies();
+      if (legal.registrationRequired &&
+          (legal.terms == null || legal.privacyNotice == null)) {
+        throw const FormatException(
+            'Required legal document metadata is incomplete.');
+      }
+      if (!mounted || !_registering) return;
+      setState(() {
+        _legal = legal;
+        _legalLoading = false;
+      });
+    } catch (error) {
+      if (!mounted || !_registering) return;
+      setState(() {
+        _legalLoading = false;
+        _error =
+            'Legal documents could not be loaded. Check your connection and try again.';
+      });
+      debugPrint('Legal policy load failed: $error');
+    }
+  }
+
+  Future<void> _openLegal(LegalDocumentPolicy document) async {
+    final opened = await launchUrl(
+      Uri.parse(document.url),
+      mode: LaunchMode.externalApplication,
+    );
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open the legal document.')),
+      );
     }
   }
 
@@ -228,6 +300,54 @@ class _LoginScreenState extends State<LoginScreen> {
                         return null;
                       },
                     ),
+                    if (_registering && _legalLoading) ...[
+                      const SizedBox(height: 14),
+                      const LinearProgressIndicator(),
+                      const SizedBox(height: 8),
+                      const Text('Loading current legal documents…'),
+                    ],
+                    if (_registering &&
+                        _legal?.registrationRequired == true) ...[
+                      const SizedBox(height: 10),
+                      CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        value: _acceptedTerms,
+                        onChanged: _busy
+                            ? null
+                            : (value) =>
+                                setState(() => _acceptedTerms = value ?? false),
+                        title: const Text('I accept the Terms of Service'),
+                        subtitle: Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton(
+                            onPressed: () => _openLegal(_legal!.terms!),
+                            child: Text(
+                              'Read Terms (${_legal!.terms!.version})',
+                            ),
+                          ),
+                        ),
+                      ),
+                      CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        value: _acceptedPrivacyNotice,
+                        onChanged: _busy
+                            ? null
+                            : (value) => setState(
+                                () => _acceptedPrivacyNotice = value ?? false),
+                        title: const Text('I acknowledge the Privacy Notice'),
+                        subtitle: Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton(
+                            onPressed: () => _openLegal(_legal!.privacyNotice!),
+                            child: Text(
+                              'Read Privacy Notice (${_legal!.privacyNotice!.version})',
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 14),
                     TextFormField(
                       controller: _password,
@@ -295,7 +415,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                     const SizedBox(height: 20),
                     FilledButton(
-                      onPressed: _busy ? null : _submit,
+                      onPressed: _busy ||
+                              (_registering &&
+                                  (_legalLoading ||
+                                      _legal == null ||
+                                      (_legal!.registrationRequired &&
+                                          (!_acceptedTerms ||
+                                              !_acceptedPrivacyNotice))))
+                          ? null
+                          : _submit,
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
@@ -320,13 +448,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     const SizedBox(height: 8),
                     TextButton(
-                      onPressed: _busy
-                          ? null
-                          : () => setState(() {
-                                _registering = !_registering;
-                                _recovering = false;
-                                _error = null;
-                              }),
+                      onPressed: _busy ? null : _toggleRegistration,
                       child: Text(
                         _registering
                             ? 'I already have an account'

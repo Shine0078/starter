@@ -146,9 +146,9 @@ void main() {
 
   testWidgets('rejects a short password before contacting the server',
       (tester) async {
-    var requests = 0;
-    final api = clientWith(MockClient((_) async {
-      requests += 1;
+    var registrationRequests = 0;
+    final api = clientWith(MockClient((request) async {
+      if (!request.url.path.endsWith('/legal')) registrationRequests += 1;
       return http.Response('{}', 200);
     }));
 
@@ -163,7 +163,39 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Use at least 12 characters.'), findsOneWidget);
-    expect(requests, 0);
+    expect(registrationRequests, 0);
+  });
+
+  testWidgets('requires both configured legal documents before registration',
+      (tester) async {
+    final api = clientWith(MockClient((request) async {
+      if (request.url.path.endsWith('/legal')) {
+        return http.Response(
+          '{"registrationRequired":true,"terms":{"version":"terms-v1","url":"https://finverse.example/terms-v1"},"privacyNotice":{"version":"privacy-v1","url":"https://finverse.example/privacy-v1"}}',
+          200,
+        );
+      }
+      return http.Response('{}', 200);
+    }));
+
+    await tester.pumpWidget(FinverseApp(api: api));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Create an account'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('I accept the Terms of Service'), findsOneWidget);
+    expect(find.text('I acknowledge the Privacy Notice'), findsOneWidget);
+    expect(find.text('Read Terms (terms-v1)'), findsOneWidget);
+    expect(find.text('Read Privacy Notice (privacy-v1)'), findsOneWidget);
+
+    FilledButton create =
+        tester.widget(find.widgetWithText(FilledButton, 'Create account'));
+    expect(create.onPressed, isNull);
+    await tester.tap(find.byType(Checkbox).at(0));
+    await tester.tap(find.byType(Checkbox).at(1));
+    await tester.pump();
+    create = tester.widget(find.widgetWithText(FilledButton, 'Create account'));
+    expect(create.onPressed, isNotNull);
   });
 
   testWidgets('surfaces the server message when sign-in is rejected',

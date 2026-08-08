@@ -29,6 +29,43 @@ class PublicUser {
   String get label => displayName?.isNotEmpty == true ? displayName! : email;
 }
 
+class LegalDocumentPolicy {
+  const LegalDocumentPolicy({required this.version, required this.url});
+
+  factory LegalDocumentPolicy.fromJson(Map<String, dynamic> json) =>
+      LegalDocumentPolicy(
+        version: json['version'] as String,
+        url: json['url'] as String,
+      );
+
+  final String version;
+  final String url;
+}
+
+class LegalPolicies {
+  const LegalPolicies({
+    required this.registrationRequired,
+    this.terms,
+    this.privacyNotice,
+  });
+
+  factory LegalPolicies.fromJson(Map<String, dynamic> json) => LegalPolicies(
+        registrationRequired: json['registrationRequired'] as bool? ?? false,
+        terms: json['terms'] == null
+            ? null
+            : LegalDocumentPolicy.fromJson(
+                json['terms'] as Map<String, dynamic>),
+        privacyNotice: json['privacyNotice'] == null
+            ? null
+            : LegalDocumentPolicy.fromJson(
+                json['privacyNotice'] as Map<String, dynamic>),
+      );
+
+  final bool registrationRequired;
+  final LegalDocumentPolicy? terms;
+  final LegalDocumentPolicy? privacyNotice;
+}
+
 class AppSession {
   const AppSession({
     required this.id,

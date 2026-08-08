@@ -44,6 +44,11 @@ Privacy settings also show recent security activity and default-off analytics an
 product-update choices. Every grant or withdrawal is kept as versioned, append-only
 server history and is included in account export and erasure.
 
+Account creation loads the server's current Terms of Service and Privacy Notice,
+opens each HTTPS document in the platform browser, requires both acknowledgements,
+and sends their exact version ids. The API stores that evidence atomically with
+the new user. Counsel still has to supply the reviewed documents and version ids.
+
 Successful authenticated reads are cached locally for offline fallback. Payloads
 are AES-256-GCM encrypted with a key in the platform keystore, scoped per user,
 limited to 30 days, and purged on sign-out or account deletion. The dashboard labels

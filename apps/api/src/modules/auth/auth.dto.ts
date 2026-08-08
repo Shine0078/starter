@@ -1,4 +1,12 @@
-import { Equals, IsEmail, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  Equals,
+  IsBoolean,
+  IsEmail,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from '../../domain/auth/password-policy';
 
@@ -26,6 +34,24 @@ export class RegisterDto {
   @IsString()
   @MaxLength(100)
   displayName?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  acceptedTerms?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  termsVersion?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  acceptedPrivacyNotice?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  privacyVersion?: string;
 }
 
 export class LoginDto {
