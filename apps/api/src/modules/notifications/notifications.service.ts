@@ -3,6 +3,11 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 
 import type { NotificationPreferences, UserNotification } from '../../domain/types';
 import {
+  deriveSubscriptionAlerts,
+  deriveUnusualTransactionAlerts,
+  type DerivedFinancialAlert,
+} from '../../domain/notifications/financial-alerts';
+import {
   CLOCK,
   NOTIFICATION_STORE,
   type ClockPort,
@@ -51,6 +56,27 @@ export class NotificationsService {
     const preferences = await this.notifications.getPreferences(userId);
     const today = this.clock.today();
     const createdAt = this.clock.now().toISOString();
+
+    if (
+      preferences.bills ||
+      preferences.subscriptions ||
+      preferences.unusualTransactions
+    ) {
+      const transactions = await this.ledger.listTransactions(userId, {});
+      const derived = [
+        ...deriveSubscriptionAlerts(transactions, today),
+        ...deriveUnusualTransactionAlerts(transactions, today),
+      ];
+      for (const alert of derived) {
+        if (!alertEnabled(alert, preferences)) continue;
+        await this.notifications.upsert(userId, {
+          ...alert,
+          id: randomUUID(),
+          readAt: null,
+          createdAt,
+        });
+      }
+    }
 
     if (preferences.budget) {
       for (const progress of await this.budgets.progress(userId, today)) {
@@ -105,5 +131,21 @@ export class NotificationsService {
         });
       }
     }
+  }
+}
+
+function alertEnabled(
+  alert: DerivedFinancialAlert,
+  preferences: NotificationPreferences,
+): boolean {
+  switch (alert.kind) {
+    case 'bill':
+      return preferences.bills;
+    case 'subscription':
+      return preferences.subscriptions;
+    case 'unusual_transaction':
+      return preferences.unusualTransactions;
+    default:
+      return false;
   }
 }

@@ -24,7 +24,7 @@ document is the list of those constraints.
 | At rest (disk) | Depends on the as-yet-unselected host | Managed database and volume encryption verified in provider configuration |
 | At rest (field) | Email and financial fields are plaintext in PostgreSQL | KMS-backed envelope encryption for the fields selected by the threat model |
 | On device | Refresh/access tokens, app-lock preference, and the offline-cache key use Keychain / Android Keystore. Cached financial payloads use AES-256-GCM with authenticated context, a 30-day ceiling, user scoping, purge-on-sign-out, and an optional system-authentication app gate | Consider whole-file SQLCipher if the threat model requires hiding cache metadata as well as payloads; verify app-lock behavior on physical hardware |
-| Backups | No backup system exists | Encrypted backups, documented retention, access controls, and a tested restore drill |
+| Backups | Guarded backup and `_restore_test` drill scripts exist; no production schedule, encrypted object store, access policy, or completed production drill exists | Wire the scripts to the selected managed database and backup store, then record recurring restore evidence |
 
 KMS data keys, server-field master-key rotation, whole-file SQLCipher, and backup
 approval remain design targets. Authenticated mobile cache encryption is implemented;

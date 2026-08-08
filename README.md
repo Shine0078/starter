@@ -9,7 +9,8 @@ a plan. This README tells you how to run what exists.
 **Status: launch engineering in progress.** The API and Android app include
 TOTP multi-factor authentication, device app lock, real
 Plaid Sandbox Link, encrypted token storage, incremental sync, budgets, goals,
-notifications, insights, and account lifecycle controls. Production Plaid access,
+evidence-based bill, subscription, duplicate-charge, and unusual-spending alerts,
+insights, and account lifecycle controls. Production Plaid access,
 hosting, legal review, store approval, and billing remain external launch gates
 ([selling audit](docs/08-what-blocks-selling.md)).
 
@@ -210,8 +211,8 @@ stopped running.
 
 ## Notes on what is and isn't verified
 
-- **The API and its domain logic run and are tested.** 297 tests run with no
-  database; the full suite is **393 passing** against real PostgreSQL, including
+- **The API and its domain logic run and are tested.** 303 tests run with no
+  database; the full suite is **399 passing** against real PostgreSQL, including
   the store contract — which runs as the restricted role, so it executes with the
   row-level security policies in force — and a suite that issues deliberately
   unfiltered SQL to prove the database withholds other users' rows on its own.

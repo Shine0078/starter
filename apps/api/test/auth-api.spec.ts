@@ -698,6 +698,11 @@ describe('auth API', () => {
         .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
         .expect(200);
       expect(first.body.unread).toBeGreaterThan(0);
+      expect(
+        first.body.notifications.some(
+          (notification: { kind: string }) => notification.kind === 'subscription',
+        ),
+      ).toBe(true);
       const notificationId = first.body.notifications[0].id as string;
 
       const second = await request(http)
@@ -715,6 +720,28 @@ describe('auth API', () => {
         .set('Authorization', `Bearer ${bob.tokens.accessToken}`)
         .expect(200);
       expect(bobRows.body.count).toBe(0);
+    });
+
+    it('honours alert preferences before deriving financial notifications', async () => {
+      const user = await register();
+      const authorization = `Bearer ${user.tokens.accessToken}`;
+      await request(http).post('/api/sync').set('Authorization', authorization).expect(201);
+      await request(http)
+        .patch('/api/notifications/preferences')
+        .set('Authorization', authorization)
+        .send({ subscriptions: false, bills: false, unusualTransactions: false })
+        .expect(200);
+
+      const response = await request(http)
+        .get('/api/notifications')
+        .set('Authorization', authorization)
+        .expect(200);
+      const kinds = response.body.notifications.map(
+        (notification: { kind: string }) => notification.kind,
+      );
+      expect(kinds).not.toContain('subscription');
+      expect(kinds).not.toContain('bill');
+      expect(kinds).not.toContain('unusual_transaction');
     });
 
     it('will not let one user revoke another session', async () => {

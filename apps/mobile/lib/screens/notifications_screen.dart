@@ -92,7 +92,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                   fontSize: 20, fontWeight: FontWeight.w600)),
                           SizedBox(height: 6),
                           Text(
-                              'Budget, balance, credit, and security alerts will appear here.'),
+                              'Budget, bill, subscription, unusual spending, balance, credit, and security alerts will appear here.'),
                         ]),
                       ),
                     for (var index = 0; index < _rows.length; index++)
@@ -127,8 +127,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   IconData _icon(String kind) => switch (kind) {
         'budget' => Icons.pie_chart_outline,
+        'bill' => Icons.event_available_outlined,
         'credit_utilization' => Icons.credit_card,
+        'subscription' => Icons.autorenew,
         'low_balance' => Icons.account_balance_wallet_outlined,
+        'unusual_transaction' => Icons.manage_search,
         'bank_sync' => Icons.sync_problem,
         'security' => Icons.security,
         _ => Icons.notifications_outlined,

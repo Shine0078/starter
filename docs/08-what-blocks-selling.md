@@ -25,7 +25,7 @@ Stated so the rest of this document is not read as "nothing works".
 | Authentication | Argon2id, rotating refresh tokens with reuse detection, email verification, password reset, TOTP MFA/recovery codes, device app lock, recoverable deletion, global guard, per-account lockout, session list, audit trail |
 | Persistence | Postgres behind ports, contract-tested against both adapters, migrations |
 | Isolation | Row-level security, app connects as a non-superuser role, 21 dedicated tests |
-| Tests | 297 without a database, 393 against real PostgreSQL, 20 Flutter tests, and an Android debug APK build; all passing |
+| Tests | 303 without a database, 399 against real PostgreSQL, 20 Flutter tests, and an Android debug APK build; all passing |
 | CI | GitHub Actions: API typecheck/test/build/image + Flutter analyze/test/Android compile; tagged API/APK releases |
 
 That is a solid Phase-0 foundation. It is not a product.
@@ -77,7 +77,7 @@ believe controls exist that do not.** Fixing the wording is part of the work.
 | 3.1.1 | TLS 1.3, HSTS, certificate pinning | "In transit" row of the encryption table | Nothing. No TLS config anywhere; the API serves plain HTTP |
 | 3.1.2 | Field-level AES-256-GCM envelope encryption via KMS | Table row, plus per-user data keys and master-key rotation | Not implemented. `email` and every other field are plaintext |
 | 3.1.3 | SQLCipher-encrypted local SQLite on device | "On device" row | **Partially complete:** user-scoped SQLite cache payloads use AES-256-GCM with a keystore key, authenticated context, expiry, and purge. Whole-file SQLCipher remains a threat-model decision because cache metadata is not encrypted |
-| 3.1.4 | Encrypted backups with second-approver restore | "Backups" row | No backup process exists |
+| 3.1.4 | Encrypted backups with second-approver restore | "Backups" row | Guarded backup and `_restore_test` scripts exist; production scheduling, encrypted storage, access approval, and a recorded drill remain |
 | 3.1.5 | No standing production access, audited break-glass | "Access control" section, present tense | No production exists; no access control process exists |
 | 3.1.6 | Deletion purge job at +30 days | `02-data-model.md` previously described it as present | Implemented and proven against PostgreSQL; production still needs to schedule the command |
 
@@ -121,7 +121,7 @@ has a `docker-compose.yml` for local development and a CI workflow. That is all.
 | 4.6 | **No monitoring, metrics, or alerting** | `/healthz` now fails with HTTP 503 when PostgreSQL is down; nothing external scrapes or alerts on it | 1 week |
 | 4.7 | **External error tracking absent** | Structured request logs now carry correlation ids and deliberately omit headers, bodies, queries, users, merchants, and amounts; no external log/error service is configured | external account + days |
 | 4.8 | **No rate limiting beyond in-process** | `@nestjs/throttler` keeps counters in memory, so limits reset on restart and are per-instance. Redis is in `docker-compose.yml` and the API does not reference it once | days |
-| 4.9 | **No job queue or scheduler** | Needed for sync, purge jobs, monthly reports, and notifications. The mission names RabbitMQ/Kafka; nothing exists | 1–2 weeks |
+| 4.9 | **No general scheduler** | Plaid webhooks use a durable PostgreSQL retry queue, but scheduled purge, proactive notification refresh, and recurring report delivery still need platform jobs | external host + days |
 | 4.10 | **No load or performance testing** | "Scalable to millions" is currently an aspiration with no measurement behind it | 1 week |
 | 4.11 | **No staging environment** | Nowhere to verify a release before users get it | with 4.2 |
 | 4.12 | **Production migration orchestration** | Idempotence is tested and the image defaults `MIGRATE_ON_BOOT=false`; the release guide defines the step | Must wire into selected host |
@@ -141,7 +141,7 @@ smaller than the complete MISSION.md product.
 | 5.1 | **Core navigation started** | Onboarding, home, transaction search/detail/correction, budgets, goals, bank accounts, subscriptions, notifications, settings/session controls, portable export, versioned legal/optional consent history, device app lock, and recent security activity are implemented | 2–3 weeks for remaining breadth/polish |
 | 5.2 | **Read-only offline cache implemented** | Authenticated GET responses can fall back to a 30-day, user-scoped encrypted cache with a visible stale-data banner. Offline writes, background reconciliation, and conflict handling remain | 2–3 weeks |
 | 5.3 | **No state management** | `setState` only. Honest at one screen, unworkable at twenty | with 5.1 |
-| 5.4 | **No push notifications** | Persistent preferences, a mobile notification centre, and deduplicated budget, utilization, low-balance, and bank-sync alerts exist. Device push delivery, bill reminders, and unusual-spend detection remain | 2–3 weeks |
+| 5.4 | **No push notifications** | Persistent preferences and a mobile centre now cover budgets, utilization, low balances, bank sync, upcoming bills, subscription price rises, possible duplicates, and conservative spending outliers. Device push delivery remains | external push credentials + 1–2 weeks |
 | 5.5 | **Android identity and launcher** | **Completed:** `com.finverse.finance`, FINVERSE label, versioned platform project, and branded launcher asset | Store listing still external |
 | 5.6 | **Release signing credentials** | Gradle and the release workflow are wired for an upload key and refuse a distributable release without secrets | User must generate and protect the upload key |
 | 5.7 | **iOS never built** | Requires a Mac. Untested and unverified | 1 week |
@@ -197,8 +197,13 @@ features them.
   investment, tax, fraud, and AI sections depend on those underlying features.
 - Goals and savings targets — persistent model, progress math, contribution history, API, RLS, and Flutter screen are complete
 - Net worth dashboard — no investments, loans, or property
-- Notifications and smart reminders — persistent preferences, a mobile centre, and deduplicated in-app budget, credit-utilization, low-balance, and bank-sync alerts exist; push delivery, bill reminders, and unusual-spend alerts remain
-- Fraud and anomaly detection — duplicates, abnormal purchases, foreign spending
+- Notifications and smart reminders — persistent preferences and deduplicated
+  in-app budget, credit-utilization, low-balance, bank-sync, upcoming-bill,
+  subscription-price-rise, possible-duplicate, and spending-outlier alerts exist;
+  push delivery still requires platform credentials and a background delivery job
+- Fraud and anomaly detection — exact recent duplicate prompts and conservative
+  category outliers are implemented; foreign-spend rules and a trained fraud
+  model are not
 - Receipt OCR
 
 **Named once, clearly later-phase**

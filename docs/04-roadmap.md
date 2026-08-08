@@ -39,6 +39,8 @@ of the difficulty is technical.
 - [x] Sync engine: cursor-based, idempotent, handles pending → posted transitions
 - [ ] Merchant lexicon seeded (top ~2,000 merchants covers most volume)
 - [x] Budgets, goals, and subscription detection (real-bank acceptance remains)
+- [x] In-app budget, credit, low-balance, bank-sync, upcoming-bill,
+      subscription-price-rise, possible-duplicate, and spending-outlier alerts
 - [x] Flutter app: dashboard, transactions, budgets, goals, and insight surfaces
 - [x] Deletion + export, verified through API, mobile, and PostgreSQL erasure tests
 
