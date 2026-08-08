@@ -74,6 +74,14 @@
       .stat { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; }
       .stat dt { color: var(--muted); }
       .stat dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+      .chart { min-height: 180px; }
+      .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+      .chart text { fill: var(--muted); font: 11px ui-sans-serif, -apple-system, "Segoe UI", sans-serif; }
+      .chart .grid { stroke: var(--line); stroke-width: 1; }
+      .chart .line { stroke: var(--accent); stroke-width: 3; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .chart .area { fill: var(--accent); opacity: .12; }
+      .chart .negative { stroke: var(--bad); fill: var(--bad); }
+      .event-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
       code { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 12px; }
       #status { color: var(--muted); font-size: 12px; }
     </style>
@@ -84,6 +92,7 @@
       <span class="tag">dev dashboard</span>
       <span class="tag">mock aggregator</span>
       <button id="sync">Sync</button>
+      <a href="/api/transactions/export.csv" download>Export CSV</a>
       <span id="status">not synced yet</span>
     </header>
 
@@ -98,6 +107,11 @@
         <div id="health" class="muted">—</div>
       </section>
 
+      <section>
+        <h2>Credit-card plan</h2>
+        <div id="cards" class="muted">—</div>
+      </section>
+
       <section class="wide">
         <h2>Budgets — this month</h2>
         <div id="budgets" class="muted">—</div>
@@ -106,6 +120,26 @@
       <section>
         <h2>This month vs last (like for like)</h2>
         <div id="summary" class="muted">—</div>
+      </section>
+
+      <section>
+        <h2>Spending by category</h2>
+        <div id="category-chart" class="chart muted">—</div>
+      </section>
+
+      <section class="wide">
+        <h2>30-day cash-flow outlook</h2>
+        <div id="forecast" class="chart muted">—</div>
+      </section>
+
+      <section class="wide">
+        <h2>Can I afford a purchase?</h2>
+        <form id="scenario-form" class="row" style="gap:10px;align-items:end">
+          <label>Amount<br><input id="scenario-amount" type="number" min="0.01" step="0.01" value="1200.00" required></label>
+          <label>Purchase date<br><input id="scenario-date" type="date" required></label>
+          <button type="submit">Model impact</button>
+        </form>
+        <div id="scenario" class="muted" style="margin-top:12px">Sync to model a one-off purchase against known recurring cash flow.</div>
       </section>
 
       <section>
@@ -189,6 +223,29 @@
           }`;
       }
 
+      function renderCards(cards) {
+        const target = $('cards');
+        if (!cards.length) {
+          target.innerHTML = '<span class="muted">No credit cards connected.</span>';
+          return;
+        }
+        target.className = '';
+        target.innerHTML = cards.map((card) => {
+          const level = card.utilization >= .9 ? 'bad' : card.utilization >= .3 ? 'warn' : 'good';
+          const date = card.safePaymentWindow
+            ? `${card.safePaymentWindow.start}–${card.safePaymentWindow.end}`
+            : card.paymentDueDate ? 'Pay now; safe window has passed' : 'Set a due date to plan ahead';
+          return `<div style="margin-bottom:14px">
+            <div class="row"><strong>${esc(card.accountName)}</strong><span class="pill ${level}">${card.utilizationPercent}% used</span></div>
+            <div class="bar"><i class="${level === 'good' ? '' : level}" style="width:${Math.min(100, card.utilizationPercent)}%"></i></div>
+            <div class="row" style="margin-top:7px"><span class="muted">Owed</span><strong>${esc(card.balanceOwedFormatted)}</strong></div>
+            <div class="row"><span class="muted">To 30% utilization</span><span>${esc(card.payDownToThirtyPercentFormatted)}</span></div>
+            <div class="row"><span class="muted">Pay before</span><span>${esc(date)}</span></div>
+            ${card.alerts.length ? `<div class="muted" style="font-size:12px;margin-top:5px">${esc(card.alerts.join(' '))}</div>` : ''}
+          </div>`;
+        }).join('');
+      }
+
       function renderBudgets(data) {
         if (!data.count) {
           $('budgets').innerHTML = '<span class="muted">No budgets yet.</span>';
@@ -236,6 +293,8 @@
             .map((c) => `<dt>${esc(c.categoryName)}</dt><dd>${esc(c.totalFormatted)}</dd>`)
             .join('')}</dl>`;
 
+        renderCategoryChart(report.topCategories);
+
         $('insights').className = '';
         $('insights').innerHTML = report.insights.length
           ? report.insights
@@ -250,6 +309,84 @@
               })
               .join('')
           : '<span class="muted">Nothing notable changed.</span>';
+      }
+
+      // Inline SVG keeps this developer dashboard dependency-free. The values
+      // remain visible in text so the chart is useful with a screen reader,
+      // too; the graphic is an enhancement, not the only representation.
+      function renderCategoryChart(categories) {
+        const target = $('category-chart');
+        if (!categories.length) {
+          target.innerHTML = '<span class="muted">No spending in this period.</span>';
+          return;
+        }
+        const rows = categories.slice(0, 6);
+        const maximum = Math.max(...rows.map((row) => row.total), 1);
+        const height = rows.length * 32 + 12;
+        target.innerHTML = `<svg viewBox="0 0 620 ${height}" role="img" aria-label="Spending by category">
+          ${rows.map((row, index) => {
+            const y = index * 32 + 8;
+            const width = Math.max(3, Math.round((row.total / maximum) * 320));
+            return `<text x="0" y="${y + 12}">${esc(row.categoryName)}</text>
+              <rect x="150" y="${y}" width="360" height="18" rx="5" fill="var(--line)"></rect>
+              <rect x="150" y="${y}" width="${width}" height="18" rx="5" fill="var(--accent)"></rect>
+              <text x="610" y="${y + 12}" text-anchor="end">${esc(row.totalFormatted)}</text>`;
+          }).join('')}
+        </svg>`;
+      }
+
+      function renderForecast(forecast) {
+        const target = $('forecast');
+        if (!forecast.points.length) {
+          target.innerHTML = '<span class="muted">No forecast data yet.</span>';
+          return;
+        }
+        const width = 760, height = 220, left = 10, right = 10, top = 22, bottom = 30;
+        const balances = forecast.points.map((point) => point.balance);
+        const min = Math.min(forecast.startingBalance, ...balances, 0);
+        const max = Math.max(forecast.startingBalance, ...balances, 1);
+        const span = Math.max(max - min, 1);
+        const x = (index) => left + (index / Math.max(forecast.points.length - 1, 1)) * (width - left - right);
+        const y = (value) => top + ((max - value) / span) * (height - top - bottom);
+        const line = forecast.points.map((point, index) => `${x(index)},${y(point.balance)}`).join(' ');
+        const area = `${left},${height - bottom} ${line} ${x(forecast.points.length - 1)},${height - bottom}`;
+        const zeroY = y(0);
+        const ending = forecast.points[forecast.points.length - 1];
+        const upcoming = forecast.events.slice(0, 5);
+        target.innerHTML = `<div class="row" style="margin-bottom:8px"><span class="muted">Known recurring income and bills only</span>
+          <strong>${esc(forecast.startingBalanceFormatted)} to ${esc(forecast.endingBalanceFormatted)}</strong></div>
+          <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Projected liquid cash balance over the next 30 days">
+            <line class="grid" x1="${left}" x2="${width - right}" y1="${zeroY}" y2="${zeroY}"></line>
+            <path class="area" d="M ${area} Z"></path><polyline class="line${ending.balance < 0 ? ' negative' : ''}" points="${line}"></polyline>
+            <text x="${left}" y="${height - 8}">${esc(forecast.points[0].date)}</text>
+            <text x="${width - right}" y="${height - 8}" text-anchor="end">${esc(ending.date)}</text>
+            <text x="${left}" y="14">High ${esc(forecast.points.reduce((best, point) => point.balance > best.balance ? point : best).balanceFormatted)}</text>
+            ${forecast.lowBalanceDates.length ? `<text class="negative" x="${width - right}" y="14" text-anchor="end">Projected below $0</text>` : ''}
+          </svg>
+          ${upcoming.length ? `<div class="event-list">${upcoming.map((event) =>
+            `<span class="pill ${event.kind === 'expense' ? 'warn' : 'good'}">${esc(event.date)} - ${esc(event.merchant)} ${esc(event.amountFormatted)}</span>`
+          ).join('')}</div>` : '<div class="muted">No repeatable future income or bills found yet.</div>'}`;
+
+        const dateInput = $('scenario-date');
+        if (!dateInput.value && forecast.points.length) {
+          dateInput.value = forecast.points[Math.min(6, forecast.points.length - 1)].date;
+        }
+        dateInput.min = forecast.points[0]?.date ?? '';
+        dateInput.max = forecast.points[forecast.points.length - 1]?.date ?? '';
+      }
+
+      function renderScenario(scenario) {
+        const target = $('scenario');
+        const className = scenario.lowBalanceDates.length ? 'bad' : 'good';
+        target.className = '';
+        target.innerHTML = `<div class="row"><strong>Projected purchase impact</strong>
+          <span class="pill ${className}">${scenario.lowBalanceDates.length ? 'cash shortfall' : 'known bills covered'}</span></div>
+          <dl class="stat" style="margin-top:8px">
+            <dt>Before purchase</dt><dd>${esc(scenario.balanceBeforePurchaseFormatted)}</dd>
+            <dt>After purchase</dt><dd>${esc(scenario.balanceAfterPurchaseFormatted)}</dd>
+            <dt>End of outlook</dt><dd>${esc(scenario.endingBalanceFormatted)}</dd>
+          </dl>
+          <ul>${scenario.warnings.map((warning) => `<li>${esc(warning)}</li>`).join('')}</ul>`;
       }
 
       function renderSubs(data) {
@@ -336,11 +473,13 @@
       }
 
       async function refresh() {
-        const [accounts, health, budgets, report, subs, review, txns] = await Promise.all([
+        const [accounts, health, cards, budgets, report, forecast, subs, review, txns] = await Promise.all([
           api('/accounts'),
           api('/health-score'),
+          api('/credit-cards'),
           api('/budgets/progress'),
           api('/insights'),
+          api('/cash-flow-forecast?days=30'),
           api('/subscriptions'),
           api('/transactions/needs-review'),
           api('/transactions?limit=25'),
@@ -348,8 +487,10 @@
 
         renderAccounts(accounts);
         renderHealth(health);
+        renderCards(cards);
         renderBudgets(budgets);
         renderInsights(report);
+        renderForecast(forecast);
         renderSubs(subs);
 
         $('review').className = 'scroll';
@@ -372,6 +513,21 @@
         });
         $('status').textContent = result.message;
         await refresh();
+      });
+
+      $('scenario-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const amount = Math.round(Number($('scenario-amount').value) * 100);
+        const date = $('scenario-date').value;
+        const target = $('scenario');
+        target.className = 'muted';
+        target.textContent = 'Modelling known recurring cash flow…';
+        try {
+          const scenario = await api(`/purchase-scenario?days=30&amount=${encodeURIComponent(amount)}&date=${encodeURIComponent(date)}`);
+          renderScenario(scenario);
+        } catch (error) {
+          target.textContent = `Could not model this purchase: ${String(error)}`;
+        }
       });
 
       $('sync').addEventListener('click', async () => {
