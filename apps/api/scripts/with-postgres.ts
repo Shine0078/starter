@@ -17,22 +17,63 @@
  */
 
 import { spawn } from 'node:child_process';
+import { createServer } from 'node:net';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import EmbeddedPostgres from 'embedded-postgres';
 
-const PORT = Number(process.env.EMBEDDED_PG_PORT ?? 55432);
+/** Fixed, so `npm run db:start` gives a predictable DATABASE_URL to paste. */
+const SERVE_PORT = Number(process.env.EMBEDDED_PG_PORT ?? 55432);
 const USER = 'finverse';
 const PASSWORD = 'finverse_dev_only';
 const DATABASE = 'finverse';
 
-export const CONNECTION_STRING = `postgresql://${USER}:${PASSWORD}@localhost:${PORT}/${DATABASE}`;
+function connectionString(port: number): string {
+  return `postgresql://${USER}:${PASSWORD}@localhost:${port}/${DATABASE}`;
+}
+
+/** Asks the OS for a free port by binding one and immediately releasing it. */
+async function freePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const server = createServer();
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address();
+      const port = typeof address === 'object' && address ? address.port : 0;
+      server.close(() => (port ? resolve(port) : reject(new Error('no free port'))));
+    });
+  });
+}
+
+async function isPortFree(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const server = createServer();
+    server.once('error', () => resolve(false));
+    server.listen(port, '127.0.0.1', () => server.close(() => resolve(true)));
+  });
+}
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const serveOnly = args[0] === '--serve';
+
+  // Test runs take an ephemeral port. A previous run that was interrupted can
+  // leave a postgres process holding the fixed one, and the failure that
+  // produces is an unhelpful "undefined" rather than "port in use".
+  const explicitPort = process.env.EMBEDDED_PG_PORT;
+  const PORT =
+    serveOnly || explicitPort ? SERVE_PORT : await freePort();
+
+  if (!(await isPortFree(PORT))) {
+    throw new Error(
+      `Port ${PORT} is already in use. A previous run may have left a postgres ` +
+        `process behind — stop it, or set EMBEDDED_PG_PORT to something else.`,
+    );
+  }
+
+  const CONNECTION_STRING = connectionString(PORT);
 
   // A fresh data directory per run. Tests that depend on state left behind by a
   // previous run pass locally and fail in CI; making that impossible is worth

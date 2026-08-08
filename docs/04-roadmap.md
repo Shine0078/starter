@@ -24,8 +24,15 @@ data in under five minutes, on one command, with no bank involved.
 The first real bank connection is the hardest step in the whole plan, and almost none
 of the difficulty is technical.
 
+- [x] Identity: email + password, Argon2id, rotating refresh tokens with reuse
+      detection, global auth guard, per-account lockout, session/device
+      management, security audit trail
+- [x] Cross-user isolation regression tests
+- [ ] **Row-level security** — isolation is enforced by application code today.
+      See the note below; this is the next task.
+- [ ] Email verification and password reset (both need an email provider)
+- [ ] Passkeys, OAuth2 + PKCE, MFA, step-up auth
 - [ ] Aggregator contract signed (Plaid US / Flinks CA — pick one, not both)
-- [ ] Identity: passkeys, OAuth2 + PKCE, step-up auth
 - [ ] Link flow, token storage, reauth handling
 - [ ] Sync engine: cursor-based, idempotent, handles pending → posted transitions
 - [ ] Merchant lexicon seeded (top ~2,000 merchants covers most volume)
@@ -46,6 +53,32 @@ Write code during these. Do not schedule as if they are instant.
 
 **Exit:** you personally run your own finances in the app for a month and stop opening
 your banking app.
+
+### Why row-level security is its own task
+
+Every store method already takes `userId` and every query filters on it, and
+there are tests that attempt cross-user reads and writes. What is missing is the
+database refusing to serve the wrong rows *even if a query forgets its filter* —
+defence against a future missing `WHERE`, not against today's code.
+
+It is not a one-line migration, which is why it is not bundled into the auth
+work:
+
+1. **Policies need a user in scope.** `current_setting('finverse.user_id')` has
+   to be set per request, which means `SET LOCAL` inside a transaction — so the
+   Postgres stores must route their queries through a per-call transaction
+   rather than borrowing a pooled connection directly.
+2. **The app must not be a superuser.** Superusers bypass RLS entirely, and both
+   the docker-compose and embedded-postgres setups currently connect as one. A
+   dedicated `finverse_app` role has to be created, granted, and adopted by
+   `DATABASE_URL` — otherwise the policies exist but never apply, and the tests
+   proving they work would pass against nothing.
+3. **Only the four user-owned tables qualify.** `users`, `sessions`, and
+   `auth_events` are read before a user is known (login, refresh, lockout
+   counting), so they stay under application control by necessity.
+
+Doing (1) and (2) badly is worse than not doing them: policies that silently do
+not apply read as protection that is not there.
 
 ## Phase 2 — Intelligence
 
