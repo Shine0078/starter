@@ -262,6 +262,13 @@ class ApiClient {
         .toList();
   }
 
+  Future<List<CategoryDefinition>> categories() async {
+    final json = await _get('/categories') as Map<String, dynamic>;
+    return (json['categories'] as List<dynamic>)
+        .map((e) => CategoryDefinition.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
   Future<List<Transaction>> needsReview() async {
     final json =
         await _get('/transactions/needs-review') as Map<String, dynamic>;

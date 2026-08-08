@@ -6,8 +6,10 @@ import 'package:http/testing.dart';
 import 'package:finverse/api/client.dart';
 import 'package:finverse/api/session_store.dart';
 import 'package:finverse/main.dart';
+import 'package:finverse/models/models.dart';
 import 'package:finverse/screens/home_screen.dart';
 import 'package:finverse/screens/login_screen.dart';
+import 'package:finverse/screens/transaction_detail_screen.dart';
 
 /// An in-memory session store keeps these tests off the platform keystore,
 /// which has no implementation in the widget-test host.
@@ -217,6 +219,45 @@ void main() {
     expect(find.text('Restore your account'), findsOneWidget);
     expect(find.text('Restore account'), findsOneWidget);
     expect(find.text('Back to sign in'), findsOneWidget);
+  });
+
+  testWidgets('shows transaction evidence and category controls',
+      (tester) async {
+    final api = clientWith(MockClient((request) async {
+      if (request.url.path.endsWith('/categories')) {
+        return http.Response(
+          '{"count":2,"categories":[{"slug":"food","name":"Food","parent":null,"kind":"expense"},{"slug":"groceries","name":"Groceries","parent":"food","kind":"expense"}]}',
+          200,
+        );
+      }
+      return http.Response('{}', 200);
+    }));
+    final transaction = Transaction.fromJson({
+      'id': 'txn-1',
+      'accountId': 'account-1',
+      'postedAt': '2026-08-08',
+      'amount': -1299,
+      'currency': 'CAD',
+      'amountFormatted': '-\$12.99',
+      'rawDescriptor': 'POS GROCERY STORE 1234',
+      'normalizedDescriptor': 'grocery store',
+      'merchant': 'Grocery Store',
+      'categorySlug': 'groceries',
+      'categorySource': 'merchant_rule',
+      'categoryConfidence': 0.91,
+      'pending': false,
+      'isRecurring': false,
+    });
+
+    await tester.pumpWidget(MaterialApp(
+      home: TransactionDetailScreen(api: api, transaction: transaction),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Transaction details'), findsOneWidget);
+    expect(find.text('Grocery Store'), findsOneWidget);
+    expect(find.text('Bank description'), findsOneWidget);
+    expect(find.textContaining('91% confidence'), findsOneWidget);
   });
 
   testWidgets('navigates to transactions, budgets, and goals', (tester) async {

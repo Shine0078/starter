@@ -243,8 +243,10 @@ class Account {
 class Transaction {
   Transaction({
     required this.id,
+    required this.accountId,
     required this.postedAt,
     required this.amount,
+    required this.currency,
     required this.amountFormatted,
     required this.rawDescriptor,
     required this.normalizedDescriptor,
@@ -258,8 +260,10 @@ class Transaction {
 
   factory Transaction.fromJson(Map<String, dynamic> json) => Transaction(
         id: json['id'] as String,
+        accountId: json['accountId'] as String? ?? '',
         postedAt: json['postedAt'] as String,
         amount: json['amount'] as int,
+        currency: json['currency'] as String? ?? 'USD',
         amountFormatted: json['amountFormatted'] as String,
         rawDescriptor: json['rawDescriptor'] as String,
         normalizedDescriptor: json['normalizedDescriptor'] as String,
@@ -272,8 +276,10 @@ class Transaction {
       );
 
   final String id;
+  final String accountId;
   final String postedAt;
   final int amount;
+  final String currency;
   final String amountFormatted;
   final String rawDescriptor;
   final String normalizedDescriptor;
@@ -292,6 +298,28 @@ class Transaction {
       categorySource == 'user_manual' || categorySource == 'user_rule';
 
   bool get needsReview => categorySource == 'unknown';
+}
+
+class CategoryDefinition {
+  const CategoryDefinition({
+    required this.slug,
+    required this.name,
+    required this.kind,
+    this.parent,
+  });
+
+  factory CategoryDefinition.fromJson(Map<String, dynamic> json) =>
+      CategoryDefinition(
+        slug: json['slug'] as String,
+        name: json['name'] as String,
+        parent: json['parent'] as String?,
+        kind: json['kind'] as String,
+      );
+
+  final String slug;
+  final String name;
+  final String? parent;
+  final String kind;
 }
 
 class Budget {

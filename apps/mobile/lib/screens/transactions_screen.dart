@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api/client.dart';
 import '../models/models.dart';
 import '../widgets/transaction_tile.dart';
+import 'transaction_detail_screen.dart';
 
 class TransactionsScreen extends StatefulWidget {
   const TransactionsScreen({required this.api, super.key});
@@ -91,6 +92,15 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           final row = _rows[index];
           return TransactionTile(
             transaction: row,
+            onTap: () async {
+              await Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => TransactionDetailScreen(
+                  api: widget.api,
+                  transaction: row,
+                ),
+              ));
+              await _load();
+            },
             onRecategorize: (slug) async {
               await widget.api.recategorize(row.id, slug);
               await _load();

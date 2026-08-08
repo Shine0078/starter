@@ -32,8 +32,9 @@ attention, manual sync, webhook-driven background sync, and disconnect/revoke.
 
 ## Customer workflows
 
-The app includes a financial dashboard with charts, searchable transactions,
-editable budgets, savings goals and contributions, bank connections, subscription
+The app includes a financial dashboard with charts, searchable transactions and
+auditable transaction details, editable budgets, savings goals and contributions,
+bank connections, subscription
 detection and price-change warnings, an in-app notification centre, notification
 preferences, and a settings/privacy area with active-device session revocation.
 

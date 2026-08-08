@@ -11,11 +11,13 @@ class TransactionTile extends StatelessWidget {
   const TransactionTile({
     required this.transaction,
     required this.onRecategorize,
+    this.onTap,
     super.key,
   });
 
   final Transaction transaction;
   final Future<void> Function(String categorySlug) onRecategorize;
+  final VoidCallback? onTap;
 
   static const _quickCategories = <String>[
     'groceries',
@@ -38,6 +40,7 @@ class TransactionTile extends StatelessWidget {
     final isOutflow = transaction.amount < 0;
 
     return ListTile(
+      onTap: onTap,
       dense: true,
       contentPadding: EdgeInsets.zero,
       title: Text(

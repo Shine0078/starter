@@ -9,6 +9,7 @@ import '../widgets/transaction_tile.dart';
 import 'notifications_screen.dart';
 import 'settings_screen.dart';
 import 'subscriptions_screen.dart';
+import 'transaction_detail_screen.dart';
 
 /// The home screen: net position, health score, budgets, recent activity.
 ///
@@ -471,6 +472,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ..._transactions.map(
             (txn) => TransactionTile(
               transaction: txn,
+              onTap: () async {
+                await Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => TransactionDetailScreen(
+                    api: widget.api,
+                    transaction: txn,
+                  ),
+                ));
+                await _load();
+              },
               onRecategorize: (slug) async {
                 final message = await widget.api.recategorize(txn.id, slug);
                 if (!mounted) return;
