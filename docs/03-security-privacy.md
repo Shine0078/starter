@@ -23,11 +23,12 @@ document is the list of those constraints.
 | In transit | API serves HTTP locally; no repository TLS or pinning config | TLS at the production edge, HSTS after domain validation; evaluate mobile pinning with a rotation plan |
 | At rest (disk) | Depends on the as-yet-unselected host | Managed database and volume encryption verified in provider configuration |
 | At rest (field) | Email and financial fields are plaintext in PostgreSQL | KMS-backed envelope encryption for the fields selected by the threat model |
-| On device | Refresh/access tokens use Keychain / Android Keystore | Add an encrypted offline database only when offline mode is implemented |
+| On device | Refresh/access tokens and the offline-cache key use Keychain / Android Keystore. Cached financial payloads use AES-256-GCM with authenticated context, a 30-day ceiling, user scoping, and purge-on-sign-out | Consider whole-file SQLCipher if the threat model requires hiding cache metadata as well as payloads; add biometric app lock |
 | Backups | No backup system exists | Encrypted backups, documented retention, access controls, and a tested restore drill |
 
-KMS data keys, master-key rotation, SQLCipher, and backup approval are design targets;
-none is implemented in this repository today.
+KMS data keys, server-field master-key rotation, whole-file SQLCipher, and backup
+approval remain design targets. Authenticated mobile cache encryption is implemented;
+the other controls in this sentence are not.
 
 ## Authentication
 

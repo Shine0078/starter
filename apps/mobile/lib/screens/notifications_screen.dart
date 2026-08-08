@@ -24,6 +24,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _load() async {
+    widget.api.resetOfflineStatus();
     try {
       final rows = await widget.api.notifications();
       if (mounted) {

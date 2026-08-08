@@ -8,22 +8,33 @@ class SessionTokens {
     required this.accessToken,
     required this.refreshToken,
     required this.refreshExpiresAt,
+    this.userId,
   });
 
   factory SessionTokens.fromJson(Map<String, dynamic> json) => SessionTokens(
         accessToken: json['accessToken'] as String,
         refreshToken: json['refreshToken'] as String,
         refreshExpiresAt: json['refreshExpiresAt'] as String? ?? '',
+        userId: json['userId'] as String?,
       );
 
   final String accessToken;
   final String refreshToken;
   final String refreshExpiresAt;
+  final String? userId;
+
+  SessionTokens withUserId(String? value) => SessionTokens(
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+        refreshExpiresAt: refreshExpiresAt,
+        userId: value,
+      );
 
   Map<String, dynamic> toJson() => {
         'accessToken': accessToken,
         'refreshToken': refreshToken,
         'refreshExpiresAt': refreshExpiresAt,
+        if (userId != null) 'userId': userId,
       };
 }
 

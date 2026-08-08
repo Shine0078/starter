@@ -31,6 +31,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
   }
 
   Future<void> _loadCategories() async {
+    widget.api.resetOfflineStatus();
     try {
       final categories = await widget.api.categories();
       if (!mounted) return;

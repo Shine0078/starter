@@ -42,6 +42,7 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
   }
 
   Future<void> _load() async {
+    widget.api.resetOfflineStatus();
     if (mounted) setState(() => _error = null);
     try {
       final rows = await widget.api.budgetProgress();

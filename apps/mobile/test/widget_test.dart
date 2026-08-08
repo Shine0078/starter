@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:cryptography/cryptography.dart';
 
 import 'package:finverse/api/client.dart';
 import 'package:finverse/api/onboarding_store.dart';
+import 'package:finverse/api/offline_cache.dart';
 import 'package:finverse/api/session_store.dart';
 import 'package:finverse/main.dart';
 import 'package:finverse/models/models.dart';
@@ -14,13 +16,70 @@ import 'package:finverse/screens/transaction_detail_screen.dart';
 
 /// An in-memory session store keeps these tests off the platform keystore,
 /// which has no implementation in the widget-test host.
-ApiClient clientWith(MockClient http, {SessionStore? store}) => ApiClient(
+ApiClient clientWith(MockClient http,
+        {SessionStore? store, OfflineCacheStore? offlineCache}) =>
+    ApiClient(
       httpClient: http,
       baseUrl: 'http://localhost:9999',
       sessionStore: store ?? InMemorySessionStore(),
+      offlineCache: offlineCache,
     );
 
 void main() {
+  test('offline payload encryption authenticates ciphertext and context',
+      () async {
+    final cipher = OfflineCachePayloadCipher();
+    final key = SecretKey(List<int>.generate(32, (index) => index));
+    final envelope = await cipher.encrypt('financial-data', key, [1, 2, 3]);
+
+    expect(await cipher.decrypt(envelope, key, [1, 2, 3]), 'financial-data');
+    final tampered = EncryptedCacheEnvelope(
+      nonce: envelope.nonce,
+      mac: envelope.mac,
+      ciphertext: [...envelope.ciphertext]..[0] = envelope.ciphertext[0] ^ 1,
+    );
+    await expectLater(
+      cipher.decrypt(tampered, key, [1, 2, 3]),
+      throwsA(anything),
+    );
+    await expectLater(
+      cipher.decrypt(envelope, key, [9, 9, 9]),
+      throwsA(anything),
+    );
+  });
+
+  test('falls back to user-scoped cached reads and purges them on sign-out',
+      () async {
+    final store = InMemorySessionStore();
+    final cache = InMemoryOfflineCacheStore();
+    await store.write(const SessionTokens(
+      accessToken: 'access',
+      refreshToken: 'refresh',
+      refreshExpiresAt: '2026-09-08T00:00:00.000Z',
+      userId: 'user-1',
+    ));
+    var requests = 0;
+    final api = clientWith(
+      MockClient((request) async {
+        requests++;
+        if (request.method == 'POST') throw http.ClientException('offline');
+        if (requests == 1) return http.Response('[]', 200);
+        throw http.ClientException('offline');
+      }),
+      store: store,
+      offlineCache: cache,
+    );
+    await api.restoreSession();
+
+    expect(await api.accounts(), isEmpty);
+    api.resetOfflineStatus();
+    expect(await api.accounts(), isEmpty);
+    expect(api.usedOfflineCache, isTrue);
+
+    await api.signOut();
+    expect(await cache.read('user-1', '/accounts'), isNull);
+  });
+
   testWidgets('first launch explains the product before sign-in',
       (tester) async {
     final api = clientWith(MockClient((_) async => http.Response('{}', 200)));

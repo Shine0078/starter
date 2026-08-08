@@ -54,6 +54,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _load({bool sync = false}) async {
+    widget.api.resetOfflineStatus();
     setState(() {
       _loading = true;
       _error = null;

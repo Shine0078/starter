@@ -100,10 +100,16 @@ reference numbers, store numbers, and city/state tails before matching.
 
 ## Offline-first on mobile
 
-The Flutter client holds a local SQLite mirror and treats it as the read source.
-The network is a sync channel, not a dependency. Writes are queued locally and
-reconciled server-side with last-write-wins on a per-field basis, using the server
-clock — device clocks lie.
+The Flutter client now stores successful authenticated GET responses in a
+user-scoped SQLite cache. Financial payloads are encrypted with AES-256-GCM using
+a random key held in the platform keystore. When the API is unreachable, reads may
+fall back to a cache entry no older than 30 days and the dashboard visibly reports
+the oldest timestamp in use. Sign-out and account deletion purge that user's cache.
+
+This is intentionally read-only offline support. Mutations are not queued yet;
+budgets, category corrections, goals, and bank actions continue to require the
+server. A later sync journal must use server-issued versions rather than device
+timestamps — device clocks lie.
 
 This is required by the mission ("offline mode for basic features") and it is also
 what makes the app feel fast enough to open daily.
@@ -116,7 +122,8 @@ what makes the app feel fast enough to open daily.
 - **A hand-rolled ML model.** Tier 1 + Tier 2 gets to roughly 85% accuracy on common
   merchants. Collect corrections first; they are the training set. Build the model
   when there is data to build it from.
-- **Real bank connections.** Gated on commercial agreements, not code. See
+- **Production bank connections.** Plaid Sandbox is implemented; live institutions
+  remain gated on Plaid production approval and commercial/security review. See
   [04-roadmap.md](04-roadmap.md).
 
 ## Related

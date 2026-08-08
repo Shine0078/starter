@@ -76,7 +76,7 @@ believe controls exist that do not.** Fixing the wording is part of the work.
 |---|---|---|---|
 | 3.1.1 | TLS 1.3, HSTS, certificate pinning | "In transit" row of the encryption table | Nothing. No TLS config anywhere; the API serves plain HTTP |
 | 3.1.2 | Field-level AES-256-GCM envelope encryption via KMS | Table row, plus per-user data keys and master-key rotation | Not implemented. `email` and every other field are plaintext |
-| 3.1.3 | SQLCipher-encrypted local SQLite on device | "On device" row | No local database exists on the device at all |
+| 3.1.3 | SQLCipher-encrypted local SQLite on device | "On device" row | **Partially complete:** user-scoped SQLite cache payloads use AES-256-GCM with a keystore key, authenticated context, expiry, and purge. Whole-file SQLCipher remains a threat-model decision because cache metadata is not encrypted |
 | 3.1.4 | Encrypted backups with second-approver restore | "Backups" row | No backup process exists |
 | 3.1.5 | No standing production access, audited break-glass | "Access control" section, present tense | No production exists; no access control process exists |
 | 3.1.6 | Deletion purge job at +30 days | `02-data-model.md` previously described it as present | Implemented and proven against PostgreSQL; production still needs to schedule the command |
@@ -138,7 +138,7 @@ smaller than the complete MISSION.md product.
 | # | Item | Detail | Effort |
 |---|---|---|---|
 | 5.1 | **Core navigation started** | Onboarding, home, transaction search/detail/correction, budgets, goals, bank accounts, subscriptions, notifications, and basic settings/session controls are implemented. No consent/privacy-access dashboard | 3–4 weeks |
-| 5.2 | **No offline mode** | Mission requires offline-first. There is no local database — every screen is a live API call | 3–4 weeks |
+| 5.2 | **Read-only offline cache implemented** | Authenticated GET responses can fall back to a 30-day, user-scoped encrypted cache with a visible stale-data banner. Offline writes, background reconciliation, and conflict handling remain | 2–3 weeks |
 | 5.3 | **No state management** | `setState` only. Honest at one screen, unworkable at twenty | with 5.1 |
 | 5.4 | **No push notifications** | Persistent preferences, a mobile notification centre, and deduplicated budget, utilization, low-balance, and bank-sync alerts exist. Device push delivery, bill reminders, and unusual-spend detection remain | 2–3 weeks |
 | 5.5 | **Android identity and launcher** | **Completed:** `com.finverse.finance`, FINVERSE label, versioned platform project, and branded launcher asset | Store listing still external |

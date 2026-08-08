@@ -24,6 +24,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   }
 
   Future<void> _load() async {
+    widget.api.resetOfflineStatus();
     setState(() {
       _loading = true;
       _error = null;

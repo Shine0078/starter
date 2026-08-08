@@ -33,6 +33,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   }
 
   Future<void> _load() async {
+    widget.api.resetOfflineStatus();
     setState(() {
       _loading = true;
       _error = null;

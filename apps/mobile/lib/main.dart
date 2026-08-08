@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 
 import 'api/client.dart';
 import 'api/onboarding_store.dart';
+import 'api/offline_cache.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/onboarding_screen.dart';
 
 void main() => runApp(FinverseApp(
-      api: ApiClient(),
+      api: ApiClient(offlineCache: EncryptedSqliteOfflineCache()),
       onboardingStore: SecureOnboardingStore(),
     ));
 

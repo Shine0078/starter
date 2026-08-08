@@ -1,8 +1,9 @@
 # Data Model
 
-Postgres is the system of record. The mobile client currently keeps only session
-credentials in the operating-system keystore; an offline SQLite cache is a target,
-not an implemented feature.
+Postgres is the system of record. The mobile client keeps session credentials and
+the offline-cache encryption key in the operating-system keystore. Successful GET
+payloads are cached in user-scoped SQLite rows as AES-256-GCM ciphertext for up to
+30 days; the cache is purged on sign-out and account deletion.
 
 The tables that exist today live in `apps/api/migrations` — numbered `.sql`
 files, applied once each inside a transaction. What follows describes the full

@@ -35,6 +35,7 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
   }
 
   Future<void> _load() async {
+    widget.api.resetOfflineStatus();
     try {
       final links = await widget.api.bankLinks();
       if (mounted) {

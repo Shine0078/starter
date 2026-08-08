@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../api/client.dart';
 import 'budgets_screen.dart';
@@ -28,19 +29,40 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        body: IndexedStack(
-          index: _index,
-          children: [
-            DashboardScreen(
-              api: widget.api,
-              onSignOut: widget.onSignOut,
-              onAccountDeleted: widget.onAccountDeleted,
-            ),
-            TransactionsScreen(api: widget.api),
-            BudgetsScreen(api: widget.api),
-            GoalsScreen(api: widget.api),
-            BankConnectionsScreen(api: widget.api),
-          ],
+        body: ValueListenableBuilder<DateTime?>(
+          valueListenable: widget.api.offlineCacheStatus,
+          builder: (context, cachedAt, _) => Column(
+            children: [
+              if (cachedAt != null)
+                Material(
+                  color: Theme.of(context).colorScheme.tertiaryContainer,
+                  child: ListTile(
+                    dense: true,
+                    leading: const Icon(Icons.cloud_off_outlined),
+                    title: const Text('Offline — showing saved data'),
+                    subtitle: Text(
+                      'Last updated ${DateFormat.yMMMd().add_jm().format(cachedAt.toLocal())}. Changes require a connection.',
+                    ),
+                  ),
+                ),
+              Expanded(
+                child: IndexedStack(
+                  index: _index,
+                  children: [
+                    DashboardScreen(
+                      api: widget.api,
+                      onSignOut: widget.onSignOut,
+                      onAccountDeleted: widget.onAccountDeleted,
+                    ),
+                    TransactionsScreen(api: widget.api),
+                    BudgetsScreen(api: widget.api),
+                    GoalsScreen(api: widget.api),
+                    BankConnectionsScreen(api: widget.api),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
         bottomNavigationBar: NavigationBar(
           selectedIndex: _index,

@@ -1,14 +1,17 @@
 import 'dart:convert';
+import 'dart:async';
 
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
 
 import '../models/models.dart';
+import 'offline_cache.dart';
 import 'session_store.dart';
 
 /// Thin client over the FINVERSE API.
 ///
-/// Deliberately dumb: it parses JSON into models and nothing else. No caching,
-/// no business logic. The financial rules live server-side in the domain layer
+/// It parses JSON into models but contains no financial business logic. The
+/// financial rules live server-side in the domain layer
 /// (see ADR-0002) so that the phone and any future web client cannot drift
 /// apart in their arithmetic.
 ///
@@ -18,9 +21,13 @@ import 'session_store.dart';
 /// have to handle a 401 itself.
 class ApiClient {
   ApiClient(
-      {http.Client? httpClient, String? baseUrl, SessionStore? sessionStore})
+      {http.Client? httpClient,
+      String? baseUrl,
+      SessionStore? sessionStore,
+      OfflineCacheStore? offlineCache})
       : _http = httpClient ?? http.Client(),
         sessionStore = sessionStore ?? SecureSessionStore(),
+        offlineCache = offlineCache ?? NoopOfflineCacheStore(),
         baseUrl = baseUrl ??
             const String.fromEnvironment(
               'API_BASE_URL',
@@ -32,8 +39,14 @@ class ApiClient {
   final http.Client _http;
   final String baseUrl;
   final SessionStore sessionStore;
+  final OfflineCacheStore offlineCache;
 
   SessionTokens? _tokens;
+  final ValueNotifier<DateTime?> offlineCacheStatus = ValueNotifier(null);
+
+  DateTime? get offlineCacheUpdatedAt => offlineCacheStatus.value;
+  bool get usedOfflineCache => offlineCacheStatus.value != null;
+  void resetOfflineStatus() => offlineCacheStatus.value = null;
 
   /// Called when the session is gone for good, so the app can show sign-in.
   void Function()? onSessionExpired;
@@ -63,7 +76,9 @@ class ApiClient {
       ..headers.addAll(_headers(json: body != null));
     if (body != null) request.body = jsonEncode(body);
 
-    final response = await http.Response.fromStream(await _http.send(request));
+    final response = await http.Response.fromStream(
+      await _http.send(request).timeout(const Duration(seconds: 20)),
+    );
 
     if (response.statusCode == 401 && allowRetry && _tokens != null) {
       if (await _refresh()) return _perform(method, path, body, false);
@@ -75,11 +90,69 @@ class ApiClient {
   }
 
   Future<dynamic> _get(String path) async {
-    final response = await _perform('GET', path, null, true);
-    if (response.statusCode >= 400) {
-      throw ApiException(path, response.statusCode, response.body);
+    final owner = _cacheOwner;
+    try {
+      final response = await _perform('GET', path, null, true);
+      if (response.statusCode >= 400) {
+        if (response.statusCode < 500) {
+          throw ApiException(path, response.statusCode, response.body);
+        }
+        return _cachedOrThrow(owner, path,
+            ApiException(path, response.statusCode, response.body));
+      }
+      if (owner != null && response.body.isNotEmpty && !_neverCache(path)) {
+        try {
+          await offlineCache.write(owner, path, response.body);
+        } catch (_) {
+          // A cache failure must never turn a successful API read into an error.
+        }
+      }
+      return jsonDecode(response.body);
+    } on ApiException {
+      rethrow;
+    } on TimeoutException catch (error) {
+      return _cachedOrThrow(owner, path, error);
+    } on http.ClientException catch (error) {
+      return _cachedOrThrow(owner, path, error);
     }
-    return jsonDecode(response.body);
+  }
+
+  Future<dynamic> _cachedOrThrow(
+      String? owner, String path, Object original) async {
+    if (owner != null && !_neverCache(path)) {
+      try {
+        final cached = await offlineCache.read(owner, path);
+        if (cached != null) {
+          final current = offlineCacheStatus.value;
+          offlineCacheStatus.value =
+              current == null || cached.updatedAt.isBefore(current)
+                  ? cached.updatedAt
+                  : current;
+          return jsonDecode(cached.body);
+        }
+      } catch (_) {
+        // Preserve the network error; corrupt or unavailable cache is not data.
+      }
+    }
+    throw original;
+  }
+
+  bool _neverCache(String path) => path.startsWith('/auth/');
+
+  String? get _cacheOwner {
+    if (_tokens?.userId != null) return _tokens!.userId;
+    final token = _tokens?.accessToken;
+    if (token == null) return null;
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return null;
+      final payload = jsonDecode(
+              utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))))
+          as Map<String, dynamic>;
+      return payload['sub'] as String?;
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<dynamic> _send(String method, String path, [Object? body]) async {
@@ -153,9 +226,11 @@ class ApiClient {
       throw AuthException.fromResponse(response.statusCode, decoded);
     }
 
-    _tokens = SessionTokens.fromJson(decoded['tokens'] as Map<String, dynamic>);
+    final user = PublicUser.fromJson(decoded['user'] as Map<String, dynamic>);
+    _tokens = SessionTokens.fromJson(decoded['tokens'] as Map<String, dynamic>)
+        .withUserId(user.id);
     await sessionStore.write(_tokens!);
-    return PublicUser.fromJson(decoded['user'] as Map<String, dynamic>);
+    return user;
   }
 
   Future<bool> _refresh() async {
@@ -171,8 +246,10 @@ class ApiClient {
       if (response.statusCode >= 400) return false;
 
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      final userId = _cacheOwner;
       _tokens =
-          SessionTokens.fromJson(decoded['tokens'] as Map<String, dynamic>);
+          SessionTokens.fromJson(decoded['tokens'] as Map<String, dynamic>)
+              .withUserId(userId);
       await sessionStore.write(_tokens!);
       return true;
     } catch (_) {
@@ -195,9 +272,11 @@ class ApiClient {
   }
 
   Future<void> signOutEverywhere() async {
+    final owner = _cacheOwner;
     await _send('POST', '/auth/logout-all');
     _tokens = null;
     await sessionStore.clear();
+    if (owner != null) await offlineCache.clearOwner(owner);
   }
 
   /// Clears the local session, and by default tells the server to revoke it.
@@ -206,6 +285,7 @@ class ApiClient {
   /// a user tapping "sign out" on a train with no signal must still end up
   /// signed out on the device.
   Future<void> signOut({bool notifyServer = true}) async {
+    final owner = _cacheOwner;
     if (notifyServer && _tokens != null) {
       try {
         await _perform('POST', '/auth/logout', null, false);
@@ -215,11 +295,13 @@ class ApiClient {
     }
     _tokens = null;
     await sessionStore.clear();
+    if (owner != null) await offlineCache.clearOwner(owner);
   }
 
   /// Schedules irreversible erasure after a 30-day recovery window.
   /// Credentials are cleared only after the server accepts the request.
   Future<DateTime> requestAccountDeletion(String password) async {
+    final owner = _cacheOwner;
     final response = await _perform(
       'DELETE',
       '/auth/account',
@@ -236,6 +318,7 @@ class ApiClient {
     final scheduledFor = DateTime.parse(decoded['purgeScheduledFor'] as String);
     _tokens = null;
     await sessionStore.clear();
+    if (owner != null) await offlineCache.clearOwner(owner);
     return scheduledFor;
   }
 

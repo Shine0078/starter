@@ -24,6 +24,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
   }
 
   Future<void> _load() async {
+    widget.api.resetOfflineStatus();
     try {
       final goals = await widget.api.goals();
       if (mounted) setState(() => _goals = goals);

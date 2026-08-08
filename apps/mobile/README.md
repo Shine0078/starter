@@ -39,6 +39,11 @@ detection and price-change warnings, an in-app notification centre, notification
 preferences, first-launch onboarding, and a settings/privacy area with active-device
 session revocation.
 
+Successful authenticated reads are cached locally for offline fallback. Payloads
+are AES-256-GCM encrypted with a key in the platform keystore, scoped per user,
+limited to 30 days, and purged on sign-out or account deletion. The dashboard labels
+cached data and its last-updated time. Offline writes are not queued.
+
 ## Verification
 
 ```powershell
