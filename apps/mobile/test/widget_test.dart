@@ -5,6 +5,7 @@ import 'package:http/testing.dart';
 import 'package:cryptography/cryptography.dart';
 
 import 'package:finverse/api/client.dart';
+import 'package:finverse/api/app_lock.dart';
 import 'package:finverse/api/onboarding_store.dart';
 import 'package:finverse/api/offline_cache.dart';
 import 'package:finverse/api/session_store.dart';
@@ -26,7 +27,77 @@ ApiClient clientWith(MockClient http,
       offlineCache: offlineCache,
     );
 
+class FakeDeviceAuthenticator implements DeviceAuthenticator {
+  FakeDeviceAuthenticator({this.supported = true, this.result = true});
+
+  bool supported;
+  bool result;
+  int calls = 0;
+
+  @override
+  Future<bool> authenticate(String reason) async {
+    calls += 1;
+    return result;
+  }
+
+  @override
+  Future<bool> isSupported() async => supported;
+}
+
 void main() {
+  test('device app lock authenticates before enable and after backgrounding',
+      () async {
+    final authenticator = FakeDeviceAuthenticator();
+    final controller = AppLockController(
+      store: InMemoryAppLockStore(),
+      authenticator: authenticator,
+    );
+
+    await controller.initialize();
+    expect(controller.enabled, isFalse);
+    expect(await controller.setEnabled(true), AppLockChangeResult.changed);
+    expect(controller.enabled, isTrue);
+    expect(authenticator.calls, 1);
+
+    controller.lock();
+    expect(controller.locked, isTrue);
+    expect(await controller.unlock(), isTrue);
+    expect(controller.locked, isFalse);
+    expect(authenticator.calls, 2);
+  });
+
+  testWidgets(
+      'app lock hides financial UI until device authentication succeeds',
+      (tester) async {
+    final authenticator = FakeDeviceAuthenticator(result: false);
+    final controller = AppLockController(
+      store: InMemoryAppLockStore(enabled: true),
+      authenticator: authenticator,
+    );
+    await controller.initialize();
+
+    await tester.pumpWidget(MaterialApp(
+      home: AppLockGate(
+        controller: controller,
+        onSignOut: () async {},
+        child: const Text('Sensitive financial dashboard'),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('FINVERSE is locked'), findsOneWidget);
+    expect(find.text('Sensitive financial dashboard'), findsNothing);
+    authenticator.result = true;
+    await tester.tap(find.text('Unlock FINVERSE'));
+    await tester.pumpAndSettle();
+    expect(find.text('Sensitive financial dashboard'), findsOneWidget);
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    await tester.pump();
+    expect(find.text('FINVERSE is locked'), findsOneWidget);
+    expect(find.text('Sensitive financial dashboard'), findsNothing);
+  });
+
   test('offline payload encryption authenticates ciphertext and context',
       () async {
     final cipher = OfflineCachePayloadCipher();
@@ -490,9 +561,15 @@ void main() {
       return http.Response('{}', 200);
     }));
 
+    final appLock = AppLockController(
+      store: InMemoryAppLockStore(),
+      authenticator: FakeDeviceAuthenticator(),
+    );
+    await appLock.initialize();
     await tester.pumpWidget(MaterialApp(
       home: HomeScreen(
         api: api,
+        appLockController: appLock,
         onSignOut: () async {},
         onAccountDeleted: () async {},
       ),
@@ -517,6 +594,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('sam@example.com'), findsOneWidget);
     expect(find.text('This device'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Device app lock'),
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Device app lock'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('Usage analytics'),
       400,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../api/client.dart';
+import '../api/app_lock.dart';
 import 'budgets_screen.dart';
 import 'bank_connections_screen.dart';
 import 'dashboard_screen.dart';
@@ -13,12 +14,14 @@ class HomeScreen extends StatefulWidget {
     required this.api,
     required this.onSignOut,
     required this.onAccountDeleted,
+    this.appLockController,
     super.key,
   });
 
   final ApiClient api;
   final Future<void> Function() onSignOut;
   final Future<void> Function() onAccountDeleted;
+  final AppLockController? appLockController;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -51,6 +54,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     DashboardScreen(
                       api: widget.api,
+                      appLockController: widget.appLockController,
                       onSignOut: widget.onSignOut,
                       onAccountDeleted: widget.onAccountDeleted,
                     ),

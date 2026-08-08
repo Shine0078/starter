@@ -23,7 +23,7 @@ document is the list of those constraints.
 | In transit | API serves HTTP locally; no repository TLS or pinning config | TLS at the production edge, HSTS after domain validation; evaluate mobile pinning with a rotation plan |
 | At rest (disk) | Depends on the as-yet-unselected host | Managed database and volume encryption verified in provider configuration |
 | At rest (field) | Email and financial fields are plaintext in PostgreSQL | KMS-backed envelope encryption for the fields selected by the threat model |
-| On device | Refresh/access tokens and the offline-cache key use Keychain / Android Keystore. Cached financial payloads use AES-256-GCM with authenticated context, a 30-day ceiling, user scoping, and purge-on-sign-out | Consider whole-file SQLCipher if the threat model requires hiding cache metadata as well as payloads; add biometric app lock |
+| On device | Refresh/access tokens, app-lock preference, and the offline-cache key use Keychain / Android Keystore. Cached financial payloads use AES-256-GCM with authenticated context, a 30-day ceiling, user scoping, purge-on-sign-out, and an optional system-authentication app gate | Consider whole-file SQLCipher if the threat model requires hiding cache metadata as well as payloads; verify app-lock behavior on physical hardware |
 | Backups | No backup system exists | Encrypted backups, documented retention, access controls, and a tested restore drill |
 
 KMS data keys, server-field master-key rotation, whole-file SQLCipher, and backup
@@ -50,6 +50,7 @@ routes are authenticated by default:
 | Security event audit trail (`auth_events`) | Implemented |
 | No default signing key; production refuses to start without one | Implemented |
 | Device token storage in the platform keystore | Implemented (mobile) |
+| Optional app lock using device PIN/passcode or biometrics | Implemented and Android-compiled; physical Android and generated-iOS target verification remain |
 | Email verification with hashed, single-use, 24-hour tokens | Implemented with development and SMTP delivery adapters |
 | Password reset with hashed, single-use, one-hour tokens | Implemented API, mobile flow, and SMTP delivery adapter |
 | Password reset revokes every existing session | Implemented |
@@ -62,8 +63,6 @@ requirements. Composition rules produce `Password1!` and get reused everywhere.
 
 - MFA/TOTP, passkeys (WebAuthn), and OAuth 2.0 + PKCE. Passkeys need a
   registered domain for the relying-party id.
-- Biometric app lock on the device.
-
 Account deletion, portable data export, and new/reconnected bank Link sessions
 re-verify the current password; deletion also requires explicit typed confirmation.
 
@@ -141,7 +140,7 @@ billing goes through a hosted processor (Stripe Checkout), never our own form.
 
 | Threat | Mitigation |
 |---|---|
-| Stolen device | Tokens are in the OS keystore and remote session revocation works; biometric app gate remains absent |
+| Stolen device | Tokens are in the OS keystore, remote session revocation works, and the optional app gate hides finance UI behind device PIN/passcode or biometrics after backgrounding |
 | Compromised API server | RLS limits cross-user query mistakes; KMS field encryption remains absent |
 | Malicious insider | Production access controls and break-glass process must be created before launch |
 | Aggregator breach | No aggregator is connected; token revocation belongs in that future adapter |

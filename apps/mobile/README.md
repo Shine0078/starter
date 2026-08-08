@@ -46,6 +46,13 @@ Privacy settings also show recent security activity and default-off analytics an
 product-update choices. Every grant or withdrawal is kept as versioned, append-only
 server history and is included in account export and erasure.
 
+Users can enable a device-local app lock from Settings. FINVERSE then hides all
+financial UI whenever it leaves the foreground and requires platform system
+authentication (PIN/passcode, fingerprint, or face) on return. Device credentials
+never enter the app; only the enabled preference is kept in secure storage. The
+Android integration is compiled and versioned; a generated iOS target must retain
+the `NSFaceIDUsageDescription` entry before Mac/device validation.
+
 Account creation loads the server's current Terms of Service and Privacy Notice,
 opens each HTTPS document in the platform browser, requires both acknowledgements,
 and sends their exact version ids. The API stores that evidence atomically with

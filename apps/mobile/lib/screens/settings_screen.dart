@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../api/client.dart';
+import '../api/app_lock.dart';
 import '../models/models.dart';
 import 'bank_connections_screen.dart';
 import 'notifications_screen.dart';
@@ -18,6 +19,7 @@ class SettingsScreen extends StatefulWidget {
     required this.onSignOut,
     required this.onDeleteAccount,
     required this.onSignedOutEverywhere,
+    this.appLockController,
     super.key,
   });
 
@@ -26,6 +28,7 @@ class SettingsScreen extends StatefulWidget {
   final Future<void> Function() onSignOut;
   final Future<void> Function() onDeleteAccount;
   final Future<void> Function() onSignedOutEverywhere;
+  final AppLockController? appLockController;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -38,11 +41,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? _error;
   var _loading = true;
   var _exporting = false;
+  var _appLockBusy = false;
 
   @override
   void initState() {
     super.initState();
+    widget.appLockController?.addListener(_appLockChanged);
     _load();
+  }
+
+  @override
+  void dispose() {
+    widget.appLockController?.removeListener(_appLockChanged);
+    super.dispose();
+  }
+
+  void _appLockChanged() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _setAppLock(bool enabled) async {
+    final controller = widget.appLockController;
+    if (controller == null || _appLockBusy) return;
+    setState(() => _appLockBusy = true);
+    final result = await controller.setEnabled(enabled);
+    if (!mounted) return;
+    setState(() => _appLockBusy = false);
+    final message = switch (result) {
+      AppLockChangeResult.changed =>
+        enabled ? 'Device lock enabled.' : 'Device lock disabled.',
+      AppLockChangeResult.unavailable =>
+        'Set a device PIN, fingerprint, or face lock first.',
+      AppLockChangeResult.notAuthenticated =>
+        'Device authentication was not completed.',
+      AppLockChangeResult.failed => 'Could not update the device lock setting.',
+    };
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _load() async {
@@ -343,6 +378,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         const SizedBox(height: 20),
         _heading('PRIVACY & ACCESS'),
+        if (widget.appLockController != null)
+          Card(
+            child: SwitchListTile(
+              secondary: const Icon(Icons.fingerprint),
+              title: const Text('Device app lock'),
+              subtitle: const Text(
+                'Require your device PIN, fingerprint, or face after FINVERSE leaves the foreground.',
+              ),
+              value: widget.appLockController!.enabled,
+              onChanged: _appLockBusy ? null : _setAppLock,
+            ),
+          ),
         if (_privacy != null)
           Card(
             child: Column(

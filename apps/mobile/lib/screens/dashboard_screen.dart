@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api/client.dart';
+import '../api/app_lock.dart';
 import '../models/models.dart';
 import '../widgets/budget_tile.dart';
 import '../widgets/health_score_card.dart';
@@ -21,6 +22,7 @@ class DashboardScreen extends StatefulWidget {
     required this.api,
     this.onSignOut,
     this.onAccountDeleted,
+    this.appLockController,
     super.key,
   });
 
@@ -30,6 +32,7 @@ class DashboardScreen extends StatefulWidget {
   /// dashboard on its own.
   final Future<void> Function()? onSignOut;
   final Future<void> Function()? onAccountDeleted;
+  final AppLockController? appLockController;
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -301,6 +304,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Navigator.of(context).push(MaterialPageRoute(
                     builder: (_) => SettingsScreen(
                       api: widget.api,
+                      appLockController: widget.appLockController,
                       onVerifyEmail: _verifyEmail,
                       onSignOut: _confirmSignOut,
                       onDeleteAccount: _confirmAccountDeletion,
