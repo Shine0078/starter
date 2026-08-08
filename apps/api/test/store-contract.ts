@@ -287,6 +287,19 @@ export function runStoreContract(name: string, create: () => Promise<StoreSet>):
         expect(await stores.transactions.list(OTHER)).toHaveLength(0);
         expect(await stores.transactions.get(OTHER, 'txn_acc_checking_p1')).toBeNull();
       });
+
+      it('removes provider-deleted transactions without touching another user', async () => {
+        const removed = txn({ providerTxnId: 'removed' });
+        const kept = txn({ providerTxnId: 'kept' });
+        await stores.transactions.upsertMany(USER, [removed, kept]);
+        await stores.accounts.upsertMany(OTHER, [ACCOUNT]);
+        await stores.transactions.upsertMany(OTHER, [removed]);
+        expect(await stores.transactions.removeByProviderIds(USER, ['removed'])).toBe(1);
+        expect((await stores.transactions.list(USER)).map((row) => row.providerTxnId)).toEqual([
+          'kept',
+        ]);
+        expect(await stores.transactions.list(OTHER)).toHaveLength(1);
+      });
     });
 
     describe('budgets', () => {

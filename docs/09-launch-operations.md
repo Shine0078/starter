@@ -41,6 +41,12 @@ SMTP_SECURE=false
 SMTP_USER=<provider username>
 SMTP_PASSWORD=<provider secret>
 EMAIL_FROM=FINVERSE <no-reply@your-domain.example>
+PLAID_CLIENT_ID=<Plaid production client id>
+PLAID_SECRET=<Plaid production secret from a secret manager>
+PLAID_ENVIRONMENT=production
+PLAID_COUNTRIES=CA,US
+BANK_TOKEN_ENCRYPTION_KEY=<32 random bytes, base64 encoded>
+PLAID_WEBHOOK_URL=https://api.your-domain.example/api/bank-webhooks/plaid
 ```
 
 The production API refuses to start with the in-memory store, without the
@@ -64,6 +70,12 @@ access-controlled locations. Losing it can prevent future app updates.
 Production uses the SMTP `EmailSender` adapter and refuses to start when its required
 settings are absent. Development prints one-time codes locally. Run a deliverability
 test (SPF, DKIM, DMARC, inbox and spam placement) before inviting users.
+
+Plaid access tokens are encrypted with AES-256-GCM before persistence. Treat
+`BANK_TOKEN_ENCRYPTION_KEY` as a production encryption key: store it in the host's
+secret manager, back it up separately, and plan rotation before launch. Webhooks are
+verified against Plaid's ES256 JWK, bound to the exact raw request body, deduplicated
+within a delivery-retry window, and processed through a durable PostgreSQL queue.
 
 ## Release sequence
 

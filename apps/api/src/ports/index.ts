@@ -61,6 +61,7 @@ export interface TransactionStore {
     transactions: readonly Transaction[],
   ): Promise<{ inserted: number; updated: number }>;
   update(userId: string, id: string, patch: Partial<Transaction>): Promise<Transaction | null>;
+  removeByProviderIds(userId: string, providerTxnIds: readonly string[]): Promise<number>;
 }
 
 export interface BudgetStore {

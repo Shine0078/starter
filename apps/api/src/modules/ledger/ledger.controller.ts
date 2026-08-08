@@ -1,5 +1,8 @@
 ﻿import { Body, Controller, Get, Header, Param, Patch, Post, Query } from '@nestjs/common';
 
+import { BadRequestException } from '@nestjs/common';
+
+import { loadConfig } from '../../config';
 import { transactionsToCsv } from '../../domain/exports/transactions-csv';
 import { formatMoney, money } from '../../domain/money';
 import type { Transaction } from '../../domain/types';
@@ -21,6 +24,9 @@ export class LedgerController {
 
   @Post('sync')
   sync(@CurrentUser() userId: string) {
+    if (loadConfig().isProduction) {
+      throw new BadRequestException('Development sample sync is disabled. Connect a bank account.');
+    }
     return this.ledger.sync(userId);
   }
 

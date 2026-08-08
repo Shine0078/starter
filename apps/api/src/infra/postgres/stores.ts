@@ -344,6 +344,17 @@ export class PostgresTransactionStore implements TransactionStore {
       return rows[0] ? toTransaction(rows[0]) : null;
     });
   }
+
+  async removeByProviderIds(userId: string, providerTxnIds: readonly string[]): Promise<number> {
+    if (providerTxnIds.length === 0) return 0;
+    return withUserScope(this.pg, userId, async (client) => {
+      const result = await client.query(
+        'DELETE FROM transactions WHERE user_id = $1 AND provider_txn_id = ANY($2::text[])',
+        [userId, providerTxnIds],
+      );
+      return result.rowCount ?? 0;
+    });
+  }
 }
 
 /** Shared by `get` and the no-op path of `update`, which is already in scope. */

@@ -38,6 +38,7 @@ async function bootstrap(): Promise<void> {
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: ['log', 'warn', 'error'],
+    rawBody: true,
   });
 
   installHttpControls(app, config);

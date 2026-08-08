@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../api/client.dart';
 import 'budgets_screen.dart';
+import 'bank_connections_screen.dart';
 import 'dashboard_screen.dart';
 import 'goals_screen.dart';
 import 'transactions_screen.dart';
@@ -38,6 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
             TransactionsScreen(api: widget.api),
             BudgetsScreen(api: widget.api),
             GoalsScreen(api: widget.api),
+            BankConnectionsScreen(api: widget.api),
           ],
         ),
         bottomNavigationBar: NavigationBar(
@@ -52,6 +54,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 icon: Icon(Icons.pie_chart_outline), label: 'Budgets'),
             NavigationDestination(
                 icon: Icon(Icons.flag_outlined), label: 'Goals'),
+            NavigationDestination(
+                icon: Icon(Icons.account_balance_outlined), label: 'Accounts'),
           ],
         ),
       );

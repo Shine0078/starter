@@ -1,44 +1,42 @@
 # FINVERSE mobile
 
-Flutter client for Android and iOS.
+Flutter client for FINVERSE. Android is the verified launch target; the native
+Plaid Link bridge uses Plaid's official Android SDK rather than an unsupported
+Flutter wrapper.
 
-> **Status: verified Flutter client.** The dashboard is wired to the API contract
-> in `apps/api`, passes static analysis and widget tests, and has generated Android
-> and iOS platform projects. A debug Android APK has been built successfully.
+## Run on the Android emulator
 
-## Setup
+Start the API on port 3100, open `apps/mobile/android` in Android Studio, choose
+an emulator, and run `MainActivity`. From a terminal the equivalent is:
 
-Flutter is installed on this development machine. On a fresh machine, install it
-from <https://docs.flutter.dev/get-started/install>, then:
-
-```bash
+```powershell
 cd apps/mobile
-flutter create . --platforms=android,ios
 flutter pub get
-flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3100
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000
 ```
 
-`flutter create .` generates the `android/` and `ios/` platform folders. They are
-deliberately ignored because they are generated; run the command after cloning.
+`10.0.2.2` is the Android emulator's route to the host machine. For a physical
+phone, use `http://<your-computer-LAN-IP>:3000` and allow that port through the
+local firewall.
 
-## Talking to a local API
+## Plaid Link
 
-| Target | `API_BASE_URL` |
-|---|---|
-| Android emulator | `http://10.0.2.2:3100` |
-| iOS simulator | `http://localhost:3100` |
-| Physical device | `http://<your-lan-ip>:3100` |
+The Android application ID is `com.finverse.finance`. Add that exact package
+name under Plaid Dashboard > Developers > API > Allowed Android package names.
+The app requests a short-lived Link token from the authenticated FINVERSE API,
+opens Plaid's native UI, and returns only the temporary public token to the API.
+Plaid secrets and permanent access tokens never enter Flutter.
 
-`localhost` inside an Android emulator is the emulator itself, not your machine —
-`10.0.2.2` is the host loopback alias. This trips everyone up once.
+The Accounts tab supports new connections, update mode when credentials need
+attention, manual sync, webhook-driven background sync, and disconnect/revoke.
 
-## What exists
+## Verification
 
-A single dashboard screen: net position, financial health score with its
-components, budget progress, and recent transactions. It reads the same
-endpoints the dev dashboard at `http://localhost:3100/` uses.
+```powershell
+flutter analyze
+flutter test
+flutter build apk --debug
+```
 
-## What does not
-
-Offline-first sync, local encrypted storage, auth, and every other screen. See
-[docs/04-roadmap.md](../../docs/04-roadmap.md).
+The Android project is versioned because it contains the Plaid bridge, release
+signing setup, application ID, launcher assets, and platform configuration.

@@ -35,6 +35,8 @@ against both adapters — and, since [ADR-0006](adr/0006-row-level-security.md),
 row-level security underneath it, with the API connecting as a role that cannot
 bypass the policies.
 
-The aggregator is still a mock — no bank has been connected, and connecting one
-is gated on a commercial agreement rather than on code. Account deletion and
-retention is the next task, and is the last Phase 1 item nothing external blocks.
+Plaid Sandbox is integrated end to end on Android: native Link, encrypted access
+tokens, cursor sync, reconnect, signed webhook jobs, and revoke. Production bank
+connections still require Plaid approval. Account deletion, goals, in-app alert
+generation, release packaging, and PostgreSQL erasure/isolation proofs are complete;
+see the selling audit for the remaining engineering and external gates.

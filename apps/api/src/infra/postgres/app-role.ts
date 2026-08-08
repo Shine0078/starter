@@ -99,6 +99,21 @@ export async function provisionAppRole(pg: Pool, appDatabaseUrl: string): Promis
         );
         EXECUTE format('GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO %I', app_role);
 
+        -- This narrowly scoped SECURITY DEFINER function reveals only the user
+        -- and connection IDs required to route a verified provider webhook.
+        IF to_regprocedure('public.finverse_link_owner(text)') IS NOT NULL THEN
+          EXECUTE format(
+            'GRANT EXECUTE ON FUNCTION public.finverse_link_owner(text) TO %I',
+            app_role
+          );
+        END IF;
+        IF to_regprocedure('public.finverse_claim_bank_webhooks(integer)') IS NOT NULL THEN
+          EXECUTE format(
+            'GRANT EXECUTE ON FUNCTION public.finverse_claim_bank_webhooks(integer) TO %I',
+            app_role
+          );
+        END IF;
+
         -- Tables added by a later migration are covered without anyone having to
         -- remember to come back here.
         EXECUTE format(

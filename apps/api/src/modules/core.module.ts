@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { Global, Logger, Module, type Provider } from '@nestjs/common';
 
 import { loadConfig } from '../config';
@@ -37,6 +38,20 @@ import {
   InMemoryUserStore,
 } from '../infra/auth/in-memory-auth-stores';
 import { JwtTokenIssuer } from '../infra/auth/jwt-issuer';
+import {
+  InMemoryBankLinkStore,
+  InMemoryBankWebhookStore,
+  PostgresBankLinkStore,
+  PostgresBankWebhookStore,
+} from '../infra/banking/bank-link-stores';
+import { PlaidBankProvider } from '../infra/banking/plaid-provider';
+import { AesGcmBankTokenCipher } from '../infra/banking/token-cipher';
+import {
+  BANK_LINK_STORE,
+  BANK_PROVIDER,
+  BANK_TOKEN_CIPHER,
+  BANK_WEBHOOK_STORE,
+} from '../ports/banking';
 import {
   PostgresAuthEventStore,
   PostgresSessionStore,
@@ -82,6 +97,8 @@ function storeProviders(): Provider[] {
     const rules = new InMemoryRuleStore();
     const goals = new InMemoryGoalStore();
     const notifications = new InMemoryNotificationStore();
+    const bankLinks = new InMemoryBankLinkStore();
+    const bankWebhooks = new InMemoryBankWebhookStore();
     const users = new InMemoryUserStore();
     const sessions = new InMemorySessionStore();
     const events = new InMemoryAuthEventStore();
@@ -96,6 +113,8 @@ function storeProviders(): Provider[] {
       rules,
       goals,
       notifications,
+      bankLinks,
+      bankWebhooks,
     );
     return [
       { provide: ACCOUNT_STORE, useValue: accounts },
@@ -104,6 +123,8 @@ function storeProviders(): Provider[] {
       { provide: RULE_STORE, useValue: rules },
       { provide: GOAL_STORE, useValue: goals },
       { provide: NOTIFICATION_STORE, useValue: notifications },
+      { provide: BANK_LINK_STORE, useValue: bankLinks },
+      { provide: BANK_WEBHOOK_STORE, useValue: bankWebhooks },
       { provide: USER_STORE, useValue: users },
       { provide: SESSION_STORE, useValue: sessions },
       { provide: AUTH_EVENT_STORE, useValue: events },
@@ -133,6 +154,8 @@ function storeProviders(): Provider[] {
     { provide: RULE_STORE, useFactory: () => new PostgresRuleStore(pool) },
     { provide: GOAL_STORE, useFactory: () => new PostgresGoalStore(pool) },
     { provide: NOTIFICATION_STORE, useFactory: () => new PostgresNotificationStore(pool) },
+    { provide: BANK_LINK_STORE, useFactory: () => new PostgresBankLinkStore(pool) },
+    { provide: BANK_WEBHOOK_STORE, useFactory: () => new PostgresBankWebhookStore(pool) },
     { provide: USER_STORE, useFactory: () => new PostgresUserStore(pool) },
     { provide: SESSION_STORE, useFactory: () => new PostgresSessionStore(pool) },
     { provide: AUTH_EVENT_STORE, useFactory: () => new PostgresAuthEventStore(pool) },
@@ -150,6 +173,31 @@ function storeProviders(): Provider[] {
       useFactory: () => new MockAggregator({ today: new SystemClock().today() }),
     },
     { provide: PASSWORD_HASHER, useClass: Argon2PasswordHasher },
+    {
+      provide: BANK_PROVIDER,
+      useFactory: () =>
+        new PlaidBankProvider({
+          clientId: process.env.PLAID_CLIENT_ID,
+          secret: process.env.PLAID_SECRET,
+          environment: (process.env.PLAID_ENVIRONMENT ?? 'sandbox') as 'sandbox' | 'development' | 'production',
+          webhookUrl: process.env.PLAID_WEBHOOK_URL,
+          countries: (process.env.PLAID_COUNTRIES ?? 'CA,US').split(',').filter(Boolean),
+          androidPackageName: 'com.finverse.finance',
+        }),
+    },
+    {
+      provide: BANK_TOKEN_CIPHER,
+      useFactory: () => {
+        const configured = process.env.PLAID_CLIENT_ID || process.env.PLAID_SECRET;
+        const key = process.env.BANK_TOKEN_ENCRYPTION_KEY;
+        if (configured && !key) {
+          throw new Error('BANK_TOKEN_ENCRYPTION_KEY is required when Plaid is configured.');
+        }
+        return key
+          ? AesGcmBankTokenCipher.fromBase64(key)
+          : new AesGcmBankTokenCipher(randomBytes(32));
+      },
+    },
     {
       provide: EMAIL_SENDER,
       useFactory: () => {
@@ -199,6 +247,10 @@ function storeProviders(): Provider[] {
     RULE_STORE,
     GOAL_STORE,
     NOTIFICATION_STORE,
+    BANK_LINK_STORE,
+    BANK_PROVIDER,
+    BANK_TOKEN_CIPHER,
+    BANK_WEBHOOK_STORE,
     AGGREGATOR,
     USER_STORE,
     SESSION_STORE,

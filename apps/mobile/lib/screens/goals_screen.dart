@@ -156,6 +156,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('Goals')),
         floatingActionButton: FloatingActionButton.extended(
+          heroTag: 'add-goal',
           onPressed: _create,
           icon: const Icon(Icons.add),
           label: const Text('New goal'),

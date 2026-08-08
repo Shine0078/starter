@@ -244,6 +244,15 @@ void main() {
       if (path.endsWith('/goals')) {
         return http.Response('{"goals":[],"count":0}', 200);
       }
+      if (path.endsWith('/notifications/preferences')) {
+        return http.Response(
+          '{"budget":true,"bills":true,"creditUtilization":true,"subscriptions":true,"lowBalance":true,"unusualTransactions":true,"bankSync":true,"security":true}',
+          200,
+        );
+      }
+      if (path.endsWith('/notifications')) {
+        return http.Response('{"notifications":[],"count":0,"unread":0}', 200);
+      }
       if (path.endsWith('/insights')) {
         return http.Response(
           '{"headline":{"income":"\$0.00","expenses":"\$0.00","netCashFlow":"\$0.00","savingsRate":"0.0%"},"topCategories":[],"insights":[]}',
@@ -260,6 +269,12 @@ void main() {
         onAccountDeleted: () async {},
       ),
     ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Notifications'));
+    await tester.pumpAndSettle();
+    expect(find.text('You are all caught up'), findsOneWidget);
+    await tester.pageBack();
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Transactions'));

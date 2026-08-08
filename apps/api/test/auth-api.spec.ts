@@ -220,6 +220,7 @@ describe('auth API', () => {
       '/api/health-score',
       '/api/goals',
       '/api/notifications',
+      '/api/bank-links',
       '/api/cash-flow-forecast',
       '/api/credit-cards',
       '/api/transactions/needs-review',
@@ -266,6 +267,20 @@ describe('auth API', () => {
         .get('/api/accounts')
         .set('Authorization', `Bearer ${tokens.accessToken}`)
         .expect(200);
+    });
+
+    it('keeps connection metadata available while Plaid credentials are absent', async () => {
+      const { tokens } = await register();
+      const authorization = `Bearer ${tokens.accessToken}`;
+      await request(http)
+        .get('/api/bank-links')
+        .set('Authorization', authorization)
+        .expect(200, { count: 0, links: [] });
+      await request(http)
+        .post('/api/bank-links/link-token')
+        .set('Authorization', authorization)
+        .send({})
+        .expect(503);
     });
   });
 

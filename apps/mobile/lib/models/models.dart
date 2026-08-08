@@ -29,6 +29,126 @@ class PublicUser {
   String get label => displayName?.isNotEmpty == true ? displayName! : email;
 }
 
+class BankLink {
+  const BankLink({
+    required this.id,
+    required this.institutionName,
+    required this.status,
+    required this.createdAt,
+    this.institutionId,
+    this.errorCode,
+    this.lastSyncedAt,
+  });
+
+  factory BankLink.fromJson(Map<String, dynamic> json) => BankLink(
+        id: json['id'] as String,
+        institutionName: json['institutionName'] as String,
+        institutionId: json['institutionId'] as String?,
+        status: json['status'] as String,
+        errorCode: json['errorCode'] as String?,
+        lastSyncedAt: json['lastSyncedAt'] as String?,
+        createdAt: json['createdAt'] as String,
+      );
+
+  final String id;
+  final String institutionName;
+  final String? institutionId;
+  final String status;
+  final String? errorCode;
+  final String? lastSyncedAt;
+  final String createdAt;
+
+  bool get needsReconnect => status == 'needs_reauth';
+}
+
+class FinanceNotification {
+  const FinanceNotification({
+    required this.id,
+    required this.kind,
+    required this.title,
+    required this.message,
+    required this.severity,
+    required this.createdAt,
+    this.readAt,
+  });
+
+  factory FinanceNotification.fromJson(Map<String, dynamic> json) =>
+      FinanceNotification(
+        id: json['id'] as String,
+        kind: json['kind'] as String,
+        title: json['title'] as String,
+        message: json['message'] as String,
+        severity: json['severity'] as String,
+        createdAt: json['createdAt'] as String,
+        readAt: json['readAt'] as String?,
+      );
+
+  final String id;
+  final String kind;
+  final String title;
+  final String message;
+  final String severity;
+  final String createdAt;
+  final String? readAt;
+
+  bool get unread => readAt == null;
+
+  FinanceNotification asRead() => FinanceNotification(
+        id: id,
+        kind: kind,
+        title: title,
+        message: message,
+        severity: severity,
+        createdAt: createdAt,
+        readAt: DateTime.now().toUtc().toIso8601String(),
+      );
+}
+
+class NotificationPreferences {
+  const NotificationPreferences({
+    required this.budget,
+    required this.bills,
+    required this.creditUtilization,
+    required this.subscriptions,
+    required this.lowBalance,
+    required this.unusualTransactions,
+    required this.bankSync,
+    required this.security,
+  });
+
+  factory NotificationPreferences.fromJson(Map<String, dynamic> json) =>
+      NotificationPreferences(
+        budget: json['budget'] as bool,
+        bills: json['bills'] as bool,
+        creditUtilization: json['creditUtilization'] as bool,
+        subscriptions: json['subscriptions'] as bool,
+        lowBalance: json['lowBalance'] as bool,
+        unusualTransactions: json['unusualTransactions'] as bool,
+        bankSync: json['bankSync'] as bool,
+        security: json['security'] as bool,
+      );
+
+  final bool budget;
+  final bool bills;
+  final bool creditUtilization;
+  final bool subscriptions;
+  final bool lowBalance;
+  final bool unusualTransactions;
+  final bool bankSync;
+  final bool security;
+
+  Map<String, bool> toJson() => {
+        'budget': budget,
+        'bills': bills,
+        'creditUtilization': creditUtilization,
+        'subscriptions': subscriptions,
+        'lowBalance': lowBalance,
+        'unusualTransactions': unusualTransactions,
+        'bankSync': bankSync,
+        'security': security,
+      };
+}
+
 class SyncResult {
   SyncResult({
     required this.accounts,

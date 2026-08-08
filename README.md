@@ -6,10 +6,11 @@ automated.
 [`MISSION.md`](MISSION.md) is the product brief. [`docs/`](docs/) turns it into
 a plan. This README tells you how to run what exists.
 
-**Status: Phase 0.** One vertical slice runs end to end against a mock
-aggregator — import → categorize → budget → insights → health score. No real
-bank is connected, and connecting one is gated on commercial agreements rather
-than on code ([roadmap](docs/04-roadmap.md)).
+**Status: launch engineering in progress.** The API and Android app include real
+Plaid Sandbox Link, encrypted token storage, incremental sync, budgets, goals,
+notifications, insights, and account lifecycle controls. Production Plaid access,
+hosting, legal review, store approval, and billing remain external launch gates
+([selling audit](docs/08-what-blocks-selling.md)).
 
 ## Quick start
 
@@ -35,6 +36,17 @@ Run the tests:
 npm test
 ```
 
+On Windows, configure Plaid Sandbox without writing credentials into the repo:
+
+```powershell
+npm run plaid:configure --workspace @finverse/api
+```
+
+Open the one-time loopback URL it prints, paste the Client ID and Sandbox secret,
+then restart open terminals. The helper stores user-level development variables
+and preserves an existing bank-token encryption key. Production must use the
+hosting provider's secret manager instead.
+
 ## Layout
 
 ```
@@ -42,11 +54,11 @@ apps/
   api/          NestJS API — the vertical slice
     src/domain/   pure financial logic, no framework, no I/O
     src/ports/    interfaces the domain needs satisfied
-    src/infra/    in-memory + mock adapters (Postgres/Plaid go here)
+    src/infra/    in-memory, Postgres, mock, email, and Plaid adapters
     src/modules/  controllers and services — thin wiring
     public/       developer dashboard
-    test/         123 unit tests over the domain
-  mobile/       Flutter client (dashboard, analysis, and widget test)
+    test/         domain, HTTP, persistence, isolation, and Plaid tests
+  mobile/       Flutter Android client with native Plaid Link
 packages/
   contracts/    shared API types
 infra/          docker-compose: Postgres + Redis
@@ -66,7 +78,7 @@ slice runs today with no Docker. See [ADR-0002](docs/adr/0002-pure-domain-layer.
 
 ## API
 
-Base path `/api`. **Every route requires a bearer token** except the four marked
+Base path `/api`. **Every route requires a bearer token** except those marked
 public — the guard is registered globally, so a new controller is protected the
 moment it is written.
 
@@ -90,6 +102,11 @@ last 15 minutes; exchange the refresh token at `/api/auth/refresh` for a new pai
 | `GET` | `/auth/sessions` | Active sessions, with the current one marked |
 | `DELETE` | `/auth/sessions/:id` | Revoke one session |
 | `POST` | `/sync` | Pull from the aggregator, categorize, persist |
+| `GET` | `/bank-links` | List connected institutions and sync health |
+| `POST` | `/bank-links/link-token` | Create a Plaid Link token (new or update mode) |
+| `POST` | `/bank-links/exchange` | Exchange a temporary public token and begin sync |
+| `POST` | `/bank-links/:id/sync` | Incrementally reconcile one institution |
+| `DELETE` | `/bank-links/:id` | Revoke Plaid access and remove the stored token |
 | `GET` | `/accounts` | Balances and credit utilization |
 | `GET` | `/transactions` | `?search=&category=&account=&from=&to=&limit=` |
 | `GET` | `/transactions/export.csv` | Download the user-owned ledger as a CSV; spreadsheet-formula-safe text fields |
@@ -182,8 +199,8 @@ stopped running.
 
 ## Notes on what is and isn't verified
 
-- **The API and its domain logic run and are tested.** 243 tests run with no
-  database; the full suite is **309 passing** against real PostgreSQL, including
+- **The API and its domain logic run and are tested.** 280 tests run with no
+  database; the full suite is **371 passing** against real PostgreSQL, including
   the store contract — which runs as the restricted role, so it executes with the
   row-level security policies in force — and a suite that issues deliberately
   unfiltered SQL to prove the database withholds other users' rows on its own.

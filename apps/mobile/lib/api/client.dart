@@ -26,7 +26,7 @@ class ApiClient {
               'API_BASE_URL',
               // Android emulator's alias for the host machine. `localhost`
               // inside the emulator is the emulator itself.
-              defaultValue: 'http://10.0.2.2:3100',
+              defaultValue: 'http://10.0.2.2:3000',
             );
 
   final http.Client _http;
@@ -322,6 +322,86 @@ class ApiClient {
 
   Future<void> deleteGoal(String goalId) async {
     await _send('DELETE', '/goals/$goalId');
+  }
+
+  Future<List<BankLink>> bankLinks() async {
+    final json = await _get('/bank-links') as Map<String, dynamic>;
+    return (json['links'] as List<dynamic>)
+        .map((row) => BankLink.fromJson(row as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<String> createBankLinkToken({String? linkId}) async {
+    final json = await _send(
+      'POST',
+      '/bank-links/link-token',
+      {if (linkId != null) 'linkId': linkId},
+    ) as Map<String, dynamic>;
+    return json['token'] as String;
+  }
+
+  Future<BankLink> exchangeBankToken({
+    required String publicToken,
+    required String institutionName,
+    String? institutionId,
+  }) async {
+    final json = await _send('POST', '/bank-links/exchange', {
+      'publicToken': publicToken,
+      'institutionName': institutionName,
+      if (institutionId != null) 'institutionId': institutionId,
+    }) as Map<String, dynamic>;
+    return BankLink.fromJson(json);
+  }
+
+  Future<void> syncBankLink(String linkId) async {
+    await _send('POST', '/bank-links/$linkId/sync');
+  }
+
+  Future<void> disconnectBank(String linkId) async {
+    await _send('DELETE', '/bank-links/$linkId');
+  }
+
+  Future<void> refreshConnectedBanks() async {
+    final links = await bankLinks();
+    Object? firstError;
+    for (final link in links) {
+      if (!link.needsReconnect && link.status != 'revoked') {
+        try {
+          await syncBankLink(link.id);
+        } catch (error) {
+          firstError ??= error;
+        }
+      }
+    }
+    if (firstError != null) throw firstError;
+  }
+
+  Future<List<FinanceNotification>> notifications() async {
+    final json = await _get('/notifications') as Map<String, dynamic>;
+    return (json['notifications'] as List<dynamic>)
+        .map((row) => FinanceNotification.fromJson(row as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> markNotificationRead(String id) async {
+    await _send('PATCH', '/notifications/$id/read');
+  }
+
+  Future<NotificationPreferences> notificationPreferences() async {
+    final json =
+        await _get('/notifications/preferences') as Map<String, dynamic>;
+    return NotificationPreferences.fromJson(json);
+  }
+
+  Future<NotificationPreferences> updateNotificationPreferences(
+    NotificationPreferences preferences,
+  ) async {
+    final json = await _send(
+      'PATCH',
+      '/notifications/preferences',
+      preferences.toJson(),
+    ) as Map<String, dynamic>;
+    return NotificationPreferences.fromJson(json);
   }
 
   Future<HealthScore> healthScore() async {

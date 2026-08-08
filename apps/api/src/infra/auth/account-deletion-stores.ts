@@ -10,6 +10,7 @@ import {
   InMemoryTransactionStore,
 } from '../in-memory-store';
 import { withTransaction } from '../postgres/pool';
+import { InMemoryBankLinkStore, InMemoryBankWebhookStore } from '../banking/bank-link-stores';
 import { InMemoryAuthEventStore, InMemorySessionStore, InMemoryUserStore } from './in-memory-auth-stores';
 
 interface PendingDeletion {
@@ -30,6 +31,8 @@ export class InMemoryAccountDeletionStore implements AccountDeletionStore {
     private readonly rules: InMemoryRuleStore,
     private readonly goals: InMemoryGoalStore,
     private readonly notifications: InMemoryNotificationStore,
+    private readonly bankLinks: InMemoryBankLinkStore,
+    private readonly bankWebhooks: InMemoryBankWebhookStore,
   ) {}
 
   async request(userId: string, email: string, _requestedAt: Date, purgeAfter: Date): Promise<void> {
@@ -58,6 +61,8 @@ export class InMemoryAccountDeletionStore implements AccountDeletionStore {
       this.rules.purgeUser(userId);
       this.goals.purgeUser(userId);
       this.notifications.purgeUser(userId);
+      this.bankLinks.purgeUser(userId);
+      this.bankWebhooks.purgeUser(userId);
       this.sessions.purgeUser(userId);
       this.events.purgeUser(userId, deletion.email);
       this.users.purgeUser(userId);

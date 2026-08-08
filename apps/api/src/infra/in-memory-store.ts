@@ -144,6 +144,19 @@ export class InMemoryTransactionStore implements TransactionStore {
     return next;
   }
 
+  async removeByProviderIds(userId: string, providerTxnIds: readonly string[]): Promise<number> {
+    if (providerTxnIds.length === 0) return 0;
+    const ids = new Set(providerTxnIds);
+    const rows = bucket(this.byUser, userId);
+    let removed = 0;
+    for (let index = rows.length - 1; index >= 0; index -= 1) {
+      if (!ids.has(rows[index]!.providerTxnId)) continue;
+      rows.splice(index, 1);
+      removed += 1;
+    }
+    return removed;
+  }
+
   purgeUser(userId: string): void {
     this.byUser.delete(userId);
   }

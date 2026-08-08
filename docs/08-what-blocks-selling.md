@@ -6,9 +6,9 @@ documents — several of them describe the intended design in the present tense,
 which reads as coverage that does not exist. Where that happens it is listed
 here as a defect.
 
-**Honest one-line summary:** the financial engine and initial mobile workflows
-are real and well tested; the product is not sellable because it has never seen
-a real bank, has not been deployed or legally reviewed, and cannot take payment.
+**Honest one-line summary:** the financial engine, mobile workflows, and Plaid
+Sandbox integration are real and tested; production bank access, deployment,
+legal review, app-store approval, and billing remain external launch gates.
 
 Effort figures are rough order-of-magnitude for one experienced engineer, and
 they exclude the external lead times in §1, which dominate the schedule.
@@ -25,7 +25,7 @@ Stated so the rest of this document is not read as "nothing works".
 | Authentication | Argon2id, rotating refresh tokens with reuse detection, email verification, password reset, recoverable deletion, global guard, per-account lockout, session list, audit trail |
 | Persistence | Postgres behind ports, contract-tested against both adapters, migrations |
 | Isolation | Row-level security, app connects as a non-superuser role, 21 dedicated tests |
-| Tests | 273 without a database, 357 against real Postgres, 10 Flutter tests; all passing |
+| Tests | 280 without a database, 371 against real Postgres, 10 Flutter tests; all passing |
 | CI | GitHub Actions: API typecheck/test/build/image + Flutter analyze/test/Android compile; tagged API/APK releases |
 
 That is a solid Phase-0 foundation. It is not a product.
@@ -54,10 +54,10 @@ measured in weeks. Nothing else on this list matters until these move.
 
 | # | Item | Detail | Effort |
 |---|---|---|---|
-| 2.1 | **Aggregator is a mock** | `MockAggregator` generates a deterministic four-month ledger. No bank has ever been connected. `AggregatorPort` exists, so this is an adapter swap — but only after §1.1 | 3–6 weeks after access |
-| 2.2 | **Link flow** | No UI or API for connecting an institution, choosing accounts, or granting consent | 2–3 weeks |
-| 2.3 | **Reauth / broken-link handling** | Bank links expire and break constantly. Without this the product silently goes stale, which is worse than an error | 1–2 weeks |
-| 2.4 | **Real sync engine** | Current sync refetches everything. Production needs cursor-based incremental sync, pending → posted transitions, backfill, and rate-limit handling | 2–4 weeks |
+| 2.1 | **Production bank access** | Plaid Sandbox credentials and the real adapter are configured locally. Charging users still requires Plaid production approval and its security/commercial review | external approval |
+| 2.2 | **Link flow** | Completed for Android with Plaid's official native SDK, authenticated Link-token creation, public-token exchange, encrypted permanent tokens, and a mobile Accounts screen | Plaid Dashboard package allowlist remains owner-approved |
+| 2.3 | **Reauth / broken-link handling** | Completed: `ITEM_LOGIN_REQUIRED` becomes a visible reconnect state and Link update mode reuses the Item | production institution testing remains |
+| 2.4 | **Real sync engine** | Completed: `/transactions/sync` cursors, all-page draining, mutation-safe pagination restart, added/modified/removed reconciliation, pending-to-posted changes, serialized link sync, retry queue, and manual refresh | production load/rate-limit testing remains |
 | 2.5 | **Merchant lexicon is tiny** | Categorisation quality on real data is unknown. The top ~2,000 merchants cover most volume; the current lexicon is a fraction of that | 1–2 weeks + ongoing |
 | 2.6 | **Categorisation accuracy unmeasured** | 92% coverage on synthetic data the same codebase generated is not evidence. Needs a held-out set of real transactions | ongoing |
 | 2.7 | **Multi-currency untested** | `Money` handles it; no path exercises more than USD | 1 week |
@@ -131,16 +131,16 @@ has a `docker-compose.yml` for local development and a CI workflow. That is all.
 ## 5. The mobile app is an early product
 
 The app now has authentication/recovery, a dashboard, category-spending chart,
-searchable transactions, category corrections, budget creation/removal, email
-verification, and recoverable account deletion. It remains far smaller than the
-MISSION.md product and still lacks the externally gated bank-linking experience.
+searchable transactions, category corrections, budgets, goals, email verification,
+recoverable deletion, and Android bank connection/reconnect/sync/revoke. It remains
+smaller than the complete MISSION.md product.
 
 | # | Item | Detail | Effort |
 |---|---|---|---|
-| 5.1 | **Core navigation started** | Home, transactions, budgets, and persistent savings goals are implemented. No transaction detail, subscription/notification screen, full settings/privacy dashboard, onboarding, or account linking | 6–10 weeks |
+| 5.1 | **Core navigation started** | Home, transactions, budgets, goals, bank accounts, and an in-app notification centre are implemented. No transaction detail, subscription screen, full settings/privacy dashboard, or onboarding | 4–8 weeks |
 | 5.2 | **No offline mode** | Mission requires offline-first. There is no local database — every screen is a live API call | 3–4 weeks |
 | 5.3 | **No state management** | `setState` only. Honest at one screen, unworkable at twenty | with 5.1 |
-| 5.4 | **No push notifications** | The mission's entire notification and alert surface — bills, due dates, fraud, budgets — does not exist on either end | 2–3 weeks |
+| 5.4 | **No push notifications** | Persistent preferences, a mobile notification centre, and deduplicated budget, utilization, low-balance, and bank-sync alerts exist. Device push delivery, bill reminders, and unusual-spend detection remain | 2–3 weeks |
 | 5.5 | **Android identity and launcher** | **Completed:** `com.finverse.finance`, FINVERSE label, versioned platform project, and branded launcher asset | Store listing still external |
 | 5.6 | **Release signing credentials** | Gradle and the release workflow are wired for an upload key and refuse a distributable release without secrets | User must generate and protect the upload key |
 | 5.7 | **iOS never built** | Requires a Mac. Untested and unverified | 1 week |
@@ -193,7 +193,7 @@ features them.
 - Monthly PDF report — the mission specifies ~25 sections; CSV export is all that exists
 - Goals and savings targets — persistent model, progress math, contribution history, API, RLS, and Flutter screen are complete
 - Net worth dashboard — no investments, loans, or property
-- Notifications and smart reminders — persistent preferences and deduplicated in-app budget, credit-utilization, and low-balance alerts exist; mobile center, push delivery, bills, unusual-spend and bank-sync alerts remain
+- Notifications and smart reminders — persistent preferences, a mobile centre, and deduplicated in-app budget, credit-utilization, low-balance, and bank-sync alerts exist; push delivery, bill reminders, and unusual-spend alerts remain
 - Fraud and anomaly detection — duplicates, abnormal purchases, foreign spending
 - Receipt OCR
 
@@ -255,7 +255,7 @@ Three things make this unsellable today, and they are not the same size:
 
 1. **It has never seen a real bank.** Gated on a commercial agreement, not code.
 2. **The mobile app covers the first daily workflows, not the full product.**
-   Goals, subscriptions, notifications, offline mode, and onboarding remain.
+   Subscriptions, offline mode, onboarding, and a full privacy/settings area remain.
 3. **There is no live production deployment and no way to charge.** Release
    artifacts exist, but provider accounts and production wiring do not.
 

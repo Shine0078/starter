@@ -6,6 +6,7 @@ import '../widgets/budget_tile.dart';
 import '../widgets/health_score_card.dart';
 import '../widgets/spending_chart.dart';
 import '../widgets/transaction_tile.dart';
+import 'notifications_screen.dart';
 
 /// The home screen: net position, health score, budgets, recent activity.
 ///
@@ -44,7 +45,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _load(sync: true);
+    // Load persisted data immediately. Provider refreshes are explicit and
+    // webhook-driven; opening the app must not inject the development mock.
+    _load();
   }
 
   Future<void> _load({bool sync = false}) async {
@@ -54,7 +57,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
 
     try {
-      if (sync) await widget.api.sync();
+      if (sync) await widget.api.refreshConnectedBanks();
 
       final results = await Future.wait([
         widget.api.accounts(),
@@ -267,6 +270,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       appBar: AppBar(
         title: const Text('FINVERSE'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_outlined),
+            tooltip: 'Notifications',
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => NotificationsScreen(api: widget.api),
+            )),
+          ),
           IconButton(
             icon: const Icon(Icons.sync),
             tooltip: 'Sync accounts',

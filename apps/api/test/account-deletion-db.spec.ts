@@ -35,6 +35,18 @@ if (ownerUrl) {
          VALUES ('account-1', $1, 'Checking', 'checking', '1234', 'CAD', 10000)`,
         [userId],
       );
+      await harness.owner.query(
+        `INSERT INTO institution_links
+           (id,user_id,provider,provider_item_id,institution_name,encrypted_access_token,status,created_at)
+         VALUES ('link-1',$1,'plaid','item-1','Sandbox Bank','encrypted','healthy',now())`,
+        [userId],
+      );
+      await harness.owner.query(
+        `INSERT INTO bank_webhook_jobs
+           (id,user_id,link_id,body_hash,status,attempts,available_at,created_at)
+         VALUES ('webhook-1',$1,'link-1','body-hash','pending',0,now(),now())`,
+        [userId],
+      );
       await harness.owner.query('INSERT INTO notification_preferences (user_id) VALUES ($1)', [
         userId,
       ]);
@@ -109,6 +121,8 @@ if (ownerUrl) {
         'goal_contributions',
         'notification_preferences',
         'notifications',
+        'institution_links',
+        'bank_webhook_jobs',
         'sessions',
       ]) {
         const column = table === 'users' ? 'id' : 'user_id';

@@ -32,6 +32,8 @@ const PROTECTED_TABLES = [
   'goal_contributions',
   'notification_preferences',
   'notifications',
+  'institution_links',
+  'bank_webhook_jobs',
 ];
 
 /** Seeds one account and one transaction for a user, as the owner. */
@@ -76,6 +78,18 @@ async function seed(owner: Pool, userId: string, amount: number): Promise<void> 
        (id, user_id, kind, title, message, severity, dedupe_key, created_at)
      VALUES ($1, $2, 'budget', 'Budget', 'Budget warning', 'warning', $3, now())`,
     [`notification_${userId}`, userId, `budget:${userId}`],
+  );
+  await owner.query(
+    `INSERT INTO institution_links
+       (id,user_id,provider,provider_item_id,institution_name,encrypted_access_token,status,created_at)
+     VALUES ($1,$2,'plaid',$3,'Sandbox Bank','encrypted','healthy',now())`,
+    [`link_${userId}`, userId, `item_${userId}`],
+  );
+  await owner.query(
+    `INSERT INTO bank_webhook_jobs
+       (id,user_id,link_id,body_hash,status,attempts,available_at,created_at)
+     VALUES ($1,$2,$3,$4,'pending',0,now(),now())`,
+    [`webhook_${userId}`, userId, `link_${userId}`, `hash_${userId}`],
   );
 }
 
@@ -164,6 +178,26 @@ if (!OWNER_URL) {
       // is not true, so no row qualifies.
       const { rows } = await app.query('SELECT * FROM transactions');
       expect(rows).toHaveLength(0);
+    });
+
+    it('routes a provider Item through the narrow owner function without exposing the token', async () => {
+      const result = await app.query(
+        'SELECT * FROM finverse_link_owner($1)',
+        [`item_${ALICE}`],
+      );
+      expect(result.fields.map((field) => field.name)).toEqual(['user_id', 'link_id']);
+      expect(result.rows).toEqual([{ user_id: ALICE, link_id: `link_${ALICE}` }]);
+    });
+
+    it('atomically claims webhook jobs while returning only opaque routing fields', async () => {
+      const result = await app.query('SELECT * FROM finverse_claim_bank_webhooks(10)');
+      expect(result.fields.map((field) => field.name)).toEqual([
+        'id', 'user_id', 'link_id', 'body_hash', 'attempts', 'available_at',
+      ]);
+      expect(result.rows).toHaveLength(2);
+      expect(result.rows.every((row) => row.attempts === 1)).toBe(true);
+      const second = await app.query('SELECT * FROM finverse_claim_bank_webhooks(10)');
+      expect(second.rows).toHaveLength(0);
     });
 
     it('sees nothing when the scope is set to a blank user', async () => {
