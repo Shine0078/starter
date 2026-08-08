@@ -21,11 +21,11 @@ Stated so the rest of this document is not read as "nothing works".
 
 | Area | State |
 |---|---|
-| Financial math | Money as integer minor units, categorisation, budgets, insights, subscription detection, health score, cash-flow forecast, credit-card planner, purchase simulator, CSV export |
+| Financial math | Money as integer minor units, categorisation, budgets, insights, subscription detection, health score, cash-flow forecast, credit-card planner, purchase simulator, CSV export, monthly PDF report |
 | Authentication | Argon2id, rotating refresh tokens with reuse detection, email verification, password reset, TOTP MFA/recovery codes, device app lock, recoverable deletion, global guard, per-account lockout, session list, audit trail |
 | Persistence | Postgres behind ports, contract-tested against both adapters, migrations |
 | Isolation | Row-level security, app connects as a non-superuser role, 21 dedicated tests |
-| Tests | 295 without a database, 391 against real PostgreSQL, 20 Flutter tests, and an Android debug APK build; all passing |
+| Tests | 297 without a database, 393 against real PostgreSQL, 20 Flutter tests, and an Android debug APK build; all passing |
 | CI | GitHub Actions: API typecheck/test/build/image + Flutter analyze/test/Android compile; tagged API/APK releases |
 
 That is a solid Phase-0 foundation. It is not a product.
@@ -181,7 +181,7 @@ Completely absent from the repository. There is no billing code of any kind.
 
 ---
 
-## 8. Mission features not started
+## 8. Mission features still incomplete
 
 Tracked separately from bugs and gaps: these are promises in `MISSION.md` with
 no implementation. Roughly in descending order of how prominently the mission
@@ -191,7 +191,10 @@ features them.
 
 - Conversational AI assistant (needs a zero-retention LLM agreement first)
 - ML categoriser trained on user corrections — rules-only today
-- Monthly PDF report — the mission specifies ~25 sections; CSV export is all that exists
+- Monthly PDF report core is complete — a private three-page report now covers
+  summary metrics, cash-flow comparisons, spending categories, budgets,
+  subscriptions, a 30-day forecast, and an action plan. The mission's later
+  investment, tax, fraud, and AI sections depend on those underlying features.
 - Goals and savings targets — persistent model, progress math, contribution history, API, RLS, and Flutter screen are complete
 - Net worth dashboard — no investments, loans, or property
 - Notifications and smart reminders — persistent preferences, a mobile centre, and deduplicated in-app budget, credit-utilization, low-balance, and bank-sync alerts exist; push delivery, bill reminders, and unusual-spend alerts remain

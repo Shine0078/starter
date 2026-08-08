@@ -92,7 +92,8 @@ ADR-0006 records the shape and what it costs.
 - [x] Credit-card payment planner: statement/due dates, utilization alerts, safe payment window
 - [ ] Financial health score surfaced with actionable steps
 - [x] User-owned ledger CSV export (formula-injection safe)
-- [ ] Professional monthly PDF report
+- [x] Professional monthly PDF report with cash-flow charts, budget performance,
+      subscriptions, forecast, and prioritized actions
 - [x] Conservative cash-flow forecasting (7/30/90 day; repeatable income and bills only)
 - [x] One-off purchase simulator against the conservative cash-flow forecast
 - [ ] Receipt OCR, on-device

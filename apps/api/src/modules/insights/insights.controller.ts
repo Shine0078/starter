@@ -1,6 +1,9 @@
 ﻿import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
 
 import { formatMoney, money } from '../../domain/money';
+import { StreamableFile } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
+import { renderMonthlyReportPdf } from '../../infra/reports/monthly-report-pdf';
 import { CurrentUser } from '../auth/auth.guard';
 import { InsightsService } from './insights.service';
 
@@ -38,6 +41,24 @@ export class InsightsController {
       insights: report.insights,
       raw: { summary, previous: report.previous },
     };
+  }
+
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Get('reports/monthly.pdf')
+  async monthlyPdf(
+    @CurrentUser() userId: string,
+    @Query('asOf') asOf?: string,
+  ) {
+    if (asOf && !isIsoCalendarDate(asOf)) {
+      throw new BadRequestException('asOf must be a valid date in YYYY-MM-DD format.');
+    }
+    const bundle = await this.insights.professionalMonthlyReport(userId, asOf);
+    const pdf = await renderMonthlyReportPdf(bundle);
+    return new StreamableFile(pdf, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="finverse-monthly-report-${bundle.report.summary.period.start.slice(0, 7)}.pdf"`,
+      length: pdf.length,
+    });
   }
 
   @Get('subscriptions')
@@ -148,4 +169,11 @@ export class InsightsController {
       endingBalanceFormatted: formatMoney(money(scenario.endingBalance, scenario.currency)),
     };
   }
+}
+
+function isIsoCalendarDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
 }

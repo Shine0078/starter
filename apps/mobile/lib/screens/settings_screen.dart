@@ -43,6 +43,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? _error;
   var _loading = true;
   var _exporting = false;
+  var _reporting = false;
   var _appLockBusy = false;
   var _mfaBusy = false;
 
@@ -415,6 +416,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _shareMonthlyReport() async {
+    setState(() => _reporting = true);
+    File? reportFile;
+    try {
+      final bytes = await widget.api.monthlyReportPdf();
+      final directory = await getTemporaryDirectory();
+      final month = DateFormat('yyyy-MM').format(DateTime.now());
+      reportFile = File(
+          '${directory.path}${Platform.pathSeparator}finverse-monthly-report-$month.pdf');
+      await reportFile.writeAsBytes(bytes, flush: true);
+      await SharePlus.instance.share(ShareParams(
+        files: [XFile(reportFile.path, mimeType: 'application/pdf')],
+        title: 'FINVERSE monthly report',
+        subject: 'My FINVERSE monthly financial report',
+      ));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.toString())));
+    } finally {
+      try {
+        if (reportFile != null && await reportFile.exists()) {
+          await reportFile.delete();
+        }
+      } catch (_) {
+        // The OS temp directory remains the fallback if another app still has
+        // the share open; the platform will reclaim it later.
+      }
+      if (mounted) setState(() => _reporting = false);
+    }
+  }
+
   Future<void> _updateConsent(String kind, bool granted) async {
     try {
       final privacy = await widget.api.updateConsent(kind, granted);
@@ -651,6 +684,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   )
                 : const Icon(Icons.chevron_right),
             onTap: _exporting ? null : _exportData,
+          ),
+        ),
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.picture_as_pdf_outlined),
+            title: const Text('Monthly financial report'),
+            subtitle: const Text(
+              'Charts, budget performance, subscriptions, forecast, and action plan',
+            ),
+            trailing: _reporting
+                ? const SizedBox.square(
+                    dimension: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.ios_share_outlined),
+            onTap: _reporting ? null : _shareMonthlyReport,
           ),
         ),
         const Card(

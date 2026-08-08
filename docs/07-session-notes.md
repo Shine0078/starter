@@ -1,8 +1,8 @@
 # Where the project stands
 
 Written for whoever picks this up next — including a fresh agent session with no
-memory of how any of it got here. Last updated after the MFA security milestone
-on 2026-08-08.
+memory of how any of it got here. Last updated after the MFA and professional
+monthly-report milestones on 2026-08-08.
 
 Read [`MISSION.md`](../MISSION.md) for the product, [`HANDOVER.md`](../HANDOVER.md)
 for the backlog, and [`04-roadmap.md`](04-roadmap.md) for the sequence. This file
@@ -12,8 +12,8 @@ is the shortest path to being productive again.
 
 ```bash
 npm install
-npm test          # 295 tests, no database needed
-npm run test:db   # 391 tests, spins up a real PostgreSQL and tears it down
+npm test          # 297 tests, no database needed
+npm run test:db   # 393 tests, spins up a real PostgreSQL and tears it down
 npm run dev       # API + dev dashboard on http://localhost:3000
 ```
 
@@ -27,8 +27,8 @@ Every number below was produced by running the thing, not by reading the code.
 
 | Check | Result |
 |---|---|
-| API tests, in-memory | 295 passed |
-| API tests, real Postgres | 391 passed |
+| API tests, in-memory | 297 passed |
+| API tests, real Postgres | 393 passed |
 | `tsc --noEmit`, `npm run build` | clean |
 | `flutter analyze`, `flutter test` | clean, 20 passed |
 | Android debug compile | `com.finverse.finance`, API 36, 170.9 MB APK; debug-only artifact built successfully |
@@ -45,7 +45,9 @@ detection, global guard, per-account lockout, session list, audit trail);
 Postgres persistence behind ports with a contract suite covering both adapters;
 row-level security, with the API connecting as a role that cannot bypass it;
 categorisation, budgets, insights, subscriptions, health score, cash-flow
-forecast, credit-card planner, purchase simulator, CSV export.
+forecast, credit-card planner, purchase simulator, CSV export. The Flutter
+Settings screen can also request and share a private monthly PDF containing
+vector charts, budget progress, subscriptions, forecast, and actions.
 
 **Mock:** the aggregator. `MockAggregator` generates a deterministic four-month
 ledger. No bank has ever been connected, and connecting one is gated on a

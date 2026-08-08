@@ -360,6 +360,7 @@ describe('auth API', () => {
       '/api/credit-cards',
       '/api/transactions/needs-review',
       '/api/privacy',
+      '/api/reports/monthly.pdf',
     ];
 
     it.each(PROTECTED)('%s requires a token', async (path) => {
@@ -501,6 +502,38 @@ describe('auth API', () => {
         .expect(200);
 
       expect(bobBudgets.body).toHaveLength(0);
+    });
+
+    it('generates a private multi-page monthly PDF report with charts', async () => {
+      const account = await register();
+      const authorization = `Bearer ${account.tokens.accessToken}`;
+      await request(http)
+        .post('/api/sync')
+        .set('Authorization', authorization)
+        .expect(201);
+      await request(http)
+        .post('/api/budgets')
+        .set('Authorization', authorization)
+        .send({ categorySlug: 'restaurants', limitAmount: 20000 })
+        .expect(201);
+
+      const response = await request(http)
+        .get('/api/reports/monthly.pdf?asOf=2026-08-08')
+        .set('Authorization', authorization)
+        .expect(200);
+
+      expect(response.headers['content-type']).toContain('application/pdf');
+      expect(response.headers['content-disposition']).toContain(
+        'finverse-monthly-report-2026-08.pdf',
+      );
+      expect(Buffer.isBuffer(response.body)).toBe(true);
+      expect(response.body.subarray(0, 5).toString('ascii')).toBe('%PDF-');
+      expect(response.body.length).toBeGreaterThan(5_000);
+
+      await request(http)
+        .get('/api/reports/monthly.pdf?asOf=2026-02-31')
+        .set('Authorization', authorization)
+        .expect(400);
     });
 
     it('exports portable user data after password confirmation without credential material', async () => {

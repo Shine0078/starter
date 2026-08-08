@@ -409,6 +409,15 @@ class ApiClient {
     return response.body;
   }
 
+  Future<List<int>> monthlyReportPdf() async {
+    final response = await _perform('GET', '/reports/monthly.pdf', null, true);
+    if (response.statusCode >= 400) {
+      throw ApiException(
+          '/reports/monthly.pdf', response.statusCode, response.body);
+    }
+    return response.bodyBytes;
+  }
+
   Future<PrivacyDashboard> privacyDashboard() async {
     final json = await _get('/privacy') as Map<String, dynamic>;
     return PrivacyDashboard.fromJson(json);

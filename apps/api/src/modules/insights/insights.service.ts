@@ -34,6 +34,16 @@ export interface MonthlyReport {
   insights: Insight[];
 }
 
+export interface ProfessionalMonthlyReport {
+  asOf: string;
+  report: MonthlyReport;
+  budgets: Awaited<ReturnType<BudgetsService['progress']>>;
+  subscriptions: Awaited<ReturnType<InsightsService['subscriptions']>>;
+  health: HealthScore;
+  forecast: CashFlowForecast;
+  creditCards: CreditCardPlan[];
+}
+
 @Injectable()
 export class InsightsService {
   constructor(
@@ -134,5 +144,30 @@ export class InsightsService {
       this.accounts.list(userId),
     ]);
     return simulatePurchase(accounts, transactions, today, days, amount, purchaseDate);
+  }
+
+  async professionalMonthlyReport(
+    userId: string,
+    asOf?: string,
+  ): Promise<ProfessionalMonthlyReport> {
+    const today = asOf ?? this.clock.today();
+    const [report, budgets, subscriptions, health, forecast, creditCards] = await Promise.all([
+      this.monthlyReport(userId, today),
+      this.budgets.progress(userId, today),
+      this.subscriptions(userId, today),
+      this.healthScore(userId, today),
+      this.cashFlowForecast(userId, 30, today),
+      this.creditCardPlans(userId, today),
+    ]);
+
+    return {
+      asOf: today,
+      report,
+      budgets,
+      subscriptions,
+      health,
+      forecast,
+      creditCards,
+    };
   }
 }

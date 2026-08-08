@@ -125,6 +125,7 @@ last 15 minutes; exchange the refresh token at `/api/auth/refresh` for a new pai
 | `GET`/`POST` | `/budgets` | List / create |
 | `GET` | `/budgets/progress` | Spend, thresholds, projections, alerts |
 | `GET` | `/insights` | Month-to-date vs. the same window last month |
+| `GET` | `/reports/monthly.pdf?asOf=YYYY-MM-DD` | Private multi-page PDF with cash-flow charts, budgets, subscriptions, forecast, and actions |
 | `GET` | `/subscriptions` | Detected recurring charges and price rises |
 | `GET` | `/health-score` | 0–1000 with per-component actions |
 | `GET` | `/cash-flow-forecast?days=7|30|90` | Conservative liquid-cash outlook from repeatable income and bills |
@@ -209,8 +210,8 @@ stopped running.
 
 ## Notes on what is and isn't verified
 
-- **The API and its domain logic run and are tested.** 295 tests run with no
-  database; the full suite is **391 passing** against real PostgreSQL, including
+- **The API and its domain logic run and are tested.** 297 tests run with no
+  database; the full suite is **393 passing** against real PostgreSQL, including
   the store contract — which runs as the restricted role, so it executes with the
   row-level security policies in force — and a suite that issues deliberately
   unfiltered SQL to prove the database withholds other users' rows on its own.
@@ -219,6 +220,9 @@ stopped running.
   Android debug APK build.** Android and iOS platform projects can be generated
   locally. See the
   [cheap launch path](docs/06-cheap-launch-path.md).
+- **Users can share a professional monthly PDF from Settings.** The report is
+  generated on demand and includes summary metrics, vector charts, category and
+  budget performance, recurring costs, a 30-day forecast, and prioritized actions.
 - **CI is ready in `.github/workflows/ci.yml`.** It starts automatically after a
   commit is pushed to GitHub and requires no secrets for its default checks.
 

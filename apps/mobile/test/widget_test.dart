@@ -656,6 +656,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Usage analytics'), findsOneWidget);
     expect(find.text('Export my data'), findsOneWidget);
+    expect(find.text('Monthly financial report'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('RECENT SECURITY ACTIVITY'),
       400,
