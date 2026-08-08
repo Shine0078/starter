@@ -224,6 +224,7 @@ describe('auth API', () => {
       '/api/cash-flow-forecast',
       '/api/credit-cards',
       '/api/transactions/needs-review',
+      '/api/privacy',
     ];
 
     it.each(PROTECTED)('%s requires a token', async (path) => {
@@ -393,6 +394,37 @@ describe('auth API', () => {
       expect(serialized).not.toContain('refreshToken');
       expect(serialized).not.toContain('encryptedAccessToken');
       expect(serialized).not.toContain('providerItemId');
+    });
+
+    it('keeps an append-only history of optional consent choices per user', async () => {
+      const alice = await register();
+      const bob = await register();
+
+      await request(http)
+        .patch('/api/privacy/consents/analytics')
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .send({ granted: true })
+        .expect(200);
+      const changed = await request(http)
+        .patch('/api/privacy/consents/analytics')
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .send({ granted: false })
+        .expect(200);
+      expect(changed.body.optionalConsents.analytics.granted).toBe(false);
+      expect(changed.body.consentHistory.filter((row: { kind: string }) => row.kind === 'analytics')).toHaveLength(2);
+
+      const bobDashboard = await request(http)
+        .get('/api/privacy')
+        .set('Authorization', `Bearer ${bob.tokens.accessToken}`)
+        .expect(200);
+      expect(bobDashboard.body.optionalConsents.analytics.granted).toBe(false);
+      expect(bobDashboard.body.consentHistory).toHaveLength(0);
+
+      await request(http)
+        .patch('/api/privacy/consents/terms')
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .send({ granted: false })
+        .expect(400);
     });
 
     it('keeps savings goals separate', async () => {

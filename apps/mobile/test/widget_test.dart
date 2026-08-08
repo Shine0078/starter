@@ -412,6 +412,12 @@ void main() {
           200,
         );
       }
+      if (path.endsWith('/privacy')) {
+        return http.Response(
+          '{"user":{"id":"user-1","email":"sam@example.com","emailVerified":true},"optionalConsents":{"analytics":{"granted":false,"policyVersion":"preference-v1","updatedAt":null},"productUpdates":{"granted":false,"policyVersion":"preference-v1","updatedAt":null}},"consentHistory":[],"securityActivity":[{"id":"event-1","kind":"login","succeeded":true,"ipAddress":"127.0.0.1","userAgent":"FINVERSE Android","detail":null,"createdAt":"2026-08-08T00:00:00.000Z"}],"retention":{"accountDeletionRecoveryDays":30,"offlineCacheMaximumDays":30}}',
+          200,
+        );
+      }
       if (path.endsWith('/insights')) {
         return http.Response(
           '{"headline":{"income":"\$0.00","expenses":"\$0.00","netCashFlow":"\$0.00","savingsRate":"0.0%"},"topCategories":[],"insights":[]}',
@@ -448,7 +454,21 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('sam@example.com'), findsOneWidget);
     expect(find.text('This device'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Usage analytics'),
+      400,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Usage analytics'), findsOneWidget);
     expect(find.text('Export my data'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('RECENT SECURITY ACTIVITY'),
+      400,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('RECENT SECURITY ACTIVITY'), findsOneWidget);
     await tester.pageBack();
     await tester.pumpAndSettle();
 

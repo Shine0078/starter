@@ -100,6 +100,12 @@ if (ownerUrl) {
          VALUES ('event-' || $1, $1, $2, 'login', true)`,
         [userId, email],
       );
+      await harness.owner.query(
+        `INSERT INTO consent_events
+           (id,user_id,kind,granted,policy_version,source,created_at)
+         VALUES ('consent-' || $1,$1,'analytics',true,'preference-v1','user_settings',now())`,
+        [userId],
+      );
 
       const deletions = new PostgresAccountDeletionStore(harness.app);
       const requestedAt = new Date('2026-08-01T00:00:00.000Z');
@@ -123,6 +129,7 @@ if (ownerUrl) {
         'notifications',
         'institution_links',
         'bank_webhook_jobs',
+        'consent_events',
         'sessions',
       ]) {
         const column = table === 'users' ? 'id' : 'user_id';

@@ -1,4 +1,4 @@
-import { describe, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import {
   InMemoryAuthActionTokenStore,
@@ -34,6 +34,7 @@ import {
 import { runAuthStoreContract, type AuthStoreSet } from './auth-store-contract';
 import { startPgHarness } from './pg-harness';
 import { runStoreContract, type StoreSet } from './store-contract';
+import { InMemoryConsentStore, PostgresConsentStore } from '../src/infra/privacy/consent-stores';
 
 // ------------------------------------------------- in-memory identity stores
 
@@ -109,6 +110,37 @@ runStoreContract('in-memory', async (): Promise<StoreSet> => {
   return set;
 });
 
+describe('consent store: in-memory', () => {
+  let store: InMemoryConsentStore;
+
+  beforeEach(() => {
+    store = new InMemoryConsentStore();
+  });
+
+  it('keeps append-only choices ordered and users isolated', async () => {
+    await store.record('alice', {
+      id: 'consent-1',
+      userId: 'alice',
+      kind: 'analytics',
+      granted: true,
+      policyVersion: 'preference-v1',
+      source: 'user_settings',
+      createdAt: new Date('2026-08-01T00:00:00Z'),
+    });
+    await store.record('alice', {
+      id: 'consent-2',
+      userId: 'alice',
+      kind: 'analytics',
+      granted: false,
+      policyVersion: 'preference-v1',
+      source: 'user_settings',
+      createdAt: new Date('2026-08-02T00:00:00Z'),
+    });
+    expect((await store.list('alice')).map((event) => event.granted)).toEqual([false, true]);
+    expect(await store.list('bob')).toEqual([]);
+  });
+});
+
 // ----------------------------------------------------------------- postgres
 
 /**
@@ -124,6 +156,40 @@ runStoreContract('in-memory', async (): Promise<StoreSet> => {
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
 
 if (TEST_DATABASE_URL) {
+  describe('consent store: postgres', () => {
+    let harness: Awaited<ReturnType<typeof startPgHarness>>;
+    let store: PostgresConsentStore;
+
+    beforeAll(async () => {
+      harness = await startPgHarness(TEST_DATABASE_URL);
+      store = new PostgresConsentStore(harness.app);
+    });
+
+    afterAll(async () => {
+      await harness.close();
+      await closePool();
+    });
+
+    beforeEach(async () => {
+      await harness.owner.query("DELETE FROM users WHERE id IN ('consent_alice','consent_bob')");
+      await harness.owner.query("INSERT INTO users (id) VALUES ('consent_alice'),('consent_bob')");
+    });
+
+    it('round-trips append-only choices through the restricted role', async () => {
+      await store.record('consent_alice', {
+        id: 'consent-pg-1',
+        userId: 'consent_alice',
+        kind: 'product_updates',
+        granted: true,
+        policyVersion: 'preference-v1',
+        source: 'user_settings',
+        createdAt: new Date('2026-08-01T00:00:00Z'),
+      });
+      expect((await store.list('consent_alice'))[0]?.granted).toBe(true);
+      expect(await store.list('consent_bob')).toEqual([]);
+    });
+  });
+
   // Note which pool goes where: the stores under test get the restricted
   // runtime role, so the whole contract runs with the RLS policies in force,
   // while reset() uses the owner. Handing the stores the owner's pool would

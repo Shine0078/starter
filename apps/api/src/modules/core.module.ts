@@ -46,6 +46,7 @@ import {
 } from '../infra/banking/bank-link-stores';
 import { PlaidBankProvider } from '../infra/banking/plaid-provider';
 import { AesGcmBankTokenCipher } from '../infra/banking/token-cipher';
+import { InMemoryConsentStore, PostgresConsentStore } from '../infra/privacy/consent-stores';
 import {
   BANK_LINK_STORE,
   BANK_PROVIDER,
@@ -77,6 +78,7 @@ import {
   TOKEN_ISSUER,
   USER_STORE,
 } from '../ports/auth';
+import { CONSENT_STORE } from '../ports/privacy';
 
 /**
  * Composition root. The only file that decides which adapter satisfies which
@@ -103,6 +105,7 @@ function storeProviders(): Provider[] {
     const sessions = new InMemorySessionStore();
     const events = new InMemoryAuthEventStore();
     const actionTokens = new InMemoryAuthActionTokenStore();
+    const consents = new InMemoryConsentStore();
     const deletions = new InMemoryAccountDeletionStore(
       users,
       sessions,
@@ -115,6 +118,7 @@ function storeProviders(): Provider[] {
       notifications,
       bankLinks,
       bankWebhooks,
+      consents,
     );
     return [
       { provide: ACCOUNT_STORE, useValue: accounts },
@@ -130,6 +134,7 @@ function storeProviders(): Provider[] {
       { provide: AUTH_EVENT_STORE, useValue: events },
       { provide: ACCOUNT_DELETION_STORE, useValue: deletions },
       { provide: AUTH_ACTION_TOKEN_STORE, useValue: actionTokens },
+      { provide: CONSENT_STORE, useValue: consents },
     ];
   }
 
@@ -161,6 +166,7 @@ function storeProviders(): Provider[] {
     { provide: AUTH_EVENT_STORE, useFactory: () => new PostgresAuthEventStore(pool) },
     { provide: ACCOUNT_DELETION_STORE, useFactory: () => new PostgresAccountDeletionStore(pool) },
     { provide: AUTH_ACTION_TOKEN_STORE, useFactory: () => new PostgresAuthActionTokenStore(pool) },
+    { provide: CONSENT_STORE, useFactory: () => new PostgresConsentStore(pool) },
   ];
 }
 
@@ -260,6 +266,7 @@ function storeProviders(): Provider[] {
     EMAIL_SENDER,
     PASSWORD_HASHER,
     TOKEN_ISSUER,
+    CONSENT_STORE,
   ],
 })
 export class CoreModule {}

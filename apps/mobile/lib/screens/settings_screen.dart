@@ -34,6 +34,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   PublicUser? _user;
   List<AppSession> _sessions = const [];
+  PrivacyDashboard? _privacy;
   String? _error;
   var _loading = true;
   var _exporting = false;
@@ -45,17 +46,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _load() async {
+    widget.api.resetOfflineStatus();
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
-      final results =
-          await Future.wait([widget.api.me(), widget.api.sessions()]);
+      final results = await Future.wait([
+        widget.api.me(),
+        widget.api.sessions(),
+        widget.api.privacyDashboard(),
+      ]);
       if (!mounted) return;
       setState(() {
         _user = results[0] as PublicUser;
         _sessions = results[1] as List<AppSession>;
+        _privacy = results[2] as PrivacyDashboard;
         _loading = false;
       });
     } catch (error) {
@@ -186,6 +192,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _updateConsent(String kind, bool granted) async {
+    try {
+      final privacy = await widget.api.updateConsent(kind, granted);
+      if (mounted) setState(() => _privacy = privacy);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.toString())));
+    }
+  }
+
+  void _showConsentHistory() {
+    final history = _privacy!.consentHistory;
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Consent history'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: history.isEmpty
+              ? const Text('No optional consent choices recorded yet.')
+              : ListView(
+                  shrinkWrap: true,
+                  children: history
+                      .map((entry) => ListTile(
+                            leading: Icon(entry.granted
+                                ? Icons.check_circle_outline
+                                : Icons.cancel_outlined),
+                            title: Text(entry.kind.replaceAll('_', ' ')),
+                            subtitle: Text(
+                              '${entry.granted ? 'Granted' : 'Withdrawn'} • ${_date(entry.createdAt)}\n${entry.policyVersion}',
+                            ),
+                          ))
+                      .toList(),
+                ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('Settings & privacy')),
@@ -291,6 +343,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         const SizedBox(height: 20),
         _heading('PRIVACY & ACCESS'),
+        if (_privacy != null)
+          Card(
+            child: Column(
+              children: [
+                SwitchListTile(
+                  secondary: const Icon(Icons.analytics_outlined),
+                  title: const Text('Usage analytics'),
+                  subtitle: const Text(
+                    'Allow future privacy-preserving product analytics. No analytics SDK is currently installed.',
+                  ),
+                  value: _privacy!.analytics.granted,
+                  onChanged: (value) => _updateConsent('analytics', value),
+                ),
+                SwitchListTile(
+                  secondary: const Icon(Icons.mark_email_unread_outlined),
+                  title: const Text('Product updates'),
+                  subtitle: const Text(
+                    'Allow occasional FINVERSE product news. Marketing delivery is not currently enabled.',
+                  ),
+                  value: _privacy!.productUpdates.granted,
+                  onChanged: (value) =>
+                      _updateConsent('product_updates', value),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.history),
+                  title: const Text('Consent history'),
+                  subtitle: Text(
+                    '${_privacy!.consentHistory.length} recorded choice${_privacy!.consentHistory.length == 1 ? '' : 's'}',
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: _showConsentHistory,
+                ),
+              ],
+            ),
+          ),
         Card(
           child: ListTile(
             leading: const Icon(Icons.download_outlined),
@@ -317,6 +404,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
             isThreeLine: true,
           ),
         ),
+        if (_privacy != null && _privacy!.securityActivity.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _heading('RECENT SECURITY ACTIVITY'),
+          Card(
+            child: Column(
+              children: _privacy!.securityActivity
+                  .take(5)
+                  .map((event) => ListTile(
+                        leading: Icon(
+                          event.succeeded
+                              ? Icons.verified_user_outlined
+                              : Icons.warning_amber_outlined,
+                        ),
+                        title: Text(event.kind.replaceAll('_', ' ')),
+                        subtitle: Text(
+                          '${_date(event.createdAt)}\n${event.ipAddress ?? 'IP unavailable'}',
+                        ),
+                        isThreeLine: true,
+                      ))
+                  .toList(),
+            ),
+          ),
+        ],
         ListTile(
           leading: const Icon(Icons.logout),
           title: const Text('Sign out'),

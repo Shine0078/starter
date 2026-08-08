@@ -40,6 +40,10 @@ preferences, first-launch onboarding, and a settings/privacy area with active-de
 session revocation and password-confirmed portable data export through the native
 share sheet.
 
+Privacy settings also show recent security activity and default-off analytics and
+product-update choices. Every grant or withdrawal is kept as versioned, append-only
+server history and is included in account export and erasure.
+
 Successful authenticated reads are cached locally for offline fallback. Payloads
 are AES-256-GCM encrypted with a key in the platform keystore, scoped per user,
 limited to 30 days, and purged on sign-out or account deletion. The dashboard labels

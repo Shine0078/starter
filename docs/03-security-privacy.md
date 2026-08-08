@@ -127,7 +127,7 @@ aggregates only, or self-hosted.
 
 | Framework | Status | Blocker |
 |---|---|---|
-| GDPR / CCPA / PIPEDA | Account request, recovery, purge, CSV ledger export, and a password-confirmed portable JSON export are implemented. The JSON includes profile, security activity, sessions, finance records, preferences, and sanitized bank-link metadata | Consent records, identity-verification procedure, response operations, and counsel review remain |
+| GDPR / CCPA / PIPEDA | Account request, recovery, purge, CSV ledger export, password-confirmed portable JSON export, append-only optional-consent history, and a user-visible security activity surface are implemented | Counsel-approved legal notices/versions, DSAR identity-verification procedure, response operations, and retention evidence remain |
 | SOC 2 Type II | Not ready; several production controls do not exist | Requires implemented controls, evidence window, and auditor |
 | PCI DSS | Mostly **out of scope by design** — we never touch card PANs | Stays true only if we never accept card entry |
 | Open Banking (PSD2, CDR, UK OBIE) | Handled via aggregator | Their license, not ours, in most regions |

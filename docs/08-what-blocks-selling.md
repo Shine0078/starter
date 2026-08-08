@@ -25,7 +25,7 @@ Stated so the rest of this document is not read as "nothing works".
 | Authentication | Argon2id, rotating refresh tokens with reuse detection, email verification, password reset, recoverable deletion, global guard, per-account lockout, session list, audit trail |
 | Persistence | Postgres behind ports, contract-tested against both adapters, migrations |
 | Isolation | Row-level security, app connects as a non-superuser role, 21 dedicated tests |
-| Tests | 282 without a database, 373 against real Postgres, 15 Flutter tests; all passing |
+| Tests | 285 without a database, 379 against real Postgres, 15 Flutter tests; all passing |
 | CI | GitHub Actions: API typecheck/test/build/image + Flutter analyze/test/Android compile; tagged API/APK releases |
 
 That is a solid Phase-0 foundation. It is not a product.
@@ -99,8 +99,8 @@ environment before they can be claimed.
 | 3.2.8 | **Password blocklist is a small built-in set** | Should check a real corpus via HIBP k-anonymity | days |
 | 3.2.9 | **CORS is wide open in development** | Correctly fails closed in production, but the production allowlist has never been exercised | days |
 | 3.2.10 | **Secrets management** | `JWT_SECRET` and DB passwords come from env vars. No KMS, no rotation, no vault | 1 week |
-| 3.2.11 | **Portable data export** | **Completed technically:** password-confirmed JSON includes profile, sessions, security activity, accounts, transactions, budgets, rules, goals/contributions, notifications/preferences, and sanitized bank metadata; no password hashes, session-token hashes, or Plaid secrets | Counsel must approve DSAR procedure and scope |
-| 3.2.12 | **Consent and retention records** | Settings now exposes sessions, bank access, notification choices, deletion, and export. Versioned legal acknowledgements, optional-consent history, and retention-policy evidence do not exist yet | 1–2 weeks plus counsel-approved policy versions |
+| 3.2.11 | **Portable data export** | **Completed technically:** password-confirmed JSON includes profile, sessions, security activity, accounts, transactions, budgets, rules, goals/contributions, notifications/preferences, consent history, and sanitized bank metadata; no password hashes, session-token hashes, or Plaid secrets | Counsel must approve DSAR procedure and scope |
+| 3.2.12 | **Consent and retention records** | **Optional consent is complete technically:** analytics/product-update choices default off, every grant/withdrawal is append-only with policy version/source/server time, RLS-isolated, exported, visible to the user, and erased with the account. Counsel-approved terms/privacy versions and retention-policy evidence remain | external policy decisions plus days of wiring |
 | 3.2.13 | **No penetration test** | A finance product should not take its first real user without one | 2–4 weeks + fixes |
 | 3.2.14 | **No threat model document** | The abbreviated table in the docs is a sketch, not a threat model | 1 week |
 
@@ -137,7 +137,7 @@ smaller than the complete MISSION.md product.
 
 | # | Item | Detail | Effort |
 |---|---|---|---|
-| 5.1 | **Core navigation started** | Onboarding, home, transaction search/detail/correction, budgets, goals, bank accounts, subscriptions, notifications, settings/session controls, and password-confirmed data export are implemented. No consent-management dashboard | 2–4 weeks |
+| 5.1 | **Core navigation started** | Onboarding, home, transaction search/detail/correction, budgets, goals, bank accounts, subscriptions, notifications, settings/session controls, portable export, optional consent management/history, and recent security activity are implemented | 2–3 weeks for remaining breadth/polish |
 | 5.2 | **Read-only offline cache implemented** | Authenticated GET responses can fall back to a 30-day, user-scoped encrypted cache with a visible stale-data banner. Offline writes, background reconciliation, and conflict handling remain | 2–3 weeks |
 | 5.3 | **No state management** | `setState` only. Honest at one screen, unworkable at twenty | with 5.1 |
 | 5.4 | **No push notifications** | Persistent preferences, a mobile notification centre, and deduplicated budget, utilization, low-balance, and bank-sync alerts exist. Device push delivery, bill reminders, and unusual-spend detection remain | 2–3 weeks |
@@ -174,8 +174,8 @@ Completely absent from the repository. There is no billing code of any kind.
 | 7.1 | No support channel, help centre, or in-app contact route |
 | 7.2 | No admin tooling — no way to look up a user's problem without raw SQL, which RLS now (correctly) blocks |
 | 7.3 | No incident process, on-call, or status page |
-| 7.4 | No analytics or product telemetry — the mission asks for privacy-preserving telemetry with consent; there is none |
-| 7.5 | No terms of service, privacy policy, or cookie/consent surfaces as shipped artefacts |
+| 7.4 | No analytics or product telemetry is installed. A default-off, versioned consent surface now exists before any analytics SDK is introduced |
+| 7.5 | Optional-consent controls/history exist, but no counsel-approved terms of service or privacy policy is shipped |
 | 7.6 | No onboarding or user documentation |
 
 ---
@@ -255,7 +255,8 @@ Three things make this unsellable today, and they are not the same size:
 
 1. **It has never seen a real bank.** Gated on a commercial agreement, not code.
 2. **The mobile app covers the first daily workflows, not the full product.**
-   Offline mode and a full consent/privacy-access area remain.
+   Offline writes and several mission-scale surfaces still remain; legal-policy text
+   and versions require owner/counsel decisions.
 3. **There is no live production deployment and no way to charge.** Release
    artifacts exist, but provider accounts and production wiring do not.
 

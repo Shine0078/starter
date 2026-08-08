@@ -659,3 +659,110 @@ class SubscriptionPriceIncrease {
   final int percent;
   final String annualImpact;
 }
+
+class ConsentChoice {
+  const ConsentChoice({
+    required this.granted,
+    required this.policyVersion,
+    this.updatedAt,
+  });
+
+  factory ConsentChoice.fromJson(Map<String, dynamic> json) => ConsentChoice(
+        granted: json['granted'] as bool,
+        policyVersion: json['policyVersion'] as String,
+        updatedAt: json['updatedAt'] as String?,
+      );
+
+  final bool granted;
+  final String policyVersion;
+  final String? updatedAt;
+}
+
+class ConsentHistoryEntry {
+  const ConsentHistoryEntry({
+    required this.kind,
+    required this.granted,
+    required this.policyVersion,
+    required this.createdAt,
+  });
+
+  factory ConsentHistoryEntry.fromJson(Map<String, dynamic> json) =>
+      ConsentHistoryEntry(
+        kind: json['kind'] as String,
+        granted: json['granted'] as bool,
+        policyVersion: json['policyVersion'] as String,
+        createdAt: json['createdAt'] as String,
+      );
+
+  final String kind;
+  final bool granted;
+  final String policyVersion;
+  final String createdAt;
+}
+
+class SecurityActivity {
+  const SecurityActivity({
+    required this.kind,
+    required this.succeeded,
+    required this.createdAt,
+    this.ipAddress,
+    this.userAgent,
+    this.detail,
+  });
+
+  factory SecurityActivity.fromJson(Map<String, dynamic> json) =>
+      SecurityActivity(
+        kind: json['kind'] as String,
+        succeeded: json['succeeded'] as bool,
+        createdAt: json['createdAt'] as String,
+        ipAddress: json['ipAddress'] as String?,
+        userAgent: json['userAgent'] as String?,
+        detail: json['detail'] as String?,
+      );
+
+  final String kind;
+  final bool succeeded;
+  final String createdAt;
+  final String? ipAddress;
+  final String? userAgent;
+  final String? detail;
+}
+
+class PrivacyDashboard {
+  const PrivacyDashboard({
+    required this.analytics,
+    required this.productUpdates,
+    required this.consentHistory,
+    required this.securityActivity,
+    required this.accountDeletionRecoveryDays,
+    required this.offlineCacheMaximumDays,
+  });
+
+  factory PrivacyDashboard.fromJson(Map<String, dynamic> json) {
+    final choices = json['optionalConsents'] as Map<String, dynamic>;
+    final retention = json['retention'] as Map<String, dynamic>;
+    return PrivacyDashboard(
+      analytics:
+          ConsentChoice.fromJson(choices['analytics'] as Map<String, dynamic>),
+      productUpdates: ConsentChoice.fromJson(
+          choices['productUpdates'] as Map<String, dynamic>),
+      consentHistory: (json['consentHistory'] as List<dynamic>)
+          .map((row) =>
+              ConsentHistoryEntry.fromJson(row as Map<String, dynamic>))
+          .toList(),
+      securityActivity: (json['securityActivity'] as List<dynamic>)
+          .map((row) => SecurityActivity.fromJson(row as Map<String, dynamic>))
+          .toList(),
+      accountDeletionRecoveryDays:
+          retention['accountDeletionRecoveryDays'] as int,
+      offlineCacheMaximumDays: retention['offlineCacheMaximumDays'] as int,
+    );
+  }
+
+  final ConsentChoice analytics;
+  final ConsentChoice productUpdates;
+  final List<ConsentHistoryEntry> consentHistory;
+  final List<SecurityActivity> securityActivity;
+  final int accountDeletionRecoveryDays;
+  final int offlineCacheMaximumDays;
+}

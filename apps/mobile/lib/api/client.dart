@@ -338,6 +338,20 @@ class ApiClient {
     return response.body;
   }
 
+  Future<PrivacyDashboard> privacyDashboard() async {
+    final json = await _get('/privacy') as Map<String, dynamic>;
+    return PrivacyDashboard.fromJson(json);
+  }
+
+  Future<PrivacyDashboard> updateConsent(String kind, bool granted) async {
+    final json = await _send(
+      'PATCH',
+      '/privacy/consents/${Uri.encodeComponent(kind)}',
+      {'granted': granted},
+    ) as Map<String, dynamic>;
+    return PrivacyDashboard.fromJson(json);
+  }
+
   Future<SyncResult> sync() async {
     final json = await _send('POST', '/sync') as Map<String, dynamic>;
     return SyncResult.fromJson(json);

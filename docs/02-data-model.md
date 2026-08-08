@@ -39,6 +39,22 @@ User ──┬── Institution Link ── Account ── Transaction ──�
 | `deletion_requested_at` | timestamptz | start of the recovery window; nullable |
 | `purge_after` | timestamptz | irreversible erasure time; nullable |
 
+### `consent_events`
+Append-only evidence for user-controlled optional processing. A new row is
+created for every grant or withdrawal; history is never overwritten. The current
+choice is the newest event for a kind. PostgreSQL RLS scopes rows to the user and
+the user foreign key cascades during permanent account erasure.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | text | pk |
+| `user_id` | text | fk to users, delete cascade |
+| `kind` | text | `analytics`, `product_updates`, or a future versioned legal acknowledgement |
+| `granted` | boolean | false records withdrawal rather than deleting evidence |
+| `policy_version` | text | version presented when the choice was made |
+| `source` | text | registration, user settings, or an audited migration |
+| `created_at` | timestamptz | authoritative server time |
+
 ### `institution_links`
 The connection to an aggregator. **No bank credentials, ever.** We store the
 aggregator's opaque item/link token and nothing that could authenticate as the user.

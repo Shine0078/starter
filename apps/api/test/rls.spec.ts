@@ -34,6 +34,7 @@ const PROTECTED_TABLES = [
   'notifications',
   'institution_links',
   'bank_webhook_jobs',
+  'consent_events',
 ];
 
 /** Seeds one account and one transaction for a user, as the owner. */
@@ -90,6 +91,12 @@ async function seed(owner: Pool, userId: string, amount: number): Promise<void> 
        (id,user_id,link_id,body_hash,status,attempts,available_at,created_at)
      VALUES ($1,$2,$3,$4,'pending',0,now(),now())`,
     [`webhook_${userId}`, userId, `link_${userId}`, `hash_${userId}`],
+  );
+  await owner.query(
+    `INSERT INTO consent_events
+       (id,user_id,kind,granted,policy_version,source,created_at)
+     VALUES ($1,$2,'analytics',false,'preference-v1','user_settings',now())`,
+    [`consent_${userId}`, userId],
   );
 }
 
