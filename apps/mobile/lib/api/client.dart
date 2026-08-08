@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../models/models.dart';
+import 'session_store.dart';
 
 /// Thin client over the FINVERSE API.
 ///
@@ -10,9 +11,15 @@ import '../models/models.dart';
 /// no business logic. The financial rules live server-side in the domain layer
 /// (see ADR-0002) so that the phone and any future web client cannot drift
 /// apart in their arithmetic.
+///
+/// It does own one piece of protocol: attaching the access token and, when the
+/// server says it has expired, exchanging the refresh token exactly once before
+/// retrying. Access tokens are short-lived, so without that every screen would
+/// have to handle a 401 itself.
 class ApiClient {
-  ApiClient({http.Client? httpClient, String? baseUrl})
+  ApiClient({http.Client? httpClient, String? baseUrl, SessionStore? sessionStore})
       : _http = httpClient ?? http.Client(),
+        sessionStore = sessionStore ?? SecureSessionStore(),
         baseUrl = baseUrl ??
             const String.fromEnvironment(
               'API_BASE_URL',
@@ -23,11 +30,51 @@ class ApiClient {
 
   final http.Client _http;
   final String baseUrl;
+  final SessionStore sessionStore;
+
+  SessionTokens? _tokens;
+
+  /// Called when the session is gone for good, so the app can show sign-in.
+  void Function()? onSessionExpired;
 
   Uri _uri(String path) => Uri.parse('$baseUrl/api$path');
 
+  /// True when a stored session was found. Call once at startup.
+  Future<bool> restoreSession() async {
+    _tokens = await sessionStore.read();
+    return _tokens != null;
+  }
+
+  bool get isAuthenticated => _tokens != null;
+
+  Map<String, String> _headers({bool json = false}) => {
+        if (json) 'content-type': 'application/json',
+        if (_tokens != null) 'authorization': 'Bearer ${_tokens!.accessToken}',
+      };
+
+  Future<http.Response> _perform(
+    String method,
+    String path,
+    Object? body,
+    bool allowRetry,
+  ) async {
+    final request = http.Request(method, _uri(path))
+      ..headers.addAll(_headers(json: body != null));
+    if (body != null) request.body = jsonEncode(body);
+
+    final response = await http.Response.fromStream(await _http.send(request));
+
+    if (response.statusCode == 401 && allowRetry && _tokens != null) {
+      if (await _refresh()) return _perform(method, path, body, false);
+      await signOut(notifyServer: false);
+      onSessionExpired?.call();
+    }
+
+    return response;
+  }
+
   Future<dynamic> _get(String path) async {
-    final response = await _http.get(_uri(path));
+    final response = await _perform('GET', path, null, true);
     if (response.statusCode >= 400) {
       throw ApiException(path, response.statusCode, response.body);
     }
@@ -35,16 +82,81 @@ class ApiClient {
   }
 
   Future<dynamic> _send(String method, String path, [Object? body]) async {
-    final request = http.Request(method, _uri(path))
-      ..headers['content-type'] = 'application/json';
-    if (body != null) request.body = jsonEncode(body);
-
-    final streamed = await _http.send(request);
-    final response = await http.Response.fromStream(streamed);
+    final response = await _perform(method, path, body, true);
     if (response.statusCode >= 400) {
       throw ApiException(path, response.statusCode, response.body);
     }
     return response.body.isEmpty ? null : jsonDecode(response.body);
+  }
+
+  // ------------------------------------------------------------------ auth
+
+  Future<PublicUser> register(String email, String password) =>
+      _authenticate('/auth/register', {'email': email, 'password': password});
+
+  Future<PublicUser> signIn(String email, String password) =>
+      _authenticate('/auth/login', {'email': email, 'password': password});
+
+  Future<PublicUser> _authenticate(String path, Map<String, dynamic> body) async {
+    // Deliberately bypasses _perform: there is no session to attach or retry.
+    final response = await _http.post(
+      _uri(path),
+      headers: {'content-type': 'application/json'},
+      body: jsonEncode(body),
+    );
+
+    final decoded = response.body.isEmpty
+        ? <String, dynamic>{}
+        : jsonDecode(response.body) as Map<String, dynamic>;
+
+    if (response.statusCode >= 400) {
+      throw AuthException.fromResponse(response.statusCode, decoded);
+    }
+
+    _tokens = SessionTokens.fromJson(decoded['tokens'] as Map<String, dynamic>);
+    await sessionStore.write(_tokens!);
+    return PublicUser.fromJson(decoded['user'] as Map<String, dynamic>);
+  }
+
+  Future<bool> _refresh() async {
+    final refreshToken = _tokens?.refreshToken;
+    if (refreshToken == null) return false;
+
+    try {
+      final response = await _http.post(
+        _uri('/auth/refresh'),
+        headers: {'content-type': 'application/json'},
+        body: jsonEncode({'refreshToken': refreshToken}),
+      );
+      if (response.statusCode >= 400) return false;
+
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      _tokens = SessionTokens.fromJson(decoded['tokens'] as Map<String, dynamic>);
+      await sessionStore.write(_tokens!);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<PublicUser> me() async =>
+      PublicUser.fromJson(await _get('/auth/me') as Map<String, dynamic>);
+
+  /// Clears the local session, and by default tells the server to revoke it.
+  ///
+  /// The local clear happens regardless of whether the server call succeeds —
+  /// a user tapping "sign out" on a train with no signal must still end up
+  /// signed out on the device.
+  Future<void> signOut({bool notifyServer = true}) async {
+    if (notifyServer && _tokens != null) {
+      try {
+        await _perform('POST', '/auth/logout', null, false);
+      } catch (_) {
+        // Offline, or the session was already revoked server-side.
+      }
+    }
+    _tokens = null;
+    await sessionStore.clear();
   }
 
   Future<SyncResult> sync() async {
@@ -122,6 +234,45 @@ class ApiClient {
   }
 
   void close() => _http.close();
+}
+
+/// A rejected sign-in or registration, with something worth showing the user.
+///
+/// Separate from ApiException because these are the only API errors a person is
+/// expected to act on — every other failure is a bug or an outage.
+class AuthException implements Exception {
+  AuthException(this.message, {this.problems = const [], this.retryAfterSeconds});
+
+  factory AuthException.fromResponse(int statusCode, Map<String, dynamic> body) {
+    final problems = (body['problems'] as List<dynamic>?)?.cast<String>() ?? const <String>[];
+
+    // The API returns `message` as a string, or as a list when several
+    // validation rules failed at once.
+    final rawMessage = body['message'];
+    final message = rawMessage is List
+        ? rawMessage.join(' ')
+        : rawMessage as String? ?? 'Something went wrong. Try again.';
+
+    return AuthException(
+      statusCode == 429
+          ? 'Too many attempts. Wait a moment and try again.'
+          : message,
+      problems: problems,
+      retryAfterSeconds: (body['retryAfterSeconds'] as num?)?.toInt(),
+    );
+  }
+
+  final String message;
+
+  /// Password-policy failures, so all of them can be fixed in one go rather
+  /// than discovered one attempt at a time.
+  final List<String> problems;
+  final int? retryAfterSeconds;
+
+  String get displayMessage => problems.isEmpty ? message : problems.join('\n');
+
+  @override
+  String toString() => displayMessage;
 }
 
 class ApiException implements Exception {

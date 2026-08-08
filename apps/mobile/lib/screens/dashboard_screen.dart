@@ -12,9 +12,13 @@ import '../widgets/transaction_tile.dart';
 /// screen that is the honest choice; introducing Riverpod or Bloc here would be
 /// ceremony without payoff. Revisit when there are enough screens to justify it.
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({required this.api, super.key});
+  const DashboardScreen({required this.api, this.onSignOut, super.key});
 
   final ApiClient api;
+
+  /// Ends the session and returns to sign-in. Null in tests that render the
+  /// dashboard on its own.
+  final Future<void> Function()? onSignOut;
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -85,6 +89,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return '$sign\$$absolute';
   }
 
+  Future<void> _confirmSignOut() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Sign out?'),
+        content: const Text('You will need your email and password to sign back in.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Sign out'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) await widget.onSignOut?.call();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -98,6 +124,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
             tooltip: 'Sync accounts',
             onPressed: _loading ? null : () => _load(sync: true),
           ),
+          if (widget.onSignOut != null)
+            IconButton(
+              icon: const Icon(Icons.logout),
+              tooltip: 'Sign out',
+              onPressed: _confirmSignOut,
+            ),
         ],
       ),
       body: _buildBody(theme),

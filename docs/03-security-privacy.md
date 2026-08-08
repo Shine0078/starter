@@ -31,12 +31,41 @@ the master key rewraps data keys without rewriting user rows.
 
 ## Authentication
 
-- OAuth 2.0 + PKCE, passkeys (WebAuthn) as the primary factor.
-- Biometric unlock on device gates the local store, not the account — a stolen phone
-  with a compromised fingerprint must not yield a session token that works elsewhere.
-- Refresh tokens are rotating and single-use; reuse detection revokes the family.
-- Step-up authentication required for: linking an account, exporting data, changing
-  notification destinations, and deletion.
+**Implemented today.** Email and password, with the guard registered globally so
+routes are authenticated by default:
+
+| Control | State |
+|---|---|
+| Argon2id hashing, OWASP parameters (m=19456, t=2, p=1) | Implemented |
+| Transparent rehash when stored parameters are below policy | Implemented |
+| Access tokens: HS256 JWT, 15-minute lifetime, pinned algorithm | Implemented |
+| Refresh tokens: opaque, 32 bytes, stored only as SHA-256 | Implemented |
+| Single-use rotation with family revocation on replay | Implemented |
+| Revocation effective immediately (session state checked per request) | Implemented |
+| Per-account lockout after 8 failures in 15 minutes | Implemented |
+| Per-IP throttling on the unauthenticated routes | Implemented |
+| Constant-cost login whether or not the address exists | Implemented |
+| Session/device list with per-session revocation | Implemented |
+| Security event audit trail (`auth_events`) | Implemented |
+| No default signing key; production refuses to start without one | Implemented |
+| Device token storage in the platform keystore | Implemented (mobile) |
+
+Password rules follow NIST SP 800-63B — length plus a blocklist, no composition
+requirements. Composition rules produce `Password1!` and get reused everywhere.
+
+**Not yet implemented**, and named here so the gap is not mistaken for coverage:
+
+- Email verification. The column and timestamp exist; nothing sends mail, so an
+  address is currently unproven.
+- Password reset / account recovery. There is no flow, which means a forgotten
+  password is unrecoverable.
+- MFA/TOTP, passkeys (WebAuthn), and OAuth 2.0 + PKCE. Passkeys need a
+  registered domain for the relying-party id.
+- Step-up authentication for linking an account, exporting, or deletion.
+- Biometric app lock on the device.
+
+The blocklist is a small built-in set. Production should check a real corpus —
+the Have I Been Pwned k-anonymity range API never receives the password itself.
 
 ## Access control
 

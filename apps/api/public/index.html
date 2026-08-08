@@ -84,6 +84,13 @@
       .event-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
       code { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 12px; }
       #status { color: var(--muted); font-size: 12px; }
+      #authPanel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+      #authPanel input {
+        display: block; width: 100%; margin: 4px 0 10px; padding: 8px 10px;
+        font: inherit; color: var(--ink); background: var(--bg);
+        border: 1px solid var(--line); border-radius: 8px;
+      }
+      #authError:not(:empty) { color: var(--bad); }
     </style>
   </head>
   <body>
@@ -91,12 +98,31 @@
       <h1>FINVERSE</h1>
       <span class="tag">dev dashboard</span>
       <span class="tag">mock aggregator</span>
-      <button id="sync">Sync</button>
-      <a href="/api/transactions/export.csv" download>Export CSV</a>
-      <span id="status">not synced yet</span>
+      <button id="sync" hidden>Sync</button>
+      <button id="export" class="ghost" hidden>Export CSV</button>
+      <button id="logout" class="ghost" hidden>Sign out</button>
+      <span id="who" class="muted"></span>
+      <span id="status">not signed in</span>
     </header>
 
-    <main>
+    <section id="authPanel" style="max-width:400px;margin:0 auto 16px">
+      <h2 id="authTitle">Sign in</h2>
+      <form id="authForm">
+        <label class="muted" for="authEmail">Email</label>
+        <input id="authEmail" type="email" autocomplete="username" required
+               placeholder="you@example.com" />
+        <label class="muted" for="authPassword">Password</label>
+        <input id="authPassword" type="password" autocomplete="current-password" required
+               placeholder="At least 12 characters" />
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button type="submit" id="authSubmit">Sign in</button>
+          <button type="button" class="ghost" id="authToggle">Create an account instead</button>
+        </div>
+      </form>
+      <div id="authError" class="muted" style="margin-top:10px"></div>
+    </section>
+
+    <main hidden>
       <section>
         <h2>Accounts</h2>
         <div id="accounts" class="muted">—</div>
@@ -165,11 +191,66 @@
 
     <script>
       const $ = (id) => document.getElementById(id);
-      const api = (path, options) =>
-        fetch(`/api${path}`, options).then((r) => {
-          if (!r.ok) throw new Error(`${path} -> ${r.status}`);
-          return r.json();
-        });
+
+      // --- session -----------------------------------------------------------
+      //
+      // sessionStorage, not localStorage: the tokens die with the tab. This is a
+      // developer tool served from the API itself; a production browser client
+      // should keep the refresh token in an HttpOnly cookie so page script
+      // cannot read it at all.
+      const TOKENS_KEY = 'finverse.dev.tokens';
+
+      let tokens = null;
+      try {
+        tokens = JSON.parse(sessionStorage.getItem(TOKENS_KEY) ?? 'null');
+      } catch {
+        tokens = null;
+      }
+
+      function setTokens(next) {
+        tokens = next;
+        if (next) sessionStorage.setItem(TOKENS_KEY, JSON.stringify(next));
+        else sessionStorage.removeItem(TOKENS_KEY);
+      }
+
+      async function tryRefresh() {
+        if (!tokens?.refreshToken) return false;
+        try {
+          const response = await fetch('/api/auth/refresh', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ refreshToken: tokens.refreshToken }),
+          });
+          if (!response.ok) return false;
+          setTokens((await response.json()).tokens);
+          return true;
+        } catch {
+          return false;
+        }
+      }
+
+      async function rawApi(path, options = {}, allowRetry = true) {
+        const headers = { ...(options.headers ?? {}) };
+        if (tokens?.accessToken) headers.authorization = `Bearer ${tokens.accessToken}`;
+
+        const response = await fetch(`/api${path}`, { ...options, headers });
+
+        // Access tokens are short-lived by design. One transparent refresh, then
+        // give up and show the sign-in panel rather than looping.
+        if (response.status === 401 && allowRetry) {
+          if (await tryRefresh()) return rawApi(path, options, false);
+          showSignedOut('Session expired. Sign in again.');
+          throw new Error('Not authenticated');
+        }
+
+        if (!response.ok) throw new Error(`${path} -> ${response.status}`);
+        return response;
+      }
+
+      async function api(path, options) {
+        const response = await rawApi(path, options);
+        return response.status === 204 ? null : response.json();
+      }
 
       const esc = (s) =>
         String(s ?? '').replace(/[&<>"']/g, (c) =>
@@ -548,8 +629,119 @@
         }
       });
 
-      // Seed the view on first load so the page is never empty.
-      $('sync').click();
+      // --- sign in / sign out ------------------------------------------------
+
+      let authMode = 'login';
+
+      function showSignedOut(message) {
+        setTokens(null);
+        $('authPanel').hidden = false;
+        document.querySelector('main').hidden = true;
+        for (const id of ['sync', 'export', 'logout']) $(id).hidden = true;
+        $('who').textContent = '';
+        $('status').textContent = message ?? 'not signed in';
+      }
+
+      async function showSignedIn() {
+        $('authPanel').hidden = true;
+        document.querySelector('main').hidden = false;
+        for (const id of ['sync', 'export', 'logout']) $(id).hidden = false;
+
+        const me = await api('/auth/me');
+        $('who').textContent = me.email;
+
+        await ensureBudgets();
+        await refresh();
+        $('status').textContent = 'signed in';
+      }
+
+      $('authToggle').addEventListener('click', () => {
+        authMode = authMode === 'login' ? 'register' : 'login';
+        $('authTitle').textContent = authMode === 'login' ? 'Sign in' : 'Create an account';
+        $('authSubmit').textContent = authMode === 'login' ? 'Sign in' : 'Create account';
+        $('authToggle').textContent =
+          authMode === 'login' ? 'Create an account instead' : 'I already have an account';
+        $('authPassword').setAttribute(
+          'autocomplete',
+          authMode === 'login' ? 'current-password' : 'new-password',
+        );
+        $('authError').textContent = '';
+      });
+
+      $('authForm').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        $('authError').textContent = '';
+        $('authSubmit').disabled = true;
+
+        try {
+          const response = await fetch(`/api/auth/${authMode}`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              email: $('authEmail').value,
+              password: $('authPassword').value,
+            }),
+          });
+
+          const body = await response.json().catch(() => ({}));
+
+          if (!response.ok) {
+            // The API returns the full list of policy problems on a rejected
+            // password so they can all be fixed at once.
+            const problems = Array.isArray(body.problems) ? body.problems.join(' ') : '';
+            $('authError').textContent =
+              problems || body.message || `Request failed (${response.status})`;
+            return;
+          }
+
+          setTokens(body.tokens);
+          $('authPassword').value = '';
+          await showSignedIn();
+        } catch (error) {
+          $('authError').textContent = String(error);
+        } finally {
+          $('authSubmit').disabled = false;
+        }
+      });
+
+      $('logout').addEventListener('click', async () => {
+        try {
+          await rawApi('/auth/logout', { method: 'POST' }, false);
+        } catch {
+          // Already invalid server-side; clearing locally is still correct.
+        }
+        showSignedOut('signed out');
+      });
+
+      // The CSV link cannot be a plain <a download>: that request carries no
+      // Authorization header and would 401. Fetch it, then hand the browser a
+      // blob instead.
+      $('export').addEventListener('click', async () => {
+        try {
+          const response = await rawApi('/transactions/export.csv');
+          const url = URL.createObjectURL(await response.blob());
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = 'finverse-transactions.csv';
+          link.click();
+          URL.revokeObjectURL(url);
+        } catch (error) {
+          $('status').textContent = `Export failed: ${error}`;
+        }
+      });
+
+      // Restore an existing session if the tab still holds one.
+      (async () => {
+        if (!tokens?.accessToken) {
+          showSignedOut();
+          return;
+        }
+        try {
+          await showSignedIn();
+        } catch {
+          showSignedOut();
+        }
+      })();
     </script>
   </body>
 </html>

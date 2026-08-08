@@ -5,6 +5,30 @@
 // string and never re-derives it, so currency formatting stays consistent
 // across platforms and never drifts from the server's view (ADR-0003).
 
+/// The signed-in user. Never carries a password hash — the API does not send one.
+class PublicUser {
+  const PublicUser({
+    required this.id,
+    required this.email,
+    required this.emailVerified,
+    this.displayName,
+  });
+
+  factory PublicUser.fromJson(Map<String, dynamic> json) => PublicUser(
+        id: json['id'] as String,
+        email: json['email'] as String,
+        emailVerified: json['emailVerified'] as bool? ?? false,
+        displayName: json['displayName'] as String?,
+      );
+
+  final String id;
+  final String email;
+  final bool emailVerified;
+  final String? displayName;
+
+  String get label => displayName?.isNotEmpty == true ? displayName! : email;
+}
+
 class SyncResult {
   SyncResult({
     required this.accounts,

@@ -66,11 +66,29 @@ slice runs today with no Docker. See [ADR-0002](docs/adr/0002-pure-domain-layer.
 
 ## API
 
-Base path `/api`. Auth is Phase 1; until then `x-user-id` selects a user and
-defaults to a demo account.
+Base path `/api`. **Every route requires a bearer token** except the four marked
+public — the guard is registered globally, so a new controller is protected the
+moment it is written.
+
+```bash
+curl -X POST localhost:3000/api/auth/register \
+  -H 'content-type: application/json' \
+  -d '{"email":"you@example.com","password":"correct horse battery staple"}'
+```
+
+Then send `Authorization: Bearer <accessToken>` on everything else. Access tokens
+last 15 minutes; exchange the refresh token at `/api/auth/refresh` for a new pair.
 
 | Method | Path | Purpose |
 |---|---|---|
+| `POST` | `/auth/register` | **Public.** Create an account, returns a session |
+| `POST` | `/auth/login` | **Public.** Exchange credentials for a session |
+| `POST` | `/auth/refresh` | **Public.** Rotate the refresh token |
+| `POST` | `/auth/logout` | End this session |
+| `POST` | `/auth/logout-all` | End every session on every device |
+| `GET` | `/auth/me` | The signed-in user |
+| `GET` | `/auth/sessions` | Active sessions, with the current one marked |
+| `DELETE` | `/auth/sessions/:id` | Revoke one session |
 | `POST` | `/sync` | Pull from the aggregator, categorize, persist |
 | `GET` | `/accounts` | Balances and credit utilization |
 | `GET` | `/transactions` | `?search=&category=&account=&from=&to=&limit=` |
@@ -85,7 +103,8 @@ defaults to a demo account.
 | `GET` | `/cash-flow-forecast?days=7|30|90` | Conservative liquid-cash outlook from repeatable income and bills |
 | `GET` | `/purchase-scenario?days=7|30|90&amount=<minor>&date=YYYY-MM-DD` | One-off purchase impact against the same conservative outlook |
 | `GET` | `/credit-cards` | Utilization, pay-down target, and an early payment window |
-| `GET` | `/healthz` | Liveness |
+| `GET` | `/categories` | **Public.** The seeded category tree |
+| `GET` | `/healthz` | **Public.** Liveness and database readiness |
 
 ## Persistence
 
