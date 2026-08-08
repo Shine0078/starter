@@ -183,6 +183,23 @@ class ApiClient {
   Future<PublicUser> me() async =>
       PublicUser.fromJson(await _get('/auth/me') as Map<String, dynamic>);
 
+  Future<List<AppSession>> sessions() async {
+    final json = await _get('/auth/sessions') as List<dynamic>;
+    return json
+        .map((e) => AppSession.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> revokeSession(String sessionId) async {
+    await _send('DELETE', '/auth/sessions/${Uri.encodeComponent(sessionId)}');
+  }
+
+  Future<void> signOutEverywhere() async {
+    await _send('POST', '/auth/logout-all');
+    _tokens = null;
+    await sessionStore.clear();
+  }
+
   /// Clears the local session, and by default tells the server to revoke it.
   ///
   /// The local clear happens regardless of whether the server call succeeds —

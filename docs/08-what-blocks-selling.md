@@ -137,7 +137,7 @@ smaller than the complete MISSION.md product.
 
 | # | Item | Detail | Effort |
 |---|---|---|---|
-| 5.1 | **Core navigation started** | Home, transactions, budgets, goals, bank accounts, and an in-app notification centre are implemented. No transaction detail, subscription screen, full settings/privacy dashboard, or onboarding | 4–8 weeks |
+| 5.1 | **Core navigation started** | Home, transactions, budgets, goals, bank accounts, subscriptions, notifications, and basic settings/session controls are implemented. No transaction detail, consent/privacy-access dashboard, or onboarding | 3–6 weeks |
 | 5.2 | **No offline mode** | Mission requires offline-first. There is no local database — every screen is a live API call | 3–4 weeks |
 | 5.3 | **No state management** | `setState` only. Honest at one screen, unworkable at twenty | with 5.1 |
 | 5.4 | **No push notifications** | Persistent preferences, a mobile notification centre, and deduplicated budget, utilization, low-balance, and bank-sync alerts exist. Device push delivery, bill reminders, and unusual-spend detection remain | 2–3 weeks |
@@ -255,7 +255,7 @@ Three things make this unsellable today, and they are not the same size:
 
 1. **It has never seen a real bank.** Gated on a commercial agreement, not code.
 2. **The mobile app covers the first daily workflows, not the full product.**
-   Subscriptions, offline mode, onboarding, and a full privacy/settings area remain.
+   Offline mode, onboarding, and a full consent/privacy-access area remain.
 3. **There is no live production deployment and no way to charge.** Release
    artifacts exist, but provider accounts and production wiring do not.
 

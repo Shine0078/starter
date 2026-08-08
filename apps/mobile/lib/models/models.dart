@@ -29,6 +29,36 @@ class PublicUser {
   String get label => displayName?.isNotEmpty == true ? displayName! : email;
 }
 
+class AppSession {
+  const AppSession({
+    required this.id,
+    required this.issuedAt,
+    required this.expiresAt,
+    required this.current,
+    this.lastUsedAt,
+    this.userAgent,
+    this.ipAddress,
+  });
+
+  factory AppSession.fromJson(Map<String, dynamic> json) => AppSession(
+        id: json['id'] as String,
+        issuedAt: json['issuedAt'] as String,
+        expiresAt: json['expiresAt'] as String,
+        lastUsedAt: json['lastUsedAt'] as String?,
+        userAgent: json['userAgent'] as String?,
+        ipAddress: json['ipAddress'] as String?,
+        current: json['current'] as bool,
+      );
+
+  final String id;
+  final String issuedAt;
+  final String expiresAt;
+  final String? lastUsedAt;
+  final String? userAgent;
+  final String? ipAddress;
+  final bool current;
+}
+
 class BankLink {
   const BankLink({
     required this.id,
@@ -548,6 +578,8 @@ class SubscriptionsReport {
     required this.monthlyTotalFormatted,
     required this.annualTotalFormatted,
     required this.subscriptions,
+    required this.priceIncreases,
+    required this.possiblyCancelled,
   });
 
   factory SubscriptionsReport.fromJson(Map<String, dynamic> json) =>
@@ -558,10 +590,44 @@ class SubscriptionsReport {
         subscriptions: (json['subscriptions'] as List<dynamic>)
             .map((e) => Subscription.fromJson(e as Map<String, dynamic>))
             .toList(),
+        priceIncreases: (json['priceIncreases'] as List<dynamic>? ?? const [])
+            .map((e) =>
+                SubscriptionPriceIncrease.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        possiblyCancelled:
+            (json['possiblyCancelled'] as List<dynamic>? ?? const [])
+                .cast<String>(),
       );
 
   final int count;
   final String monthlyTotalFormatted;
   final String annualTotalFormatted;
   final List<Subscription> subscriptions;
+  final List<SubscriptionPriceIncrease> priceIncreases;
+  final List<String> possiblyCancelled;
+}
+
+class SubscriptionPriceIncrease {
+  SubscriptionPriceIncrease({
+    required this.merchant,
+    required this.from,
+    required this.to,
+    required this.percent,
+    required this.annualImpact,
+  });
+
+  factory SubscriptionPriceIncrease.fromJson(Map<String, dynamic> json) =>
+      SubscriptionPriceIncrease(
+        merchant: json['merchant'] as String,
+        from: json['from'] as String,
+        to: json['to'] as String,
+        percent: json['percent'] as int,
+        annualImpact: json['annualImpact'] as String,
+      );
+
+  final String merchant;
+  final String from;
+  final String to;
+  final int percent;
+  final String annualImpact;
 }

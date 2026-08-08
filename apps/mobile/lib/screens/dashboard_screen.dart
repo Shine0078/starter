@@ -7,6 +7,8 @@ import '../widgets/health_score_card.dart';
 import '../widgets/spending_chart.dart';
 import '../widgets/transaction_tile.dart';
 import 'notifications_screen.dart';
+import 'settings_screen.dart';
+import 'subscriptions_screen.dart';
 
 /// The home screen: net position, health score, budgets, recent activity.
 ///
@@ -271,6 +273,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         title: const Text('FINVERSE'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.subscriptions_outlined),
+            tooltip: 'Subscriptions',
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => SubscriptionsScreen(api: widget.api),
+            )),
+          ),
+          IconButton(
             icon: const Icon(Icons.notifications_outlined),
             tooltip: 'Notifications',
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(
@@ -286,11 +295,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
             PopupMenuButton<String>(
               tooltip: 'Account menu',
               onSelected: (value) {
+                if (value == 'settings') {
+                  Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => SettingsScreen(
+                      api: widget.api,
+                      onVerifyEmail: _verifyEmail,
+                      onSignOut: _confirmSignOut,
+                      onDeleteAccount: _confirmAccountDeletion,
+                      onSignedOutEverywhere: () async {
+                        if (mounted) Navigator.of(context).pop();
+                        await widget.onSignOut?.call();
+                      },
+                    ),
+                  ));
+                }
                 if (value == 'sign-out') _confirmSignOut();
                 if (value == 'verify-email') _verifyEmail();
                 if (value == 'delete-account') _confirmAccountDeletion();
               },
               itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'settings',
+                  child: ListTile(
+                    leading: Icon(Icons.settings_outlined),
+                    title: Text('Settings & privacy'),
+                  ),
+                ),
                 const PopupMenuItem(
                   value: 'sign-out',
                   child: ListTile(

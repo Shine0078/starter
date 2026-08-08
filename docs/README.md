@@ -38,5 +38,6 @@ bypass the policies.
 Plaid Sandbox is integrated end to end on Android: native Link, encrypted access
 tokens, cursor sync, reconnect, signed webhook jobs, and revoke. Production bank
 connections still require Plaid approval. Account deletion, goals, in-app alert
-generation, release packaging, and PostgreSQL erasure/isolation proofs are complete;
+generation, subscription monitoring, session controls, release packaging, and
+PostgreSQL erasure/isolation proofs are complete;
 see the selling audit for the remaining engineering and external gates.

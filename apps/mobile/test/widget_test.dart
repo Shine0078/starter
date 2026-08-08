@@ -253,6 +253,24 @@ void main() {
       if (path.endsWith('/notifications')) {
         return http.Response('{"notifications":[],"count":0,"unread":0}', 200);
       }
+      if (path.endsWith('/subscriptions')) {
+        return http.Response(
+          '{"count":0,"monthlyTotalFormatted":"\$0.00","annualTotalFormatted":"\$0.00","subscriptions":[],"priceIncreases":[],"possiblyCancelled":[]}',
+          200,
+        );
+      }
+      if (path.endsWith('/auth/me')) {
+        return http.Response(
+          '{"id":"user-1","email":"sam@example.com","emailVerified":true}',
+          200,
+        );
+      }
+      if (path.endsWith('/auth/sessions')) {
+        return http.Response(
+          '[{"id":"session-1","issuedAt":"2026-08-08T00:00:00.000Z","expiresAt":"2026-09-08T00:00:00.000Z","lastUsedAt":"2026-08-08T00:00:00.000Z","userAgent":"FINVERSE Android","ipAddress":"127.0.0.1","current":true}]',
+          200,
+        );
+      }
       if (path.endsWith('/insights')) {
         return http.Response(
           '{"headline":{"income":"\$0.00","expenses":"\$0.00","netCashFlow":"\$0.00","savingsRate":"0.0%"},"topCategories":[],"insights":[]}',
@@ -274,6 +292,21 @@ void main() {
     await tester.tap(find.byTooltip('Notifications'));
     await tester.pumpAndSettle();
     expect(find.text('You are all caught up'), findsOneWidget);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Subscriptions'));
+    await tester.pumpAndSettle();
+    expect(find.text('No recurring subscriptions detected.'), findsOneWidget);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Account menu'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Settings & privacy'));
+    await tester.pumpAndSettle();
+    expect(find.text('sam@example.com'), findsOneWidget);
+    expect(find.text('This device'), findsOneWidget);
     await tester.pageBack();
     await tester.pumpAndSettle();
 

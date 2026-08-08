@@ -6,7 +6,7 @@ Flutter wrapper.
 
 ## Run on the Android emulator
 
-Start the API on port 3100, open `apps/mobile/android` in Android Studio, choose
+Start the API on port 3000, open `apps/mobile/android` in Android Studio, choose
 an emulator, and run `MainActivity`. From a terminal the equivalent is:
 
 ```powershell
@@ -29,6 +29,13 @@ Plaid secrets and permanent access tokens never enter Flutter.
 
 The Accounts tab supports new connections, update mode when credentials need
 attention, manual sync, webhook-driven background sync, and disconnect/revoke.
+
+## Customer workflows
+
+The app includes a financial dashboard with charts, searchable transactions,
+editable budgets, savings goals and contributions, bank connections, subscription
+detection and price-change warnings, an in-app notification centre, notification
+preferences, and a settings/privacy area with active-device session revocation.
 
 ## Verification
 
