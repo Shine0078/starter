@@ -155,11 +155,20 @@ product away.
 
 Only the connected-institution limit is enforced today. The tiering in
 `src/domain/billing/plans.ts` is a placeholder shape rather than a pricing
-decision, and the mobile client has no upgrade UI yet — gating a route it
-already calls would break the app for every user. See
-[ADR-0007](docs/adr/0007-billing-and-entitlements.md), which also explains why
-selling subscriptions *inside* the mobile app needs StoreKit and Play Billing
-rather than this flow.
+decision — the mechanism is complete, the product decision is not.
+
+The mobile client has a plan screen and a paywall sheet, and turns the API's
+`plan_upgrade_required` 403 into a typed exception so any gated route explains
+itself instead of showing a raw error. Purchasing from inside the app is behind
+`BILLING_PURCHASE_MODE`, which **defaults to `informational`** — no checkout
+button — because Apple and Google require their own billing for digital
+subscriptions:
+
+```bash
+flutter build apk --dart-define=BILLING_PURCHASE_MODE=linkOut
+```
+
+See [ADR-0007](docs/adr/0007-billing-and-entitlements.md) for the full reasoning.
 
 ## Persistence
 

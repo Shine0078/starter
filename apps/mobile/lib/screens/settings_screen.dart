@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -11,6 +12,7 @@ import '../api/app_lock.dart';
 import '../models/models.dart';
 import 'bank_connections_screen.dart';
 import 'notifications_screen.dart';
+import 'plan_screen.dart';
 import 'subscriptions_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -40,6 +42,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   List<AppSession> _sessions = const [];
   PrivacyDashboard? _privacy;
   MfaStatus? _mfa;
+  PlanSummary? _plan;
   String? _error;
   var _loading = true;
   var _exporting = false;
@@ -84,12 +87,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
+  /// Loaded on its own and allowed to fail quietly.
+  ///
+  /// It is a subtitle on one row. Folding it into `_load`'s `Future.wait` would
+  /// mean a deployment with billing misconfigured shows "Could not load account
+  /// settings" and hides sessions, MFA, and account deletion behind it.
+  Future<void> _loadPlan() async {
+    try {
+      final plan = await widget.api.planSummary();
+      if (mounted) setState(() => _plan = plan);
+    } catch (_) {
+      if (mounted) setState(() => _plan = null);
+    }
+  }
+
   Future<void> _load() async {
     widget.api.resetOfflineStatus();
     setState(() {
       _loading = true;
       _error = null;
     });
+    unawaited(_loadPlan());
     try {
       final results = await Future.wait([
         widget.api.me(),
@@ -564,6 +582,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onTap: () => Navigator.of(context).push(MaterialPageRoute(
                   builder: (_) => SubscriptionsScreen(api: widget.api),
                 )),
+              ),
+              ListTile(
+                leading: const Icon(Icons.workspace_premium_outlined),
+                title: const Text('Your plan'),
+                subtitle: Text(_plan?.planName ?? 'Loading…'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () async {
+                  await Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => PlanScreen(api: widget.api),
+                  ));
+                  // The plan may have changed while they were away.
+                  if (mounted) _loadPlan();
+                },
               ),
             ],
           ),

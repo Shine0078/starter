@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:cryptography/cryptography.dart';
 
+import 'package:finverse/api/billing_policy.dart';
 import 'package:finverse/api/client.dart';
 import 'package:finverse/api/app_lock.dart';
 import 'package:finverse/api/onboarding_store.dart';
@@ -14,6 +15,7 @@ import 'package:finverse/models/models.dart';
 import 'package:finverse/screens/home_screen.dart';
 import 'package:finverse/screens/bank_connections_screen.dart';
 import 'package:finverse/screens/login_screen.dart';
+import 'package:finverse/screens/plan_screen.dart';
 import 'package:finverse/screens/transaction_detail_screen.dart';
 import 'package:finverse/widgets/budget_tile.dart';
 import 'package:finverse/widgets/health_score_card.dart';
@@ -48,7 +50,192 @@ class FakeDeviceAuthenticator implements DeviceAuthenticator {
   Future<bool> isSupported() async => supported;
 }
 
+/// Canned billing responses, so each test only overrides what it cares about.
+const _freePlanJson = '{"plan":"free","planName":"Free","status":"none",'
+    '"bankLinkLimit":1,"entitlements":["data_export"],'
+    '"cancelAtPeriodEnd":false,"purchaseAvailable":true,'
+    '"currentPeriodEnd":null,"trialEnd":null}';
+
+const _plansJson = '{"plans":['
+    '{"id":"free","name":"Free","bankLinkLimit":1,'
+    '"entitlements":["data_export"],"purchasable":false},'
+    '{"id":"pro","name":"Pro","bankLinkLimit":25,'
+    '"entitlements":["unlimited_bank_links","monthly_pdf_report","data_export"],'
+    '"purchasable":true}]}';
+
+http.Response? _billingResponse(http.BaseRequest request,
+    {String subscription = _freePlanJson}) {
+  final path = request.url.path;
+  if (path.endsWith('/billing/subscription')) {
+    return http.Response(subscription, 200);
+  }
+  if (path.endsWith('/billing/plans')) return http.Response(_plansJson, 200);
+  return null;
+}
+
 void main() {
+  // ------------------------------------------------------------ plan and paywall
+
+  testWidgets('shows the current plan and what each tier includes',
+      (tester) async {
+    final api = clientWith(MockClient((request) async =>
+        _billingResponse(request) ?? http.Response('{}', 404)));
+
+    await tester.pumpWidget(MaterialApp(home: PlanScreen(api: api)));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Free'), findsWidgets);
+    expect(find.text('Connect up to 1 institution.'), findsOneWidget);
+    expect(find.text('Pro'), findsOneWidget);
+    // Entitlement slugs are never shown raw to a user.
+    expect(find.text('Connect multiple institutions'), findsOneWidget);
+    expect(find.text('unlimited_bank_links'), findsNothing);
+  });
+
+  testWidgets('offers no in-app purchase in the default build', (tester) async {
+    // The default mode is the only one safe in every distribution channel:
+    // Apple and Google require their own billing for digital subscriptions, so
+    // a checkout button shipped by default is a store-rejection risk.
+    final api = clientWith(MockClient((request) async =>
+        _billingResponse(request) ?? http.Response('{}', 404)));
+
+    await tester.pumpWidget(MaterialApp(home: PlanScreen(api: api)));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Upgrade to Pro'), findsNothing);
+    // …but the user is still told how to get it, rather than hitting a dead end.
+    expect(find.textContaining('managed on the web'), findsOneWidget);
+  });
+
+  testWidgets('offers checkout when the build is configured to link out',
+      (tester) async {
+    http.Request? checkout;
+    final api = clientWith(MockClient((request) async {
+      final billing = _billingResponse(request);
+      if (billing != null) return billing;
+      if (request.url.path.endsWith('/billing/checkout-session')) {
+        checkout = request;
+        return http.Response('{"url":"https://checkout.test/session","expiresAt":null}', 200);
+      }
+      return http.Response('{}', 404);
+    }));
+
+    await tester.pumpWidget(MaterialApp(
+      home: PlanScreen(api: api, purchaseMode: BillingPurchaseMode.linkOut),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Upgrade to Pro'), findsOneWidget);
+    await tester.tap(find.text('Upgrade to Pro'));
+    await tester.pumpAndSettle();
+
+    // A plan id crosses the wire, never a price — the server decides what to
+    // charge, so a tampered client cannot ask to be sold something cheaper.
+    expect(checkout, isNotNull);
+    expect(checkout!.body, contains('"plan":"pro"'));
+    expect(checkout!.body, isNot(contains('price')));
+  });
+
+  testWidgets('tells a subscriber their payment failed without implying lockout',
+      (tester) async {
+    const pastDue = '{"plan":"pro","planName":"Pro","status":"past_due",'
+        '"bankLinkLimit":25,"entitlements":["unlimited_bank_links"],'
+        '"cancelAtPeriodEnd":false,"purchaseAvailable":true,'
+        '"currentPeriodEnd":"2026-09-08T00:00:00.000Z","trialEnd":null}';
+    final api = clientWith(MockClient((request) async =>
+        _billingResponse(request, subscription: pastDue) ??
+        http.Response('{}', 404)));
+
+    await tester.pumpWidget(MaterialApp(home: PlanScreen(api: api)));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Payment problem'), findsOneWidget);
+    // Access continues while the provider retries (ADR-0007). Saying otherwise
+    // loses a customer who would have simply updated their card.
+    expect(find.textContaining('still active'), findsOneWidget);
+  });
+
+  testWidgets('turns a plan refusal into an offer, not a raw error',
+      (tester) async {
+    final api = clientWith(MockClient((request) async {
+      final billing = _billingResponse(request);
+      if (billing != null) return billing;
+      if (request.url.path.endsWith('/bank-links')) {
+        return http.Response('{"count":0,"links":[]}', 200);
+      }
+      if (request.url.path.endsWith('/accounts')) {
+        return http.Response('[]', 200);
+      }
+      if (request.url.path.endsWith('/bank-links/link-token')) {
+        return http.Response(
+          '{"error":"plan_upgrade_required","message":"Your Free plan allows 1 institution.",'
+          '"entitlement":"unlimited_bank_links","requiredPlan":"pro"}',
+          403,
+        );
+      }
+      return http.Response('{}', 200);
+    }));
+
+    await tester.pumpWidget(MaterialApp(home: BankConnectionsScreen(api: api)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Connect bank'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.byType(TextField).last, 'correct horse battery staple');
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+
+    // The named capability, not the JSON body, and a way forward.
+    expect(find.text('Connect multiple institutions'), findsOneWidget);
+    expect(find.text('See plans'), findsOneWidget);
+    expect(find.textContaining('plan_upgrade_required'), findsNothing);
+  });
+
+  testWidgets('stops at the link limit before asking for a password',
+      (tester) async {
+    // The server refuses over-limit connections anyway, but discovering that
+    // only after the user has typed their password and authenticated with
+    // their bank wastes the most effortful part of the flow.
+    var linkTokenRequested = false;
+    final api = clientWith(MockClient((request) async {
+      final billing = _billingResponse(request);
+      if (billing != null) return billing;
+      if (request.url.path.endsWith('/bank-links')) {
+        return http.Response(
+          '{"count":1,"links":[{"id":"link-1","provider":"plaid",'
+          '"institutionName":"First Platypus Bank","status":"healthy",'
+          '"errorCode":null,"lastSyncedAt":null,"createdAt":"2026-08-01T00:00:00.000Z"}]}',
+          200,
+        );
+      }
+      if (request.url.path.endsWith('/accounts')) return http.Response('[]', 200);
+      if (request.url.path.endsWith('/bank-links/link-token')) {
+        linkTokenRequested = true;
+        return http.Response('{"token":"link-sandbox"}', 200);
+      }
+      return http.Response('{}', 200);
+    }));
+
+    await tester.pumpWidget(MaterialApp(home: BankConnectionsScreen(api: api)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Connect bank'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Confirm it’s you'), findsNothing);
+    expect(linkTokenRequested, isFalse);
+    expect(find.textContaining('connects up to 1 institution'), findsOneWidget);
+  });
+
+  testWidgets('does not mistake an ordinary 403 for a paywall', (tester) async {
+    // Only the server's explicit marker means "upgrade". Dressing every
+    // authorisation failure up as an upsell would hide real bugs.
+    final response = http.Response('{"message":"Forbidden"}', 403);
+    expect(
+      PlanUpgradeRequiredException.maybeFrom('/anything', response),
+      isNull,
+    );
+  });
+
   testWidgets('net position never mixes currencies and exposes chart semantics',
       (tester) async {
     final semantics = tester.ensureSemantics();
@@ -875,7 +1062,17 @@ void main() {
     await tester.tap(find.text('Settings & privacy'));
     await tester.pumpAndSettle();
     expect(find.text('sam@example.com'), findsOneWidget);
+    expect(find.text('Your plan'), findsOneWidget);
     expect(find.text('This device'), findsOneWidget);
+    // Scrolled to rather than asserted in place: the account card grows as
+    // settings are added, and a test that depends on what fits above the fold
+    // breaks every time one is.
+    await tester.scrollUntilVisible(
+      find.text('Authenticator security'),
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pumpAndSettle();
     expect(find.text('Authenticator security'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('Device app lock'),

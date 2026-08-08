@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../api/client.dart';
 import '../api/plaid_link.dart';
 import '../models/models.dart';
+import 'plan_screen.dart';
 
 class BankConnectionsScreen extends StatefulWidget {
   const BankConnectionsScreen(
@@ -24,9 +27,20 @@ class _DefaultPlaidLink extends PlaidLink {
 class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
   List<BankLink> _links = const [];
   List<Account> _accounts = const [];
+  PlanSummary? _plan;
   bool _loading = true;
   bool _working = false;
   String? _error;
+
+  /// Connections that count against the plan limit, matching the server's rule
+  /// in BankingService: a revoked link is not occupying a slot.
+  int get _activeLinks =>
+      _links.where((link) => link.status != 'revoked').length;
+
+  bool get _atLinkLimit {
+    final plan = _plan;
+    return plan != null && _activeLinks >= plan.bankLinkLimit;
+  }
 
   @override
   void initState() {
@@ -35,8 +49,21 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
     _recoverPlaidResult();
   }
 
+  /// Loaded separately and allowed to fail: not knowing the plan costs a
+  /// pre-check, and the server still refuses over-limit connections. Folding it
+  /// into the main load would let a billing hiccup hide the accounts list.
+  Future<void> _loadPlan() async {
+    try {
+      final plan = await widget.api.planSummary();
+      if (mounted) setState(() => _plan = plan);
+    } catch (_) {
+      if (mounted) setState(() => _plan = null);
+    }
+  }
+
   Future<void> _load() async {
     widget.api.resetOfflineStatus();
+    unawaited(_loadPlan());
     try {
       final results = await Future.wait([
         widget.api.bankLinks(),
@@ -73,6 +100,30 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
 
   Future<void> _connect([BankLink? existing]) async {
     if (_working) return;
+
+    // Checked before the password prompt and before Plaid Link opens. The
+    // server is still the authority, but discovering the limit only *after*
+    // someone has typed their password and authenticated with their bank would
+    // waste the most effortful part of the flow.
+    //
+    // Reconnecting an existing link is exempt: it occupies a slot already.
+    if (existing == null && _atLinkLimit) {
+      final plan = _plan!;
+      await showUpgradeSheet(
+        context,
+        widget.api,
+        PlanUpgradeRequiredException(
+          path: '/bank-links/exchange',
+          message: 'Your ${plan.planName} plan connects up to '
+              '${plan.bankLinkLimit} '
+              '${plan.bankLinkLimit == 1 ? 'institution' : 'institutions'}. '
+              'Upgrade to connect more.',
+          entitlement: 'unlimited_bank_links',
+        ),
+      );
+      return;
+    }
+
     final password = await _confirmPassword(
       existing == null ? 'connect a bank' : 'reconnect this bank',
     );
@@ -390,12 +441,26 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
     }
   }
 
-  String _friendly(Object error) {
+  /// Null when there is nothing to put in the error banner.
+  String? _friendly(Object error) {
+    // A plan refusal is not an error message; it is an offer. Surfacing it in
+    // the red banner alongside outages would read as something broken.
+    if (error is PlanUpgradeRequiredException) {
+      unawaited(_offerUpgrade(error));
+      return null;
+    }
     final value = error.toString();
     if (value.contains('503')) {
       return 'Bank connections are not configured on this server yet.';
     }
     return value;
+  }
+
+  Future<void> _offerUpgrade(PlanUpgradeRequiredException reason) async {
+    if (!mounted) return;
+    await showUpgradeSheet(context, widget.api, reason);
+    // The plan may now be different, and the limit with it.
+    if (mounted) await _loadPlan();
   }
 
   @override

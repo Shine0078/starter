@@ -95,7 +95,8 @@ class ApiClient {
       final response = await _perform('GET', path, null, true);
       if (response.statusCode >= 400) {
         if (response.statusCode < 500) {
-          throw ApiException(path, response.statusCode, response.body);
+          throw PlanUpgradeRequiredException.maybeFrom(path, response) ??
+              ApiException(path, response.statusCode, response.body);
         }
         return _cachedOrThrow(owner, path,
             ApiException(path, response.statusCode, response.body));
@@ -108,6 +109,10 @@ class ApiClient {
         }
       }
       return jsonDecode(response.body);
+    } on PlanUpgradeRequiredException {
+      // Not a network failure, so serving stale cache would be wrong: the
+      // server has answered, and its answer is "upgrade".
+      rethrow;
     } on ApiException {
       rethrow;
     } on TimeoutException catch (error) {
@@ -158,7 +163,8 @@ class ApiClient {
   Future<dynamic> _send(String method, String path, [Object? body]) async {
     final response = await _perform(method, path, body, true);
     if (response.statusCode >= 400) {
-      throw ApiException(path, response.statusCode, response.body);
+      throw PlanUpgradeRequiredException.maybeFrom(path, response) ??
+          ApiException(path, response.statusCode, response.body);
     }
     return response.body.isEmpty ? null : jsonDecode(response.body);
   }
@@ -700,6 +706,36 @@ class ApiClient {
     return SubscriptionsReport.fromJson(json);
   }
 
+  // --------------------------------------------------------------- billing
+
+  Future<PlanSummary> planSummary() async =>
+      PlanSummary.fromJson(await _get('/billing/subscription') as Map<String, dynamic>);
+
+  Future<List<BillingPlan>> billingPlans() async {
+    final json = await _get('/billing/plans') as Map<String, dynamic>;
+    return (json['plans'] as List<dynamic>)
+        .map((row) => BillingPlan.fromJson(row as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Starts a hosted checkout and returns where to send the customer.
+  ///
+  /// Only a plan id crosses the wire — never a price. The server resolves what
+  /// to charge from its own configuration, so a tampered client cannot ask to
+  /// be sold something cheaper.
+  Future<CheckoutSession> startCheckout(String plan) async {
+    final json = await _send('POST', '/billing/checkout-session', {'plan': plan})
+        as Map<String, dynamic>;
+    return CheckoutSession.fromJson(json);
+  }
+
+  /// A link to the provider's own page for cancelling, changing a card, or
+  /// downloading invoices. None of those flows are rebuilt in this app.
+  Future<String> billingPortalUrl() async {
+    final json = await _send('POST', '/billing/portal-session') as Map<String, dynamic>;
+    return json['url'] as String;
+  }
+
   void close() => _http.close();
 }
 
@@ -760,4 +796,56 @@ class ApiException implements Exception {
 
   @override
   String toString() => 'ApiException($statusCode on $path): $body';
+}
+
+/// The server refused because the user's plan does not include this.
+///
+/// Recognised centrally in the client rather than screen by screen, so that a
+/// feature moving behind the paywall does not require every caller to learn
+/// about billing. Without this, a gated route surfaces as a raw JSON blob in a
+/// snackbar — which reads as a bug, not a price.
+class PlanUpgradeRequiredException implements Exception {
+  PlanUpgradeRequiredException({
+    required this.path,
+    required this.message,
+    this.entitlement,
+    this.requiredPlan,
+  });
+
+  /// Returns null when the response is an ordinary error, so callers can fall
+  /// back to [ApiException]. A 403 is only a paywall when the server says so:
+  /// an authorisation failure elsewhere must not be dressed up as an upsell.
+  static PlanUpgradeRequiredException? maybeFrom(
+      String path, http.Response response) {
+    if (response.statusCode != 403 || response.body.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map<String, dynamic>) return null;
+      if (decoded['error'] != 'plan_upgrade_required') return null;
+
+      final rawMessage = decoded['message'];
+      return PlanUpgradeRequiredException(
+        path: path,
+        message: rawMessage is String
+            ? rawMessage
+            : 'Your plan does not include this feature.',
+        entitlement: decoded['entitlement'] as String?,
+        requiredPlan: decoded['requiredPlan'] as String?,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  final String path;
+  final String message;
+
+  /// The named capability that was missing, e.g. `unlimited_bank_links`.
+  final String? entitlement;
+
+  /// The cheapest plan that would have allowed it.
+  final String? requiredPlan;
+
+  @override
+  String toString() => message;
 }

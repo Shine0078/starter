@@ -947,3 +947,109 @@ class MfaEnrollment {
   final String secret;
   final String otpauthUri;
 }
+
+// --------------------------------------------------------------------- plans
+
+/// One tier from the public catalogue at `GET /billing/plans`.
+///
+/// The catalogue is served rather than hardcoded here on purpose: the server's
+/// `domain/billing/plans.ts` is the single place tiering is decided, and a copy
+/// in the client would drift the moment a limit changed. A shipped app cannot
+/// be updated as fast as a deployment.
+class BillingPlan {
+  const BillingPlan({
+    required this.id,
+    required this.name,
+    required this.bankLinkLimit,
+    required this.entitlements,
+    required this.purchasable,
+  });
+
+  factory BillingPlan.fromJson(Map<String, dynamic> json) => BillingPlan(
+        id: json['id'] as String,
+        name: json['name'] as String,
+        bankLinkLimit: json['bankLinkLimit'] as int? ?? 0,
+        entitlements:
+            (json['entitlements'] as List<dynamic>? ?? const []).cast<String>(),
+        purchasable: json['purchasable'] as bool? ?? false,
+      );
+
+  final String id;
+  final String name;
+  final int bankLinkLimit;
+  final List<String> entitlements;
+  final bool purchasable;
+}
+
+/// The signed-in user's plan, from `GET /billing/subscription`.
+class PlanSummary {
+  const PlanSummary({
+    required this.plan,
+    required this.planName,
+    required this.status,
+    required this.bankLinkLimit,
+    required this.entitlements,
+    required this.cancelAtPeriodEnd,
+    required this.purchaseAvailable,
+    this.currentPeriodEnd,
+    this.trialEnd,
+  });
+
+  factory PlanSummary.fromJson(Map<String, dynamic> json) => PlanSummary(
+        plan: json['plan'] as String,
+        planName: json['planName'] as String,
+        status: json['status'] as String,
+        bankLinkLimit: json['bankLinkLimit'] as int? ?? 0,
+        entitlements:
+            (json['entitlements'] as List<dynamic>? ?? const []).cast<String>(),
+        cancelAtPeriodEnd: json['cancelAtPeriodEnd'] as bool? ?? false,
+        // False when the server has no payment provider configured, which is a
+        // supported deployment rather than an error — the UI hides buying
+        // instead of offering something that would 503.
+        purchaseAvailable: json['purchaseAvailable'] as bool? ?? false,
+        currentPeriodEnd: _parseDate(json['currentPeriodEnd']),
+        trialEnd: _parseDate(json['trialEnd']),
+      );
+
+  final String plan;
+  final String planName;
+
+  /// Mirrors the provider's vocabulary: `none`, `trialing`, `active`,
+  /// `past_due`, `canceled`, and so on.
+  final String status;
+  final int bankLinkLimit;
+  final List<String> entitlements;
+  final bool cancelAtPeriodEnd;
+  final bool purchaseAvailable;
+  final DateTime? currentPeriodEnd;
+  final DateTime? trialEnd;
+
+  bool get isFree => plan == 'free';
+  bool get isTrialing => status == 'trialing';
+
+  /// A renewal payment has failed and the provider is still retrying.
+  ///
+  /// Access deliberately continues meanwhile (see ADR-0007), so this is a
+  /// prompt to fix a card rather than a lockout — and saying so plainly is the
+  /// difference between a customer updating their card and one who thinks they
+  /// have already been cut off.
+  bool get needsPaymentAttention => status == 'past_due' || status == 'unpaid';
+
+  bool has(String entitlement) => entitlements.contains(entitlement);
+
+  static DateTime? _parseDate(Object? value) =>
+      value is String ? DateTime.tryParse(value) : null;
+}
+
+/// Where to send the customer to pay, from `POST /billing/checkout-session`.
+class CheckoutSession {
+  const CheckoutSession({required this.url, this.expiresAt});
+
+  factory CheckoutSession.fromJson(Map<String, dynamic> json) => CheckoutSession(
+        url: json['url'] as String,
+        expiresAt: PlanSummary._parseDate(json['expiresAt']),
+      );
+
+  final String url;
+  final DateTime? expiresAt;
+}

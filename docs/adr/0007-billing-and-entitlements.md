@@ -81,10 +81,15 @@ decision**, and no feature route is gated today. Two reasons:
 
 1. Pricing is the owner's decision (§6.1 of `08-what-blocks-selling.md`), and
    inventing one in code would bury it where nobody looks for it.
-2. The Flutter client already calls `reports/monthly.pdf`,
-   `cash-flow-forecast`, and `purchase-scenario` for every user. Gating any of
-   them today would break the shipping app for everyone, with no upgrade path in
-   the UI to recover through.
+2. ~~The Flutter client has no upgrade path to recover through.~~ **Resolved.**
+   The client now has a plan screen and a paywall sheet, and turns the API's
+   `plan_upgrade_required` 403 into a typed `PlanUpgradeRequiredException` that
+   any screen can present. Gating a route no longer strands anyone.
+
+   What remains is (1): the client is ready, the pricing decision is not.
+   Note also that purchasing in the app is gated by `BILLING_PURCHASE_MODE`
+   (see below), so turning on a gate before that is settled would show users a
+   paywall they cannot pay through from the phone.
 
 What *is* enforced is the connected-institution limit, because that is the one
 genuine marginal cost — the aggregator charges per connected Item — and it fails
@@ -115,6 +120,23 @@ take a cut. The hosted-checkout flow built here is the **web** path. Wiring a
 rejected from both stores. StoreKit and Play Billing are a separate integration
 with their own receipt-validation webhooks, and `Subscription` is deliberately
 provider-shaped so a second billing adapter can sit behind the same port.
+
+The client makes this an explicit decision rather than a hidden assumption.
+`lib/api/billing_policy.dart` defines `BILLING_PURCHASE_MODE`, a compile-time
+constant with three values:
+
+- **`informational`** (the default) — plan state and tier contents are shown,
+  with no way to buy. Safe in every distribution channel. Because the constant
+  is const, the checkout path is tree-shaken out of a release build entirely,
+  which is a stronger claim to a reviewer than a runtime flag.
+- **`linkOut`** — opens hosted checkout in the system browser. Correct for a web
+  or sideloaded build; before a store submission, confirm the relevant
+  external-purchase-link entitlement.
+- **`nativeStore`** — StoreKit / Play Billing. Not implemented, and selecting it
+  disables purchasing rather than pretending to work.
+
+An unrecognised value falls back to `informational`: a typo in a CI flag must not
+produce a store-rejectable binary.
 
 ## Alternatives rejected
 
