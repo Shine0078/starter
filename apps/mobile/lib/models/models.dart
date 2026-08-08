@@ -615,6 +615,112 @@ class CategorySpend {
   final int transactionCount;
 }
 
+class ForecastPoint {
+  const ForecastPoint({
+    required this.date,
+    required this.balance,
+    required this.balanceFormatted,
+  });
+
+  factory ForecastPoint.fromJson(Map<String, dynamic> json) => ForecastPoint(
+        date: json['date'] as String,
+        balance: json['balance'] as int,
+        balanceFormatted: json['balanceFormatted'] as String? ?? '',
+      );
+
+  final String date;
+  final int balance;
+  final String balanceFormatted;
+}
+
+class ForecastEvent {
+  const ForecastEvent({
+    required this.date,
+    required this.merchant,
+    required this.kind,
+    required this.amountFormatted,
+    required this.confidence,
+  });
+
+  factory ForecastEvent.fromJson(Map<String, dynamic> json) => ForecastEvent(
+        date: json['date'] as String,
+        merchant: json['merchant'] as String,
+        kind: json['kind'] as String,
+        amountFormatted: json['amountFormatted'] as String,
+        confidence: (json['confidence'] as num).toDouble(),
+      );
+
+  final String date;
+  final String merchant;
+  final String kind;
+  final String amountFormatted;
+  final double confidence;
+}
+
+class CashFlowForecast {
+  const CashFlowForecast({
+    required this.currency,
+    required this.startingBalanceFormatted,
+    required this.endingBalanceFormatted,
+    required this.points,
+    required this.events,
+    required this.lowBalanceDates,
+  });
+
+  factory CashFlowForecast.fromJson(Map<String, dynamic> json) =>
+      CashFlowForecast(
+        currency: json['currency'] as String,
+        startingBalanceFormatted: json['startingBalanceFormatted'] as String,
+        endingBalanceFormatted: json['endingBalanceFormatted'] as String,
+        points: (json['points'] as List<dynamic>)
+            .map((row) => ForecastPoint.fromJson(row as Map<String, dynamic>))
+            .toList(),
+        events: (json['events'] as List<dynamic>)
+            .map((row) => ForecastEvent.fromJson(row as Map<String, dynamic>))
+            .toList(),
+        lowBalanceDates:
+            (json['lowBalanceDates'] as List<dynamic>).cast<String>(),
+      );
+
+  final String currency;
+  final String startingBalanceFormatted;
+  final String endingBalanceFormatted;
+  final List<ForecastPoint> points;
+  final List<ForecastEvent> events;
+  final List<String> lowBalanceDates;
+}
+
+class PurchaseScenario {
+  const PurchaseScenario({
+    required this.currency,
+    required this.balanceBeforePurchaseFormatted,
+    required this.balanceAfterPurchaseFormatted,
+    required this.endingBalanceFormatted,
+    required this.lowBalanceDates,
+    required this.warnings,
+  });
+
+  factory PurchaseScenario.fromJson(Map<String, dynamic> json) =>
+      PurchaseScenario(
+        currency: json['currency'] as String,
+        balanceBeforePurchaseFormatted:
+            json['balanceBeforePurchaseFormatted'] as String,
+        balanceAfterPurchaseFormatted:
+            json['balanceAfterPurchaseFormatted'] as String,
+        endingBalanceFormatted: json['endingBalanceFormatted'] as String,
+        lowBalanceDates:
+            (json['lowBalanceDates'] as List<dynamic>).cast<String>(),
+        warnings: (json['warnings'] as List<dynamic>).cast<String>(),
+      );
+
+  final String currency;
+  final String balanceBeforePurchaseFormatted;
+  final String balanceAfterPurchaseFormatted;
+  final String endingBalanceFormatted;
+  final List<String> lowBalanceDates;
+  final List<String> warnings;
+}
+
 class Subscription {
   Subscription({
     required this.merchant,

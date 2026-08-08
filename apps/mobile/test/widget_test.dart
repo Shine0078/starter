@@ -676,6 +676,7 @@ void main() {
   });
 
   testWidgets('navigates to transactions, budgets, and goals', (tester) async {
+    final semantics = tester.ensureSemantics();
     final api = clientWith(MockClient((request) async {
       final path = request.url.path;
       if (path.endsWith('/sync')) {
@@ -688,6 +689,18 @@ void main() {
       if (path.endsWith('/health-score')) {
         return http.Response(
           '{"score":500,"band":"fair","components":[],"topActions":[]}',
+          200,
+        );
+      }
+      if (path.endsWith('/cash-flow-forecast')) {
+        return http.Response(
+          '{"asOf":"2026-08-08","currency":"USD","startingBalance":100000,"startingBalanceFormatted":"\$1,000.00","endingBalanceFormatted":"\$850.00","lowBalanceDates":[],"events":[{"date":"2026-08-12","amount":-15000,"merchant":"Internet","kind":"expense","confidence":0.92,"transactionIds":["txn-1"],"amountFormatted":"-\$150.00"}],"points":[{"date":"2026-08-09","balance":100000,"balanceFormatted":"\$1,000.00"},{"date":"2026-08-12","balance":85000,"balanceFormatted":"\$850.00"}]}',
+          200,
+        );
+      }
+      if (path.endsWith('/purchase-scenario')) {
+        return http.Response(
+          '{"currency":"USD","balanceBeforePurchaseFormatted":"\$1,000.00","balanceAfterPurchaseFormatted":"\$900.00","endingBalanceFormatted":"\$750.00","lowBalanceDates":[],"warnings":["Known recurring commitments remain covered in this conservative scenario.","This scenario includes repeatable income and bills only; it does not predict everyday discretionary spending."]}',
           200,
         );
       }
@@ -763,6 +776,35 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
+    await tester.tap(find.byTooltip('Cash-flow planning'));
+    await tester.pumpAndSettle();
+    expect(find.text('Conservative forecast'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('cash-flow-chart')),
+      180,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pumpAndSettle();
+    final chartSemantics = tester.widget<Semantics>(
+      find
+          .ancestor(
+            of: find.byKey(const Key('cash-flow-chart')),
+            matching: find.byType(Semantics),
+          )
+          .first,
+    );
+    expect(
+      chartSemantics.properties.label,
+      contains(r'Cash flow forecast from $1,000.00 to $850.00'),
+    );
+    expect(find.text('Internet'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), '100');
+    await tester.tap(find.text('Check scenario'));
+    await tester.pumpAndSettle();
+    expect(find.text('\$900.00'), findsOneWidget);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
     await tester.tap(find.byTooltip('Notifications'));
     await tester.pumpAndSettle();
     expect(find.text('You are all caught up'), findsOneWidget);
@@ -824,5 +866,6 @@ void main() {
     expect(find.text('New goal'), findsOneWidget);
     expect(find.text('Create a goal and turn saving into a plan.'),
         findsOneWidget);
+    semantics.dispose();
   });
 }

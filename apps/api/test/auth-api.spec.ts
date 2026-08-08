@@ -536,6 +536,36 @@ describe('auth API', () => {
         .expect(400);
     });
 
+    it('keeps cash-flow planning currency-specific and validates the code', async () => {
+      const account = await register();
+      const authorization = `Bearer ${account.tokens.accessToken}`;
+      await request(http)
+        .post('/api/sync')
+        .set('Authorization', authorization)
+        .expect(201);
+
+      const forecast = await request(http)
+        .get('/api/cash-flow-forecast?days=30&asOf=2026-08-08&currency=USD')
+        .set('Authorization', authorization)
+        .expect(200);
+      expect(forecast.body.currency).toBe('USD');
+      expect(forecast.body.points).toHaveLength(30);
+      expect(forecast.body.startingBalanceFormatted).toEqual(expect.any(String));
+
+      await request(http)
+        .get('/api/cash-flow-forecast?currency=usd')
+        .set('Authorization', authorization)
+        .expect(400);
+
+      const scenario = await request(http)
+        .get('/api/purchase-scenario?days=30&asOf=2026-08-08&date=2026-08-09&amount=10000&currency=USD')
+        .set('Authorization', authorization)
+        .expect(200);
+      expect(scenario.body.currency).toBe('USD');
+      expect(scenario.body.purchase.amountFormatted).toEqual(expect.any(String));
+      expect(scenario.body.warnings).toHaveLength(2);
+    });
+
     it('exports portable user data after password confirmation without credential material', async () => {
       const alice = await register();
       await request(http)

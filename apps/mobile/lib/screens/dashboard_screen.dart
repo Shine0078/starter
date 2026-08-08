@@ -9,6 +9,7 @@ import '../widgets/net_position_card.dart';
 import '../widgets/spending_chart.dart';
 import '../widgets/transaction_tile.dart';
 import 'notifications_screen.dart';
+import 'planning_screen.dart';
 import 'settings_screen.dart';
 import 'subscriptions_screen.dart';
 import 'transaction_detail_screen.dart';
@@ -264,6 +265,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       appBar: AppBar(
         title: const Text('FINVERSE'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.show_chart),
+            tooltip: 'Cash-flow planning',
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => PlanningScreen(api: widget.api),
+            )),
+          ),
           IconButton(
             icon: const Icon(Icons.subscriptions_outlined),
             tooltip: 'Subscriptions',

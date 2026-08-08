@@ -25,7 +25,7 @@ Stated so the rest of this document is not read as "nothing works".
 | Authentication | Argon2id, rotating refresh tokens with reuse detection, email verification, password reset, TOTP MFA/recovery codes, device app lock, recoverable deletion, global guard, per-account lockout, session list, audit trail |
 | Persistence | Postgres behind ports, contract-tested against both adapters, migrations |
 | Isolation | Row-level security, app connects as a non-superuser role, 21 dedicated tests |
-| Tests | 303 without a database, 401 against real PostgreSQL, 21 Flutter tests, and an Android debug APK build; all passing |
+| Tests | 304 without a database, 402 against real PostgreSQL, 22 Flutter tests, and an Android debug APK build; all passing |
 | CI | GitHub Actions: API typecheck/test/build/image + Flutter analyze/test/Android compile; tagged API/APK releases |
 
 That is a solid Phase-0 foundation. It is not a product.
@@ -60,7 +60,7 @@ measured in weeks. Nothing else on this list matters until these move.
 | 2.4 | **Real sync engine** | Completed: `/transactions/sync` cursors, all-page draining, mutation-safe pagination restart, added/modified/removed reconciliation, pending-to-posted changes, serialized link sync, retry queue, and manual refresh | production load/rate-limit testing remains |
 | 2.5 | **Merchant lexicon is tiny** | Categorisation quality on real data is unknown. The top ~2,000 merchants cover most volume; the current lexicon is a fraction of that | 1–2 weeks + ongoing |
 | 2.6 | **Categorisation accuracy unmeasured** | 92% coverage on synthetic data the same codebase generated is not evidence. Needs a held-out set of real transactions | ongoing |
-| 2.7 | **Multi-currency untested** | `Money` handles it; no path exercises more than USD | 1 week |
+| 2.7 | **Multi-currency partially implemented** | The mobile net-position chart never combines currencies, and cash-flow/purchase planning is explicitly currency-selectable and API-tested. Monthly insights, budgets, subscriptions, goals, and reports still assume one reporting currency at a time; live mixed-currency institution testing remains | 1 week |
 
 ---
 
@@ -138,7 +138,7 @@ smaller than the complete MISSION.md product.
 
 | # | Item | Detail | Effort |
 |---|---|---|---|
-| 5.1 | **Core navigation started** | Onboarding, home, transaction search/detail/correction, budgets, goals, bank accounts, subscriptions, notifications, settings/session controls, portable export, versioned legal/optional consent history, device app lock, and recent security activity are implemented | 2–3 weeks for remaining breadth/polish |
+| 5.1 | **Core navigation started** | Onboarding, currency-safe net position, cash-flow planning and purchase scenarios, transaction search/detail/correction, budgets, goals, bank accounts, subscriptions, notifications, settings/session controls, portable export, versioned legal/optional consent history, device app lock, and recent security activity are implemented | 2–3 weeks for remaining breadth/polish |
 | 5.2 | **Read-only offline cache implemented** | Authenticated GET responses can fall back to a 30-day, user-scoped encrypted cache with a visible stale-data banner. Offline writes, background reconciliation, and conflict handling remain | 2–3 weeks |
 | 5.3 | **No state management** | `setState` only. Honest at one screen, unworkable at twenty | with 5.1 |
 | 5.4 | **No push notifications** | Persistent preferences and a mobile centre now cover budgets, utilization, low balances, bank sync, upcoming bills, subscription price rises, possible duplicates, and conservative spending outliers. Device push delivery remains | external push credentials + 1–2 weeks |
@@ -196,7 +196,9 @@ features them.
   subscriptions, a 30-day forecast, and an action plan. The mission's later
   investment, tax, fraud, and AI sections depend on those underlying features.
 - Goals and savings targets — persistent model, progress math, contribution history, API, RLS, and Flutter screen are complete
-- Net worth dashboard — no investments, loans, or property
+- Net-position dashboard — connected assets and debts are charted separately per
+  currency; property/manual assets, full investment holdings, and historical
+  net-worth snapshots remain
 - Notifications and smart reminders — persistent preferences and deduplicated
   in-app budget, credit-utilization, low-balance, bank-sync, upcoming-bill,
   subscription-price-rise, possible-duplicate, and spending-outlier alerts exist;

@@ -26,7 +26,10 @@ export interface AuthStoreSet {
   teardown(): Promise<void>;
 }
 
-const NOW = new Date('2026-08-07T12:00:00.000Z');
+// listActive is intentionally evaluated against the adapter/database wall
+// clock. Keep its live fixtures relative to the test run so this contract does
+// not start failing simply because a hard-coded future date has arrived.
+const NOW = new Date();
 const HOUR = 60 * 60 * 1000;
 
 export function runAuthStoreContract(name: string, create: () => Promise<AuthStoreSet>): void {

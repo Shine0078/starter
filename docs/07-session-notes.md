@@ -13,8 +13,8 @@ is the shortest path to being productive again.
 
 ```bash
 npm install
-npm test          # 303 tests, no database needed
-npm run test:db   # 401 tests, spins up a real PostgreSQL and tears it down
+npm test          # 304 tests, no database needed
+npm run test:db   # 402 tests, spins up a real PostgreSQL and tears it down
 npm run dev       # API + dev dashboard on http://localhost:3000
 ```
 
@@ -28,8 +28,8 @@ Every number below was produced by running the thing, not by reading the code.
 
 | Check | Result |
 |---|---|
-| API tests, in-memory | 303 passed |
-| API tests, real Postgres | 401 passed |
+| API tests, in-memory | 304 passed |
+| API tests, real Postgres | 402 passed |
 | `tsc --noEmit`, `npm run build` | clean |
 | `flutter analyze`, `flutter test` | clean, 21 passed |
 | Android debug compile | `com.finverse.finance`, API 36, 170.9 MB APK; debug-only artifact built successfully |

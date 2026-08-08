@@ -100,6 +100,7 @@ export class InsightsController {
     @CurrentUser() userId: string,
     @Query('days') days = '30',
     @Query('asOf') asOf?: string,
+    @Query('currency') currency = 'USD',
   ) {
     const parsedDays = Number(days);
     if (![7, 30, 90].includes(parsedDays)) {
@@ -107,8 +108,14 @@ export class InsightsController {
       // graph length a client can accidentally turn into a false forecast.
       throw new BadRequestException('days must be one of 7, 30, or 90');
     }
+    assertCurrency(currency);
 
-    const forecast = await this.insights.cashFlowForecast(userId, parsedDays, asOf);
+    const forecast = await this.insights.cashFlowForecast(
+      userId,
+      parsedDays,
+      asOf,
+      currency,
+    );
     return {
       ...forecast,
       startingBalanceFormatted: formatMoney(money(forecast.startingBalance, forecast.currency)),
@@ -146,6 +153,7 @@ export class InsightsController {
     @Query('date') date: string | undefined,
     @Query('days') days = '30',
     @Query('asOf') asOf?: string,
+    @Query('currency') currency = 'USD',
   ) {
     const parsedDays = Number(days);
     const parsedAmount = Number(amount);
@@ -156,8 +164,16 @@ export class InsightsController {
       throw new BadRequestException('amount must be a positive integer in minor units');
     }
     if (!date) throw new BadRequestException('date is required as YYYY-MM-DD');
+    assertCurrency(currency);
 
-    const scenario = await this.insights.purchaseScenario(userId, parsedDays, parsedAmount, date, asOf);
+    const scenario = await this.insights.purchaseScenario(
+      userId,
+      parsedDays,
+      parsedAmount,
+      date,
+      asOf,
+      currency,
+    );
     return {
       ...scenario,
       purchase: {
@@ -168,6 +184,12 @@ export class InsightsController {
       balanceAfterPurchaseFormatted: formatMoney(money(scenario.balanceAfterPurchase, scenario.currency)),
       endingBalanceFormatted: formatMoney(money(scenario.endingBalance, scenario.currency)),
     };
+  }
+}
+
+function assertCurrency(value: string): void {
+  if (!/^[A-Z]{3}$/.test(value)) {
+    throw new BadRequestException('currency must be an uppercase 3-letter ISO code');
   }
 }
 

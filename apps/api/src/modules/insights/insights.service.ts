@@ -118,13 +118,18 @@ export class InsightsService {
    * A conservative 7/30/90-day outlook based only on recurring income and
    * recurring charges.  It deliberately does not invent discretionary spend.
    */
-  async cashFlowForecast(userId: string, days: number, asOf?: string): Promise<CashFlowForecast> {
+  async cashFlowForecast(
+    userId: string,
+    days: number,
+    asOf?: string,
+    currency = 'USD',
+  ): Promise<CashFlowForecast> {
     const today = asOf ?? this.clock.today();
     const [transactions, accounts] = await Promise.all([
       this.transactions.list(userId),
       this.accounts.list(userId),
     ]);
-    return forecastCashFlow(accounts, transactions, today, days);
+    return forecastCashFlow(accounts, transactions, today, days, currency);
   }
 
   async creditCardPlans(userId: string, asOf?: string): Promise<CreditCardPlan[]> {
@@ -137,13 +142,14 @@ export class InsightsService {
     amount: number,
     purchaseDate: string,
     asOf?: string,
+    currency = 'USD',
   ): Promise<PurchaseScenario> {
     const today = asOf ?? this.clock.today();
     const [transactions, accounts] = await Promise.all([
       this.transactions.list(userId),
       this.accounts.list(userId),
     ]);
-    return simulatePurchase(accounts, transactions, today, days, amount, purchaseDate);
+    return simulatePurchase(accounts, transactions, today, days, amount, purchaseDate, currency);
   }
 
   async professionalMonthlyReport(

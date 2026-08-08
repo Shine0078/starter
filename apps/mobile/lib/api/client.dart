@@ -444,6 +444,28 @@ class ApiClient {
         .toList();
   }
 
+  Future<CashFlowForecast> cashFlowForecast({
+    required int days,
+    required String currency,
+  }) async {
+    final json = await _get(
+      '/cash-flow-forecast?days=$days&currency=${Uri.encodeQueryComponent(currency)}',
+    ) as Map<String, dynamic>;
+    return CashFlowForecast.fromJson(json);
+  }
+
+  Future<PurchaseScenario> purchaseScenario({
+    required int amount,
+    required String date,
+    required int days,
+    required String currency,
+  }) async {
+    final json = await _get(
+      '/purchase-scenario?amount=$amount&date=${Uri.encodeQueryComponent(date)}&days=$days&currency=${Uri.encodeQueryComponent(currency)}',
+    ) as Map<String, dynamic>;
+    return PurchaseScenario.fromJson(json);
+  }
+
   Future<List<Transaction>> transactions(
       {int limit = 50, String? search}) async {
     final query = search == null || search.isEmpty

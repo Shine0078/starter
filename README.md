@@ -129,8 +129,8 @@ last 15 minutes; exchange the refresh token at `/api/auth/refresh` for a new pai
 | `GET` | `/reports/monthly.pdf?asOf=YYYY-MM-DD` | Private multi-page PDF with cash-flow charts, budgets, subscriptions, forecast, and actions |
 | `GET` | `/subscriptions` | Detected recurring charges and price rises |
 | `GET` | `/health-score` | 0–1000 with per-component actions |
-| `GET` | `/cash-flow-forecast?days=7|30|90` | Conservative liquid-cash outlook from repeatable income and bills |
-| `GET` | `/purchase-scenario?days=7|30|90&amount=<minor>&date=YYYY-MM-DD` | One-off purchase impact against the same conservative outlook |
+| `GET` | `/cash-flow-forecast?days=7|30|90&currency=CAD` | Currency-specific conservative liquid-cash outlook from repeatable income and bills |
+| `GET` | `/purchase-scenario?days=7|30|90&amount=<minor>&date=YYYY-MM-DD&currency=CAD` | One-off purchase impact against the same currency-specific outlook |
 | `GET` | `/credit-cards` | Utilization, pay-down target, and an early payment window |
 | `GET` | `/categories` | **Public.** The seeded category tree |
 | `GET` | `/healthz` | **Public.** Liveness and database readiness |
@@ -220,13 +220,13 @@ stopped running.
 
 ## Notes on what is and isn't verified
 
-- **The API and its domain logic run and are tested.** 303 tests run with no
-  database; the full suite is **401 passing** against real PostgreSQL, including
+- **The API and its domain logic run and are tested.** 304 tests run with no
+  database; the full suite is **402 passing** against real PostgreSQL, including
   the store contract — which runs as the restricted role, so it executes with the
   row-level security policies in force — and a suite that issues deliberately
   unfiltered SQL to prove the database withholds other users' rows on its own.
   The slice is also exercised end to end over HTTP.
-- **The Flutter app is verified by static analysis, 21 tests, and a real
+- **The Flutter app is verified by static analysis, 22 tests, and a real
   Android debug APK build.** Android and iOS platform projects can be generated
   locally. See the
   [cheap launch path](docs/06-cheap-launch-path.md).
