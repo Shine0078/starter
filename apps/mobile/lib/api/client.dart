@@ -8,6 +8,26 @@ import '../models/models.dart';
 import 'offline_cache.dart';
 import 'session_store.dart';
 
+/// Where the API lives, for this build on this platform.
+///
+/// Set `--dart-define=API_BASE_URL=https://host` to point a build anywhere.
+///
+/// Left unset, the two defaults differ because the right answer does:
+///
+///  - **Web.** The compiled app is served by the API itself, so the API is
+///    wherever the page came from. Deriving it from `Uri.base` means the same
+///    build works on localhost, on a LAN address, and behind a Tailscale
+///    hostname with no rebuild — which matters when the URL you install the
+///    PWA from is not the URL you developed against.
+///  - **Native.** `10.0.2.2` is the Android emulator's alias for the host
+///    machine; `localhost` inside the emulator is the emulator itself.
+String resolveBaseUrl() {
+  const configured = String.fromEnvironment('API_BASE_URL');
+  if (configured.isNotEmpty) return configured;
+  if (kIsWeb) return Uri.base.origin;
+  return 'http://10.0.2.2:3000';
+}
+
 /// Thin client over the FINVERSE API.
 ///
 /// It parses JSON into models but contains no financial business logic. The
@@ -28,13 +48,7 @@ class ApiClient {
       : _http = httpClient ?? http.Client(),
         sessionStore = sessionStore ?? SecureSessionStore(),
         offlineCache = offlineCache ?? NoopOfflineCacheStore(),
-        baseUrl = baseUrl ??
-            const String.fromEnvironment(
-              'API_BASE_URL',
-              // Android emulator's alias for the host machine. `localhost`
-              // inside the emulator is the emulator itself.
-              defaultValue: 'http://10.0.2.2:3000',
-            );
+        baseUrl = baseUrl ?? resolveBaseUrl();
 
   final http.Client _http;
   final String baseUrl;

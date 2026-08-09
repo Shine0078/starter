@@ -3,17 +3,22 @@ import 'package:flutter/material.dart';
 import 'api/client.dart';
 import 'api/app_lock.dart';
 import 'api/onboarding_store.dart';
-import 'api/offline_cache.dart';
+import 'api/platform/device_auth.dart';
+import 'api/platform/offline_cache_factory.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/onboarding_screen.dart';
 
+// Both factories resolve per target: the encrypted SQLite cache and the system
+// biometric prompt on Android and iOS, no-op equivalents in a browser. Neither
+// native package compiles for the web, so the choice has to happen at import
+// time rather than behind a runtime `if (kIsWeb)`.
 void main() => runApp(FinverseApp(
-      api: ApiClient(offlineCache: EncryptedSqliteOfflineCache()),
+      api: ApiClient(offlineCache: createOfflineCache()),
       onboardingStore: SecureOnboardingStore(),
       appLockController: AppLockController(
         store: SecureAppLockStore(),
-        authenticator: LocalDeviceAuthenticator(),
+        authenticator: createDeviceAuthenticator(),
       ),
     ));
 

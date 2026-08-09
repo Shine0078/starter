@@ -1,6 +1,9 @@
+// Deliberately imports no platform-native package. `local_auth` does not
+// compile for the web, and this file defines the types every target needs;
+// the native implementation lives in platform/device_auth_native.dart behind a
+// conditional export.
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:local_auth/local_auth.dart';
 
 abstract class AppLockStore {
   Future<bool> isEnabled();
@@ -43,25 +46,6 @@ class InMemoryAppLockStore implements AppLockStore {
 abstract class DeviceAuthenticator {
   Future<bool> isSupported();
   Future<bool> authenticate(String reason);
-}
-
-class LocalDeviceAuthenticator implements DeviceAuthenticator {
-  LocalDeviceAuthenticator({LocalAuthentication? authentication})
-      : _authentication = authentication ?? LocalAuthentication();
-
-  final LocalAuthentication _authentication;
-
-  @override
-  Future<bool> isSupported() => _authentication.isDeviceSupported();
-
-  @override
-  Future<bool> authenticate(String reason) => _authentication.authenticate(
-        localizedReason: reason,
-        // Allows the device PIN/passcode fallback when biometrics are not
-        // enrolled. Locking the app must never strand its owner.
-        biometricOnly: false,
-        persistAcrossBackgrounding: true,
-      );
 }
 
 class UnavailableDeviceAuthenticator implements DeviceAuthenticator {

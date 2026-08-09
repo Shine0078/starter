@@ -1,14 +1,13 @@
 import 'dart:async';
-import 'dart:io';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../api/client.dart';
 import '../api/app_lock.dart';
+import '../api/platform/file_share.dart';
 import '../models/models.dart';
 import 'bank_connections_screen.dart';
 import 'notifications_screen.dart';
@@ -413,16 +412,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => _exporting = true);
     try {
       final json = await widget.api.exportData(currentPassword);
-      final directory = await getTemporaryDirectory();
       final stamp = DateFormat('yyyyMMdd-HHmmss').format(DateTime.now());
-      final file = File(
-          '${directory.path}${Platform.pathSeparator}finverse-data-$stamp.json');
-      await file.writeAsString(json, flush: true);
-      await SharePlus.instance.share(ShareParams(
-        files: [XFile(file.path, mimeType: 'application/json')],
+      await shareGeneratedFile(
+        bytes: Uint8List.fromList(utf8.encode(json)),
+        fileName: 'finverse-data-$stamp.json',
+        mimeType: 'application/json',
         title: 'FINVERSE data export',
         subject: 'My FINVERSE data export',
-      ));
+      );
     } catch (error) {
       if (!mounted) return;
       final message =
@@ -436,32 +433,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _shareMonthlyReport() async {
     setState(() => _reporting = true);
-    File? reportFile;
     try {
       final bytes = await widget.api.monthlyReportPdf();
-      final directory = await getTemporaryDirectory();
       final month = DateFormat('yyyy-MM').format(DateTime.now());
-      reportFile = File(
-          '${directory.path}${Platform.pathSeparator}finverse-monthly-report-$month.pdf');
-      await reportFile.writeAsBytes(bytes, flush: true);
-      await SharePlus.instance.share(ShareParams(
-        files: [XFile(reportFile.path, mimeType: 'application/pdf')],
+      await shareGeneratedFile(
+        bytes: Uint8List.fromList(bytes),
+        fileName: 'finverse-monthly-report-$month.pdf',
+        mimeType: 'application/pdf',
         title: 'FINVERSE monthly report',
         subject: 'My FINVERSE monthly financial report',
-      ));
+      );
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(error.toString())));
     } finally {
-      try {
-        if (reportFile != null && await reportFile.exists()) {
-          await reportFile.delete();
-        }
-      } catch (_) {
-        // The OS temp directory remains the fallback if another app still has
-        // the share open; the platform will reclaim it later.
-      }
       if (mounted) setState(() => _reporting = false);
     }
   }

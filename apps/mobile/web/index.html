@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="FINVERSE - privacy-first personal finance.">
+
+  <!--
+    viewport-fit=cover lets the app paint under the notch and home indicator
+    once iOS runs it standalone. Without it there are black bars at both ends
+    and it reads as a web page in a costume rather than an app.
+  -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+
+  <!--
+    Installing to the iPhone home screen.
+
+    `apple-mobile-web-app-capable` is what removes the Safari address bar and
+    toolbar; without it, "Add to Home Screen" produces a bookmark that opens in
+    the browser rather than something that behaves like an app.
+
+    `black-translucent` lets the Flutter UI extend behind the status bar, which
+    is what the viewport-fit above is for.
+
+    iOS ignores manifest.json for the home-screen icon and title, so both are
+    declared here as well. They are not duplication for its own sake - drop
+    them and the icon becomes a grey screenshot of the page.
+  -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FINVERSE">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="apple-touch-icon" sizes="512x512" href="icons/Icon-512.png">
+
+  <meta name="theme-color" content="#2F6DF6">
+
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>FINVERSE</title>
+  <link rel="manifest" href="manifest.json">
+
+  <style>
+    /* Matches the app's seed colour so the launch is a colour, not a white
+       flash, on a phone that has just come off a dark home screen. */
+    body {
+      margin: 0;
+      background-color: #0B1220;
+    }
+    @media (prefers-color-scheme: light) {
+      body { background-color: #F7F9FC; }
+    }
+  </style>
+</head>
+<body>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

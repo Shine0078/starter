@@ -3,7 +3,9 @@ import 'reflect-metadata';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
-import { join } from 'node:path';
+import type { NextFunction, Request, Response } from 'express';
+import { existsSync } from 'node:fs';
+import { extname, join } from 'node:path';
 
 import { AppModule } from './app.module';
 import { loadConfig } from './config';
@@ -52,6 +54,25 @@ async function bootstrap(): Promise<void> {
   // The developer dashboard. Not the product UI — that is the Flutter app.
   app.useStaticAssets(join(__dirname, '..', 'public'));
 
+  // The Flutter app, compiled for the web, served from the same origin as the
+  // API it talks to. Same-origin means no CORS to configure and no second host
+  // to run, and it is what makes the phone-installable PWA a single URL.
+  //
+  // Optional by design: the directory only exists after `flutter build web`,
+  // and the API must still boot without it. See docs/11-run-on-your-phone.md.
+  const webAppDir = join(__dirname, '..', '..', 'mobile', 'build', 'web');
+  if (existsSync(join(webAppDir, 'index.html'))) {
+    app.useStaticAssets(webAppDir, { prefix: '/app' });
+
+    // Flutter routes client-side, so a deep link or a hard refresh inside the
+    // app asks the server for a path that does not exist on disk. Hand those
+    // back index.html and let the app resolve them.
+    app.use('/app', (request: Request, response: Response, next: NextFunction) => {
+      if (request.method !== 'GET' || extname(request.path)) return next();
+      response.sendFile(join(webAppDir, 'index.html'));
+    });
+  }
+
   // Drain in-flight requests and close the pool on SIGTERM/SIGINT, so a
   // restart doesn't sever open connections mid-transaction.
   app.enableShutdownHooks();
@@ -68,6 +89,9 @@ async function bootstrap(): Promise<void> {
   logger.log(`Store      ${config.store}`);
   logger.log(`Dashboard  http://localhost:${PORT}/`);
   logger.log(`Health     http://localhost:${PORT}/healthz`);
+  if (existsSync(join(webAppDir, 'index.html'))) {
+    logger.log(`App        http://localhost:${PORT}/app/`);
+  }
 }
 
 void bootstrap();

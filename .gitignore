@@ -34,9 +34,13 @@ pnpm-debug.log*
 .pub/
 *.iml
 apps/mobile/build/
-# Android is versioned because CI and store releases need a platform project.
-apps/mobile/ios/
-apps/mobile/web/
+# android/, ios/ and web/ are versioned deliberately. Each carries real project
+# configuration that `flutter create` would silently reset: the bundle
+# identifiers, the iOS App Transport Security policy, the Face ID and local
+# network usage strings, and the PWA manifest. Losing those to a regenerated
+# folder is how an app ships as com.example.something.
+#
+# The desktop targets are not shipped, so they stay generated.
 apps/mobile/windows/
 apps/mobile/macos/
 apps/mobile/linux/
