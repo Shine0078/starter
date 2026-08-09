@@ -28,6 +28,15 @@ String resolveBaseUrl() {
   return 'http://10.0.2.2:3000';
 }
 
+/// How long any single request may take before it is treated as failed.
+///
+/// Applied to *every* call, including the unauthenticated ones. A request with
+/// no timeout does not fail — it hangs, and a sign-in button that spins forever
+/// with no error and no way back is indistinguishable from a crashed app. That
+/// is the exact shape of a server whose host went to sleep mid-request: the TCP
+/// connection is accepted and then nothing ever comes back.
+const Duration kRequestTimeout = Duration(seconds: 20);
+
 /// Thin client over the FINVERSE API.
 ///
 /// It parses JSON into models but contains no financial business logic. The
@@ -91,7 +100,7 @@ class ApiClient {
     if (body != null) request.body = jsonEncode(body);
 
     final response = await http.Response.fromStream(
-      await _http.send(request).timeout(const Duration(seconds: 20)),
+      await _http.send(request).timeout(kRequestTimeout),
     );
 
     if (response.statusCode == 401 && allowRetry && _tokens != null) {
@@ -187,7 +196,7 @@ class ApiClient {
 
   Future<LegalPolicies> legalPolicies() async {
     final response =
-        await _http.get(_uri('/legal')).timeout(const Duration(seconds: 20));
+        await _http.get(_uri('/legal')).timeout(kRequestTimeout);
     if (response.statusCode >= 400) {
       throw ApiException('/legal', response.statusCode, response.body);
     }
@@ -280,11 +289,13 @@ class ApiClient {
   }
 
   Future<void> _publicAuthAction(String path, Map<String, dynamic> body) async {
-    final response = await _http.post(
-      _uri(path),
-      headers: {'content-type': 'application/json'},
-      body: jsonEncode(body),
-    );
+    final response = await _http
+        .post(
+          _uri(path),
+          headers: {'content-type': 'application/json'},
+          body: jsonEncode(body),
+        )
+        .timeout(kRequestTimeout);
     final decoded = response.body.isEmpty
         ? <String, dynamic>{}
         : jsonDecode(response.body) as Map<String, dynamic>;
@@ -296,11 +307,13 @@ class ApiClient {
   Future<PublicUser> _authenticate(
       String path, Map<String, dynamic> body) async {
     // Deliberately bypasses _perform: there is no session to attach or retry.
-    final response = await _http.post(
-      _uri(path),
-      headers: {'content-type': 'application/json'},
-      body: jsonEncode(body),
-    );
+    final response = await _http
+        .post(
+          _uri(path),
+          headers: {'content-type': 'application/json'},
+          body: jsonEncode(body),
+        )
+        .timeout(kRequestTimeout);
 
     final decoded = response.body.isEmpty
         ? <String, dynamic>{}
@@ -329,11 +342,13 @@ class ApiClient {
     if (refreshToken == null) return false;
 
     try {
-      final response = await _http.post(
-        _uri('/auth/refresh'),
-        headers: {'content-type': 'application/json'},
-        body: jsonEncode({'refreshToken': refreshToken}),
-      );
+      final response = await _http
+          .post(
+            _uri('/auth/refresh'),
+            headers: {'content-type': 'application/json'},
+            body: jsonEncode({'refreshToken': refreshToken}),
+          )
+          .timeout(kRequestTimeout);
       if (response.statusCode >= 400) return false;
 
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;

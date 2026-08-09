@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -281,6 +283,29 @@ void main() {
     expect(find.text('Confirm it’s you'), findsNothing);
     expect(linkTokenRequested, isFalse);
     expect(find.textContaining('connects up to 1 institution'), findsOneWidget);
+  });
+
+  testWidgets('never waits forever on a server that accepts and goes quiet',
+      (tester) async {
+    // The failure this guards against is not an error, it is silence: a host
+    // that sleeps mid-request accepts the connection and never answers. Without
+    // a timeout the sign-in button spins forever with no error and no way back,
+    // which is indistinguishable from a crashed app.
+    //
+    // Registration and sign-in bypass the authenticated request path, so they
+    // need the timeout applied separately — that is exactly how they lost it.
+    // A future that never completes, rather than a long delay: it models the
+    // silence exactly and leaves no pending timer behind.
+    final api = clientWith(MockClient((_) => Completer<http.Response>().future));
+
+    // The matcher is attached before time advances, so the failure is observed
+    // rather than surfacing as an unhandled async error.
+    final expectation = expectLater(
+      api.signIn('sam@example.com', 'correct horse battery staple'),
+      throwsA(isA<TimeoutException>()),
+    );
+    await tester.pump(kRequestTimeout + const Duration(seconds: 1));
+    await expectation;
   });
 
   testWidgets('does not mistake an ordinary 403 for a paywall', (tester) async {
