@@ -30,13 +30,50 @@ function presentAccount(account: Awaited<ReturnType<LedgerService['listAccounts'
   };
 }
 
-const MANUAL_TYPES = new Set(['cash', 'checking', 'savings', 'investment', 'loan']);
+/**
+ * Account kinds a user can enter by hand.
+ *
+ * `credit_card` belongs here even though it is the one type an aggregator
+ * normally supplies: the whole credit-card surface — utilisation, the pay-down
+ * target, the safe payment window — is useless to anyone who has not connected
+ * a bank, and connecting a bank is gated on a commercial agreement. Leaving it
+ * out meant "add your credit card" had no answer at all.
+ */
+const MANUAL_TYPES = new Set([
+  'cash',
+  'checking',
+  'savings',
+  'investment',
+  'loan',
+  'credit_card',
+]);
+
+/** Balances that are money owed rather than money held. */
+const LIABILITY_TYPES = new Set(['loan', 'credit_card']);
+
 type ManualAccountBody = {
   name?: unknown;
   type?: unknown;
   currency?: unknown;
   balanceCurrent?: unknown;
+  creditLimit?: unknown;
+  statementDay?: unknown;
+  paymentDueDay?: unknown;
 };
+
+/** Optional whole number in an inclusive range, or undefined. */
+function optionalInt(
+  value: unknown,
+  field: string,
+  min: number,
+  max: number,
+): number | undefined {
+  if (value === undefined || value === null || value === '') return undefined;
+  if (!Number.isSafeInteger(value) || (value as number) < min || (value as number) > max) {
+    throw new BadRequestException(`${field} must be a whole number from ${min} through ${max}`);
+  }
+  return value as number;
+}
 
 function manualAccountDetails(body: ManualAccountBody) {
   const name = typeof body.name === 'string' ? body.name.trim() : '';
@@ -47,7 +84,9 @@ function manualAccountDetails(body: ManualAccountBody) {
     throw new BadRequestException('name must be from 1 through 80 characters');
   }
   if (!MANUAL_TYPES.has(type)) {
-    throw new BadRequestException('type must be cash, checking, savings, investment, or loan');
+    throw new BadRequestException(
+      `type must be one of ${[...MANUAL_TYPES].join(', ')}`,
+    );
   }
   if (!/^[A-Z]{3}$/.test(currency)) {
     throw new BadRequestException('currency must be a 3-letter ISO code');
@@ -55,17 +94,38 @@ function manualAccountDetails(body: ManualAccountBody) {
   if (!Number.isSafeInteger(balance) || Math.abs(balance as number) > 10_000_000_000_000) {
     throw new BadRequestException('balanceCurrent must be a safe minor-unit integer');
   }
-  if (type === 'loan' && (balance as number) > 0) {
-    throw new BadRequestException('a loan balance must be zero or negative');
+
+  // Sign carries meaning throughout the domain: negative is money owed
+  // (ADR-0003). A credit card entered as a positive balance would count as an
+  // asset and inflate net position by twice the debt.
+  const isLiability = LIABILITY_TYPES.has(type);
+  if (isLiability && (balance as number) > 0) {
+    throw new BadRequestException(
+      `a ${type === 'loan' ? 'loan' : 'credit card'} balance must be zero or negative`,
+    );
   }
-  if (type !== 'loan' && (balance as number) < 0) {
+  if (!isLiability && (balance as number) < 0) {
     throw new BadRequestException('an asset balance must be zero or positive');
   }
+
+  const creditLimit = optionalInt(body.creditLimit, 'creditLimit', 0, 10_000_000_000_000);
+  const statementDay = optionalInt(body.statementDay, 'statementDay', 1, 31);
+  const paymentDueDay = optionalInt(body.paymentDueDay, 'paymentDueDay', 1, 31);
+
+  if (type !== 'credit_card' && (creditLimit !== undefined || statementDay !== undefined || paymentDueDay !== undefined)) {
+    throw new BadRequestException(
+      'creditLimit, statementDay and paymentDueDay apply only to a credit_card',
+    );
+  }
+
   return {
     name,
-    type: type as 'cash' | 'checking' | 'savings' | 'investment' | 'loan',
+    type: type as 'cash' | 'checking' | 'savings' | 'investment' | 'loan' | 'credit_card',
     currency,
     balanceCurrent: balance as number,
+    ...(creditLimit === undefined ? {} : { creditLimit }),
+    ...(statementDay === undefined ? {} : { statementDay }),
+    ...(paymentDueDay === undefined ? {} : { paymentDueDay }),
   };
 }
 

@@ -18,7 +18,7 @@
 
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -67,6 +67,16 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const serveOnly = args[0] === '--serve';
 
+  // `--serve` keeps its data; a test run never does.
+  //
+  // Those are opposite requirements and both are correct. A test that depends
+  // on state a previous run left behind passes locally and fails in CI, so the
+  // suite gets a throwaway directory every time. Someone actually using the app
+  // on their own machine wants the opposite: their accounts and budgets still
+  // there tomorrow. Deleting a developer's data because the test harness needs
+  // a clean slate is not a trade worth making.
+  const persist = serveOnly && !args.includes('--ephemeral');
+
   // Test runs take an ephemeral port. A previous run that was interrupted can
   // leave a postgres process holding the fixed one, and the failure that
   // produces is an unhelpful "undefined" rather than "port in use".
@@ -84,17 +94,21 @@ async function main(): Promise<void> {
   const CONNECTION_STRING = connectionString(PORT);
   const APP_CONNECTION_STRING = connectionString(PORT, APP_USER, APP_PASSWORD);
 
-  // A fresh data directory per run. Tests that depend on state left behind by a
-  // previous run pass locally and fail in CI; making that impossible is worth
-  // the couple of seconds initdb costs.
-  const dataDir = mkdtempSync(join(tmpdir(), 'finverse-pg-'));
+  // Persistent runs keep their cluster inside the repo (gitignored) so it is
+  // obvious where the data lives and easy to throw away deliberately. Test runs
+  // get a throwaway directory in the OS temp dir.
+  const dataDir = persist
+    ? join(__dirname, '..', '.postgres-data')
+    : mkdtempSync(join(tmpdir(), 'finverse-pg-'));
+
+  const alreadyInitialised = persist && existsSync(join(dataDir, 'PG_VERSION'));
 
   const pg = new EmbeddedPostgres({
     databaseDir: dataDir,
     user: USER,
     password: PASSWORD,
     port: PORT,
-    persistent: false,
+    persistent: persist,
     onLog: () => {},
   });
 
@@ -107,6 +121,8 @@ async function main(): Promise<void> {
     } catch {
       // Already gone; nothing useful to do while shutting down.
     }
+    // Never delete a persistent cluster. That directory is the user's data.
+    if (persist) return;
     try {
       rmSync(dataDir, { recursive: true, force: true });
     } catch {
@@ -119,19 +135,35 @@ async function main(): Promise<void> {
   process.on('SIGTERM', () => void stop().then(() => process.exit(143)));
 
   console.log(`Starting PostgreSQL on port ${PORT}...`);
-  await pg.initialise();
+
+  // initdb only on a directory that has never been one. Re-running it against
+  // an existing cluster is how you lose the data you were trying to keep.
+  if (!alreadyInitialised) await pg.initialise();
   await pg.start();
-  await pg.createDatabase(DATABASE);
+
+  // Already there on every run after the first, and that is not an error.
+  try {
+    await pg.createDatabase(DATABASE);
+  } catch (error) {
+    if (!alreadyInitialised) throw error;
+  }
+
   console.log(`PostgreSQL ready: ${CONNECTION_STRING}`);
 
   if (serveOnly) {
+    console.log('');
+    console.log(
+      persist
+        ? `Data persists in ${dataDir}`
+        : 'Data is discarded when this stops (--ephemeral).',
+    );
     console.log('');
     console.log('For `npm run dev`, set both — the second is the role row-level');
     console.log('security applies to, and the API creates it on boot:');
     console.log(`  DATABASE_URL=${CONNECTION_STRING}`);
     console.log(`  DATABASE_APP_URL=${APP_CONNECTION_STRING}`);
     console.log('');
-    console.log('Leave this running; press Ctrl+C to stop and discard the data.');
+    console.log('Leave this running; press Ctrl+C to stop.');
     // Hold the process open without spinning.
     await new Promise(() => {});
     return;

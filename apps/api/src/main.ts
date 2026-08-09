@@ -1,3 +1,6 @@
+// First, and it has to be: loadConfig() is memoised and runs when the module
+// graph below is initialised, so a .env read any later would be ignored.
+import './env';
 import 'reflect-metadata';
 
 import { Logger, ValidationPipe } from '@nestjs/common';

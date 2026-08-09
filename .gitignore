@@ -34,6 +34,10 @@ pnpm-debug.log*
 .pub/
 *.iml
 apps/mobile/build/
+
+# The local persistent PostgreSQL cluster created by `npm run db:start`.
+# Somebody's actual financial data — never commit it.
+apps/api/.postgres-data/
 # android/, ios/ and web/ are versioned deliberately. Each carries real project
 # configuration that `flutter create` would silently reset: the bundle
 # identifiers, the iOS App Transport Security policy, the Face ID and local

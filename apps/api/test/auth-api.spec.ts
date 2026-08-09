@@ -550,6 +550,54 @@ describe('auth API', () => {
         .expect(200, { removed: true });
     });
 
+    it('accepts a manually entered credit card and plans against it', async () => {
+      // Connecting a bank is gated on a commercial agreement, so without this
+      // the entire credit-card surface — utilisation, pay-down target, safe
+      // payment window — was unreachable for every user of the product.
+      const account = await register();
+      const auth = { Authorization: `Bearer ${account.tokens.accessToken}` };
+
+      const card = await request(http)
+        .post('/api/accounts/manual')
+        .set(auth)
+        .send({
+          name: 'Rewards Visa',
+          type: 'credit_card',
+          currency: 'CAD',
+          balanceCurrent: -125_000,
+          creditLimit: 500_000,
+          statementDay: 18,
+          paymentDueDay: 12,
+        })
+        .expect(201);
+      expect(card.body.utilization).toBeCloseTo(0.25);
+
+      const planned = await request(http).get('/api/credit-cards').set(auth).expect(200);
+      expect(planned.body).toHaveLength(1);
+
+      // Sign carries meaning (ADR-0003): a card entered as a positive balance
+      // would count as an asset and overstate net position by twice the debt.
+      await request(http)
+        .post('/api/accounts/manual')
+        .set(auth)
+        .send({ name: 'Backwards', type: 'credit_card', currency: 'CAD', balanceCurrent: 5_000 })
+        .expect(400);
+
+      // Card-only fields on a chequing account are a mistake worth catching
+      // rather than silently storing.
+      await request(http)
+        .post('/api/accounts/manual')
+        .set(auth)
+        .send({
+          name: 'Chequing',
+          type: 'checking',
+          currency: 'CAD',
+          balanceCurrent: 1_000,
+          creditLimit: 500_000,
+        })
+        .expect(400);
+    });
+
     it('generates a private multi-page monthly PDF report with charts', async () => {
       const account = await register();
       const authorization = `Bearer ${account.tokens.accessToken}`;
