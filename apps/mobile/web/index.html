@@ -48,13 +48,80 @@
     body {
       margin: 0;
       background-color: #0B1220;
+      color: #E6EDF7;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
     @media (prefers-color-scheme: light) {
-      body { background-color: #F7F9FC; }
+      body { background-color: #F7F9FC; color: #1B2436; }
+    }
+
+    /*
+      The first load fetches a multi-megabyte renderer. Without something on
+      screen that is an unexplained blank page for several seconds, which reads
+      as a crash — and a finance app that looks crashed is one you close and do
+      not reopen. This is removed by the bootstrap below the moment Flutter
+      paints its first frame.
+    */
+    #boot {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      transition: opacity 220ms ease-out;
+    }
+    #boot.done { opacity: 0; pointer-events: none; }
+    #boot .mark { font-size: 22px; font-weight: 600; letter-spacing: 3px; }
+    #boot .hint { font-size: 13px; opacity: 0.65; max-width: 260px; text-align: center; }
+    #boot .bar {
+      width: 180px; height: 3px; border-radius: 3px;
+      background: rgba(127, 155, 200, 0.25);
+      overflow: hidden;
+    }
+    #boot .bar i {
+      display: block; height: 100%; width: 40%; border-radius: 3px;
+      background: #2F6DF6;
+      animation: slide 1.15s ease-in-out infinite;
+    }
+    @keyframes slide {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(350%); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #boot .bar i { animation: none; width: 100%; }
     }
   </style>
 </head>
 <body>
+  <div id="boot">
+    <div class="mark">FINVERSE</div>
+    <div class="bar"><i></i></div>
+    <div class="hint" id="boot-hint">Loading&hellip;</div>
+  </div>
+
+  <script>
+    // A slow network is not a failure, but after a while it is worth saying so
+    // rather than animating forever at someone.
+    var bootHint = document.getElementById('boot-hint');
+    var slow = setTimeout(function () {
+      if (bootHint) bootHint.textContent = 'Still loading. The first open downloads the app; later ones are cached.';
+    }, 6000);
+    var stalled = setTimeout(function () {
+      if (bootHint) bootHint.textContent = 'This is taking longer than expected. Check that the FINVERSE server is running and reachable, then reload.';
+    }, 25000);
+
+    window.addEventListener('flutter-first-frame', function () {
+      clearTimeout(slow);
+      clearTimeout(stalled);
+      var boot = document.getElementById('boot');
+      if (!boot) return;
+      boot.classList.add('done');
+      setTimeout(function () { boot.remove(); }, 260);
+    });
+  </script>
+
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

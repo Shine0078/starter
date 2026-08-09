@@ -21,18 +21,25 @@ built-in sample data.
 
 ## Part 1 — The free way: install it as a PWA
 
+> **Windows PowerShell 5.1 does not support `&&`.** Every command below is
+> written for it: `;` chains, and full paths, because a `cd` that silently did
+> not happen is the most common way these steps fail. On macOS or Linux use
+> `&&` and relative paths as usual.
+
 ### 1. Build the app
 
-```bash
-cd apps/mobile && flutter build web --release --base-href=/app/
+```powershell
+cd C:\Users\samue\OneDrive\Desktop\starter\apps\mobile; flutter build web --release --base-href=/app/
 ```
 
 Takes about 90 seconds. Output lands in `apps/mobile/build/web`.
 
 ### 2. Start the API
 
-```bash
-npm run dev --workspace @finverse/api
+Use a second terminal — this one stays running.
+
+```powershell
+cd C:\Users\samue\OneDrive\Desktop\starter; npm run dev --workspace @finverse/api
 ```
 
 The API serves the compiled app at `/app/` automatically when that build exists
@@ -49,9 +56,13 @@ document assumes.
 
 **Option A — Tailscale (recommended).** You already have it installed.
 
-```bash
+```powershell
 tailscale serve --bg 3000
 ```
+
+First run prints a link to enable Serve on your tailnet; visit it once. The
+proxy then survives reboots, so this is a one-time step. To stop it later:
+`tailscale serve --https=443 off`.
 
 That publishes `https://<your-machine>.<your-tailnet>.ts.net` in front of the
 local API, with a real Let's Encrypt certificate. Install Tailscale on the
@@ -97,8 +108,8 @@ Without it you would get a bookmark that opens Safari.
 There is no automatic update, because there is no app store in this loop. After
 changing code:
 
-```bash
-cd apps/mobile && flutter build web --release --base-href=/app/
+```powershell
+cd C:\Users\samue\OneDrive\Desktop\starter\apps\mobile; flutter build web --release --base-href=/app/
 ```
 
 Then pull down to refresh inside the installed app, or close it from the app
@@ -107,8 +118,8 @@ switcher and reopen. Roughly 90 seconds end to end.
 **For a faster loop while actually developing**, skip the install and use the
 dev server, which has hot reload:
 
-```bash
-cd apps/mobile && flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:3000
+```powershell
+cd C:\Users\samue\OneDrive\Desktop\starter\apps\mobile; flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:3000
 ```
 
 Edit, save, and the browser updates in about a second. Develop there, then

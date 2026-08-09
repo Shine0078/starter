@@ -3,6 +3,7 @@ import 'reflect-metadata';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
+import compression from 'compression';
 import type { NextFunction, Request, Response } from 'express';
 import { existsSync } from 'node:fs';
 import { extname, join } from 'node:path';
@@ -51,8 +52,21 @@ async function bootstrap(): Promise<void> {
   // unless CORS_ORIGINS contains an explicit allowlist.
   app.enableCors({ origin: config.corsOrigins, credentials: true });
 
-  // The developer dashboard. Not the product UI — that is the Flutter app.
-  app.useStaticAssets(join(__dirname, '..', 'public'));
+  // The compiled Flutter app is several megabytes of JavaScript and a
+  // WebAssembly renderer, and served raw that is a blank screen for tens of
+  // seconds on a phone — indistinguishable from a crash. Compression cuts it
+  // by roughly four times.
+  //
+  // Scoped to the static bundle rather than applied globally: compressing API
+  // responses that mix secrets with attacker-influenced content is the setup
+  // for BREACH, and the bundle is where all the bytes actually are.
+  app.use(['/app', '/dev'], compression());
+
+  // The developer dashboard, at an explicit path. It is a development tool
+  // that can fabricate a sample ledger from the mock aggregator, so it must
+  // not be what someone lands on when they open the site — seeing invented
+  // bills in a finance app is alarming, and reasonably so.
+  app.useStaticAssets(join(__dirname, '..', 'public'), { prefix: '/dev' });
 
   // The Flutter app, compiled for the web, served from the same origin as the
   // API it talks to. Same-origin means no CORS to configure and no second host
@@ -61,7 +75,9 @@ async function bootstrap(): Promise<void> {
   // Optional by design: the directory only exists after `flutter build web`,
   // and the API must still boot without it. See docs/11-run-on-your-phone.md.
   const webAppDir = join(__dirname, '..', '..', 'mobile', 'build', 'web');
-  if (existsSync(join(webAppDir, 'index.html'))) {
+  const webAppBuilt = existsSync(join(webAppDir, 'index.html'));
+
+  if (webAppBuilt) {
     app.useStaticAssets(webAppDir, { prefix: '/app' });
 
     // Flutter routes client-side, so a deep link or a hard refresh inside the
@@ -72,6 +88,13 @@ async function bootstrap(): Promise<void> {
       response.sendFile(join(webAppDir, 'index.html'));
     });
   }
+
+  // The root sends you to the real app when one is built, and to the developer
+  // dashboard otherwise. Nobody should have to know which path is which.
+  app.use((request: Request, response: Response, next: NextFunction) => {
+    if (request.path !== '/') return next();
+    response.redirect(webAppBuilt ? '/app/' : '/dev/');
+  });
 
   // Drain in-flight requests and close the pool on SIGTERM/SIGINT, so a
   // restart doesn't sever open connections mid-transaction.
@@ -87,10 +110,12 @@ async function bootstrap(): Promise<void> {
 
   logger.log(`FINVERSE API listening on http://localhost:${PORT}`);
   logger.log(`Store      ${config.store}`);
-  logger.log(`Dashboard  http://localhost:${PORT}/`);
   logger.log(`Health     http://localhost:${PORT}/healthz`);
-  if (existsSync(join(webAppDir, 'index.html'))) {
+  logger.log(`Dev tools  http://localhost:${PORT}/dev/  (sample data lives here)`);
+  if (webAppBuilt) {
     logger.log(`App        http://localhost:${PORT}/app/`);
+  } else {
+    logger.warn('No web build found — run `flutter build web` to serve the app at /app/.');
   }
 }
 
