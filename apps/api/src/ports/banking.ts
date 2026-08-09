@@ -7,6 +7,20 @@ export const BANK_WEBHOOK_STORE = 'BANK_WEBHOOK_STORE';
 
 export type BankLinkStatus = 'healthy' | 'syncing' | 'needs_reauth' | 'error' | 'revoked';
 
+/**
+ * Which Plaid Link surface a link token is minted for.
+ *
+ * Not cosmetic: a token created with `android_package_name` is bound to the
+ * Android app and Plaid refuses it in a browser, and vice versa. The client
+ * says which one it is, and the provider configures the token to match.
+ */
+export const LINK_PLATFORMS = ['android', 'web'] as const;
+export type LinkPlatform = (typeof LINK_PLATFORMS)[number];
+
+export function isLinkPlatform(value: unknown): value is LinkPlatform {
+  return value === 'android' || value === 'web';
+}
+
 export interface BankLink {
   id: string;
   provider: 'plaid';
@@ -43,7 +57,11 @@ export interface BankSyncPage {
 export interface BankProvider {
   readonly name: 'plaid';
   configured: boolean;
-  createLinkToken(userId: string, accessToken?: string): Promise<{ token: string; expiresAt: string }>;
+  createLinkToken(
+    userId: string,
+    accessToken?: string,
+    platform?: LinkPlatform,
+  ): Promise<{ token: string; expiresAt: string }>;
   exchangePublicToken(publicToken: string): Promise<{ accessToken: string; itemId: string }>;
   sync(accessToken: string, cursor: string | null): Promise<BankSyncPage>;
   verifyWebhook(rawBody: Buffer, signature: string): Promise<boolean>;

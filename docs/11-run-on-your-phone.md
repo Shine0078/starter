@@ -151,23 +151,58 @@ name, type (including credit card), currency, balance. Manual accounts track
 balances and feed net position, the health score, and credit-card utilisation.
 They do not produce transactions, because nothing is importing any.
 
-**Automatically — not yet, and not on the web at all.** Importing real
-transactions needs Plaid production access, which is a commercial agreement
-(see [08-what-blocks-selling.md](08-what-blocks-selling.md) §1.2). Even once
-that exists, Plaid Link is a native SDK: it works in the Android build, and the
-iOS platform channel has not been written. The browser build cannot connect a
-bank at all.
+**Automatically — yes, including in the iPhone PWA.** Plaid ships a JavaScript
+Link SDK as well as native ones, and the web build uses it. Connecting a bank
+works in the browser; the implementation is chosen per platform in
+`lib/api/plaid_link.dart`.
 
-So on the PWA today: add cards and accounts manually, set budgets and goals
-against them, and use the sample ledger on `/dev/` if you want to see the
-categorisation and insights working on a full data set.
+| Surface | Link SDK | Works today |
+|---|---|---|
+| Web / installable PWA | Plaid Link for Web | **Yes** |
+| Android | Plaid native SDK | Yes |
+| Native iOS build | — | No platform channel written |
+
+Two things it still needs:
+
+1. **Plaid credentials on the server.** Without them the button returns a 503.
+   **Sandbox keys are free** — see below — and let you connect Plaid's test
+   institutions end to end with fake but realistic data.
+2. **Production access** before a *real* bank, which is a commercial agreement
+   (see [08-what-blocks-selling.md](08-what-blocks-selling.md) §1.2).
+
+### Getting free Plaid Sandbox credentials
+
+1. Sign up at [dashboard.plaid.com](https://dashboard.plaid.com). No payment
+   details, no commercial agreement for Sandbox.
+2. Go to **Developers → Keys** and copy the `client_id` and the **Sandbox**
+   secret.
+3. Put them in `apps/api/.env`, with an encryption key for the stored tokens:
+
+```powershell
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+```
+
+```
+PLAID_CLIENT_ID=...
+PLAID_SECRET=...
+PLAID_ENVIRONMENT=sandbox
+BANK_TOKEN_ENCRYPTION_KEY=<the base64 string from above>
+```
+
+4. Restart the API. **Connect bank** now opens Plaid Link.
+5. In Sandbox, pick any institution and sign in with username `user_good` and
+   password `pass_good`. You will get several accounts and a few hundred
+   realistic transactions — still not your money, but a full data set to see
+   categorisation, budgets, and the forecast working against.
+
+Connecting your own real bank needs production access, which is §1.2 of the
+launch plan and takes weeks. Sandbox is the honest way to exercise everything
+until then.
 
 ### What does not work in the browser build
 
 Stated plainly so nothing looks broken when it is merely absent:
 
-- **Bank connection.** Plaid Link is a native SDK with no web equivalent wired
-  up here. The Accounts screen will offer manual accounts only.
 - **Biometric app lock.** No browser API can challenge for a device credential,
   so the setting reports itself unavailable rather than pretending.
 - **Offline cache.** Web reads always go to the network. A failure is reported

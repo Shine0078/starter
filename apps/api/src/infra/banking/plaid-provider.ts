@@ -11,7 +11,7 @@ import { createHash, createPublicKey, timingSafeEqual, type JsonWebKey } from 'n
 import jwt, { type JwtPayload } from 'jsonwebtoken';
 
 import type { Account, AccountType, RawTransaction } from '../../domain/types';
-import type { BankProvider, BankSyncPage } from '../../ports/banking';
+import type { BankProvider, BankSyncPage, LinkPlatform } from '../../ports/banking';
 
 export interface PlaidProviderOptions {
   clientId?: string;
@@ -20,6 +20,9 @@ export interface PlaidProviderOptions {
   webhookUrl?: string;
   countries: string[];
   androidPackageName: string;
+  /** Registered OAuth return URL for Plaid Link on the web. Optional: the
+   *  Sandbox test institutions do not need one. */
+  webRedirectUri?: string;
 }
 
 export class PlaidBankProvider implements BankProvider {
@@ -59,8 +62,21 @@ export class PlaidBankProvider implements BankProvider {
   async createLinkToken(
     userId: string,
     accessToken?: string,
+    platform: LinkPlatform = 'android',
   ): Promise<{ token: string; expiresAt: string }> {
     const client = this.requireClient();
+
+    // `android_package_name` binds the token to the Android app; Plaid rejects
+    // such a token in a browser. The web surface takes a redirect_uri instead,
+    // and only when one is configured — it must be registered in the Plaid
+    // dashboard first, and an unregistered value is refused outright.
+    const surface =
+      platform === 'web'
+        ? this.options.webRedirectUri
+          ? { redirect_uri: this.options.webRedirectUri }
+          : {}
+        : { android_package_name: this.options.androidPackageName };
+
     const response = await client.linkTokenCreate({
       client_name: 'FINVERSE',
       language: 'en',
@@ -68,7 +84,7 @@ export class PlaidBankProvider implements BankProvider {
       user: { client_user_id: userId },
       ...(accessToken ? { access_token: accessToken } : { products: [Products.Transactions] }),
       ...(this.options.webhookUrl ? { webhook: this.options.webhookUrl } : {}),
-      android_package_name: this.options.androidPackageName,
+      ...surface,
       transactions: { days_requested: 180 },
     });
     return { token: response.data.link_token, expiresAt: response.data.expiration };

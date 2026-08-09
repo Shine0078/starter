@@ -9,19 +9,14 @@ import '../models/models.dart';
 import 'plan_screen.dart';
 
 class BankConnectionsScreen extends StatefulWidget {
-  const BankConnectionsScreen(
-      {required this.api, PlaidLink? plaidLink, super.key})
-      : plaidLink = plaidLink ?? const _DefaultPlaidLink();
+  BankConnectionsScreen({required this.api, PlaidLink? plaidLink, super.key})
+      : plaidLink = plaidLink ?? createPlaidLink();
 
   final ApiClient api;
   final PlaidLink plaidLink;
 
   @override
   State<BankConnectionsScreen> createState() => _BankConnectionsScreenState();
-}
-
-class _DefaultPlaidLink extends PlaidLink {
-  const _DefaultPlaidLink();
 }
 
 class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
@@ -136,6 +131,7 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
       final token = await widget.api.createBankLinkToken(
         password: password,
         linkId: existing?.id,
+        platform: widget.plaidLink.platform,
       );
       final result = await widget.plaidLink.open(token);
       if (!result.succeeded) {
@@ -449,9 +445,17 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
       unawaited(_offerUpgrade(error));
       return null;
     }
+    if (error is PlaidLinkUnavailable || error is MissingPluginException) {
+      return 'Bank connection is not available in this build. Add accounts '
+          'manually here instead.';
+    }
+
     final value = error.toString();
     if (value.contains('503')) {
-      return 'Bank connections are not configured on this server yet.';
+      // The old wording stopped at "not configured", which reads as a dead end.
+      // Sandbox credentials are free and take a few minutes, so say that.
+      return 'This server has no Plaid credentials yet. Plaid Sandbox keys are '
+          'free — see docs/11-run-on-your-phone.md.';
     }
     return value;
   }
@@ -484,13 +488,17 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
               icon: const Icon(Icons.add_card),
               label: const Text('Add manual'),
             ),
-            const SizedBox(height: 10),
-            FloatingActionButton.extended(
-              heroTag: 'connect-bank',
-              onPressed: _working ? null : () => _connect(),
-              icon: const Icon(Icons.add_link),
-              label: const Text('Connect bank'),
-            ),
+            // Only where Plaid Link can actually open. In the browser build the
+            // native SDK does not exist, so this button could only ever fail.
+            if (widget.plaidLink.isSupported) ...[
+              const SizedBox(height: 10),
+              FloatingActionButton.extended(
+                heroTag: 'connect-bank',
+                onPressed: _working ? null : () => _connect(),
+                icon: const Icon(Icons.add_link),
+                label: const Text('Connect bank'),
+              ),
+            ],
           ],
         ),
         body: _loading
@@ -538,7 +546,7 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
                       padding: EdgeInsets.fromLTRB(4, 20, 4, 6),
                       child: Text('BANK CONNECTIONS'),
                     ),
-                    if (_links.isEmpty)
+                    if (_links.isEmpty && widget.plaidLink.isSupported)
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 48),
                         child: Column(children: [
@@ -552,6 +560,25 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
                               'Connect a bank for automatic balances and transactions.',
                               textAlign: TextAlign.center),
                         ]),
+                      ),
+                    // Reached only by the native iOS build, which has no Plaid
+                    // platform channel. Say so plainly and point at what does
+                    // work, rather than leaving an empty section that looks
+                    // like something failed to load.
+                    if (!widget.plaidLink.isSupported)
+                      Card(
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        child: const ListTile(
+                          leading: Icon(Icons.phonelink_off_outlined),
+                          title: Text('Not available in this build'),
+                          subtitle: Text(
+                            'Bank connection is not wired up for this platform yet. It '
+                            'works in the browser and on Android. You can still add your '
+                            'accounts and cards with "Add manual" and set budgets and '
+                            'goals against them.',
+                          ),
+                          isThreeLine: true,
+                        ),
                       ),
                     for (final link in _links) _connectionCard(link),
                   ],

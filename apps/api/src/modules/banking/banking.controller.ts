@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Post } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 
-import type { BankLink } from '../../ports/banking';
+import { isLinkPlatform, type BankLink } from '../../ports/banking';
 import { CurrentUser, ReqContext } from '../auth/auth.guard';
 import { AuthService, type RequestContext } from '../auth/auth.service';
 import { CreateLinkTokenDto, ExchangeBankTokenDto } from './banking.dto';
@@ -28,7 +28,11 @@ export class BankingController {
     @ReqContext() context: RequestContext,
   ) {
     await this.auth.verifyBankLinkStepUp(userId, body.password, context);
-    return this.banking.createLinkToken(userId, body.linkId);
+    return this.banking.createLinkToken(
+      userId,
+      body.linkId,
+      isLinkPlatform(body.platform) ? body.platform : 'android',
+    );
   }
 
   @Post('exchange')

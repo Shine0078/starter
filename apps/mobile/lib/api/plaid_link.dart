@@ -1,4 +1,15 @@
-import 'package:flutter/services.dart';
+/// Plaid Link, across the surfaces this app runs on.
+///
+/// Plaid ships a native SDK for Android and a JavaScript SDK for the browser.
+/// They are different products with the same job, so this file holds the shared
+/// types and the platform-agnostic interface, and the implementation is chosen
+/// by conditional export.
+///
+/// iOS has neither yet: the native SDK has no platform channel here, and an
+/// iPhone runs the web implementation through the installable PWA instead.
+library;
+
+export 'plaid_link_web.dart' if (dart.library.io) 'plaid_link_native.dart';
 
 class PlaidLinkResult {
   const PlaidLinkResult({
@@ -19,6 +30,9 @@ class PlaidLinkResult {
         errorMessage: map['errorMessage'] as String?,
       );
 
+  /// The user closed Link without finishing. Not an error to report.
+  factory PlaidLinkResult.cancelled() => const PlaidLinkResult(succeeded: false);
+
   final bool succeeded;
   final String? publicToken;
   final String? institutionId;
@@ -27,32 +41,29 @@ class PlaidLinkResult {
   final String? errorMessage;
 }
 
-/// Small Flutter bridge over Plaid's officially supported native Android SDK.
-class PlaidLink {
+/// What every platform implementation provides.
+abstract class PlaidLink {
   const PlaidLink();
 
-  static const _channel = MethodChannel('com.finverse.finance/plaid_link');
+  /// Whether Link can open here at all. False leaves the UI to explain itself
+  /// rather than offering a button that could only ever fail.
+  bool get isSupported;
 
-  Future<PlaidLinkResult> open(String linkToken) async {
-    final result = await _channel.invokeMapMethod<Object?, Object?>(
-      'open',
-      {'token': linkToken},
-    );
-    if (result == null) throw const PlaidLinkUnavailable();
-    return PlaidLinkResult.fromMap(result);
-  }
+  /// Which Link surface this is, so the server mints a matching token. A token
+  /// carrying `android_package_name` is refused in a browser, and vice versa.
+  String get platform;
 
-  /// Recovers an OAuth result delivered after Android recreated the Activity.
-  Future<PlaidLinkResult?> consumePending() async {
-    final result =
-        await _channel.invokeMapMethod<Object?, Object?>('consumePending');
-    return result == null ? null : PlaidLinkResult.fromMap(result);
-  }
+  Future<PlaidLinkResult> open(String linkToken);
+
+  /// Recovers a result delivered after the host recreated the view. Android
+  /// needs this after an OAuth redirect rebuilds the Activity; the web
+  /// implementation keeps its handler alive and has nothing to recover.
+  Future<PlaidLinkResult?> consumePending();
 }
 
 class PlaidLinkUnavailable implements Exception {
   const PlaidLinkUnavailable();
 
   @override
-  String toString() => 'Bank connection is currently available on Android.';
+  String toString() => 'Bank connection is not available on this device.';
 }

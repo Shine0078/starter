@@ -647,11 +647,16 @@ class ApiClient {
   Future<String> createBankLinkToken({
     required String password,
     String? linkId,
+    String platform = 'android',
   }) async {
     final json = await _send(
       'POST',
       '/bank-links/link-token',
-      {'password': password, if (linkId != null) 'linkId': linkId},
+      {
+        'password': password,
+        'platform': platform,
+        if (linkId != null) 'linkId': linkId,
+      },
     ) as Map<String, dynamic>;
     return json['token'] as String;
   }

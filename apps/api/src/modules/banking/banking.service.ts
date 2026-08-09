@@ -37,6 +37,7 @@ import {
   type BankProvider,
   type BankTokenCipher,
   type BankWebhookStore,
+  type LinkPlatform,
 } from '../../ports/banking';
 import { BillingService } from '../billing/billing.service';
 
@@ -73,7 +74,7 @@ export class BankingService implements OnModuleInit, OnModuleDestroy {
     return this.links.list(userId);
   }
 
-  async createLinkToken(userId: string, linkId?: string) {
+  async createLinkToken(userId: string, linkId?: string, platform: LinkPlatform = 'android') {
     this.requireConfigured();
     let accessToken: string | undefined;
     if (linkId) {
@@ -81,7 +82,7 @@ export class BankingService implements OnModuleInit, OnModuleDestroy {
       if (!link) throw new NotFoundException('Bank connection not found.');
       accessToken = this.cipher.decrypt(link.encryptedAccessToken);
     }
-    return this.provider.createLinkToken(userId, accessToken);
+    return this.provider.createLinkToken(userId, accessToken, platform);
   }
 
   async exchange(

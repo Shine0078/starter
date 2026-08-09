@@ -225,6 +225,7 @@ function storeProviders(): Provider[] {
           webhookUrl: process.env.PLAID_WEBHOOK_URL,
           countries: (process.env.PLAID_COUNTRIES ?? 'CA,US').split(',').filter(Boolean),
           androidPackageName: 'com.finverse.finance',
+          webRedirectUri: process.env.PLAID_WEB_REDIRECT_URI,
         }),
     },
     {
