@@ -116,6 +116,38 @@ Deliberately under-detects rather than over-detects: a missed transfer overstate
 spending in a way the user can see and correct, while a false pair silently
 deletes a real expense from their totals.
 
+### §2 — Design system ✅ (foundation) / ⏳ (adoption)
+
+`lib/design/` — tokens, semantic colours, typography, theme, components, and a
+single `design.dart` barrel. 12 tests.
+
+What it settles, once, instead of per screen:
+
+- **Money is set in tabular figures.** By default digits have proportional
+  widths, so a 1 is narrower than a 0 and a column of amounts wobbles. This is
+  the cheapest change in the system and the most visible: it is the difference
+  between a ledger and a paragraph.
+- **Direction is never colour alone.** `MoneyText` carries an explicit `+`/`−`
+  and `FinMetricTile` pairs every trend colour with an arrow, because roughly
+  one man in twelve cannot separate red from green (§41).
+- **Money reads aloud correctly.** "−$4.50" is announced as "$4.50 out", not as
+  punctuation.
+- **Sign and meaning are separated.** `TrendMeaning` exists because spending
+  £200 less is a negative number and good news, while earning £200 less is a
+  negative number and bad news.
+- **Semantic colours, not literal ones.** `income`/`expense`/`warning` via a
+  `ThemeExtension`, with a dark palette that is lifted in lightness and pulled
+  back in chroma rather than the light one dimmed — saturated red and green
+  vibrate and fail contrast on a dark surface.
+- **Skeletons, empty states, error states, stale banner** (§33–35), including a
+  shimmer that genuinely stops under reduced motion rather than merely hiding.
+- **48dp minimum tap target** on every button.
+
+**Adoption is partial and that is the honest status.** The theme is applied app-
+wide, and the dashboard's loading and error states now use it. The remaining
+eleven screens still carry inline padding and colours; converting them is
+mechanical but not yet done.
+
 ### Supporting work
 - Persistent local PostgreSQL, so data survives a restart.
 - `.env` is now actually loaded — `.env.example` had promised this and nothing
@@ -142,19 +174,20 @@ Honest list, in §44 order. None of this is started unless stated.
 | 12 | Refund/duplicate intelligence | Refund matching missing |
 | 13 | Insight engine | `insights.ts` exists; §29–30 prioritisation does not |
 | 14 | Caching and performance | No analytics cache |
-| §2 | Design system | Not started — the largest single piece |
-| §41 | Accessibility | Partial |
+| §2 | Design system | Foundation built; **11 of 12 screens not yet converted** |
+| §41 | Accessibility | Partial — the design system covers contrast, targets, semantics and reduced motion |
 
 ### Recommended next three
 
-1. **Pagination + filtering** (§14, §9). Everything else in the transaction UI
+1. **Convert the remaining screens to the design system.** Mechanical, and
+   until it is done the app still looks assembled from twelve opinions.
+2. **Pagination + filtering** (§14, §9). Everything else in the transaction UI
    sits on top of it, and it is the one existing scaling cliff.
-2. **Design system** (§2). Every screen redesign depends on it; doing screens
-   first means doing them twice.
 3. **Analytics domain layer, then the Analytics screen** (§22–27). Biggest
    visible gap against the brief.
 
-State management (§43.3) should be resolved as part of (2), not after it.
+State management (§43.3) should be resolved during (1), not after it: converting
+a screen is the moment its state handling is already open.
 
 ---
 

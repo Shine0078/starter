@@ -5,6 +5,7 @@ import 'api/app_lock.dart';
 import 'api/onboarding_store.dart';
 import 'api/platform/device_auth.dart';
 import 'api/platform/offline_cache_factory.dart';
+import 'design/design.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/onboarding_screen.dart';
@@ -41,22 +42,11 @@ class FinverseApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const seed = Color(0xFF2F6DF6);
-
     return MaterialApp(
       title: 'FINVERSE',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: seed),
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: seed,
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-      ),
+      theme: FinTheme.light(),
+      darkTheme: FinTheme.dark(),
       // Follow the OS. A finance app opened at night should not flashbang you.
       themeMode: ThemeMode.system,
       home: OnboardingGate(

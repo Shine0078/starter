@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../api/client.dart';
 import '../api/app_lock.dart';
+import '../design/design.dart';
 import '../models/models.dart';
 import '../widgets/budget_tile.dart';
 import '../widgets/health_score_card.dart';
@@ -356,42 +357,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildBody(ThemeData theme) {
-    if (_loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    // A skeleton in the shape of the real dashboard, not a spinner in the
+    // middle of a blank screen (§33). Nothing jumps when the data lands.
+    if (_loading) return const FinDashboardSkeleton();
 
     if (_error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.cloud_off, size: 40, color: theme.colorScheme.error),
-              const SizedBox(height: 12),
-              Text(
-                "Couldn't reach the API",
-                style: theme.textTheme.titleMedium,
-              ),
-              const SizedBox(height: 6),
-              Text(
-                _error!,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodySmall,
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'On an Android emulator the host is 10.0.2.2, not localhost.',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodySmall,
-              ),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: () => _load(sync: true),
-                child: const Text('Retry'),
-              ),
-            ],
-          ),
+      return SingleChildScrollView(
+        child: FinErrorState(
+          title: "We couldn't load your finances",
+          // Plain language, and something to do about it (§34). The raw
+          // exception is still available, one tap down, for whoever needs it.
+          message: 'FINVERSE could not reach its server. Check your connection '
+              'and try again — nothing has been lost.',
+          onRetry: () => _load(sync: true),
+          technicalDetail: _error,
         ),
       );
     }
