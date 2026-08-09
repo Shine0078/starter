@@ -14,6 +14,11 @@ import {
 
 import { categorizeDescriptor } from '../../domain/categorization/categorize';
 import { normalizeDescriptor } from '../../domain/categorization/normalize';
+import {
+  detectInternalTransfers,
+  internalTransferIds,
+  isUserCategorised,
+} from '../../domain/transactions/internal-transfers';
 import type { RawTransaction, Transaction } from '../../domain/types';
 import {
   ACCOUNT_STORE,
@@ -133,6 +138,50 @@ export class BankingService implements OnModuleInit, OnModuleDestroy {
     return (await this.links.get(userId, link.id))!;
   }
 
+  /**
+   * Re-categorises detected internal transfers so they stop being counted as
+   * income and spending.
+   *
+   * Considers a recent window rather than the whole ledger: transfers pair
+   * within days, and re-examining years of history on every sync would grow
+   * without bound for no benefit.
+   *
+   * A transaction the user has categorised themselves is never touched. Their
+   * correction is the most reliable signal in the system, and silently
+   * overriding it is the one behaviour ADR-0004 exists to prevent.
+   */
+  private async reconcileInternalTransfers(userId: string): Promise<number> {
+    const today = this.clock.today();
+    const since = new Date(Date.parse(`${today}T00:00:00Z`) - 45 * 86_400_000)
+      .toISOString()
+      .slice(0, 10);
+
+    const recent = await this.transactions.list(userId, {
+      range: { start: since, end: today },
+    });
+
+    const pairs = detectInternalTransfers(recent);
+    if (pairs.length === 0) return 0;
+
+    const byId = new Map(recent.map((row) => [row.id, row]));
+    let updated = 0;
+
+    for (const id of internalTransferIds(pairs)) {
+      const txn = byId.get(id);
+      if (!txn || isUserCategorised(txn)) continue;
+      if (txn.categorySlug === 'transfer') continue;
+
+      await this.transactions.update(userId, id, {
+        categorySlug: 'transfer',
+        categorySource: 'transfer_pairing',
+        categoryConfidence: 0.95,
+      });
+      updated += 1;
+    }
+
+    return updated;
+  }
+
   async sync(userId: string, linkId: string) {
     this.requireConfigured();
     const existing = await this.links.get(userId, linkId);
@@ -193,11 +242,18 @@ export class BankingService implements OnModuleInit, OnModuleDestroy {
         errorCode: null,
         lastSyncedAt: this.clock.now().toISOString(),
       });
+
+      // Runs after every page is in, not per page: the two sides of a transfer
+      // routinely arrive in different pages, and often from different
+      // institutions entirely.
+      const transfers = await this.reconcileInternalTransfers(userId);
+
       return {
         fetched,
         inserted,
         updated,
         removed,
+        transfersDetected: transfers,
         coverage: fetched === 0 ? 1 : categorized / fetched,
       };
     } catch (error) {

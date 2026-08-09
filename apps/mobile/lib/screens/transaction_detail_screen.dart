@@ -169,10 +169,22 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
         subtitle: SelectableText(value.isEmpty ? 'Unavailable' : value),
       );
 
+  /// Every category must be able to say why it is what it is (ADR-0004), and
+  /// "suggested by transfer pairing" is provenance, not an explanation.
   String _categoryExplanation(Transaction transaction) {
     if (transaction.isUserSet) return 'Chosen by you.';
     if (transaction.needsReview) return 'FINVERSE needs your review.';
+
+    if (transaction.categorySource == 'transfer_pairing') {
+      return 'Matched to the opposite side of this amount in another of your '
+          'accounts, so it is money you moved rather than income or spending. '
+          'It is left out of your totals.';
+    }
+
     final percent = (transaction.categoryConfidence * 100).round();
+    if (transaction.categorySource == 'lexicon') {
+      return 'Recognised from the merchant name • $percent% confidence.';
+    }
     return 'Suggested by ${transaction.categorySource.replaceAll('_', ' ')} • $percent% confidence.';
   }
 }

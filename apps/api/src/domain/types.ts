@@ -15,6 +15,11 @@ export type CategorySource =
   | 'lexicon'
   | 'model'
   | 'user_manual'
+  /** Matched to its counterpart in another of the user's own accounts, so it is
+   *  a movement between their accounts rather than income or spending. Distinct
+   *  from `lexicon` because the evidence is a paired transaction, not a
+   *  descriptor — and that is what the UI should say when asked why. */
+  | 'transfer_pairing'
   | 'unknown';
 
 export type BudgetPeriodType = 'weekly' | 'monthly' | 'yearly';
