@@ -13,7 +13,8 @@ provider, or legal approval already exists.
   Android upload key, and publishes a same-origin `/app/` Flutter web/PWA bundle
   as a release artifact.
 - CI type-checks, tests with both stores, applies migrations twice, builds the API,
-  analyzes/tests Flutter, and compiles the Android release target.
+  analyzes/tests Flutter, compiles Android, and compiles the native iOS target
+  without signing on macOS.
 - `infra/scripts/backup-postgres.ps1` creates a compressed custom-format PostgreSQL
   backup, validates its archive structure, and rolls off files older than the chosen
   retention window.
