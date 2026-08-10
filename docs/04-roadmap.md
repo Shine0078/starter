@@ -93,7 +93,7 @@ ADR-0006 records the shape and what it costs.
 - [x] Privacy-safe deterministic assistant over aggregates; a zero-retention
       LLM contract is still required before adding free-form model prompts
 - [x] Credit-card payment planner: statement/due dates, utilization alerts, safe payment window
-- [ ] Financial health score surfaced with actionable steps
+- [x] Financial health score surfaced with explainable components and actionable steps
 - [x] User-owned ledger CSV export (formula-injection safe)
 - [x] Professional monthly PDF report with cash-flow charts, budget performance,
       subscriptions, forecast, and prioritized actions
