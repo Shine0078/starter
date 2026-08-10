@@ -749,8 +749,23 @@ class ApiClient {
       }
     }
     _tokens = null;
-    await sessionStore.clear();
-    if (owner != null) await offlineCache.clearOwner(owner);
+    // Local auth state must end even when the platform keystore or cache is
+    // temporarily unavailable (for example while an iPhone is locked). A
+    // cleanup failure must never leave the current UI authenticated or make
+    // the sign-out action appear to have failed.
+    try {
+      await sessionStore.clear();
+    } catch (_) {
+      // The in-memory session is authoritative for this process. The next
+      // launch will retry the platform cleanup before restoring a session.
+    }
+    if (owner != null) {
+      try {
+        await offlineCache.clearOwner(owner);
+      } catch (_) {
+        // Cache cleanup is best-effort and never blocks sign-out.
+      }
+    }
     pendingMutationCount.value = 0;
     offlineCacheStatus.value = null;
   }

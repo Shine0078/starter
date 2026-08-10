@@ -69,6 +69,17 @@ class UnavailableSessionStore implements SessionStore {
   Future<void> clear() async {}
 }
 
+class FailingClearSessionStore extends InMemorySessionStore {
+  @override
+  Future<void> clear() => Future<void>.error(StateError('keystore locked'));
+}
+
+class FailingClearCacheStore extends InMemoryOfflineCacheStore {
+  @override
+  Future<void> clearOwner(String owner) =>
+      Future<void>.error(StateError('cache unavailable'));
+}
+
 /// Canned billing responses, so each test only overrides what it cares about.
 const _freePlanJson = '{"plan":"free","planName":"Free","status":"none",'
     '"bankLinkLimit":1,"entitlements":["data_export"],'
@@ -691,6 +702,27 @@ void main() {
 
     await api.signOut();
     expect(await cache.read('user-1', '/accounts'), isNull);
+  });
+
+  test('sign out clears the active session even when local cleanup fails',
+      () async {
+    final store = FailingClearSessionStore();
+    final cache = FailingClearCacheStore();
+    await store.write(const SessionTokens(
+      accessToken: 'access',
+      refreshToken: 'refresh',
+      refreshExpiresAt: '2026-09-08T00:00:00.000Z',
+      userId: 'user-1',
+    ));
+    final api = clientWith(
+      MockClient((request) async => http.Response('{}', 200)),
+      store: store,
+      offlineCache: cache,
+    );
+    expect(await api.restoreSession(), isTrue);
+
+    await expectLater(api.signOut(), completes);
+    expect(api.isAuthenticated, isFalse);
   });
 
   test('queues offline preference edits and replays the latest value',
