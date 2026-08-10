@@ -126,9 +126,10 @@ file would be required to verify any requirements unique to that document.
   successful replay.
 - Data-quality domain checks and authenticated route protection are covered by
   focused API tests; Flutter analyzer and the 59-test mobile suite remain clean.
-- A provider-neutral public deployment path now runs the tagged API image behind
-  Caddy with automatic HTTPS. Port 3000 remains private to the Docker network,
-  and the phone can be built against that public origin instead of Tailscale.
+- A provider-neutral public deployment path now runs the tagged API and optional
+  Flutter web bundle behind Caddy with automatic HTTPS. Port 3000 remains
+  private to the Docker network, and native phones or the `/app/` PWA can use
+  that public origin instead of Tailscale.
 
 ## Still incomplete locally
 

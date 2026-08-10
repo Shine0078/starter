@@ -116,11 +116,12 @@ remain SHA-256 hashes and cannot be recovered from the database.
 
 The repository includes [`infra/docker-compose.public.yml`](../infra/docker-compose.public.yml)
 and [`infra/Caddyfile`](../infra/Caddyfile) for a small VPS or any Docker host
-with a public IPv4/IPv6 address. It runs the tagged API image behind Caddy, keeps
-port 3000 private to the Docker network, and obtains/renews HTTPS automatically
-for `PUBLIC_API_DOMAIN`. The database is deliberately not bundled into this
-stack: use a managed PostgreSQL provider so backups, storage encryption, and
-restore access are not tied to a single cheap server.
+with a public IPv4/IPv6 address. It runs the tagged API image and an optional
+Flutter web bundle behind Caddy, keeps port 3000 private to the Docker network,
+and obtains/renews HTTPS automatically for `PUBLIC_API_DOMAIN`. The database is
+deliberately not bundled into this stack: use a managed PostgreSQL provider so
+backups, storage encryption, and restore access are not tied to a single cheap
+server.
 
 ```powershell
 Copy-Item infra/.env.production.example infra/.env.production
@@ -132,12 +133,27 @@ docker compose --env-file infra/.env.production -f infra/docker-compose.public.y
 ```
 
 Point the domain's DNS A/AAAA record at the host before starting Caddy. Then
-build the phone app with the same origin:
+build the native phone app with the same origin:
 
 ```powershell
 flutter build apk --release `
   --dart-define=API_BASE_URL=https://api.your-domain.example
 ```
+
+For an iPhone without a Mac/Xcode build, build the PWA and copy its contents
+into `infra/web/` before `docker compose up`. The public stack serves it at
+`/app/` and routes API calls to the same HTTPS origin:
+
+```powershell
+flutter build web --release `
+  --base-href=/app/ `
+  --dart-define=API_BASE_URL=https://api.your-domain.example
+Copy-Item -Recurse -Force apps/mobile/build/web/* infra/web/
+```
+
+Open `https://api.your-domain.example/app/` in Safari and use **Add to Home
+Screen**. The first deployment may leave the optional `web` container showing
+only its README until the compiled bundle is copied into that directory.
 
 This removes the Tailscale/VPN dependency for a physical iPhone. A domain,
 public host, and managed database are still owner-supplied infrastructure; the
