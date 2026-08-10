@@ -703,14 +703,35 @@ class ApiClient {
     await _send('DELETE', '/auth/sessions/${Uri.encodeComponent(sessionId)}');
   }
 
-  Future<void> signOutEverywhere() async {
+  /// Revokes every server session when reachable, but always signs this
+  /// device out locally. A failed network request must not leave a user stuck
+  /// inside a financial session; the boolean tells the caller whether other
+  /// devices were confirmed revoked.
+  Future<bool> signOutEverywhere() async {
     final owner = _cacheOwner;
-    await _send('POST', '/auth/logout-all');
+    var serverConfirmed = true;
+    try {
+      await _send('POST', '/auth/logout-all');
+    } catch (_) {
+      serverConfirmed = false;
+    }
     _tokens = null;
-    await sessionStore.clear();
-    if (owner != null) await offlineCache.clearOwner(owner);
+    try {
+      await sessionStore.clear();
+    } catch (_) {
+      // The in-memory session is already gone. A later launch can retry the
+      // keystore deletion rather than resurrecting this in-process session.
+    }
+    if (owner != null) {
+      try {
+        await offlineCache.clearOwner(owner);
+      } catch (_) {
+        // Local cache cleanup is best-effort and never blocks sign-out.
+      }
+    }
     pendingMutationCount.value = 0;
     offlineCacheStatus.value = null;
+    return serverConfirmed;
   }
 
   /// Clears the local session, and by default tells the server to revoke it.

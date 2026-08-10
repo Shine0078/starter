@@ -365,7 +365,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
     if (confirmed != true) return;
-    await widget.api.signOutEverywhere();
+    final serverConfirmed = await widget.api.signOutEverywhere();
+    if (!serverConfirmed && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text(
+          'This device was signed out. Other devices will be revoked when the server is reachable.',
+        ),
+      ));
+    }
     await widget.onSignedOutEverywhere();
   }
 

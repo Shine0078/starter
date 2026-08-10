@@ -764,6 +764,26 @@ void main() {
     expect(seen.body, contains('correct horse battery staple'));
   });
 
+  test('signing out everywhere clears this device when the server is offline',
+      () async {
+    final store = InMemorySessionStore();
+    await store.write(const SessionTokens(
+      accessToken: 'active-access',
+      refreshToken: 'active-refresh',
+      refreshExpiresAt: '2026-09-08T00:00:00.000Z',
+      userId: 'user-1',
+    ));
+    final api = clientWith(
+      MockClient((_) => throw http.ClientException('offline')),
+      store: store,
+    );
+    expect(await api.restoreSession(), isTrue);
+
+    expect(await api.signOutEverywhere(), isFalse);
+    expect(api.isAuthenticated, isFalse);
+    expect(await store.read(), isNull);
+  });
+
   testWidgets('first launch explains the product before sign-in',
       (tester) async {
     final api = clientWith(MockClient((_) async => http.Response('{}', 200)));
