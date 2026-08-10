@@ -38,6 +38,7 @@ MFA_ENCRYPTION_KEY=<32 random bytes, base64 encoded>
 CORS_ORIGINS=https://your-domain.example
 MIGRATE_ON_BOOT=false
 TRUST_PROXY_HOPS=1
+METRICS_TOKEN=<random bearer token for the internal /api/metrics scrape>
 SMTP_HOST=smtp.your-provider.example
 SMTP_PORT=587
 SMTP_SECURE=false
@@ -114,12 +115,16 @@ remain SHA-256 hashes and cannot be recovered from the database.
 4. Deploy the tagged GHCR image using only the restricted runtime database URL.
 5. Confirm `/healthz` returns HTTP 200. It returns HTTP 503 when PostgreSQL is not
    reachable, so the platform can stop routing traffic to an unhealthy instance.
-6. Confirm the API's hourly `AuthMaintenanceService` is enabled. For a
+6. Scrape `/api/metrics` from the monitoring agent with
+   `Authorization: Bearer $METRICS_TOKEN`; it exposes only route-template counts,
+   status totals, durations, and process uptime. Never expose this endpoint
+   publicly without the token.
+7. Confirm the API's hourly `AuthMaintenanceService` is enabled. For a
    scale-to-zero deployment, also schedule `npm run purge:accounts
    --workspace @finverse/api` daily; the production image runs the compiled
    `dist/` command, while source-only local work can use
    `npm run purge:accounts:dev --workspace @finverse/api`.
-7. Schedule daily backups and a recurring restore drill to a disposable
+8. Schedule daily backups and a recurring restore drill to a disposable
    `_restore_test` database.
 
 ## Cheap public HTTPS path for the phone

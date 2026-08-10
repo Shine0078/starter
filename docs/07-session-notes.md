@@ -3,8 +3,8 @@
 Written for whoever picks this up next — including a fresh agent session with no
 memory of how any of it got here. Last updated after the MFA, professional
 monthly-report, smart-alert, core-accessibility, shared-rate-limit, load-smoke,
-analytics-cache, session-restore, Plaid Sandbox, and deterministic-assistant
-verification milestones on
+analytics-cache, session-restore, Plaid Sandbox, deterministic-assistant, and
+protected-metrics verification milestones on
 2026-08-10.
 
 Read [`MISSION.md`](../MISSION.md) for the product, [`HANDOVER.md`](../HANDOVER.md)
@@ -15,8 +15,8 @@ is the shortest path to being productive again.
 
 ```bash
 npm install
-npm test          # 402 tests, no database needed
-npm run test:db   # 503 tests, spins up a real PostgreSQL and tears it down
+npm test          # 407 tests, no database needed
+npm run test:db   # 508 tests, spins up a real PostgreSQL and tears it down
 npm run dev       # API + dev dashboard on http://localhost:3000
 ```
 
@@ -30,8 +30,8 @@ Every number below was produced by running the thing, not by reading the code.
 
 | Check | Result |
 |---|---|
-| API tests, in-memory | 402 passed |
-| API tests, real Postgres | 503 passed |
+| API tests, in-memory | 407 passed |
+| API tests, real Postgres | 508 passed |
 | `tsc --noEmit`, `npm run build` | clean |
 | `flutter analyze`, `flutter test` | clean, 68 passed |
 | Android debug compile | `com.finverse.finance`, API 36, 170.9 MB APK; debug-only artifact built successfully |
@@ -40,8 +40,8 @@ Every number below was produced by running the thing, not by reading the code.
 | Dashboard | register → sync → correct → logout, verified in a browser |
 | API on Postgres as `finverse_app` | two users, 183 transactions each, sync → correct → re-sync → budget, isolation confirmed against the raw tables |
 
-A previous version of this table said 225 and 288. Those were stale on the day
-they were written; the counts above were re-measured.
+A previous version of this table said 225 and 288, then 402 and 503. Those were
+stale on the day they were written; the counts above were re-measured.
 
 The load figures are a repeatable regression baseline from this workstation,
 not a capacity promise. CI runs 160 requests at concurrency 8 and fails above a

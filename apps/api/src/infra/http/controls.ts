@@ -3,6 +3,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import type { NextFunction, Request, Response } from 'express';
 
 import type { AppConfig } from '../../config';
+import { httpMetrics } from './metrics';
 
 const SAFE_REQUEST_ID = /^[A-Za-z0-9._:-]{1,100}$/;
 
@@ -33,8 +34,16 @@ export function installHttpControls(app: NestExpressApplication, config: AppConf
     }
 
     response.once('finish', () => {
-      if (process.env.NODE_ENV === 'test') return;
       const durationMs = Number(process.hrtime.bigint() - started) / 1_000_000;
+      httpMetrics.record({
+        method: request.method,
+        // Never use a raw URL as a metric label. Route templates keep the
+        // series bounded and avoid turning user-controlled ids into telemetry.
+        route: request.route?.path ?? 'unmatched',
+        statusCode: response.statusCode,
+        durationMs,
+      });
+      if (process.env.NODE_ENV === 'test') return;
       process.stdout.write(
         `${JSON.stringify({
           timestamp: new Date().toISOString(),

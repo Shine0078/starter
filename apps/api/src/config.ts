@@ -49,6 +49,8 @@ export interface AppConfig {
   legal: LegalConfig;
   /** Return URLs for hosted checkout and the billing portal. */
   billing: BillingConfig;
+  /** Optional bearer token for the internal Prometheus scrape endpoint. */
+  metricsToken: string | undefined;
 }
 
 /**
@@ -242,6 +244,15 @@ function resolveBillingConfig(isProduction: boolean, port: number, billingEnable
   };
 }
 
+function resolveMetricsToken(): string | undefined {
+  const token = process.env.METRICS_TOKEN?.trim();
+  if (!token) return undefined;
+  if (token.length < 16 || token.length > 256) {
+    throw new Error('METRICS_TOKEN must be between 16 and 256 characters when configured.');
+  }
+  return token;
+}
+
 /**
  * Memoised, and it has to be.
  *
@@ -345,5 +356,6 @@ function buildConfig(): AppConfig {
     ),
     legal: resolveLegalConfig(isProduction),
     billing: resolveBillingConfig(isProduction, port, Boolean(stripeKey)),
+    metricsToken: resolveMetricsToken(),
   };
 }

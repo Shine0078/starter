@@ -1,6 +1,15 @@
-import { Controller, Get, Module, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Header,
+  Module,
+  Req,
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import type { Request } from 'express';
 
 import { loadConfig } from './config';
 import { CATEGORIES } from './domain/categories';
@@ -17,6 +26,7 @@ import { GoalsModule } from './modules/goals/goals.module';
 import { LedgerModule } from './modules/ledger/ledger.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PrivacyModule } from './modules/privacy/privacy.module';
+import { httpMetrics, metricsTokenMatches } from './infra/http/metrics';
 
 const appConfig = loadConfig();
 
@@ -78,6 +88,25 @@ class MetaController {
   legal() {
     const { legal } = loadConfig();
     return legal;
+  }
+
+  /**
+   * Internal Prometheus scrape endpoint. It is public to the application guard
+   * because a monitoring agent has no user session; production must configure
+   * METRICS_TOKEN so the endpoint is not an unauthenticated data source.
+   */
+  @Public()
+  @Header('Content-Type', 'text/plain; version=0.0.4; charset=utf-8')
+  @Get('metrics')
+  metrics(@Req() request: Request) {
+    const config = loadConfig();
+    if (config.isProduction && !config.metricsToken) {
+      throw new ServiceUnavailableException('Metrics access is not configured.');
+    }
+    if (config.metricsToken && !metricsTokenMatches(request.header('authorization'), config.metricsToken)) {
+      throw new UnauthorizedException('Metrics token required.');
+    }
+    return httpMetrics.toPrometheus();
   }
 }
 

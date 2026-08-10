@@ -391,6 +391,9 @@ describe('auth API', () => {
     it('allows health and categories without a token', async () => {
       await request(http).get('/healthz').expect(200);
       await request(http).get('/api/categories').expect(200);
+      const metrics = await request(http).get('/api/metrics').expect(200);
+      expect(metrics.headers['content-type']).toContain('text/plain');
+      expect(metrics.text).toContain('finverse_http_requests_total');
     });
 
     it('adds safe headers and a correlation id without accepting an unsafe id', async () => {

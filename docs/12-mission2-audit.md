@@ -91,6 +91,9 @@ file would be required to verify any requirements unique to that document.
   merchant, savings, subscription, and spending-change questions from the same
   aggregate analytics used by the dashboard. It returns evidence and caveats,
   never raw transactions, and does not require an external AI provider.
+- Bounded Prometheus-compatible HTTP metrics are now collected from route
+  templates only (never raw URLs) and exposed at protected `/api/metrics` with
+  an optional development path and a production `METRICS_TOKEN` requirement.
 - Native local-alert delivery is now wired through a platform-safe Flutter
   service. Users can grant Android/iPhone notification permission from the
   notification preferences screen; unread server alerts are presented once per
@@ -108,8 +111,8 @@ file would be required to verify any requirements unique to that document.
 
 ## Evidence
 
-- API in-memory suite: 402 passing, 5 database-only skips.
-- PostgreSQL contract/RLS suite: 503 passing in embedded PostgreSQL.
+- API in-memory suite: 407 passing, 5 database-only skips.
+- PostgreSQL contract/RLS suite: 508 passing in embedded PostgreSQL.
 - Flutter: 68 widget/design tests passing, `flutter analyze` clean.
 - Android release APK and web release build both compile. The Android emulator
   booted but its package/activity services were unavailable during an install

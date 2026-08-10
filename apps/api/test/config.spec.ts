@@ -17,6 +17,7 @@ const KEYS = [
   'CORS_ORIGINS',
   'PORT',
   'TRUST_PROXY_HOPS',
+  'METRICS_TOKEN',
   'LEGAL_TERMS_VERSION',
   'LEGAL_TERMS_URL',
   'LEGAL_PRIVACY_VERSION',
@@ -134,5 +135,17 @@ describe.sequential('production configuration', () => {
     process.env.PLAID_SECRET = 'secret';
     process.env.PLAID_ENVIRONMENT = 'sandbox';
     expect(() => loadConfig()).toThrow(/PLAID_ENVIRONMENT=production/);
+  });
+
+  it('accepts a sufficiently random metrics bearer token', () => {
+    productionBase();
+    process.env.METRICS_TOKEN = 'metrics-token-that-is-long-enough';
+    expect(loadConfig().metricsToken).toBe('metrics-token-that-is-long-enough');
+  });
+
+  it('rejects a weak metrics bearer token', () => {
+    productionBase();
+    process.env.METRICS_TOKEN = 'too-short';
+    expect(() => loadConfig()).toThrow(/METRICS_TOKEN/);
   });
 });
