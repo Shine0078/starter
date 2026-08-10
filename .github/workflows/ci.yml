@@ -97,3 +97,22 @@ jobs:
       - run: flutter test
       - name: Compile Android release target
         run: flutter build apk --release --dart-define=API_BASE_URL=https://api.example.invalid
+
+  ios:
+    name: Compile native iOS target
+    # This is intentionally a compile-only job. Signing, App Store
+    # provisioning, and physical-device smoke tests require the owner's Apple
+    # account and remain release-gate work rather than pull-request secrets.
+    runs-on: macos-14
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Compile iOS without signing
+        run: flutter build ios --release --no-codesign --dart-define=API_BASE_URL=https://api.example.invalid
