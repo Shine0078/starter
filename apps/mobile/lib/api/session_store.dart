@@ -11,12 +11,35 @@ class SessionTokens {
     this.userId,
   });
 
-  factory SessionTokens.fromJson(Map<String, dynamic> json) => SessionTokens(
-        accessToken: json['accessToken'] as String,
-        refreshToken: json['refreshToken'] as String,
-        refreshExpiresAt: json['refreshExpiresAt'] as String? ?? '',
-        userId: json['userId'] as String?,
-      );
+  factory SessionTokens.fromJson(Map<String, dynamic> json) {
+    final accessToken = json['accessToken'];
+    final refreshToken = json['refreshToken'];
+    if (accessToken is! String || accessToken.trim().isEmpty) {
+      throw const FormatException('Stored access token is empty.');
+    }
+    if (refreshToken is! String || refreshToken.trim().isEmpty) {
+      throw const FormatException('Stored refresh token is empty.');
+    }
+    final expiry = json['refreshExpiresAt'];
+    if (expiry != null && expiry is! String) {
+      throw const FormatException('Stored refresh expiry is invalid.');
+    }
+    if (expiry is String &&
+        expiry.isNotEmpty &&
+        DateTime.tryParse(expiry) == null) {
+      throw const FormatException('Stored refresh expiry is invalid.');
+    }
+    final userId = json['userId'];
+    if (userId != null && (userId is! String || userId.trim().isEmpty)) {
+      throw const FormatException('Stored session owner is invalid.');
+    }
+    return SessionTokens(
+      accessToken: accessToken,
+      refreshToken: refreshToken,
+      refreshExpiresAt: expiry as String? ?? '',
+      userId: userId as String?,
+    );
+  }
 
   final String accessToken;
   final String refreshToken;

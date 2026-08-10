@@ -20,6 +20,18 @@ class _GoalsScreenState extends State<GoalsScreen> {
   @override
   void initState() {
     super.initState();
+    widget.api.dataRevision.addListener(_onDataChanged);
+    _load();
+  }
+
+  @override
+  void dispose() {
+    widget.api.dataRevision.removeListener(_onDataChanged);
+    super.dispose();
+  }
+
+  void _onDataChanged() {
+    if (!mounted || _loading) return;
     _load();
   }
 

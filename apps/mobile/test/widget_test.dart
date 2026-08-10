@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -118,7 +119,8 @@ void main() {
       if (billing != null) return billing;
       if (request.url.path.endsWith('/billing/checkout-session')) {
         checkout = request;
-        return http.Response('{"url":"https://checkout.test/session","expiresAt":null}', 200);
+        return http.Response(
+            '{"url":"https://checkout.test/session","expiresAt":null}', 200);
       }
       return http.Response('{}', 404);
     }));
@@ -153,7 +155,8 @@ void main() {
       if (billing != null) return billing;
       if (request.url.path.endsWith('/billing/checkout-session')) {
         checkout = request;
-        return http.Response('{"url":"https://checkout.test/s","expiresAt":null}', 200);
+        return http.Response(
+            '{"url":"https://checkout.test/s","expiresAt":null}', 200);
       }
       return http.Response('{}', 404);
     }));
@@ -195,7 +198,8 @@ void main() {
     expect(find.text('WHAT EACH PLAN INCLUDES'), findsNothing);
   });
 
-  testWidgets('tells a subscriber their payment failed without implying lockout',
+  testWidgets(
+      'tells a subscriber their payment failed without implying lockout',
       (tester) async {
     const pastDue = '{"plan":"pro","planName":"Pro","status":"past_due",'
         '"bankLinkLimit":25,"entitlements":["unlimited_bank_links"],'
@@ -267,7 +271,9 @@ void main() {
           200,
         );
       }
-      if (request.url.path.endsWith('/accounts')) return http.Response('[]', 200);
+      if (request.url.path.endsWith('/accounts')) {
+        return http.Response('[]', 200);
+      }
       if (request.url.path.endsWith('/bank-links/link-token')) {
         linkTokenRequested = true;
         return http.Response('{"token":"link-sandbox"}', 200);
@@ -296,7 +302,8 @@ void main() {
     // need the timeout applied separately — that is exactly how they lost it.
     // A future that never completes, rather than a long delay: it models the
     // silence exactly and leaves no pending timer behind.
-    final api = clientWith(MockClient((_) => Completer<http.Response>().future));
+    final api =
+        clientWith(MockClient((_) => Completer<http.Response>().future));
 
     // The matcher is attached before time advances, so the failure is observed
     // rather than surfacing as an unhandled async error.
@@ -831,6 +838,60 @@ void main() {
     expect(find.byType(LoginScreen), findsNothing);
   });
 
+  test('refreshes an expired access token during session restore', () async {
+    String segment(Map<String, dynamic> value) => base64Url
+        .encode(utf8.encode(jsonEncode(value)))
+        .replaceAll('=', '');
+    final expiredAccess =
+        '${segment({'alg': 'HS256', 'typ': 'JWT'})}.${segment({'sub': 'user-1', 'exp': 1})}.signature';
+    final store = InMemorySessionStore();
+    await store.write(SessionTokens(
+      accessToken: expiredAccess,
+      refreshToken: 'stored-refresh',
+      refreshExpiresAt: '2099-01-01T00:00:00.000Z',
+      userId: 'user-1',
+    ));
+    var refreshCalls = 0;
+    final api = clientWith(
+      MockClient((request) async {
+        if (request.url.path.endsWith('/auth/refresh')) {
+          refreshCalls++;
+          return http.Response(
+            '{"tokens":{"accessToken":"fresh","refreshToken":"next","refreshExpiresAt":"2099-01-01T00:00:00.000Z"}}',
+            200,
+          );
+        }
+        return http.Response('{}', 200);
+      }),
+      store: store,
+    );
+
+    expect(await api.restoreSession(), isTrue);
+    expect(refreshCalls, 1);
+    expect((await store.read())?.accessToken, 'fresh');
+  });
+
+  test('clears a session whose refresh expiry is already past', () async {
+    final store = InMemorySessionStore();
+    await store.write(const SessionTokens(
+      accessToken: 'stored-access',
+      refreshToken: 'stored-refresh',
+      refreshExpiresAt: '2020-01-01T00:00:00.000Z',
+    ));
+    var requests = 0;
+    final api = clientWith(
+      MockClient((_) async {
+        requests++;
+        return http.Response('{}', 200);
+      }),
+      store: store,
+    );
+
+    expect(await api.restoreSession(), isFalse);
+    expect(requests, 0);
+    expect(await store.read(), isNull);
+  });
+
   testWidgets('attaches the bearer token to API calls', (tester) async {
     final store = InMemorySessionStore();
     await store.write(const SessionTokens(
@@ -852,6 +913,19 @@ void main() {
     await api.accounts();
 
     expect(seenAuthorization, 'Bearer stored-access');
+  });
+
+  test('broadcasts a revision after a successful authenticated write',
+      () async {
+    final api = clientWith(
+      MockClient((_) async => http.Response('{}', 200)),
+    );
+    var revisions = 0;
+    api.dataRevision.addListener(() => revisions++);
+
+    await api.deleteManualAccount('manual-1');
+
+    expect(revisions, 1);
   });
 
   testWidgets('refreshes once on 401, then retries the original call',
@@ -890,6 +964,61 @@ void main() {
     expect(calls.where((c) => c.contains('/auth/refresh')), hasLength(1));
     // Original call, refresh, retry — not an endless loop.
     expect(calls, hasLength(3));
+  });
+
+  test('shares one refresh rotation across concurrent 401 responses', () async {
+    final store = InMemorySessionStore();
+    await store.write(const SessionTokens(
+      accessToken: 'expired',
+      refreshToken: 'good-refresh',
+      refreshExpiresAt: '',
+    ));
+
+    var refreshCalls = 0;
+    var staleCalls = 0;
+    final api = clientWith(
+      MockClient((request) async {
+        if (request.url.path.endsWith('/auth/refresh')) {
+          refreshCalls += 1;
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+          return http.Response(
+            '{"tokens":{"accessToken":"fresh","refreshToken":"next","refreshExpiresAt":""}}',
+            200,
+          );
+        }
+        if (request.headers['authorization'] == 'Bearer expired') {
+          staleCalls += 1;
+          return http.Response('{"message":"expired"}', 401);
+        }
+        return http.Response('[]', 200);
+      }),
+      store: store,
+    );
+
+    await api.restoreSession();
+    await Future.wait([api.accounts(), api.accounts()]);
+
+    expect(refreshCalls, 1);
+    expect(staleCalls, 2);
+    expect(api.isAuthenticated, isTrue);
+    expect((await store.read())?.refreshToken, 'next');
+  });
+
+  test('canonicalises API origins and rejects unsafe values', () {
+    expect(normalizeBaseUrl('https://api.example.com/'),
+        'https://api.example.com');
+    expect(normalizeBaseUrl('https://api.example.com/v1/'),
+        'https://api.example.com/v1');
+    expect(() => normalizeBaseUrl('api.example.com'), throwsArgumentError);
+    expect(() => normalizeBaseUrl('https://api.example.com/?token=x'),
+        throwsArgumentError);
+    expect(() => normalizeBaseUrl('https://user:pass@api.example.com'),
+        throwsArgumentError);
+  });
+
+  test('formats date filters as local calendar dates', () {
+    expect(dateOnly(DateTime(2026, 1, 2, 23, 59)), '2026-01-02');
+    expect(dateOnly(DateTime.utc(2026, 12, 31)), '2026-12-31');
   });
 
   test(
@@ -1186,6 +1315,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Search merchant or description'), findsOneWidget);
     expect(find.text('No matching transactions.'), findsOneWidget);
+    await tester.tap(find.byTooltip('Filter transactions'));
+    await tester.pumpAndSettle();
+    expect(find.text('Filter transactions'), findsOneWidget);
+    expect(find.text('Apply filters'), findsOneWidget);
+    await tester.tap(find.text('Clear all'));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('Budgets'));
     await tester.pumpAndSettle();

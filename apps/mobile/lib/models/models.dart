@@ -595,6 +595,258 @@ class InsightsReport {
   final List<Insight> insights;
 }
 
+class AnalyticsBucket {
+  const AnalyticsBucket({
+    required this.key,
+    required this.label,
+    required this.total,
+    required this.totalFormatted,
+    required this.transactionCount,
+  });
+
+  final String key;
+  final String label;
+  final int total;
+  final String totalFormatted;
+  final int transactionCount;
+}
+
+class AnalyticsTimelineEvent {
+  const AnalyticsTimelineEvent({
+    required this.id,
+    required this.date,
+    required this.label,
+    required this.kind,
+    required this.amount,
+    required this.amountFormatted,
+    required this.accountId,
+  });
+
+  factory AnalyticsTimelineEvent.fromJson(Map<String, dynamic> json) =>
+      AnalyticsTimelineEvent(
+        id: json['id'] as String,
+        date: json['date'] as String,
+        label: json['label'] as String,
+        kind: json['kind'] as String,
+        amount: json['amount'] as int,
+        amountFormatted: json['amountFormatted'] as String,
+        accountId: json['accountId'] as String,
+      );
+
+  final String id;
+  final String date;
+  final String label;
+  final String kind;
+  final int amount;
+  final String amountFormatted;
+  final String accountId;
+}
+
+class AnalyticsVelocity {
+  const AnalyticsVelocity({
+    required this.currentPeriodSpend,
+    required this.currentPeriodSpendFormatted,
+    required this.projectedPeriodSpend,
+    required this.projectedPeriodSpendFormatted,
+    required this.historicalAverageSpend,
+    required this.historicalAverageSpendFormatted,
+    required this.percentDelta,
+    required this.enoughHistory,
+  });
+
+  factory AnalyticsVelocity.fromJson(Map<String, dynamic> json) => AnalyticsVelocity(
+        currentPeriodSpend: json['currentPeriodSpend'] as int,
+        currentPeriodSpendFormatted: json['currentPeriodSpendFormatted'] as String,
+        projectedPeriodSpend: json['projectedPeriodSpend'] as int,
+        projectedPeriodSpendFormatted: json['projectedPeriodSpendFormatted'] as String,
+        historicalAverageSpend: json['historicalAverageSpend'] as int?,
+        historicalAverageSpendFormatted: json['historicalAverageSpendFormatted'] as String?,
+        percentDelta: (json['percentDelta'] as num?)?.toDouble(),
+        enoughHistory: json['enoughHistory'] as bool,
+      );
+
+  final int currentPeriodSpend;
+  final String currentPeriodSpendFormatted;
+  final int projectedPeriodSpend;
+  final String projectedPeriodSpendFormatted;
+  final int? historicalAverageSpend;
+  final String? historicalAverageSpendFormatted;
+  final double? percentDelta;
+  final bool enoughHistory;
+}
+
+class AnalyticsRefundMatch {
+  const AnalyticsRefundMatch({
+    required this.refundId,
+    required this.purchaseId,
+    required this.amountFormatted,
+    required this.purchaseAmountFormatted,
+    required this.merchant,
+    required this.purchaseDate,
+    required this.refundDate,
+    required this.daysAfterPurchase,
+    required this.confidence,
+  });
+
+  factory AnalyticsRefundMatch.fromJson(Map<String, dynamic> json) =>
+      AnalyticsRefundMatch(
+        refundId: json['refundId'] as String,
+        purchaseId: json['purchaseId'] as String,
+        amountFormatted: json['amountFormatted'] as String,
+        purchaseAmountFormatted: json['purchaseAmountFormatted'] as String,
+        merchant: json['merchant'] as String,
+        purchaseDate: json['purchaseDate'] as String,
+        refundDate: json['refundDate'] as String,
+        daysAfterPurchase: json['daysAfterPurchase'] as int,
+        confidence: (json['confidence'] as num).toDouble(),
+      );
+
+  final String refundId;
+  final String purchaseId;
+  final String amountFormatted;
+  final String purchaseAmountFormatted;
+  final String merchant;
+  final String purchaseDate;
+  final String refundDate;
+  final int daysAfterPurchase;
+  final double confidence;
+}
+
+class AnalyticsReport {
+  AnalyticsReport({
+    required this.periodStart,
+    required this.periodEnd,
+    required this.currency,
+    required this.grossExpenses,
+    required this.grossExpensesFormatted,
+    required this.refundsFormatted,
+    required this.refundMatches,
+    required this.netExpensesFormatted,
+    required this.expenseCount,
+    required this.averageExpenseFormatted,
+    required this.medianExpenseFormatted,
+    required this.largestExpense,
+    required this.spendingByCategory,
+    required this.spendingByMerchant,
+    required this.spendingByAccount,
+    required this.recurringSpendingFormatted,
+    required this.discretionarySpendingFormatted,
+    required this.essentialSpendingFormatted,
+    required this.totalIncomeFormatted,
+    required this.recurringIncomeFormatted,
+    required this.irregularIncomeFormatted,
+    required this.incomeBySource,
+    required this.savingsFormatted,
+    required this.savingsRate,
+    required this.averageMonthlySavingsFormatted,
+    required this.velocity,
+    required this.timeline,
+  });
+
+  factory AnalyticsReport.fromJson(Map<String, dynamic> json) {
+    final period = json['period'] as Map<String, dynamic>;
+    AnalyticsBucket category(Map<String, dynamic> row) => AnalyticsBucket(
+          key: row['categorySlug'] as String,
+          label: row['categoryName'] as String,
+          total: row['total'] as int,
+          totalFormatted: row['totalFormatted'] as String,
+          transactionCount: row['transactionCount'] as int,
+        );
+    AnalyticsBucket merchant(Map<String, dynamic> row) => AnalyticsBucket(
+          key: row['merchant'] as String,
+          label: row['merchant'] as String,
+          total: row['total'] as int,
+          totalFormatted: row['totalFormatted'] as String,
+          transactionCount: row['transactionCount'] as int,
+        );
+    AnalyticsBucket account(Map<String, dynamic> row) => AnalyticsBucket(
+          key: row['accountId'] as String,
+          label: row['accountId'] as String,
+          total: row['total'] as int,
+          totalFormatted: row['totalFormatted'] as String,
+          transactionCount: row['transactionCount'] as int,
+        );
+    AnalyticsBucket source(Map<String, dynamic> row) => AnalyticsBucket(
+          key: row['source'] as String,
+          label: row['source'] as String,
+          total: row['total'] as int,
+          totalFormatted: row['totalFormatted'] as String,
+          transactionCount: row['transactionCount'] as int,
+        );
+    return AnalyticsReport(
+      periodStart: period['start'] as String,
+      periodEnd: period['end'] as String,
+      currency: json['currency'] as String,
+      grossExpenses: json['grossExpenses'] as int,
+      grossExpensesFormatted: json['grossExpensesFormatted'] as String,
+      refundsFormatted: json['refundsFormatted'] as String,
+      refundMatches: (json['refundMatches'] as List<dynamic>? ?? const [])
+          .map((row) => AnalyticsRefundMatch.fromJson(row as Map<String, dynamic>))
+          .toList(),
+      netExpensesFormatted: json['netExpensesFormatted'] as String,
+      expenseCount: json['expenseCount'] as int,
+      averageExpenseFormatted: json['averageExpenseFormatted'] as String,
+      medianExpenseFormatted: json['medianExpenseFormatted'] as String,
+      largestExpense: json['largestExpense'] == null
+          ? null
+          : AnalyticsTimelineEvent.fromJson(json['largestExpense'] as Map<String, dynamic>),
+      spendingByCategory: (json['spendingByCategory'] as List<dynamic>)
+          .map((row) => category(row as Map<String, dynamic>))
+          .toList(),
+      spendingByMerchant: (json['spendingByMerchant'] as List<dynamic>)
+          .map((row) => merchant(row as Map<String, dynamic>))
+          .toList(),
+      spendingByAccount: (json['spendingByAccount'] as List<dynamic>)
+          .map((row) => account(row as Map<String, dynamic>))
+          .toList(),
+      recurringSpendingFormatted: json['recurringSpendingFormatted'] as String,
+      discretionarySpendingFormatted: json['discretionarySpendingFormatted'] as String,
+      essentialSpendingFormatted: json['essentialSpendingFormatted'] as String,
+      totalIncomeFormatted: json['totalIncomeFormatted'] as String,
+      recurringIncomeFormatted: json['recurringIncomeFormatted'] as String,
+      irregularIncomeFormatted: json['irregularIncomeFormatted'] as String,
+      incomeBySource: (json['incomeBySource'] as List<dynamic>)
+          .map((row) => source(row as Map<String, dynamic>))
+          .toList(),
+      savingsFormatted: json['savingsFormatted'] as String,
+      savingsRate: (json['savingsRate'] as num).toDouble(),
+      averageMonthlySavingsFormatted: json['averageMonthlySavingsFormatted'] as String,
+      velocity: AnalyticsVelocity.fromJson(json['velocity'] as Map<String, dynamic>),
+      timeline: (json['timeline'] as List<dynamic>)
+          .map((row) => AnalyticsTimelineEvent.fromJson(row as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+
+  final String periodStart;
+  final String periodEnd;
+  final String currency;
+  final int grossExpenses;
+  final String grossExpensesFormatted;
+  final String refundsFormatted;
+  final List<AnalyticsRefundMatch> refundMatches;
+  final String netExpensesFormatted;
+  final int expenseCount;
+  final String averageExpenseFormatted;
+  final String medianExpenseFormatted;
+  final AnalyticsTimelineEvent? largestExpense;
+  final List<AnalyticsBucket> spendingByCategory;
+  final List<AnalyticsBucket> spendingByMerchant;
+  final List<AnalyticsBucket> spendingByAccount;
+  final String recurringSpendingFormatted;
+  final String discretionarySpendingFormatted;
+  final String essentialSpendingFormatted;
+  final String totalIncomeFormatted;
+  final String recurringIncomeFormatted;
+  final String irregularIncomeFormatted;
+  final List<AnalyticsBucket> incomeBySource;
+  final String savingsFormatted;
+  final double savingsRate;
+  final String averageMonthlySavingsFormatted;
+  final AnalyticsVelocity velocity;
+  final List<AnalyticsTimelineEvent> timeline;
+}
+
 class CategorySpend {
   CategorySpend({
     required this.categorySlug,

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../api/client.dart';
@@ -14,6 +16,7 @@ import 'planning_screen.dart';
 import 'settings_screen.dart';
 import 'subscriptions_screen.dart';
 import 'transaction_detail_screen.dart';
+import 'analytics_screen.dart';
 
 /// The home screen: net position, health score, budgets, recent activity.
 ///
@@ -41,9 +44,11 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class _DashboardScreenState extends State<DashboardScreen>
+    with WidgetsBindingObserver {
   bool _loading = true;
   String? _error;
+  DateTime? _lastResumeRefresh;
 
   List<Account> _accounts = const [];
   HealthScore? _health;
@@ -54,13 +59,53 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    widget.api.dataRevision.addListener(_onDataChanged);
     // Load persisted data immediately. Provider refreshes are explicit and
     // webhook-driven; opening the app must not inject the development mock.
     _load();
   }
 
+  @override
+  void dispose() {
+    widget.api.dataRevision.removeListener(_onDataChanged);
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  void _onDataChanged() {
+    if (!mounted || _loading) return;
+    unawaited(_load());
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || _loading) return;
+    final now = DateTime.now();
+    final last = _lastResumeRefresh;
+    if (last != null && now.difference(last) < const Duration(minutes: 5)) {
+      return;
+    }
+    _lastResumeRefresh = now;
+    // Resume refresh is deliberately best-effort. If the device is offline,
+    // the subsequent reads still use the encrypted cache and the dashboard
+    // remains useful instead of surfacing a sync error as a logout-like state.
+    unawaited(_refreshAfterResume());
+  }
+
+  Future<void> _refreshAfterResume() async {
+    try {
+      await widget.api.refreshConnectedBanks();
+    } catch (_) {
+      // The explicit pull-to-refresh path reports failures; lifecycle refresh
+      // must never interrupt the user's current screen.
+    }
+    if (mounted) await _load();
+  }
+
   Future<void> _load({bool sync = false}) async {
     widget.api.resetOfflineStatus();
+    if (!mounted) return;
     setState(() {
       _loading = true;
       _error = null;
@@ -271,6 +316,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
             tooltip: 'Cash-flow planning',
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(
               builder: (_) => PlanningScreen(api: widget.api),
+            )),
+          ),
+          IconButton(
+            icon: const Icon(Icons.insights_outlined),
+            tooltip: 'Analytics',
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => AnalyticsScreen(api: widget.api),
             )),
           ),
           IconButton(

@@ -10,22 +10,73 @@ import 'session_store.dart';
 
 /// Where the API lives, for this build on this platform.
 ///
-/// Set `--dart-define=API_BASE_URL=https://host` to point a build anywhere.
+/// Set `--dart-define=API_BASE_URL=https://api.example.com` for a deployed
+/// build. Physical phones must use an explicitly configured HTTPS origin.
 ///
 /// Left unset, the two defaults differ because the right answer does:
 ///
 ///  - **Web.** The compiled app is served by the API itself, so the API is
-///    wherever the page came from. Deriving it from `Uri.base` means the same
-///    build works on localhost, on a LAN address, and behind a Tailscale
-///    hostname with no rebuild — which matters when the URL you install the
-///    PWA from is not the URL you developed against.
+///    wherever the page came from.
 ///  - **Native.** `10.0.2.2` is the Android emulator's alias for the host
 ///    machine; `localhost` inside the emulator is the emulator itself.
 String resolveBaseUrl() {
   const configured = String.fromEnvironment('API_BASE_URL');
-  if (configured.isNotEmpty) return configured;
-  if (kIsWeb) return Uri.base.origin;
-  return 'http://10.0.2.2:3000';
+  if (kReleaseMode && !kIsWeb && configured.isEmpty) {
+    throw ArgumentError(
+      'API_BASE_URL must be supplied for a native release build. '
+      'Use a public HTTPS API origin.',
+    );
+  }
+  final raw = configured.isNotEmpty
+      ? configured
+      : kIsWeb
+          ? Uri.base.origin
+          : defaultTargetPlatform == TargetPlatform.android
+              ? 'http://10.0.2.2:3000'
+              : 'http://127.0.0.1:3000';
+  return normalizeBaseUrl(raw);
+}
+
+/// Validates and canonicalises an API origin before it is used to construct a
+/// request. A trailing slash is removed so paths cannot become `//api/...`.
+String normalizeBaseUrl(String raw) {
+  final value = raw.trim();
+  final uri = Uri.tryParse(value);
+  if (uri == null ||
+      uri.host.isEmpty ||
+      !{'http', 'https'}.contains(uri.scheme)) {
+    throw ArgumentError.value(
+        raw, 'API_BASE_URL', 'must be an absolute http:// or https:// URL');
+  }
+  if (uri.userInfo.isNotEmpty) {
+    throw ArgumentError.value(
+      raw,
+      'API_BASE_URL',
+      'must not contain embedded credentials',
+    );
+  }
+  final localHost =
+      uri.host == 'localhost' || uri.host == '127.0.0.1' || uri.host == '::1';
+  if (kReleaseMode && uri.scheme != 'https' && !localHost) {
+    throw ArgumentError.value(
+      raw,
+      'API_BASE_URL',
+      'native release builds require HTTPS',
+    );
+  }
+  if (uri.query.isNotEmpty || uri.fragment.isNotEmpty) {
+    throw ArgumentError.value(
+        raw, 'API_BASE_URL', 'must not include a query string or fragment');
+  }
+  return value.replaceFirst(RegExp(r'/+$'), '');
+}
+
+/// Formats a calendar date without converting it through UTC. Date filters
+/// represent the user's local calendar day; converting midnight to ISO UTC
+/// shifts it for users east of UTC.
+String dateOnly(DateTime value) {
+  String twoDigits(int part) => part.toString().padLeft(2, '0');
+  return '${value.year}-${twoDigits(value.month)}-${twoDigits(value.day)}';
 }
 
 /// How long any single request may take before it is treated as failed.
@@ -65,7 +116,16 @@ class ApiClient {
   final OfflineCacheStore offlineCache;
 
   SessionTokens? _tokens;
+  Future<bool>? _refreshFuture;
   final ValueNotifier<DateTime?> offlineCacheStatus = ValueNotifier(null);
+
+  /// Monotonically increasing revision for successful authenticated writes.
+  ///
+  /// Screens in the IndexedStack stay alive while the user moves between
+  /// tabs. Broadcasting a revision lets them invalidate their reads as soon
+  /// as a bank sync, categorisation, budget, or goal mutation completes,
+  /// without coupling the API client to a state-management package.
+  final ValueNotifier<int> dataRevision = ValueNotifier(0);
 
   DateTime? get offlineCacheUpdatedAt => offlineCacheStatus.value;
   bool get usedOfflineCache => offlineCacheStatus.value != null;
@@ -79,10 +139,49 @@ class ApiClient {
   /// True when a stored session was found. Call once at startup.
   Future<bool> restoreSession() async {
     _tokens = await sessionStore.read();
+    final stored = _tokens;
+    if (stored == null) return false;
+
+    // Do not let an already-expired refresh token create a confusing loop of
+    // failed API calls. The server remains authoritative, but the timestamp
+    // lets us clear an obviously dead local session before rendering the app.
+    final refreshExpiry = stored.refreshExpiresAt.isEmpty
+        ? null
+        : DateTime.tryParse(stored.refreshExpiresAt);
+    if (refreshExpiry != null && !refreshExpiry.isAfter(DateTime.now())) {
+      await signOut(notifyServer: false);
+      return false;
+    }
+
+    // A user who leaves the app for more than the short access-token lifetime
+    // should return directly to a refreshed session, not to a dashboard that
+    // flashes errors while its first batch of requests discovers the expiry.
+    if (_accessTokenExpired(stored.accessToken) && !await _refresh()) {
+      await signOut(notifyServer: false);
+      return false;
+    }
     return _tokens != null;
   }
 
   bool get isAuthenticated => _tokens != null;
+
+  bool _accessTokenExpired(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return false;
+      final payload = jsonDecode(
+        utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+      ) as Map<String, dynamic>;
+      final exp = payload['exp'];
+      return exp is num &&
+          (DateTime.now().millisecondsSinceEpoch ~/ 1000) >= exp.toInt();
+    } catch (_) {
+      // Test doubles and older tokens may not be JWTs. Let the API decide in
+      // that case; a malformed local value is not evidence that the session is
+      // expired.
+      return false;
+    }
+  }
 
   Map<String, String> _headers({bool json = false}) => {
         if (json) 'content-type': 'application/json',
@@ -189,14 +288,16 @@ class ApiClient {
       throw PlanUpgradeRequiredException.maybeFrom(path, response) ??
           ApiException(path, response.statusCode, response.body);
     }
+    // Auth endpoints have their own response/session lifecycle. All other
+    // successful writes can change data that an already-mounted screen reads.
+    if (!path.startsWith('/auth/')) dataRevision.value++;
     return response.body.isEmpty ? null : jsonDecode(response.body);
   }
 
   // ------------------------------------------------------------------ auth
 
   Future<LegalPolicies> legalPolicies() async {
-    final response =
-        await _http.get(_uri('/legal')).timeout(kRequestTimeout);
+    final response = await _http.get(_uri('/legal')).timeout(kRequestTimeout);
     if (response.statusCode >= 400) {
       throw ApiException('/legal', response.statusCode, response.body);
     }
@@ -337,7 +438,21 @@ class ApiClient {
     return user;
   }
 
-  Future<bool> _refresh() async {
+  /// Share one refresh-token rotation across parallel requests. The dashboard
+  /// loads resources concurrently; rotating the same token twice would look
+  /// like token reuse and revoke the whole session family.
+  Future<bool> _refresh() {
+    final existing = _refreshFuture;
+    if (existing != null) return existing;
+    final future = _refreshInternal();
+    _refreshFuture = future;
+    future.whenComplete(() {
+      if (identical(_refreshFuture, future)) _refreshFuture = null;
+    });
+    return future;
+  }
+
+  Future<bool> _refreshInternal() async {
     final refreshToken = _tokens?.refreshToken;
     if (refreshToken == null) return false;
 
@@ -352,6 +467,9 @@ class ApiClient {
       if (response.statusCode >= 400) return false;
 
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      // A sign-out can happen while the request is in flight. Never resurrect
+      // that local session with a late refresh response.
+      if (_tokens?.refreshToken != refreshToken) return false;
       final userId = _cacheOwner;
       _tokens =
           SessionTokens.fromJson(decoded['tokens'] as Map<String, dynamic>)
@@ -541,14 +659,73 @@ class ApiClient {
   }
 
   Future<List<Transaction>> transactions(
-      {int limit = 50, String? search}) async {
-    final query = search == null || search.isEmpty
-        ? '?limit=$limit'
-        : '?limit=$limit&search=${Uri.encodeQueryComponent(search)}';
-    final json = await _get('/transactions$query') as Map<String, dynamic>;
-    return (json['transactions'] as List<dynamic>)
+      {int limit = 50,
+      String? search,
+      String? before,
+      String? accountId,
+      String? categorySlug,
+      String? categoryKind,
+      bool? pending,
+      bool? recurring,
+      int? amountMin,
+      int? amountMax,
+      DateTime? from,
+      DateTime? to}) async {
+    final page = await transactionsPage(
+      limit: limit,
+      search: search,
+      before: before,
+      accountId: accountId,
+      categorySlug: categorySlug,
+      categoryKind: categoryKind,
+      pending: pending,
+      recurring: recurring,
+      amountMin: amountMin,
+      amountMax: amountMax,
+      from: from,
+      to: to,
+    );
+    return page.transactions;
+  }
+
+  Future<TransactionPage> transactionsPage(
+      {int limit = 50,
+      String? search,
+      String? before,
+      String? accountId,
+      String? categorySlug,
+      String? categoryKind,
+      bool? pending,
+      bool? recurring,
+      int? amountMin,
+      int? amountMax,
+      DateTime? from,
+      DateTime? to}) async {
+    final params = <String, String>{'limit': '$limit'};
+    void add(String key, String? value) {
+      if (value != null && value.isNotEmpty) params[key] = value;
+    }
+
+    add('search', search);
+    add('before', before);
+    add('account', accountId);
+    add('category', categorySlug);
+    add('kind', categoryKind);
+    add('pending', pending?.toString());
+    add('recurring', recurring?.toString());
+    add('minAmount', amountMin?.toString());
+    add('maxAmount', amountMax?.toString());
+    add('from', from == null ? null : dateOnly(from));
+    add('to', to == null ? null : dateOnly(to));
+    final query = Uri(queryParameters: params).query;
+    final json = await _get('/transactions?$query') as Map<String, dynamic>;
+    final rows = (json['transactions'] as List<dynamic>)
         .map((e) => Transaction.fromJson(e as Map<String, dynamic>))
         .toList();
+    return TransactionPage(
+      transactions: rows,
+      nextCursor: json['nextCursor'] as String?,
+    );
   }
 
   Future<List<CategoryDefinition>> categories() async {
@@ -735,6 +912,26 @@ class ApiClient {
     return InsightsReport.fromJson(json);
   }
 
+  Future<AnalyticsReport> analytics({
+    String period = 'month',
+    DateTime? asOf,
+    DateTime? from,
+    DateTime? to,
+    String currency = 'USD',
+  }) async {
+    final params = <String, String>{
+      'period': period,
+      'currency': currency,
+    };
+    if (asOf != null) params['asOf'] = dateOnly(asOf);
+    if (from != null) params['from'] = dateOnly(from);
+    if (to != null) params['to'] = dateOnly(to);
+    final query = Uri(queryParameters: params).query;
+    return AnalyticsReport.fromJson(
+      await _get('/analytics?$query') as Map<String, dynamic>,
+    );
+  }
+
   Future<SubscriptionsReport> subscriptions() async {
     final json = await _get('/subscriptions') as Map<String, dynamic>;
     return SubscriptionsReport.fromJson(json);
@@ -742,8 +939,8 @@ class ApiClient {
 
   // --------------------------------------------------------------- billing
 
-  Future<PlanSummary> planSummary() async =>
-      PlanSummary.fromJson(await _get('/billing/subscription') as Map<String, dynamic>);
+  Future<PlanSummary> planSummary() async => PlanSummary.fromJson(
+      await _get('/billing/subscription') as Map<String, dynamic>);
 
   Future<List<BillingPlan>> billingPlans() async {
     final json = await _get('/billing/plans') as Map<String, dynamic>;
@@ -770,11 +967,19 @@ class ApiClient {
   /// A link to the provider's own page for cancelling, changing a card, or
   /// downloading invoices. None of those flows are rebuilt in this app.
   Future<String> billingPortalUrl() async {
-    final json = await _send('POST', '/billing/portal-session') as Map<String, dynamic>;
+    final json =
+        await _send('POST', '/billing/portal-session') as Map<String, dynamic>;
     return json['url'] as String;
   }
 
   void close() => _http.close();
+}
+
+class TransactionPage {
+  const TransactionPage({required this.transactions, required this.nextCursor});
+
+  final List<Transaction> transactions;
+  final String? nextCursor;
 }
 
 /// A rejected sign-in or registration, with something worth showing the user.
