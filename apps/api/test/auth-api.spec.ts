@@ -560,11 +560,14 @@ describe('auth API', () => {
           merchantOverride: 'My grocery store',
           note: 'Remember the receipt for reimbursement',
           excludedFromAnalytics: true,
+          isRecurring: true,
         })
         .expect(200);
       expect(updated.body.transaction.merchantOverride).toBe('My grocery store');
       expect(updated.body.transaction.note).toContain('reimbursement');
       expect(updated.body.transaction.excludedFromAnalytics).toBe(true);
+      expect(updated.body.transaction.isRecurring).toBe(true);
+      expect(updated.body.transaction.recurringOverride).toBe(true);
 
       const foundByNote = await request(http)
         .get('/api/transactions?search=reimbursement')

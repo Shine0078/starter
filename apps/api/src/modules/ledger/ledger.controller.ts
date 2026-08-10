@@ -287,6 +287,7 @@ export class LedgerController {
       merchantOverride?: unknown;
       note?: unknown;
       excludedFromAnalytics?: unknown;
+      isRecurring?: unknown;
     },
   ) {
     const transaction = await this.ledger.updatePreferences(userId, id, body);

@@ -68,6 +68,7 @@ export interface TransactionRow {
   category_source: string;
   category_confidence: number;
   is_recurring: boolean;
+  recurring_override: boolean | null;
   pending: boolean;
 }
 
@@ -88,7 +89,8 @@ export function toTransaction(row: TransactionRow): Transaction {
     categorySlug: row.category_slug,
     categorySource: row.category_source as Transaction['categorySource'],
     categoryConfidence: row.category_confidence,
-    isRecurring: row.is_recurring,
+    isRecurring: row.recurring_override ?? row.is_recurring,
+    ...(row.recurring_override === null ? {} : { recurringOverride: row.recurring_override }),
     pending: row.pending,
   };
 }

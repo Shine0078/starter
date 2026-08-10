@@ -75,6 +75,9 @@ export interface Transaction {
   /** 0–1. */
   categoryConfidence: number;
   isRecurring: boolean;
+  /** When set, the user explicitly chose the recurring state. Otherwise the
+   * recurring engine may derive it from the transaction history. */
+  recurringOverride?: boolean;
   /** Pending transactions can change amount or disappear entirely. */
   pending: boolean;
 }

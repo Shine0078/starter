@@ -177,6 +177,41 @@ describe('banking integration', () => {
     expect(await links.get('user-1', link.id)).toBeNull();
   });
 
+  it('derives recurring flags after a complete provider sync, not per page', async () => {
+    const provider = new FakeProvider();
+    const recurringRows = [
+      { ...transaction, providerTxnId: 'netflix-1', postedAt: '2026-06-01', amount: -1_599, descriptor: 'NETFLIX.COM', pending: false },
+      { ...transaction, providerTxnId: 'netflix-2', postedAt: '2026-07-01', amount: -1_599, descriptor: 'NETFLIX.COM', pending: false },
+      { ...transaction, providerTxnId: 'netflix-3', postedAt: '2026-08-01', amount: -1_599, descriptor: 'NETFLIX.COM', pending: false },
+    ];
+    provider.pages.push({
+      accounts: [account],
+      added: recurringRows,
+      modified: [],
+      removedProviderTxnIds: [],
+      nextCursor: 'recurring-cursor',
+      hasMore: false,
+    });
+    const transactions = new InMemoryTransactionStore();
+    const service = new BankingService(
+      new InMemoryBankLinkStore(),
+      provider,
+      new AesGcmBankTokenCipher(randomBytes(32)),
+      new InMemoryBankWebhookStore(),
+      new InMemoryAccountStore(),
+      transactions,
+      new InMemoryRuleStore(),
+      new InMemoryNotificationStore(),
+      new FixedClock('2026-08-08'),
+      billingHarness().billing,
+    );
+
+    await service.exchange('user-1', 'public-sandbox', 'First Platypus Bank', null);
+
+    expect(await transactions.list('user-1')).toHaveLength(3);
+    expect(await transactions.list('user-1', { recurring: true })).toHaveLength(3);
+  });
+
   it('detects ciphertext tampering', () => {
     const cipher = new AesGcmBankTokenCipher(randomBytes(32));
     const encrypted = cipher.encrypt('access-token');

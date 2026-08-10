@@ -169,10 +169,10 @@ const TXN_COLUMNS = `
   id, account_id, provider_txn_id, posted_at, amount, currency,
   raw_descriptor, normalized_descriptor, merchant,
   merchant_override, note, excluded_from_analytics,
-  category_slug, category_source, category_confidence, is_recurring, pending
+  category_slug, category_source, category_confidence, is_recurring, recurring_override, pending
 `;
 
-const TXN_INSERT_COLUMNS = 18;
+const TXN_INSERT_COLUMNS = 19;
 
 export class PostgresTransactionStore implements TransactionStore {
   constructor(private readonly pg: Pool) {}
@@ -284,6 +284,7 @@ export class PostgresTransactionStore implements TransactionStore {
             txn.categorySource,
             txn.categoryConfidence,
             txn.isRecurring,
+            txn.recurringOverride ?? null,
             txn.pending,
           );
         });
@@ -293,7 +294,7 @@ export class PostgresTransactionStore implements TransactionStore {
              id, user_id, account_id, provider_txn_id, posted_at, amount, currency,
              raw_descriptor, normalized_descriptor, merchant,
              merchant_override, note, excluded_from_analytics,
-             category_slug, category_source, category_confidence, is_recurring, pending
+             category_slug, category_source, category_confidence, is_recurring, recurring_override, pending
            ) VALUES ${tuples.join(', ')}
            ON CONFLICT (user_id, account_id, provider_txn_id) DO UPDATE SET
              posted_at             = EXCLUDED.posted_at,
@@ -321,6 +322,7 @@ export class PostgresTransactionStore implements TransactionStore {
                WHEN transactions.category_source IN ('user_manual', 'user_rule')
                  THEN transactions.category_confidence
                ELSE EXCLUDED.category_confidence END,
+             recurring_override = transactions.recurring_override,
              updated_at = now()
            RETURNING (xmax = 0) AS inserted`,
           values,
@@ -355,6 +357,7 @@ export class PostgresTransactionStore implements TransactionStore {
       categorySource: 'category_source',
       categoryConfidence: 'category_confidence',
       isRecurring: 'is_recurring',
+      recurringOverride: 'recurring_override',
       pending: 'pending',
     };
 

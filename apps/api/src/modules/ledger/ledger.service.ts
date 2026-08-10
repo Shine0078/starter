@@ -75,6 +75,7 @@ export class LedgerService {
     const recurringDescriptors = new Set(subscriptions.map((s) => s.normalizedDescriptor));
 
     for (const txn of stored) {
+      if (txn.recurringOverride !== undefined) continue;
       const shouldBeRecurring = recurringDescriptors.has(txn.normalizedDescriptor);
       if (txn.isRecurring !== shouldBeRecurring) {
         await this.transactions.update(userId, txn.id, { isRecurring: shouldBeRecurring });
@@ -220,6 +221,7 @@ export class LedgerService {
       merchantOverride?: unknown;
       note?: unknown;
       excludedFromAnalytics?: unknown;
+      isRecurring?: unknown;
     },
   ): Promise<Transaction> {
     const existing = await this.transactions.get(userId, transactionId);
@@ -242,6 +244,12 @@ export class LedgerService {
           throw new BadRequestException('excludedFromAnalytics must be a boolean');
         }
         next.excludedFromAnalytics = value;
+      } else if (key === 'isRecurring') {
+        if (typeof value !== 'boolean') {
+          throw new BadRequestException('isRecurring must be a boolean');
+        }
+        next.isRecurring = value;
+        next.recurringOverride = value;
       }
     }
 

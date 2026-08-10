@@ -14,6 +14,7 @@ import {
 
 import { categorizeDescriptor } from '../../domain/categorization/categorize';
 import { normalizeDescriptor } from '../../domain/categorization/normalize';
+import { detectSubscriptions } from '../../domain/insights/subscriptions';
 import { FinanceEventBus } from '../../infra/events/finance-event-bus';
 import {
   detectInternalTransfers,
@@ -264,6 +265,7 @@ export class BankingService implements OnModuleInit, OnModuleDestroy {
       // routinely arrive in different pages, and often from different
       // institutions entirely.
       const transfers = await this.reconcileInternalTransfers(userId);
+      const recurringDetected = await this.reconcileRecurring(userId);
 
       const result = {
         fetched,
@@ -271,6 +273,7 @@ export class BankingService implements OnModuleInit, OnModuleDestroy {
         updated,
         removed,
         transfersDetected: transfers,
+        recurringDetected,
         coverage: fetched === 0 ? 1 : categorized / fetched,
       };
       this.events?.publish({
@@ -316,6 +319,33 @@ export class BankingService implements OnModuleInit, OnModuleDestroy {
       }
       throw new ServiceUnavailableException({ message: 'Bank synchronization failed.', code });
     }
+  }
+
+  /**
+   * Recompute recurring flags after the complete incremental cycle is stored.
+   *
+   * Recurrence detection needs the whole history for a merchant, not one
+   * provider page. Keeping this here (rather than in the mapper) also makes
+   * webhook-driven syncs behave exactly like a manual refresh. The flags are
+   * derived state: a later correction, exclusion, or removed transaction can
+   * make a series stop qualifying, so stale `true` values are cleared too.
+   */
+  private async reconcileRecurring(userId: string): Promise<number> {
+    const rows = await this.transactions.list(userId);
+    const recurringIds = new Set(
+      detectSubscriptions(rows).flatMap((subscription) => subscription.transactionIds),
+    );
+    let updated = 0;
+    for (const transaction of rows) {
+      if (transaction.recurringOverride !== undefined) continue;
+      const shouldBeRecurring = recurringIds.has(transaction.id);
+      if (transaction.isRecurring === shouldBeRecurring) continue;
+      await this.transactions.update(userId, transaction.id, {
+        isRecurring: shouldBeRecurring,
+      });
+      updated += 1;
+    }
+    return updated;
   }
 
   async acceptWebhook(rawBody: Buffer, signature: string) {
