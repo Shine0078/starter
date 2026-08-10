@@ -105,9 +105,13 @@ a random key held in the platform keystore. When the API is unreachable, reads m
 fall back to a cache entry no older than 30 days and the dashboard visibly reports
 the oldest timestamp in use. Sign-out and account deletion purge that user's cache.
 
-This is intentionally read-only offline support. Mutations are not queued yet;
-budgets, category corrections, goals, and bank actions continue to require the
-server. A later sync journal must use server-issued versions rather than device
+Authenticated reads and idempotent transaction-preference mutations are cached
+and queued offline. Mutations collapse to the latest value and replay when the
+session resumes; balances remain server-authoritative and conflicts are never
+silently overwritten.
+Other mutations, including budgets, category corrections, goals, and bank
+actions, continue to require the server. A later sync journal must use
+server-issued versions rather than device
 timestamps — device clocks lie.
 
 This is required by the mission ("offline mode for basic features") and it is also

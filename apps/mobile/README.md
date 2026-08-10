@@ -66,7 +66,14 @@ the new user. Counsel still has to supply the reviewed documents and version ids
 Successful authenticated reads are cached locally for offline fallback. Payloads
 are AES-256-GCM encrypted with a key in the platform keystore, scoped per user,
 limited to 30 days, and purged on sign-out or account deletion. The dashboard labels
-cached data and its last-updated time. Offline writes are not queued.
+cached data and its last-updated time. Idempotent transaction preference writes
+made offline are encrypted, queued, collapsed to the latest value, and replayed
+when the session resumes or the dashboard reconnects. The UI shows a
+pending-sync banner; balances remain server-authoritative.
+
+The notification centre can request native Android/iPhone permission and surface
+unread FINVERSE alerts as device-local notifications. Remote push and OS-level
+background refresh still require provider credentials and native scheduling.
 
 ## Verification
 

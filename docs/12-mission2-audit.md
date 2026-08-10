@@ -79,6 +79,11 @@ file would be required to verify any requirements unique to that document.
   links, and provider connections needing re-authentication. It is exposed at
   authenticated `GET /api/data-quality` and the dashboard shows a plain-language
   warning card instead of presenting questionable analytics without context.
+- Native local-alert delivery is now wired through a platform-safe Flutter
+  service. Users can grant Android/iPhone notification permission from the
+  notification preferences screen; unread server alerts are presented once per
+  app session without requiring remote push credentials. Browser/desktop builds
+  fail closed, and remote push/background refresh remain external/native work.
 - A small internal finance event bus publishes import, update, categorisation,
   account, and bank-sync events inside the NestJS monolith without adding a
   queue or a second service.
@@ -91,7 +96,7 @@ file would be required to verify any requirements unique to that document.
 
 - API in-memory suite: 384 passing, 5 database-only skips.
 - PostgreSQL contract/RLS suite: 480 passing in embedded PostgreSQL.
-- Flutter: 55 widget/design tests passing, `flutter analyze` clean.
+- Flutter: 56 widget/design tests passing, `flutter analyze` clean.
 - Android debug APK and web release build both compile. The Android emulator
   booted but its package/activity services were unavailable during an install
   attempt; that is an emulator image issue, not a compile failure.
@@ -115,7 +120,7 @@ file would be required to verify any requirements unique to that document.
   user-scoped storage, latest-value collapse, optimistic retry semantics, and
   successful replay.
 - Data-quality domain checks and authenticated route protection are covered by
-  focused API tests; Flutter analyzer and the 55-test mobile suite remain clean.
+  focused API tests; Flutter analyzer and the 56-test mobile suite remain clean.
 
 ## Still incomplete locally
 
