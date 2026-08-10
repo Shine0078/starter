@@ -97,6 +97,10 @@ jobs:
       - run: flutter test
       - name: Compile Android release target
         run: flutter build apk --release --dart-define=API_BASE_URL=https://api.example.invalid
+      - name: Compile PWA at the public /app/ mount
+        run: |
+          flutter build web --release --base-href=/app/
+          grep -F '<base href="/app/">' build/web/index.html
 
   ios:
     name: Compile native iOS target
