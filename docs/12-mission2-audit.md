@@ -104,8 +104,11 @@ file would be required to verify any requirements unique to that document.
   LinkKit package resolution, Universal Link OAuth return, and device test.
   The iPhone PWA remains available as a browser fallback.
 - The live Plaid Sandbox credentials were configured locally (never committed)
-  and authenticated web Link-token creation was verified on 2026-08-10 against
-  the Postgres API. The Android path fails closed with an actionable
+  and the provider path was verified on 2026-08-10 against the Postgres API:
+  a disposable Sandbox public token exchanged into 2 accounts and 125
+  transactions, a second incremental sync returned 0 changes, and the link and
+  test user were removed. Authenticated web Link-token creation also succeeded.
+  The Android path fails closed with an actionable
   `PLAID_CONFIGURATION` response until the owner saves `com.finverse.finance`
   in Plaid's Allowed Android package names; Plaid requires Google identity
   verification before that dashboard change can be saved. No production key or

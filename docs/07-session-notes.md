@@ -14,7 +14,7 @@ is the shortest path to being productive again.
 
 ```bash
 npm install
-npm test          # 376 tests, no database needed
+npm test          # 384 tests, no database needed
 npm run test:db   # 485 tests, spins up a real PostgreSQL and tears it down
 npm run dev       # API + dev dashboard on http://localhost:3000
 ```
@@ -29,10 +29,10 @@ Every number below was produced by running the thing, not by reading the code.
 
 | Check | Result |
 |---|---|
-| API tests, in-memory | 376 passed |
+| API tests, in-memory | 384 passed |
 | API tests, real Postgres | 485 passed |
 | `tsc --noEmit`, `npm run build` | clean |
-| `flutter analyze`, `flutter test` | clean, 52 passed |
+| `flutter analyze`, `flutter test` | clean, 59 passed |
 | Android debug compile | `com.finverse.finance`, API 36, 170.9 MB APK; debug-only artifact built successfully |
 | Authenticated load smoke, memory | 250 requests, concurrency 10, 0 failures, 43.3 ms p95, 298.5 req/s |
 | Authenticated load smoke, real Postgres | 250 requests, concurrency 10, 0 failures, 229.1 ms p95, 146.8 req/s |
@@ -61,9 +61,10 @@ The notification centre derives conservative upcoming-bill, subscription-price,
 possible-duplicate, and unusually-large-transaction review prompts and respects
 each corresponding preference.
 
-**Mock:** the aggregator. `MockAggregator` generates a deterministic four-month
-ledger. No bank has ever been connected, and connecting one is gated on a
-commercial agreement, not on code.
+**Development-only mock:** `MockAggregator` generates a deterministic
+four-month ledger for the isolated `/dev/` dashboard and in-memory tests. It
+cannot populate a persistent user account or production deployment. The Plaid
+Sandbox adapter is configured locally and has been exercised end to end below.
 
 **Implemented but awaiting provider/device configuration:** email verification
 and password reset use hashed one-time tokens and SMTP in production; TOTP MFA
@@ -183,9 +184,9 @@ requires the owner's business and identity details; it was intentionally not
 submitted by automation.
 
 The real Sandbox path was also exercised against the running Postgres API: web
-Link-token creation succeeded; a Sandbox public token exchanged into five
-accounts and transactions; incremental sync was idempotent; then the disposable
-link and user were removed. Android Link-token creation currently returns a safe
+Link-token creation succeeded; a disposable Sandbox public token exchanged
+into two accounts and 125 transactions; a second incremental sync returned
+zero changes; then the link and test user were removed. Android Link-token creation currently returns a safe
 `PLAID_CONFIGURATION` response because the Android package identifier has not
 been allowlisted in the Plaid dashboard. Provider SDK errors are mapped without
 logging request configuration or credentials. Persisted mobile sessions now
