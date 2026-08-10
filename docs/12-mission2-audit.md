@@ -38,6 +38,10 @@ file would be required to verify any requirements unique to that document.
 - Internal-transfer detection prevents movements between a user's own accounts
   from inflating income or spending. Categorisation is deterministic and
   explainable; user corrections create reusable rules.
+- A Profile categorization-rules screen and authenticated API endpoints now let
+  users inspect and delete those durable merchant rules. Deleting a rule is
+  explicit and leaves the original bank evidence and existing transaction edits
+  unchanged.
 - Stable transaction keyset pagination (`before` cursor) in the Postgres and
   in-memory stores, API, client, and mobile feed. The feed loads older pages as
   the user scrolls.
@@ -149,9 +153,9 @@ file would be required to verify any requirements unique to that document.
 
 ## Evidence
 
-- API in-memory suite: 423 passing, 5 database-only skips.
-- PostgreSQL contract/RLS suite: 524 passing in embedded PostgreSQL.
-- Flutter: 73 widget/design tests passing, `flutter analyze` clean.
+- API in-memory suite: 425 passing, 5 database-only skips.
+- PostgreSQL contract/RLS suite: 526 passing in embedded PostgreSQL.
+- Flutter: 74 widget/design tests passing, `flutter analyze` clean.
 - Android release APK and web release build both compile. The Android emulator
   booted but its package/activity services were unavailable during an install
   attempt; that is an emulator image issue, not a compile failure.
@@ -187,7 +191,7 @@ file would be required to verify any requirements unique to that document.
   user-scoped storage, latest-value collapse, optimistic retry semantics, and
   successful replay.
 - Data-quality domain checks and authenticated route protection are covered by
-  focused API tests; Flutter analyzer and the 73-test mobile suite remain clean.
+  focused API tests; Flutter analyzer and the 74-test mobile suite remain clean.
 - A provider-neutral public deployment path now runs the tagged API and optional
   Flutter web bundle behind Caddy with automatic HTTPS. Port 3000 remains
   private to the Docker network, and native phones or the `/app/` PWA can use

@@ -125,6 +125,7 @@ last 15 minutes; exchange the refresh token at `/api/auth/refresh` for a new pai
 | `GET` | `/transactions/export.csv` | Download the user-owned ledger as a CSV; spreadsheet-formula-safe text fields |
 | `GET` | `/transactions/needs-review` | What we refused to guess at |
 | `PATCH` | `/transactions/:id/category` | Correct a category, optionally create a rule |
+| `GET`/`DELETE` | `/categorization-rules[/:id]` | Review or remove durable merchant categorization rules |
 | `GET`/`POST` | `/budgets` | List / create |
 | `GET` | `/budgets/progress` | Spend, thresholds, projections, alerts |
 | `GET` | `/insights` | `?currency=USD`; month-to-date vs. the same window last month without mixing currencies |
@@ -266,13 +267,13 @@ stopped running.
 
 ## Notes on what is and isn't verified
 
-- **The API and its domain logic run and are tested.** 423 tests run with no
-  database; the full suite is **524 passing** against real PostgreSQL, including
+- **The API and its domain logic run and are tested.** 425 tests run with no
+  database; the full suite is **526 passing** against real PostgreSQL, including
   the store contract — which runs as the restricted role, so it executes with the
   row-level security policies in force — and a suite that issues deliberately
   unfiltered SQL to prove the database withholds other users' rows on its own.
   The slice is also exercised end to end over HTTP.
-- **The Flutter app is verified by static analysis, 73 tests, and real
+- **The Flutter app is verified by static analysis, 74 tests, and real
   Android release APK and web builds.** Android and iOS platform projects can be generated
   locally. See the
   [cheap launch path](docs/06-cheap-launch-path.md).

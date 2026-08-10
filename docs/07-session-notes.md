@@ -15,8 +15,8 @@ is the shortest path to being productive again.
 
 ```bash
 npm install
-npm test          # 423 tests, no database needed
-npm run test:db   # 524 tests, spins up a real PostgreSQL and tears it down
+npm test          # 425 tests, no database needed
+npm run test:db   # 526 tests, spins up a real PostgreSQL and tears it down
 npm run dev       # API + dev dashboard on http://localhost:3000
 ```
 
@@ -30,10 +30,10 @@ Every number below was produced by running the thing, not by reading the code.
 
 | Check | Result |
 |---|---|
-| API tests, in-memory | 423 passed |
-| API tests, real Postgres | 524 passed |
+| API tests, in-memory | 425 passed |
+| API tests, real Postgres | 526 passed |
 | `tsc --noEmit`, `npm run build` | clean |
-| `flutter analyze`, `flutter test` | clean, 73 passed |
+| `flutter analyze`, `flutter test` | clean, 74 passed |
 | Android debug compile | `com.finverse.finance`, API 36, 170.9 MB APK; debug-only artifact built successfully |
 | Authenticated load smoke, memory | 250 requests, concurrency 10, 0 failures, 43.3 ms p95, 298.5 req/s |
 | Authenticated load smoke, real Postgres | 250 requests, concurrency 10, 0 failures, 229.1 ms p95, 146.8 req/s |
