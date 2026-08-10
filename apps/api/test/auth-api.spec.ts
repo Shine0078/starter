@@ -15,6 +15,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ACCOUNT_STORE, TRANSACTION_STORE, type AccountStore, type TransactionStore } from '../src/ports';
+import { BANK_LINK_STORE, type BankLinkStore } from '../src/ports/banking';
 import { ACCOUNT_DELETION_STORE, type AccountDeletionStore } from '../src/ports/auth';
 import { EMAIL_SENDER } from '../src/ports/auth';
 import type { DevelopmentEmailSender } from '../src/infra/auth/auth-action-stores';
@@ -1302,6 +1303,39 @@ describe('auth API', () => {
         .post('/api/auth/cancel-deletion')
         .send({ email, password: PASSWORD })
         .expect(401);
+    });
+
+    it('does not start deletion while a connected bank cannot be revoked', async () => {
+      const { userId, tokens } = await register();
+      const links = app.get<BankLinkStore>(BANK_LINK_STORE);
+      await links.create(userId, {
+        id: 'link-deletion-revocation',
+        provider: 'plaid',
+        providerItemId: 'item-deletion-revocation',
+        institutionId: 'ins_test',
+        institutionName: 'Test Bank',
+        encryptedAccessToken: 'ciphertext',
+        cursor: null,
+        status: 'healthy',
+        errorCode: null,
+        lastSyncedAt: null,
+        createdAt: new Date().toISOString(),
+      });
+
+      // The in-memory test provider has no Plaid credentials. The revocation
+      // boundary must fail closed instead of deleting our row while leaving an
+      // external provider Item alive.
+      await request(http)
+        .delete('/api/auth/account')
+        .set('Authorization', `Bearer ${tokens.accessToken}`)
+        .send({ password: PASSWORD, confirmation: 'DELETE' })
+        .expect(503);
+
+      await request(http)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${tokens.accessToken}`)
+        .expect(200);
+      expect((await links.get(userId, 'link-deletion-revocation'))?.status).toBe('healthy');
     });
   });
 });

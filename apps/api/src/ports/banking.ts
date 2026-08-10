@@ -4,6 +4,8 @@ export const BANK_LINK_STORE = 'BANK_LINK_STORE';
 export const BANK_PROVIDER = 'BANK_PROVIDER';
 export const BANK_TOKEN_CIPHER = 'BANK_TOKEN_CIPHER';
 export const BANK_WEBHOOK_STORE = 'BANK_WEBHOOK_STORE';
+/** Revokes every provider Item before an account enters deletion recovery. */
+export const BANK_ACCOUNT_REVOKER = 'BANK_ACCOUNT_REVOKER';
 
 export type BankLinkStatus = 'healthy' | 'syncing' | 'needs_reauth' | 'error' | 'revoked';
 
@@ -72,6 +74,15 @@ export interface BankProvider {
   sync(accessToken: string, cursor: string | null): Promise<BankSyncPage>;
   verifyWebhook(rawBody: Buffer, signature: string): Promise<boolean>;
   removeItem(accessToken: string): Promise<void>;
+}
+
+/**
+ * Privacy boundary used by account deletion. Removing our database row is not
+ * enough: a provider Item could otherwise continue pulling bank data after a
+ * user has asked FINVERSE to erase the account.
+ */
+export interface BankAccountRevoker {
+  revokeAll(userId: string): Promise<{ revoked: number }>;
 }
 
 export interface BankTokenCipher {

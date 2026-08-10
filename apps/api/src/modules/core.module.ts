@@ -52,6 +52,7 @@ import {
   PostgresBankWebhookStore,
 } from '../infra/banking/bank-link-stores';
 import { PlaidBankProvider } from '../infra/banking/plaid-provider';
+import { AccountBankRevoker } from '../infra/banking/account-revoker';
 import { AesGcmBankTokenCipher } from '../infra/banking/token-cipher';
 import { StripeBillingProvider } from '../infra/billing/stripe-provider';
 import {
@@ -63,6 +64,7 @@ import {
 import { InMemoryConsentStore, PostgresConsentStore } from '../infra/privacy/consent-stores';
 import {
   BANK_LINK_STORE,
+  BANK_ACCOUNT_REVOKER,
   BANK_PROVIDER,
   BANK_TOKEN_CIPHER,
   BANK_WEBHOOK_STORE,
@@ -244,6 +246,7 @@ function storeProviders(): Provider[] {
           : new AesGcmBankTokenCipher(randomBytes(32));
       },
     },
+    { provide: BANK_ACCOUNT_REVOKER, useClass: AccountBankRevoker },
     {
       provide: BILLING_PROVIDER,
       useFactory: () =>
@@ -311,6 +314,7 @@ function storeProviders(): Provider[] {
     NOTIFICATION_STORE,
     BANK_LINK_STORE,
     BANK_PROVIDER,
+    BANK_ACCOUNT_REVOKER,
     BANK_TOKEN_CIPHER,
     BANK_WEBHOOK_STORE,
     AGGREGATOR,

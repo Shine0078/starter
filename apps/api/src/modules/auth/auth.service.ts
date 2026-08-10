@@ -8,6 +8,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 
@@ -32,6 +33,10 @@ import {
 import { REFRESH_TOKEN_TTL_MS } from '../../infra/auth/jwt-issuer';
 import { loadConfig } from '../../config';
 import { CLOCK, type ClockPort } from '../../ports';
+import {
+  BANK_ACCOUNT_REVOKER,
+  type BankAccountRevoker,
+} from '../../ports/banking';
 import {
   ACCOUNT_DELETION_STORE,
   AUTH_ACTION_TOKEN_STORE,
@@ -101,6 +106,7 @@ export class AuthService {
     @Inject(CLOCK) private readonly clock: ClockPort,
     @Inject(MFA_STORE) private readonly mfa: MfaStore,
     @Inject(MFA_SECRET_CIPHER) private readonly mfaCipher: MfaSecretCipher,
+    @Inject(BANK_ACCOUNT_REVOKER) private readonly bankRevoker: BankAccountRevoker,
   ) {}
 
   // ------------------------------------------------------------- register
@@ -371,6 +377,28 @@ export class AuthService {
         'password re-verification failed',
       );
       throw new UnauthorizedException('Password is incorrect.');
+    }
+
+    // Revoke provider Items before disabling the account. Deleting our local
+    // row alone would leave a Plaid Item able to pull new financial data during
+    // the 30-day recovery window, which contradicts the user's erasure request.
+    // The revoker is idempotent and treats already-removed Items as complete.
+    try {
+      await this.bankRevoker.revokeAll(user.id);
+    } catch (error) {
+      await this.record(
+        'account_deletion_requested',
+        false,
+        user.id,
+        user.email,
+        context,
+        error instanceof Error ? error.message : 'bank access revocation failed',
+      );
+      throw new ServiceUnavailableException(
+        error instanceof Error
+          ? error.message
+          : 'Bank access could not be revoked. Try again shortly.',
+      );
     }
 
     const requestedAt = this.clock.now();
