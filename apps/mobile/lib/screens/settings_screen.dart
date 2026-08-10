@@ -10,6 +10,7 @@ import '../api/app_lock.dart';
 import '../api/platform/file_share.dart';
 import '../models/models.dart';
 import 'bank_connections_screen.dart';
+import 'help_support_screen.dart';
 import 'notifications_screen.dart';
 import 'plan_screen.dart';
 import 'subscriptions_screen.dart';
@@ -581,6 +582,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   // The plan may have changed while they were away.
                   if (mounted) _loadPlan();
                 },
+              ),
+              ListTile(
+                leading: const Icon(Icons.help_outline),
+                title: const Text('Help & support'),
+                subtitle: const Text('Connection checks and common questions'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => HelpSupportScreen(api: widget.api),
+                )),
               ),
             ],
           ),

@@ -19,6 +19,7 @@ import 'package:finverse/main.dart';
 import 'package:finverse/models/models.dart';
 import 'package:finverse/screens/home_screen.dart';
 import 'package:finverse/screens/bank_connections_screen.dart';
+import 'package:finverse/screens/help_support_screen.dart';
 import 'package:finverse/screens/login_screen.dart';
 import 'package:finverse/screens/plan_screen.dart';
 import 'package:finverse/screens/transaction_detail_screen.dart';
@@ -93,6 +94,23 @@ http.Response? _billingResponse(http.BaseRequest request,
 }
 
 void main() {
+  testWidgets('help centre explains connectivity and keeps diagnostics safe',
+      (tester) async {
+    final api = clientWith(MockClient((request) async =>
+        request.url.path == '/healthz'
+            ? http.Response('{"status":"ok"}', 200)
+            : http.Response('{}', 404)));
+
+    await tester.pumpWidget(MaterialApp(home: HelpSupportScreen(api: api)));
+    expect(find.text('Help & support'), findsOneWidget);
+    expect(find.text('My iPhone cannot connect'), findsOneWidget);
+    expect(find.text('Connection not checked yet'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Check connection'));
+    await tester.pumpAndSettle();
+    expect(find.text('The API is online.'), findsOneWidget);
+  });
+
   test('local alerts fail closed on unsupported targets', () async {
     final original = debugDefaultTargetPlatformOverride;
     debugDefaultTargetPlatformOverride = TargetPlatform.windows;
