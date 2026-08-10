@@ -1110,6 +1110,22 @@ describe('auth API', () => {
         .expect(401);
     });
 
+    it('allows only one concurrent request to spend a refresh token', async () => {
+      const { tokens } = await register();
+
+      const responses = await Promise.all([
+        request(http)
+          .post('/api/auth/refresh')
+          .send({ refreshToken: tokens.refreshToken }),
+        request(http)
+          .post('/api/auth/refresh')
+          .send({ refreshToken: tokens.refreshToken }),
+      ]);
+
+      expect(responses.filter((response) => response.status === 200)).toHaveLength(1);
+      expect(responses.filter((response) => response.status === 401)).toHaveLength(1);
+    });
+
     it('revokes the whole family when a rotated token is replayed', async () => {
       // A captured refresh token being replayed is the signal that it leaked.
       // Both the attacker and the legitimate holder get logged out.

@@ -56,6 +56,11 @@ export class DuplicateEmailError extends Error {
 
 export interface SessionStore {
   create(session: Session): Promise<Session>;
+  /**
+   * Atomically spends one live refresh session and inserts its successor.
+   * Returns false when another request already spent the old session.
+   */
+  rotate(sessionId: string, successor: Session, at: Date): Promise<boolean>;
   findByTokenHash(tokenHash: string): Promise<Session | null>;
   findById(userId: string, sessionId: string): Promise<Session | null>;
   /** Active sessions only, newest first. Powers the "your devices" list. */

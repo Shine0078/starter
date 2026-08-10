@@ -76,6 +76,19 @@ export class InMemorySessionStore implements SessionStore {
     return { ...session };
   }
 
+  async rotate(sessionId: string, successor: Session, at: Date): Promise<boolean> {
+    const current = this.byId.get(sessionId);
+    if (!current || current.revokedAt !== null) return false;
+
+    this.byId.set(sessionId, {
+      ...current,
+      revokedAt: at,
+      revokedReason: 'rotated',
+    });
+    this.byId.set(successor.id, { ...successor });
+    return true;
+  }
+
   async findByTokenHash(tokenHash: string): Promise<Session | null> {
     for (const session of this.byId.values()) {
       if (session.tokenHash === tokenHash) return { ...session };

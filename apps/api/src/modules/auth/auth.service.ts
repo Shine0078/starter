@@ -568,13 +568,33 @@ export class AuthService {
       throw new UnauthorizedException('Session is no longer valid. Sign in again.');
     }
 
-    // Rotate: the presented token is spent, and its successor joins the family.
-    await this.sessions.revoke(outcome.session.id, 'rotated', now);
+    // Rotate in one store operation. A mobile dashboard can have several
+    // requests discover an expired access token at once; a read-then-revoke
+    // sequence would let two requests spend the same refresh token and create
+    // competing successors.
+    const successor = this.buildSession(user, outcome.session.familyId, context);
+    const rotated = await this.sessions.rotate(outcome.session.id, successor.session, now);
+    if (!rotated) {
+      const current = await this.sessions.findByTokenHash(tokenHash);
+      const replay = evaluateRefresh(current, now);
+      if (replay.kind === 'reuse_detected') {
+        const revoked = await this.sessions.revokeFamily(replay.familyId, 'reuse_detected', now);
+        await this.record(
+          'refresh_reuse_detected',
+          false,
+          replay.userId,
+          null,
+          context,
+          `revoked ${revoked} session(s) in family ${replay.familyId}`,
+        );
+      }
+      throw new UnauthorizedException('Session is no longer valid. Sign in again.');
+    }
     await this.record('refresh', true, user.id, null, context, null);
 
     return {
       user: toPublicUser(user),
-      tokens: await this.issueSession(user, outcome.session.familyId, context),
+      tokens: successor.tokens,
     };
   }
 
@@ -740,6 +760,16 @@ export class AuthService {
     familyId: string | null,
     context: RequestContext,
   ): Promise<TokenPair> {
+    const issued = this.buildSession(user, familyId, context);
+    await this.sessions.create(issued.session);
+    return issued.tokens;
+  }
+
+  private buildSession(
+    user: User,
+    familyId: string | null,
+    context: RequestContext,
+  ): { session: Session; tokens: TokenPair } {
     const now = this.clock.now();
     const sessionId = randomUUID();
     const { token: refreshToken, tokenHash } = this.tokens.generateRefreshToken();
@@ -758,16 +788,17 @@ export class AuthService {
       ipAddress: context.ipAddress,
     };
 
-    await this.sessions.create(session);
-
     const access = this.tokens.signAccessToken(user.id, sessionId);
 
     return {
-      accessToken: access.token,
-      expiresIn: access.expiresIn,
-      refreshToken,
-      refreshExpiresAt: session.expiresAt.toISOString(),
-      tokenType: 'Bearer',
+      session,
+      tokens: {
+        accessToken: access.token,
+        expiresIn: access.expiresIn,
+        refreshToken,
+        refreshExpiresAt: session.expiresAt.toISOString(),
+        tokenType: 'Bearer',
+      },
     };
   }
 

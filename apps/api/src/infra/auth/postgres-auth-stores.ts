@@ -16,6 +16,7 @@ import {
   type SessionStore,
   type UserStore,
 } from '../../ports/auth';
+import { withTransaction } from '../postgres/pool';
 
 interface UserRow {
   id: string;
@@ -169,6 +170,35 @@ export class PostgresSessionStore implements SessionStore {
       ],
     );
     return toSession(rows[0]!);
+  }
+
+  async rotate(sessionId: string, successor: Session, at: Date): Promise<boolean> {
+    return withTransaction(this.pg, async (client) => {
+      const revoked = await client.query(
+        `UPDATE sessions
+            SET revoked_at = $2, revoked_reason = 'rotated'
+          WHERE id = $1 AND revoked_at IS NULL AND expires_at > $2`,
+        [sessionId, at],
+      );
+      if (revoked.rowCount !== 1) return false;
+
+      await client.query(
+        `INSERT INTO sessions
+           (id, user_id, family_id, token_hash, issued_at, expires_at, user_agent, ip_address)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [
+          successor.id,
+          successor.userId,
+          successor.familyId,
+          successor.tokenHash,
+          successor.issuedAt,
+          successor.expiresAt,
+          successor.userAgent,
+          successor.ipAddress,
+        ],
+      );
+      return true;
+    });
   }
 
   async findByTokenHash(tokenHash: string): Promise<Session | null> {
