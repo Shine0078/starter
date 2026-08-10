@@ -41,6 +41,10 @@ file would be required to verify any requirements unique to that document.
   also supports a durable user override; an explicit choice survives later bank
   pages, webhook retries, and re-syncs while automatic flags continue to be
   recomputed for untouched rows.
+- A non-destructive possible-duplicate marker is now user-controlled and
+  durable. It is isolated per user, survives re-sync, is visible in transaction
+  detail, and is included in CSV export without deleting or mutating provider
+  evidence.
 - A dedicated `AnalyticsScreen` with month metrics, category chart, financial
   health, subscriptions, evidence-backed insights, week/month/quarter/year/
   lifetime/custom period selection, spending velocity, and a financial timeline, backed by the server-side analytics
@@ -75,7 +79,7 @@ file would be required to verify any requirements unique to that document.
 
 - API in-memory suite: 379 passing, 5 database-only skips.
 - PostgreSQL contract/RLS suite: 480 passing in embedded PostgreSQL.
-- Flutter: 55 widget/design tests passing, `flutter analyze` clean.
+- Flutter: 54 widget/design tests passing, `flutter analyze` clean.
 - Android debug APK and web release build both compile. The Android emulator
   booted but its package/activity services were unavailable during an install
   attempt; that is an emulator image issue, not a compile failure.
