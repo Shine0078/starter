@@ -45,6 +45,9 @@ file would be required to verify any requirements unique to that document.
   durable. It is isolated per user, survives re-sync, is visible in transaction
   detail, and is included in CSV export without deleting or mutating provider
   evidence.
+- Transaction detail exposes a dedicated transfer action that records a
+  one-off user correction without creating a broad merchant rule, so internal
+  movements can be fixed safely from the feed.
 - A dedicated `AnalyticsScreen` with month metrics, category chart, financial
   health, subscriptions, evidence-backed insights, week/month/quarter/year/
   lifetime/custom period selection, spending velocity, and a financial timeline, backed by the server-side analytics
