@@ -182,7 +182,7 @@ describe('banking integration', () => {
     expect(await links.get('user-1', link.id)).toBeNull();
   });
 
-  it('shows quiet active accounts during the initial sync', async () => {
+  it('imports quiet accounts and refreshes balances without transaction deltas', async () => {
     const provider = new FakeProvider();
     provider.initialAccounts = [
       account,
@@ -200,8 +200,9 @@ describe('banking integration', () => {
     });
 
     const accounts = new InMemoryAccountStore();
+    const links = new InMemoryBankLinkStore();
     const service = new BankingService(
-      new InMemoryBankLinkStore(),
+      links,
       provider,
       new AesGcmBankTokenCipher(randomBytes(32)),
       new InMemoryBankWebhookStore(),
@@ -213,7 +214,12 @@ describe('banking integration', () => {
       billingHarness().billing,
     );
 
-    await service.exchange('user-quiet', 'public-sandbox', 'First Platypus Bank', null);
+    const link = await service.exchange(
+      'user-quiet',
+      'public-sandbox',
+      'First Platypus Bank',
+      null,
+    );
 
     await expect(accounts.list('user-quiet')).resolves.toEqual(
       expect.arrayContaining([
@@ -221,6 +227,25 @@ describe('banking integration', () => {
         expect.objectContaining({ id: 'plaid-savings-2', name: 'Sandbox Savings' }),
       ]),
     );
+
+    provider.initialAccounts = [
+      { ...account, balanceCurrent: 101_250 },
+      {
+        ...account,
+        id: 'plaid-savings-2',
+        name: 'Sandbox Savings',
+        type: 'savings',
+        balanceCurrent: 251_000,
+      },
+    ];
+    provider.pages.push({
+      accounts: [], added: [], modified: [], removedProviderTxnIds: [],
+      nextCursor: 'quiet-account-cursor-2', hasMore: false,
+    });
+    await service.sync('user-quiet', link.id);
+    await expect(accounts.get('user-quiet', account.id)).resolves.toMatchObject({
+      balanceCurrent: 101_250,
+    });
   });
 
   it('derives recurring flags after a complete provider sync, not per page', async () => {

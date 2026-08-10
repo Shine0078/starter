@@ -216,11 +216,12 @@ export class BankingService implements OnModuleInit, OnModuleDestroy {
     try {
       const accessToken = this.cipher.decrypt(link.encryptedAccessToken);
       // Plaid's /transactions/sync response only includes accounts that have
-      // transactions in that response. A newly linked account with no recent
-      // activity would otherwise be absent from FINVERSE until it moves money.
-      // Reconcile the complete active account list once, without making the
-      // auxiliary request a hard dependency for providers or transient outages.
-      if (cursor === null && this.provider.listAccounts) {
+      // transactions in that response. Reconcile the complete active account
+      // list on every pull so quiet accounts appear immediately and balances
+      // stay fresh even when there are no transaction deltas. This auxiliary
+      // request is deliberately best-effort: a transient listing failure must
+      // never block the durable transaction cursor from advancing.
+      if (this.provider.listAccounts) {
         try {
           await this.accounts.upsertMany(userId, await this.provider.listAccounts(accessToken));
         } catch {
