@@ -14,6 +14,7 @@ import {
 
 import { categorizeDescriptor } from '../../domain/categorization/categorize';
 import { normalizeDescriptor } from '../../domain/categorization/normalize';
+import { FinanceEventBus } from '../../infra/events/finance-event-bus';
 import {
   detectInternalTransfers,
   internalTransferIds,
@@ -63,6 +64,7 @@ export class BankingService implements OnModuleInit, OnModuleDestroy {
     @Inject(NOTIFICATION_STORE) private readonly notifications: NotificationStore,
     @Inject(CLOCK) private readonly clock: ClockPort,
     private readonly billing: BillingService,
+    private readonly events?: FinanceEventBus,
   ) {}
 
   onModuleInit(): void {
@@ -87,7 +89,11 @@ export class BankingService implements OnModuleInit, OnModuleDestroy {
       if (!link) throw new NotFoundException('Bank connection not found.');
       accessToken = this.cipher.decrypt(link.encryptedAccessToken);
     }
-    return this.provider.createLinkToken(userId, accessToken, platform);
+    try {
+      return await this.provider.createLinkToken(userId, accessToken, platform);
+    } catch (error) {
+      throw this.providerFailure(error, 'Could not start the bank connection.');
+    }
   }
 
   async exchange(
@@ -112,7 +118,12 @@ export class BankingService implements OnModuleInit, OnModuleDestroy {
       });
     }
 
-    const exchanged = await this.provider.exchangePublicToken(publicToken);
+    let exchanged: Awaited<ReturnType<BankProvider['exchangePublicToken']>>;
+    try {
+      exchanged = await this.provider.exchangePublicToken(publicToken);
+    } catch (error) {
+      throw this.providerFailure(error, 'That bank connection could not be completed.');
+    }
     const now = this.clock.now().toISOString();
     const link = await this.links.create(userId, {
       id: randomUUID(),
@@ -135,6 +146,12 @@ export class BankingService implements OnModuleInit, OnModuleDestroy {
       // encouraging a second Link flow and an orphaned Plaid Item.
       this.logger.warn('Initial Plaid synchronization failed; connection retained for retry.');
     }
+    this.events?.publish({
+      type: 'AccountConnected',
+      userId,
+      at: this.clock.now().toISOString(),
+      linkId: link.id,
+    });
     return (await this.links.get(userId, link.id))!;
   }
 
@@ -248,7 +265,7 @@ export class BankingService implements OnModuleInit, OnModuleDestroy {
       // institutions entirely.
       const transfers = await this.reconcileInternalTransfers(userId);
 
-      return {
+      const result = {
         fetched,
         inserted,
         updated,
@@ -256,6 +273,36 @@ export class BankingService implements OnModuleInit, OnModuleDestroy {
         transfersDetected: transfers,
         coverage: fetched === 0 ? 1 : categorized / fetched,
       };
+      this.events?.publish({
+        type: 'BankSyncCompleted',
+        userId,
+        at: this.clock.now().toISOString(),
+        linkId,
+        fetched: result.fetched,
+        inserted: result.inserted,
+        updated: result.updated,
+        removed: result.removed,
+      });
+      if (result.inserted > 0) {
+        this.events?.publish({
+          type: 'TransactionImported',
+          userId,
+          at: this.clock.now().toISOString(),
+          linkId,
+          inserted: result.inserted,
+        });
+      }
+      if (result.updated > 0 || result.removed > 0) {
+        this.events?.publish({
+          type: 'TransactionUpdated',
+          userId,
+          at: this.clock.now().toISOString(),
+          linkId,
+          updated: result.updated,
+          removed: result.removed,
+        });
+      }
+      return result;
     } catch (error) {
       const code = plaidErrorCode(error);
       await this.links.update(userId, linkId, {
@@ -322,6 +369,12 @@ export class BankingService implements OnModuleInit, OnModuleDestroy {
     }
     await this.webhooks.purgeLink(userId, linkId);
     await this.links.remove(userId, linkId);
+    this.events?.publish({
+      type: 'AccountDisconnected',
+      userId,
+      at: this.clock.now().toISOString(),
+      linkId,
+    });
   }
 
   async drainWebhookQueue(): Promise<void> {
@@ -390,6 +443,36 @@ export class BankingService implements OnModuleInit, OnModuleDestroy {
     if (!this.provider.configured) {
       throw new ServiceUnavailableException('Plaid is not configured on this server.');
     }
+  }
+
+  /**
+   * Provider SDK errors contain the request config, including authentication
+   * headers. Never let one escape to Nest's generic exception logger: Axios
+   * would print the Plaid secret alongside the stack trace. Keep only the
+   * provider error code and return a safe, actionable message to the client.
+   */
+  private providerFailure(error: unknown, fallback: string): Error {
+    const code = plaidErrorCode(error);
+    this.logger.warn(`Plaid bank operation failed (${code}).`);
+
+    if (code === 'INVALID_FIELD') {
+      return new ServiceUnavailableException({
+        message: 'Bank connection setup is incomplete on this server.',
+        code: 'PLAID_CONFIGURATION',
+      });
+    }
+    if (code === 'INVALID_PUBLIC_TOKEN') {
+      return new BadRequestException(
+        'That bank connection session is invalid or expired. Start again.',
+      );
+    }
+    if (code === 'ITEM_LOGIN_REQUIRED') {
+      return new ServiceUnavailableException({
+        message: 'This bank connection needs you to sign in again.',
+        code,
+      });
+    }
+    return new ServiceUnavailableException({ message: fallback, code });
   }
 }
 

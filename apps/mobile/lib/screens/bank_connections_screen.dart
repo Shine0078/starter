@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -40,8 +41,20 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
   @override
   void initState() {
     super.initState();
+    widget.api.dataRevision.addListener(_onDataChanged);
     _load();
     _recoverPlaidResult();
+  }
+
+  @override
+  void dispose() {
+    widget.api.dataRevision.removeListener(_onDataChanged);
+    super.dispose();
+  }
+
+  void _onDataChanged() {
+    if (!mounted || _loading || _working) return;
+    unawaited(_load());
   }
 
   /// Loaded separately and allowed to fail: not knowing the plan costs a
@@ -450,6 +463,28 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
           'manually here instead.';
     }
 
+    if (error is ApiException) {
+      try {
+        final decoded = jsonDecode(error.body);
+        if (decoded is Map<String, dynamic>) {
+          final code = decoded['code'];
+          final message = decoded['message'];
+          if (code == 'PLAID_CONFIGURATION') {
+            return 'Bank connection setup is incomplete on this server. '
+                'Finish the Plaid app configuration and try again.';
+          }
+          if (error.statusCode == 503 && message is String && message.isNotEmpty) {
+            return message;
+          }
+        }
+      } catch (_) {
+        // Fall through to a generic, actionable message for non-JSON errors.
+      }
+      if (error.statusCode == 503) {
+        return 'The bank provider is temporarily unavailable. Try again shortly.';
+      }
+    }
+
     final value = error.toString();
     if (value.contains('503')) {
       // The old wording stopped at "not configured", which reads as a dead end.
@@ -488,8 +523,9 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
               icon: const Icon(Icons.add_card),
               label: const Text('Add manual'),
             ),
-            // Only where Plaid Link can actually open. In the browser build the
-            // native SDK does not exist, so this button could only ever fail.
+            // Each platform implementation advertises whether its Plaid Link
+            // surface is available (Web uses Plaid Link for Web; Android uses
+            // the native SDK).
             if (widget.plaidLink.isSupported) ...[
               const SizedBox(height: 10),
               FloatingActionButton.extended(
@@ -561,13 +597,14 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
                               textAlign: TextAlign.center),
                         ]),
                       ),
-                    // Reached only by the native iOS build, which has no Plaid
-                    // platform channel. Say so plainly and point at what does
-                    // work, rather than leaving an empty section that looks
-                    // like something failed to load.
+                    // Reached only by a platform without a Plaid Link bridge.
+                    // Say so plainly and point at what does work, rather than
+                    // leaving an empty section that looks like a load failure.
                     if (!widget.plaidLink.isSupported)
                       Card(
-                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest,
                         child: const ListTile(
                           leading: Icon(Icons.phonelink_off_outlined),
                           title: Text('Not available in this build'),

@@ -1,4 +1,5 @@
 import { createHash, generateKeyPairSync, randomBytes, type JsonWebKey } from 'node:crypto';
+import { ServiceUnavailableException } from '@nestjs/common';
 import { describe, expect, it } from 'vitest';
 import jwt from 'jsonwebtoken';
 
@@ -39,6 +40,25 @@ class FakeProvider implements BankProvider {
   async removeItem() {}
 }
 
+class FailingProvider extends FakeProvider {
+  override async createLinkToken(): Promise<{ token: string; expiresAt: string }> {
+    throw Object.assign(new Error('provider request failed'), {
+      response: {
+        data: {
+          error_code: 'INVALID_FIELD',
+          error_message: 'private provider detail',
+        },
+      },
+    });
+  }
+
+  override async exchangePublicToken(): Promise<{ accessToken: string; itemId: string }> {
+    throw Object.assign(new Error('provider request failed'), {
+      response: { data: { error_code: 'INVALID_PUBLIC_TOKEN' } },
+    });
+  }
+}
+
 const account = {
   id: 'plaid-account-1',
   name: 'Sandbox Checking',
@@ -58,6 +78,37 @@ const transaction = {
 };
 
 describe('banking integration', () => {
+  it('maps provider failures without exposing SDK request details', async () => {
+    const provider = new FailingProvider();
+    const service = new BankingService(
+      new InMemoryBankLinkStore(),
+      provider,
+      new AesGcmBankTokenCipher(randomBytes(32)),
+      new InMemoryBankWebhookStore(),
+      new InMemoryAccountStore(),
+      new InMemoryTransactionStore(),
+      new InMemoryRuleStore(),
+      new InMemoryNotificationStore(),
+      new FixedClock('2026-08-08'),
+      billingHarness().billing,
+    );
+
+    await expect(service.createLinkToken('user-1')).rejects.toMatchObject({
+      constructor: ServiceUnavailableException,
+      response: {
+        code: 'PLAID_CONFIGURATION',
+        message: 'Bank connection setup is incomplete on this server.',
+      },
+    });
+    await expect(
+      service.exchange('user-1', 'public-token', 'Sandbox Bank', null),
+    ).rejects.toMatchObject({
+      response: {
+        message: 'That bank connection session is invalid or expired. Start again.',
+      },
+    });
+  });
+
   it('encrypts Plaid tokens and reconciles added, modified, and removed rows', async () => {
     const provider = new FakeProvider();
     provider.pages.push({
