@@ -92,4 +92,20 @@ describe('assessDataQuality', () => {
     expect(report.score).toBe(100);
     expect(report.accountCoverage).toBe(1);
   });
+
+  it('does not call a connected institution healthy before accounts import', () => {
+    const report = assessDataQuality({
+      accounts: [],
+      transactions: [],
+      bankLinks: [{
+        status: 'healthy',
+        createdAt: '2026-08-10T11:00:00.000Z',
+        lastSyncedAt: '2026-08-10T11:30:00.000Z',
+      }],
+      checkedAt: '2026-08-10T12:00:00.000Z',
+    });
+
+    expect(report.status).toBe('attention');
+    expect(report.issues.map((issue) => issue.code)).toContain('incomplete_import');
+  });
 });

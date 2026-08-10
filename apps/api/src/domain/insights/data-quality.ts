@@ -118,6 +118,19 @@ export function assessDataQuality(input: DataQualityInput): DataQualityReport {
     });
   }
 
+  const linksWithoutAccounts = input.bankLinks.length > 0 && input.accounts.length === 0
+    ? input.bankLinks.length
+    : 0;
+  if (linksWithoutAccounts > 0) {
+    issues.push({
+      code: 'incomplete_import',
+      severity: 'critical',
+      title: 'A bank connection has no imported accounts',
+      message: `${linksWithoutAccounts} bank connection${linksWithoutAccounts === 1 ? '' : 's'} has not produced an account yet.`,
+      affectedCount: linksWithoutAccounts,
+    });
+  }
+
   const staleLinks = input.bankLinks.filter((link) => {
     if (link.status === 'revoked' || link.status === 'error' || link.status === 'needs_reauth') return false;
     const syncedAt = link.lastSyncedAt ? Date.parse(link.lastSyncedAt) : NaN;
