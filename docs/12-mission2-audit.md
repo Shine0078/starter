@@ -94,6 +94,9 @@ file would be required to verify any requirements unique to that document.
 - Bounded Prometheus-compatible HTTP metrics are now collected from route
   templates only (never raw URLs) and exposed at protected `/api/metrics` with
   an optional development path and a production `METRICS_TOKEN` requirement.
+- Native iOS Plaid OAuth now has a checked-in Associated Domains entitlement,
+  validated `IOS_TEAM_ID`/redirect configuration, and public Apple App Site
+  Association routes that fail closed until the deployment supplies both.
 - Native local-alert delivery is now wired through a platform-safe Flutter
   service. Users can grant Android/iPhone notification permission from the
   notification preferences screen; unread server alerts are presented once per
@@ -111,8 +114,8 @@ file would be required to verify any requirements unique to that document.
 
 ## Evidence
 
-- API in-memory suite: 407 passing, 5 database-only skips.
-- PostgreSQL contract/RLS suite: 508 passing in embedded PostgreSQL.
+- API in-memory suite: 410 passing, 5 database-only skips.
+- PostgreSQL contract/RLS suite: 511 passing in embedded PostgreSQL.
 - Flutter: 69 widget/design tests passing, `flutter analyze` clean.
 - Android release APK and web release build both compile. The Android emulator
   booted but its package/activity services were unavailable during an install

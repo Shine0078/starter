@@ -15,8 +15,8 @@ is the shortest path to being productive again.
 
 ```bash
 npm install
-npm test          # 407 tests, no database needed
-npm run test:db   # 508 tests, spins up a real PostgreSQL and tears it down
+npm test          # 410 tests, no database needed
+npm run test:db   # 511 tests, spins up a real PostgreSQL and tears it down
 npm run dev       # API + dev dashboard on http://localhost:3000
 ```
 
@@ -30,8 +30,8 @@ Every number below was produced by running the thing, not by reading the code.
 
 | Check | Result |
 |---|---|
-| API tests, in-memory | 407 passed |
-| API tests, real Postgres | 508 passed |
+| API tests, in-memory | 410 passed |
+| API tests, real Postgres | 511 passed |
 | `tsc --noEmit`, `npm run build` | clean |
 | `flutter analyze`, `flutter test` | clean, 69 passed |
 | Android debug compile | `com.finverse.finance`, API 36, 170.9 MB APK; debug-only artifact built successfully |
@@ -40,8 +40,8 @@ Every number below was produced by running the thing, not by reading the code.
 | Dashboard | register → sync → correct → logout, verified in a browser |
 | API on Postgres as `finverse_app` | two users, 183 transactions each, sync → correct → re-sync → budget, isolation confirmed against the raw tables |
 
-A previous version of this table said 225 and 288, then 402 and 503. Those were
-stale on the day they were written; the counts above were re-measured.
+A previous version of this table said 225 and 288, then 402/503, then 407/508.
+Those were stale on the day they were written; the counts above were re-measured.
 
 The load figures are a repeatable regression baseline from this workstation,
 not a capacity promise. CI runs 160 requests at concurrency 8 and fails above a

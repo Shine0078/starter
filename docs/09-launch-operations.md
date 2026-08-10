@@ -57,6 +57,7 @@ BANK_TOKEN_ENCRYPTION_KEY=<32 random bytes, base64 encoded>
 PLAID_WEBHOOK_URL=https://api.your-domain.example/api/bank-webhooks/plaid
 PLAID_WEB_REDIRECT_URI=https://api.your-domain.example/app/
 PLAID_IOS_REDIRECT_URI=https://api.your-domain.example/plaid/
+IOS_TEAM_ID=<10-character Apple Developer Team ID>
 ```
 
 Register both redirect URIs in Plaid Developers -> API before enabling the
@@ -126,6 +127,15 @@ remain SHA-256 hashes and cannot be recovered from the database.
    `npm run purge:accounts:dev --workspace @finverse/api`.
 8. Schedule daily backups and a recurring restore drill to a disposable
    `_restore_test` database.
+
+For native iOS Plaid OAuth, set the Xcode build setting
+`PLAID_UNIVERSAL_LINK_DOMAIN` to the host in `PLAID_IOS_REDIRECT_URI` (for
+example `api.your-domain.example`). The API then serves both Apple association
+paths, `/.well-known/apple-app-site-association` and
+`/apple-app-site-association`, with the configured Team ID and `/plaid/` path.
+Verify that document over the public HTTPS origin before installing the iOS
+build; the app target already carries the matching Associated Domains
+entitlement.
 
 ## Cheap public HTTPS path for the phone
 

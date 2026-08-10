@@ -24,6 +24,14 @@ flutter build apk --release `
   --dart-define=API_BASE_URL=https://api.your-domain.example
 ```
 
+For native iOS Plaid OAuth, set the Xcode build setting
+`PLAID_UNIVERSAL_LINK_DOMAIN` to `api.your-domain.example` (the host in the
+API's `PLAID_IOS_REDIRECT_URI`). The checked-in Runner target includes the
+Associated Domains entitlement; the checked-in xcconfig uses
+`api.example.invalid` only as an unsigned-build placeholder. The API serves
+the matching Apple App Site Association document only when its `IOS_TEAM_ID`
+and redirect are configured.
+
 For temporary same-Wi-Fi development, an explicitly configured local HTTPS
 proxy is safer than exposing the API's plain HTTP port. Do not ship a LAN,
 localhost, or private-tunnel address in a release build; the public HTTPS path

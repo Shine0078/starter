@@ -25,7 +25,7 @@ Stated so the rest of this document is not read as "nothing works".
 | Authentication | Argon2id, rotating refresh tokens with reuse detection, email verification, password reset, TOTP MFA/recovery codes, device app lock, recoverable deletion, global guard, per-account lockout, session list, audit trail |
 | Persistence | Postgres behind ports, contract-tested against both adapters, migrations |
 | Isolation | Row-level security, app connects as a non-superuser role, 21 dedicated tests |
-| Tests | 407 without a database, 508 against real PostgreSQL, 69 Flutter tests, Android release and web release builds; all passing |
+| Tests | 410 without a database, 511 against real PostgreSQL, 69 Flutter tests, Android release and web release builds; all passing |
 | CI | GitHub Actions: API typecheck/test/build/image + Flutter analyze/test, Android release compile, native iOS no-signing compile, and tagged API/APK/web artifacts |
 
 That is a solid Phase-0 foundation. It is not a product.
@@ -55,7 +55,7 @@ measured in weeks. Nothing else on this list matters until these move.
 | # | Item | Detail | Effort |
 |---|---|---|---|
 | 2.1 | **Production bank access** | Plaid Sandbox credentials are configured only in this workstation's ignored `.env`; a disposable Sandbox public token was exchanged through the Postgres API into 2 accounts and 125 transactions, a second sync returned 0 changes, and the link/user were removed. No production key, production institution approval, or real-customer bank data exists. Charging users still requires Plaid production approval and its security/commercial review | external approval |
-| 2.2 | **Link flow** | Completed in source for Android and iOS with Plaid's official native SDKs, authenticated Link-token creation, public-token exchange, encrypted permanent tokens, and a mobile Accounts screen; the PWA uses Plaid Link for Web. Android Sandbox Link-token creation is currently refused by Plaid until `com.finverse.finance` is saved in the dashboard allowlist; saving it requires the owner's Google identity verification. Native iOS Link now fails closed until `PLAID_IOS_REDIRECT_URI` is set to a registered Universal Link with the matching Apple association file | owner action in Plaid Dashboard + Mac/Xcode device verification remain |
+| 2.2 | **Link flow** | Completed in source for Android and iOS with Plaid's official native SDKs, authenticated Link-token creation, public-token exchange, encrypted permanent tokens, and a mobile Accounts screen; the PWA uses Plaid Link for Web. Android Sandbox Link-token creation is currently refused by Plaid until `com.finverse.finance` is saved in the dashboard allowlist; saving it requires the owner's Google identity verification. Native iOS Link now fails closed until `PLAID_IOS_REDIRECT_URI`, `IOS_TEAM_ID`, the public association document, and the matching Xcode domain setting are configured | owner action in Plaid Dashboard + Mac/Xcode device verification remain |
 | 2.3 | **Reauth / broken-link handling** | Completed: `ITEM_LOGIN_REQUIRED` becomes a visible reconnect state and Link update mode reuses the Item | production institution testing remains |
 | 2.4 | **Real sync engine** | Completed: `/transactions/sync` cursors, all-page draining, mutation-safe pagination restart, complete active-account reconciliation on every pull (including quiet accounts and no-delta balance refreshes), added/modified/removed reconciliation, pending-to-posted changes, serialized link sync, retry queue, and manual refresh | production load/rate-limit testing remains |
 | 2.5 | **Merchant lexicon is tiny** | Categorisation quality on real data is unknown. The top ~2,000 merchants cover most volume; the current lexicon is a fraction of that | 1–2 weeks + ongoing |
@@ -150,7 +150,7 @@ smaller than the complete MISSION.md product.
 | 5.4 | **Remote push still absent; local alerts implemented** | Persistent preferences and the mobile centre cover budgets, utilization, low balances, bank sync, upcoming bills, subscription price rises, possible duplicates, and conservative spending outliers. Android/iPhone local delivery can surface unread alerts after a refresh; remote push delivery remains | external push credentials + background job |
 | 5.5 | **Android identity and launcher** | **Completed:** `com.finverse.finance`, FINVERSE label, versioned platform project, and branded launcher asset | Store listing still external |
 | 5.6 | **Release signing credentials** | Gradle and the release workflow are wired for an upload key and refuse a distributable release without secrets | User must generate and protect the upload key |
-| 5.7 | **iOS never built** | Requires a Mac. Untested and unverified | 1 week |
+| 5.7 | **iOS never built** | The checked-in target now declares the Associated Domains entitlement and the API can serve the Apple association document when `PLAID_IOS_REDIRECT_URI` and `IOS_TEAM_ID` are configured. Requires a Mac for LinkKit resolution, signing, and device verification | 1 week + owner domain |
 | 5.8 | **Mobile testing is still thin** | 69 widget/design tests cover auth protocol, persisted-session refresh, concurrent refresh, keystore write/cleanup failure, recovery, deletion, navigation, grouped transaction filters, offline cache, accessibility scaling, analytics visuals, reactive data invalidation, notification preferences, connectivity diagnostics, Plaid allowlist guidance, offline global logout, plan/paywall paths, assistant response parsing, and secure-session persistence error messaging. No device integration or golden tests | 2 weeks |
 | 5.9 | **Accessibility audit incomplete** | Core spending, budget, and health visuals now have spoken equivalents and an automated 200% text-scaling overflow test. Physical VoiceOver/TalkBack, contrast, colour-blind, and one-handed audits remain | device testing + 1–2 weeks |
 | 5.10 | **No localisation** | Mission asks for multiple languages. Single hardcoded locale | 1–2 weeks |
@@ -247,7 +247,7 @@ Worth fixing because they cause bad decisions later.
 | 9.1 | Security controls described in the present tense that do not exist | `03-security-privacy.md` — see §3.1 |
 | 9.2 | The deletion purge is described in operational detail as though it runs | `02-data-model.md` |
 | 9.3 | Unused Redis was provisioned despite zero application references | Fixed: shared rate limits and webhook jobs use PostgreSQL, and Redis was removed from the cheap-launch stack |
-| 9.4 | Test counts drift out of date and are then quoted as evidence — older counts were stale until re-measured at 407/508/69 | fixed in `07-session-notes.md`, but the pattern will recur |
+| 9.4 | Test counts drift out of date and are then quoted as evidence — older counts were stale until re-measured at 410/511/69 | fixed in `07-session-notes.md`, but the pattern will recur |
 | 9.5 | `06-cheap-launch-path.md` describes a *personal beta*, not a sellable product. It is correct for what it is, and should say so at the top so it is not mistaken for a launch plan | `06-cheap-launch-path.md` |
 
 ---

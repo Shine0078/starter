@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  Override PLAID_UNIVERSAL_LINK_DOMAIN in the iOS build settings with the
+	  same host as PLAID_IOS_REDIRECT_URI. Keeping it a build setting means the
+	  checked-in project never contains a private deployment hostname.
+	-->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:$(PLAID_UNIVERSAL_LINK_DOMAIN)</string>
+	</array>
+</dict>
+</plist>

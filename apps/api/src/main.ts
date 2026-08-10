@@ -3,7 +3,7 @@
 import './env';
 import 'reflect-metadata';
 
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { Logger, RequestMethod, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import compression from 'compression';
@@ -48,7 +48,13 @@ async function bootstrap(): Promise<void> {
   });
 
   installHttpControls(app, config);
-  app.setGlobalPrefix('api', { exclude: ['healthz'] });
+  app.setGlobalPrefix('api', {
+    exclude: [
+      'healthz',
+      { path: '.well-known/apple-app-site-association', method: RequestMethod.GET },
+      { path: 'apple-app-site-association', method: RequestMethod.GET },
+    ],
+  });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
   // Development may allow all origins; production configuration fails closed

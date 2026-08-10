@@ -26,6 +26,8 @@ const KEYS = [
   'PLAID_CLIENT_ID',
   'PLAID_SECRET',
   'PLAID_ENVIRONMENT',
+  'PLAID_IOS_REDIRECT_URI',
+  'IOS_TEAM_ID',
 ] as const;
 const original = Object.fromEntries(KEYS.map((key) => [key, process.env[key]]));
 
@@ -147,5 +149,25 @@ describe.sequential('production configuration', () => {
     productionBase();
     process.env.METRICS_TOKEN = 'too-short';
     expect(() => loadConfig()).toThrow(/METRICS_TOKEN/);
+  });
+
+  it('builds the iOS Universal Link association from the registered redirect', () => {
+    productionBase();
+    process.env.PLAID_IOS_REDIRECT_URI = 'https://api.finverse.example/plaid/';
+    process.env.IOS_TEAM_ID = 'A1B2C3D4E5';
+
+    expect(loadConfig().iosUniversalLink).toEqual({
+      redirectUri: 'https://api.finverse.example/plaid/',
+      host: 'api.finverse.example',
+      pathPrefix: '/plaid/',
+      teamId: 'A1B2C3D4E5',
+      appId: 'A1B2C3D4E5.com.finverse.finance',
+    });
+  });
+
+  it('refuses a partial iOS Universal Link configuration', () => {
+    productionBase();
+    process.env.PLAID_IOS_REDIRECT_URI = 'https://api.finverse.example/plaid/';
+    expect(() => loadConfig()).toThrow(/must be configured together/);
   });
 });

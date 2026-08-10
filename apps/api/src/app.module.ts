@@ -27,6 +27,7 @@ import { LedgerModule } from './modules/ledger/ledger.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PrivacyModule } from './modules/privacy/privacy.module';
 import { httpMetrics, metricsTokenMatches } from './infra/http/metrics';
+import { appleAppSiteAssociation as buildAppleAppSiteAssociation } from './infra/http/apple-app-site-association';
 
 const appConfig = loadConfig();
 
@@ -107,6 +108,26 @@ class MetaController {
       throw new UnauthorizedException('Metrics token required.');
     }
     return httpMetrics.toPrometheus();
+  }
+
+  /** Public Apple Universal Link registration for native Plaid OAuth. */
+  @Public()
+  @Header('Content-Type', 'application/json')
+  @Get('.well-known/apple-app-site-association')
+  appleAppSiteAssociation() {
+    const config = loadConfig().iosUniversalLink;
+    if (!config) {
+      throw new ServiceUnavailableException('iOS Universal Links are not configured.');
+    }
+    return buildAppleAppSiteAssociation(config);
+  }
+
+  /** Apple also probes this legacy path, so keep both forms equivalent. */
+  @Public()
+  @Header('Content-Type', 'application/json')
+  @Get('apple-app-site-association')
+  appleAppSiteAssociationFallback() {
+    return this.appleAppSiteAssociation();
   }
 }
 

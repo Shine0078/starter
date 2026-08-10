@@ -1,1 +1,5 @@
 #include "Generated.xcconfig"
+
+# Replace this placeholder with the public HTTPS host in PLAID_IOS_REDIRECT_URI
+# before signing an iOS build. The Runner target uses it for Associated Domains.
+PLAID_UNIVERSAL_LINK_DOMAIN = api.example.invalid

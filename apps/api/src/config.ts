@@ -23,6 +23,18 @@ export interface BillingConfig {
   portalReturnUrl: string;
 }
 
+export interface IosUniversalLinkConfig {
+  /** The exact HTTPS return URL registered with Plaid. */
+  redirectUri: string;
+  /** Host used by Apple's associated-domains entitlement. */
+  host: string;
+  /** Path prefix handled by the FINVERSE app, including its trailing slash. */
+  pathPrefix: string;
+  /** Apple developer team identifier used to build the AASA app id. */
+  teamId: string;
+  appId: string;
+}
+
 export interface AppConfig {
   port: number;
   store: StoreDriver;
@@ -51,6 +63,8 @@ export interface AppConfig {
   billing: BillingConfig;
   /** Optional bearer token for the internal Prometheus scrape endpoint. */
   metricsToken: string | undefined;
+  /** Optional iOS Universal Link registration for Plaid OAuth. */
+  iosUniversalLink: IosUniversalLinkConfig | undefined;
 }
 
 /**
@@ -253,6 +267,47 @@ function resolveMetricsToken(): string | undefined {
   return token;
 }
 
+function resolveIosUniversalLink(): IosUniversalLinkConfig | undefined {
+  const rawRedirect = process.env.PLAID_IOS_REDIRECT_URI?.trim();
+  const rawTeamId = process.env.IOS_TEAM_ID?.trim().toUpperCase();
+  if (!rawRedirect && !rawTeamId) return undefined;
+  if (!rawRedirect || !rawTeamId) {
+    throw new Error(
+      'PLAID_IOS_REDIRECT_URI and IOS_TEAM_ID must be configured together for iOS Universal Links.',
+    );
+  }
+  if (!/^[A-Z0-9]{10}$/.test(rawTeamId)) {
+    throw new Error('IOS_TEAM_ID must be the 10-character Apple Developer team id.');
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(rawRedirect);
+  } catch {
+    throw new Error('PLAID_IOS_REDIRECT_URI must be a valid absolute HTTPS URL.');
+  }
+  if (parsed.protocol !== 'https:') {
+    throw new Error('PLAID_IOS_REDIRECT_URI must use HTTPS.');
+  }
+  if (parsed.username || parsed.password || parsed.search || parsed.hash) {
+    throw new Error(
+      'PLAID_IOS_REDIRECT_URI must not include credentials, a query string, or a fragment.',
+    );
+  }
+  const path = parsed.pathname.replace(/^\/+|\/+$/g, '');
+  if (!path) {
+    throw new Error('PLAID_IOS_REDIRECT_URI must include a non-root callback path.');
+  }
+  const pathPrefix = `/${path}/`;
+  return {
+    redirectUri: parsed.toString(),
+    host: parsed.host,
+    pathPrefix,
+    teamId: rawTeamId,
+    appId: `${rawTeamId}.com.finverse.finance`,
+  };
+}
+
 /**
  * Memoised, and it has to be.
  *
@@ -357,5 +412,6 @@ function buildConfig(): AppConfig {
     legal: resolveLegalConfig(isProduction),
     billing: resolveBillingConfig(isProduction, port, Boolean(stripeKey)),
     metricsToken: resolveMetricsToken(),
+    iosUniversalLink: resolveIosUniversalLink(),
   };
 }
