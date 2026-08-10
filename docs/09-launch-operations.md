@@ -110,6 +110,37 @@ remain SHA-256 hashes and cannot be recovered from the database.
 7. Schedule daily backups and a recurring restore drill to a disposable
    `_restore_test` database.
 
+## Cheap public HTTPS path for the phone
+
+The repository includes [`infra/docker-compose.public.yml`](../infra/docker-compose.public.yml)
+and [`infra/Caddyfile`](../infra/Caddyfile) for a small VPS or any Docker host
+with a public IPv4/IPv6 address. It runs the tagged API image behind Caddy, keeps
+port 3000 private to the Docker network, and obtains/renews HTTPS automatically
+for `PUBLIC_API_DOMAIN`. The database is deliberately not bundled into this
+stack: use a managed PostgreSQL provider so backups, storage encryption, and
+restore access are not tied to a single cheap server.
+
+```powershell
+Copy-Item infra/.env.production.example infra/.env.production
+# Edit infra/.env.production and set every placeholder, then:
+$env:FINVERSE_API_IMAGE = "ghcr.io/OWNER/REPOSITORY-api:v1.0.0"
+$env:PUBLIC_API_DOMAIN = "api.your-domain.example"
+docker compose --env-file infra/.env.production -f infra/docker-compose.public.yml config
+docker compose --env-file infra/.env.production -f infra/docker-compose.public.yml up -d
+```
+
+Point the domain's DNS A/AAAA record at the host before starting Caddy. Then
+build the phone app with the same origin:
+
+```powershell
+flutter build apk --release `
+  --dart-define=API_BASE_URL=https://api.your-domain.example
+```
+
+This removes the Tailscale/VPN dependency for a physical iPhone. A domain,
+public host, and managed database are still owner-supplied infrastructure; the
+repository cannot create those accounts or certificates locally.
+
 ## Load-smoke gate
 
 `npm run load:smoke` boots the real Nest application, registers an isolated
