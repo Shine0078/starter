@@ -1,0 +1,15 @@
+{$PUBLIC_API_DOMAIN} {
+    encode zstd gzip
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "no-referrer"
+    }
+
+    # Caddy obtains and renews the certificate automatically once DNS points
+    # PUBLIC_API_DOMAIN at this host. The API remains private on the Docker
+    # network; only the TLS edge publishes ports to the internet.
+    reverse_proxy api:3000
+}

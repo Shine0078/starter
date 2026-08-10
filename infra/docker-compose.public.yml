@@ -1,0 +1,46 @@
+name: finverse-public
+
+services:
+  api:
+    # Set FINVERSE_API_IMAGE to the GHCR image produced by release.yml.
+    image: ${FINVERSE_API_IMAGE:?set FINVERSE_API_IMAGE to a tagged API image}
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/healthz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    networks:
+      - finverse
+
+  edge:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      PUBLIC_API_DOMAIN: ${PUBLIC_API_DOMAIN:?set PUBLIC_API_DOMAIN to the public API hostname}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - finverse
+
+networks:
+  finverse:
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:
