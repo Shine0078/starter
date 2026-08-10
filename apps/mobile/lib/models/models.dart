@@ -125,7 +125,10 @@ class BankLink {
   final String? lastSyncedAt;
   final String createdAt;
 
-  bool get needsReconnect => status == 'needs_reauth';
+  /// A revoked Item cannot be updated in place. It still represents the
+  /// user's institution in the list, but reconnecting must start a fresh Link
+  /// session after account-deletion recovery or an owner-side revocation.
+  bool get needsReconnect => status == 'needs_reauth' || status == 'revoked';
 }
 
 class DataQualityIssue {

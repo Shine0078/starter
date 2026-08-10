@@ -88,7 +88,14 @@ export class BankingService implements OnModuleInit, OnModuleDestroy {
     if (linkId) {
       const link = await this.links.get(userId, linkId);
       if (!link) throw new NotFoundException('Bank connection not found.');
-      accessToken = this.cipher.decrypt(link.encryptedAccessToken);
+      // A link revoked during account deletion no longer has a valid provider
+      // Item. Reusing it in Plaid update mode would send a known-dead token and
+      // leave a recovered account with no way to reconnect. Start a fresh Link
+      // flow for revoked rows; healthy and needs_reauth rows still use update
+      // mode so the provider can preserve the existing Item where possible.
+      if (link.status !== 'revoked') {
+        accessToken = this.cipher.decrypt(link.encryptedAccessToken);
+      }
     }
     try {
       return await this.provider.createLinkToken(userId, accessToken, platform);

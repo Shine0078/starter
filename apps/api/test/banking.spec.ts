@@ -23,12 +23,14 @@ class FakeProvider implements BankProvider {
   configured = true;
   pages: Array<BankSyncPage | Error> = [];
   cursors: Array<string | null> = [];
+  linkTokenInputs: Array<{ accessToken?: string; platform?: 'android' | 'ios' | 'web' }> = [];
   initialAccounts: Account[] | null = null;
   async createLinkToken(
     _userId?: string,
     _accessToken?: string,
     _platform?: 'android' | 'ios' | 'web',
   ) {
+    this.linkTokenInputs.push({ accessToken: _accessToken, platform: _platform });
     return { token: 'link-sandbox-token', expiresAt: '2026-08-08T16:00:00.000Z' };
   }
   async exchangePublicToken() {
@@ -354,6 +356,42 @@ describe('banking integration', () => {
     expect(link.status).toBe('needs_reauth');
     expect(await notifications.list('user-1')).toMatchObject([
       { kind: 'bank_sync', severity: 'critical', title: 'Reconnect your bank' },
+    ]);
+  });
+
+  it('starts a fresh Link session for a revoked connection after deletion recovery', async () => {
+    const provider = new FakeProvider();
+    const links = new InMemoryBankLinkStore();
+    const cipher = new AesGcmBankTokenCipher(randomBytes(32));
+    await links.create('user-1', {
+      id: 'revoked-link',
+      provider: 'plaid',
+      providerItemId: 'item-revoked',
+      institutionId: 'ins_test',
+      institutionName: 'Recovered Bank',
+      encryptedAccessToken: cipher.encrypt('dead-access-token'),
+      cursor: null,
+      status: 'revoked',
+      errorCode: null,
+      lastSyncedAt: null,
+      createdAt: '2026-08-08T00:00:00.000Z',
+    });
+    const service = new BankingService(
+      links,
+      provider,
+      cipher,
+      new InMemoryBankWebhookStore(),
+      new InMemoryAccountStore(),
+      new InMemoryTransactionStore(),
+      new InMemoryRuleStore(),
+      new InMemoryNotificationStore(),
+      new FixedClock('2026-08-08'),
+      billingHarness().billing,
+    );
+
+    await service.createLinkToken('user-1', 'revoked-link', 'android');
+    expect(provider.linkTokenInputs).toEqual([
+      { accessToken: undefined, platform: 'android' },
     ]);
   });
 

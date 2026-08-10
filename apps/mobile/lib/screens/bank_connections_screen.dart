@@ -705,6 +705,7 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
       );
 
   String _statusText(BankLink link) {
+    if (link.status == 'revoked') return 'Access revoked - reconnect to resume';
     if (link.needsReconnect) return 'Sign-in needs attention';
     if (link.status == 'syncing') return 'Syncing…';
     if (link.status == 'error') {
