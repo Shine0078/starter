@@ -26,6 +26,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
   late bool _excludedFromAnalytics;
   late bool _isRecurring;
   late bool? _recurringOverride;
+  late bool _duplicateReported;
   var _saving = false;
 
   @override
@@ -37,6 +38,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
     _excludedFromAnalytics = widget.transaction.excludedFromAnalytics;
     _isRecurring = widget.transaction.isRecurring;
     _recurringOverride = widget.transaction.recurringOverride;
+    _duplicateReported = widget.transaction.duplicateReported;
     _loadCategories();
   }
 
@@ -193,6 +195,29 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
     }
   }
 
+  Future<void> _toggleDuplicateReported(bool value) async {
+    final previous = _duplicateReported;
+    setState(() {
+      _duplicateReported = value;
+      _saving = true;
+    });
+    try {
+      final updated = await widget.api.updateTransactionPreferences(
+        widget.transaction.id,
+        duplicateReported: value,
+      );
+      if (mounted) setState(() => _duplicateReported = updated.duplicateReported);
+    } catch (error) {
+      if (mounted) {
+        setState(() => _duplicateReported = previous);
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.toString())));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final transaction = widget.transaction;
@@ -319,6 +344,15 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                       : 'Your choice is kept across future bank syncs'),
                   value: _isRecurring,
                   onChanged: _saving ? null : _toggleRecurring,
+                ),
+                SwitchListTile.adaptive(
+                  secondary: const Icon(Icons.report_gmailerrorred_outlined),
+                  title: const Text('Flag possible duplicate'),
+                  subtitle: Text(_duplicateReported
+                      ? 'Kept as a review marker; the transaction remains in your ledger'
+                      : 'Mark this charge for your own follow-up'),
+                  value: _duplicateReported,
+                  onChanged: _saving ? null : _toggleDuplicateReported,
                 ),
                 SwitchListTile.adaptive(
                   secondary: const Icon(Icons.visibility_off_outlined),

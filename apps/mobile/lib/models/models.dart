@@ -305,6 +305,7 @@ class Transaction {
     this.merchantOverride,
     this.note,
     this.recurringOverride,
+    this.duplicateReported = false,
     this.excludedFromAnalytics = false,
   });
 
@@ -323,6 +324,7 @@ class Transaction {
         pending: json['pending'] as bool,
         isRecurring: json['isRecurring'] as bool,
         recurringOverride: json['recurringOverride'] as bool?,
+        duplicateReported: json['duplicateReported'] as bool? ?? false,
         merchant: json['merchant'] as String?,
         merchantOverride: json['merchantOverride'] as String?,
         note: json['note'] as String?,
@@ -343,6 +345,7 @@ class Transaction {
   final bool pending;
   final bool isRecurring;
   final bool? recurringOverride;
+  final bool duplicateReported;
   final String? merchant;
   final String? merchantOverride;
   final String? note;

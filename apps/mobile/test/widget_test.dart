@@ -1145,8 +1145,30 @@ void main() {
         );
       }
       if (request.url.path.endsWith('/preferences')) {
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        final recurring = body['isRecurring'] as bool? ?? false;
+        final duplicate = body['duplicateReported'] as bool? ?? false;
         return http.Response(
-          '{"transaction":{"id":"txn-1","accountId":"account-1","postedAt":"2026-08-08","amount":-1299,"currency":"CAD","amountFormatted":"-12.99","rawDescriptor":"POS GROCERY STORE 1234","normalizedDescriptor":"grocery store","merchant":"Grocery Store","categorySlug":"groceries","categorySource":"merchant_rule","categoryConfidence":0.91,"pending":false,"isRecurring":true,"recurringOverride":true}}',
+          jsonEncode({
+            'transaction': {
+              'id': 'txn-1',
+              'accountId': 'account-1',
+              'postedAt': '2026-08-08',
+              'amount': -1299,
+              'currency': 'CAD',
+              'amountFormatted': '-12.99',
+              'rawDescriptor': 'POS GROCERY STORE 1234',
+              'normalizedDescriptor': 'grocery store',
+              'merchant': 'Grocery Store',
+              'categorySlug': 'groceries',
+              'categorySource': 'merchant_rule',
+              'categoryConfidence': 0.91,
+              'pending': false,
+              'isRecurring': recurring,
+              'recurringOverride': body.containsKey('isRecurring') ? recurring : null,
+              'duplicateReported': duplicate,
+            },
+          }),
           200,
         );
       }
@@ -1190,6 +1212,10 @@ void main() {
     await tester.tap(find.text('Mark as recurring'));
     await tester.pumpAndSettle();
     expect(find.textContaining('marked by you'), findsOneWidget);
+
+    await tester.tap(find.text('Flag possible duplicate'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Kept as a review marker'), findsOneWidget);
   });
 
   testWidgets('navigates to transactions, budgets, and goals', (tester) async {
