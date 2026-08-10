@@ -148,8 +148,7 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _error = _sessionPersistenceError);
     } catch (error) {
       if (!mounted) return;
-      setState(
-          () => _error = "Couldn't reach the server. Check your connection.");
+      setState(() => _error = widget.api.connectionFailureMessage);
       debugPrint('Sign-in failed: $error');
     } finally {
       if (mounted) setState(() => _busy = false);

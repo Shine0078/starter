@@ -37,6 +37,19 @@ proxy is safer than exposing the API's plain HTTP port. Do not ship a LAN,
 localhost, or private-tunnel address in a release build; the public HTTPS path
 described in `docs/09-launch-operations.md` works without Tailscale/VPN.
 
+For a quick Windows-only debug connection without Tailscale, put the iPhone and
+the development computer on the same Wi-Fi, start the API, and run:
+
+```powershell
+cd apps/mobile
+./run-ios-lan.ps1
+```
+
+Use one of the printed `API_BASE_URL` values in the iOS/Xcode or Flutter run
+command. Open `http://<printed-address>:3000/healthz` from Safari first; if it
+does not load, allow Node.js on the Windows **Private** firewall profile. This
+path is intentionally unavailable to release builds, which require HTTPS.
+
 ## Plaid Link
 
 The Android application ID is `com.finverse.finance`. Add that exact package

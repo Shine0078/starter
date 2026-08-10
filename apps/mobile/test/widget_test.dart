@@ -1462,6 +1462,10 @@ void main() {
       throwsArgumentError,
     );
     expect(
+      () => normalizeBaseUrl('https://127.0.0.1:3000', release: true),
+      throwsArgumentError,
+    );
+    expect(
       normalizeBaseUrl('https://api.example.com/', release: true),
       'https://api.example.com',
     );

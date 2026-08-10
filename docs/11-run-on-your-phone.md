@@ -39,6 +39,13 @@ The iOS simulator uses `http://127.0.0.1:3000` by default. A physical iPhone
 must be built with `API_BASE_URL` set to the deployed HTTPS API (or a local
 HTTPS development proxy on the same Wi-Fi). No VPN client is required.
 
+For Windows same-Wi-Fi debug testing, the API listens on all interfaces and the
+repository includes `apps/mobile/run-ios-lan.ps1`, which prints the computer's
+usable LAN origins and matching Flutter commands. This is a development-only
+HTTP path; test the printed `/healthz` URL in iPhone Safari and allow Node.js on
+the Windows Private firewall profile if necessary. Release builds reject
+loopback origins and require a reachable HTTPS API.
+
 The PWA is the free Windows-to-iPhone route:
 
 ```powershell

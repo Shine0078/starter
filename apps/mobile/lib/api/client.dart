@@ -60,6 +60,17 @@ String normalizeBaseUrl(String raw, {bool? release}) {
   // origin. Debug builds retain the emulator/simulator localhost defaults;
   // physical phones use the public HTTPS deployment path.
   final isRelease = release ?? kReleaseMode;
+  final isLoopback = uri.host == 'localhost' ||
+      uri.host == '127.0.0.1' ||
+      uri.host == '::1' ||
+      uri.host == '[::1]';
+  if (isRelease && isLoopback) {
+    throw ArgumentError.value(
+      raw,
+      'API_BASE_URL',
+      'release builds must not target a loopback address; use a reachable HTTPS API origin',
+    );
+  }
   if (isRelease && uri.scheme != 'https') {
     throw ArgumentError.value(
       raw,
@@ -155,6 +166,26 @@ class ApiClient {
   final OfflineCacheStore offlineCache;
   final LocalNotificationService localNotifications;
 
+  /// True when this build points at the device or simulator itself. This is
+  /// valid for an iOS simulator, but never reaches a Windows development API
+  /// from a physical iPhone.
+  bool get usesLoopbackOrigin {
+    final host = Uri.tryParse(baseUrl)?.host;
+    return host == 'localhost' ||
+        host == '127.0.0.1' ||
+        host == '::1' ||
+        host == '[::1]';
+  }
+
+  String get connectionFailureMessage {
+    if (!kIsWeb &&
+        defaultTargetPlatform == TargetPlatform.iOS &&
+        usesLoopbackOrigin) {
+      return 'This iPhone build is using a local-only API address. Rebuild it with API_BASE_URL set to the public HTTPS API, or to the Windows computer\'s LAN address while both devices share Wi-Fi.';
+    }
+    return "Couldn't reach the server. Check your connection.";
+  }
+
   SessionTokens? _tokens;
   // A refresh rotation can succeed on the server while the platform keystore
   // is temporarily unavailable. Keep the new token in memory and retry the
@@ -240,9 +271,14 @@ class ApiClient {
       final healthy = response.statusCode >= 200 && response.statusCode < 300;
       final detail = response.statusCode == 503
           ? 'The API is reachable, but its database is not ready.'
-          : healthy
-              ? 'The API is online.'
-              : 'The API responded with HTTP ${response.statusCode}.';
+          : !healthy &&
+                  !kIsWeb &&
+                  defaultTargetPlatform == TargetPlatform.iOS &&
+                  usesLoopbackOrigin
+              ? connectionFailureMessage
+              : healthy
+                  ? 'The API is online.'
+                  : 'The API responded with HTTP ${response.statusCode}.';
       return ApiConnectionCheck(
         healthy: healthy,
         statusCode: response.statusCode,
