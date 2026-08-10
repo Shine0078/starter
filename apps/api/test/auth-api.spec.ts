@@ -363,6 +363,7 @@ describe('auth API', () => {
       '/api/cash-flow-forecast',
       '/api/credit-cards',
       '/api/transactions/needs-review',
+      '/api/categorization-rules',
       '/api/privacy',
       '/api/reports/monthly.pdf',
     ];
@@ -510,6 +511,56 @@ describe('auth API', () => {
         .set('Authorization', `Bearer ${bob.tokens.accessToken}`)
         .send({ categorySlug: 'coffee', createRule: false })
         .expect(404);
+    });
+
+    it('lets users inspect and delete their categorization rules without crossing accounts', async () => {
+      const alice = await register();
+      const bob = await register();
+      const aliceAuth = { Authorization: `Bearer ${alice.tokens.accessToken}` };
+      const bobAuth = { Authorization: `Bearer ${bob.tokens.accessToken}` };
+
+      await request(http).post('/api/sync').set(aliceAuth).expect(201);
+      const rows = await request(http)
+        .get('/api/transactions?limit=1')
+        .set(aliceAuth)
+        .expect(200);
+      const transactionId = rows.body.transactions[0].id as string;
+
+      await request(http)
+        .patch(`/api/transactions/${encodeURIComponent(transactionId)}/category`)
+        .set(aliceAuth)
+        .send({ categorySlug: 'groceries', createRule: true })
+        .expect(200);
+
+      const aliceRules = await request(http)
+        .get('/api/categorization-rules')
+        .set(aliceAuth)
+        .expect(200);
+      expect(aliceRules.body.rules).toHaveLength(1);
+      expect(aliceRules.body.rules[0]).toMatchObject({
+        matchType: 'contains',
+        categorySlug: 'groceries',
+        priority: 0,
+      });
+      const ruleId = aliceRules.body.rules[0].id as string;
+
+      await request(http)
+        .get('/api/categorization-rules')
+        .set(bobAuth)
+        .expect(200, { rules: [] });
+      await request(http)
+        .delete(`/api/categorization-rules/${encodeURIComponent(ruleId)}`)
+        .set(bobAuth)
+        .expect(404);
+
+      await request(http)
+        .delete(`/api/categorization-rules/${encodeURIComponent(ruleId)}`)
+        .set(aliceAuth)
+        .expect(204);
+      await request(http)
+        .get('/api/categorization-rules')
+        .set(aliceAuth)
+        .expect(200, { rules: [] });
     });
 
     it('supports validated transaction feed filters', async () => {

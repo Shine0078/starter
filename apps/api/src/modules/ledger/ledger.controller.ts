@@ -1,6 +1,6 @@
 ﻿import { Body, Controller, Get, Header, Param, Patch, Post, Query } from '@nestjs/common';
 
-import { BadRequestException, Delete } from '@nestjs/common';
+import { BadRequestException, Delete, HttpCode } from '@nestjs/common';
 
 import { loadConfig } from '../../config';
 import { transactionsToCsv } from '../../domain/exports/transactions-csv';
@@ -254,6 +254,22 @@ export class LedgerController {
   async needsReview(@CurrentUser() userId: string) {
     const rows = await this.ledger.listNeedsReview(userId);
     return { count: rows.length, transactions: rows.map(present) };
+  }
+
+  @Get('categorization-rules')
+  async categorizationRules(@CurrentUser() userId: string) {
+    return {
+      rules: await this.ledger.listCategorizationRules(userId),
+    };
+  }
+
+  @Delete('categorization-rules/:id')
+  @HttpCode(204)
+  removeCategorizationRule(
+    @CurrentUser() userId: string,
+    @Param('id') id: string,
+  ) {
+    return this.ledger.removeCategorizationRule(userId, id);
   }
 
   @Patch('transactions/:id/category')

@@ -6,7 +6,7 @@ import { normalizeDescriptor } from '../../domain/categorization/normalize';
 import { isKnownCategory } from '../../domain/categories';
 import { detectSubscriptions } from '../../domain/insights/subscriptions';
 import { FinanceEventBus } from '../../infra/events/finance-event-bus';
-import type { Account, RawTransaction, Transaction } from '../../domain/types';
+import type { Account, CategorizationRule, RawTransaction, Transaction } from '../../domain/types';
 import {
   ACCOUNT_STORE,
   AGGREGATOR,
@@ -204,6 +204,16 @@ export class LedgerService {
 
   listTransactions(userId: string, query: TransactionQuery): Promise<Transaction[]> {
     return this.transactions.list(userId, query);
+  }
+
+  listCategorizationRules(userId: string): Promise<CategorizationRule[]> {
+    return this.rules.list(userId);
+  }
+
+  async removeCategorizationRule(userId: string, ruleId: string): Promise<void> {
+    if (!(await this.rules.remove(userId, ruleId))) {
+      throw new NotFoundException('Categorization rule not found.');
+    }
   }
 
   /** Transactions the categorizer could not place. The review queue. */
