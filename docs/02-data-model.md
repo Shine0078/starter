@@ -192,7 +192,9 @@ The implemented lifecycle is:
   every session.
 - `POST /auth/cancel-deletion` re-verifies email and password during the 30-day
   recovery window, restores the account, and issues a new session.
-- `npm run purge:accounts --workspace @finverse/api` permanently deletes due users.
+- The built runtime command `npm run purge:accounts --workspace @finverse/api`
+  permanently deletes due users. During source-only development, use
+  `npm run purge:accounts:dev --workspace @finverse/api` instead.
   Foreign-key cascades remove accounts, transactions, budgets, rules, and sessions;
   the job explicitly removes identity-linked and email-linked auth events first.
 - The PostgreSQL acceptance test verifies physical absence using the schema owner,

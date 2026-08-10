@@ -106,7 +106,9 @@ remain SHA-256 hashes and cannot be recovered from the database.
 4. Deploy the tagged GHCR image using only the restricted runtime database URL.
 5. Confirm `/healthz` returns HTTP 200. It returns HTTP 503 when PostgreSQL is not
    reachable, so the platform can stop routing traffic to an unhealthy instance.
-6. Schedule `npm run purge:accounts --workspace @finverse/api` daily.
+6. Schedule `npm run purge:accounts --workspace @finverse/api` daily. The
+   production image runs the compiled `dist/` command; source-only local work
+   can use `npm run purge:accounts:dev --workspace @finverse/api`.
 7. Schedule daily backups and a recurring restore drill to a disposable
    `_restore_test` database.
 

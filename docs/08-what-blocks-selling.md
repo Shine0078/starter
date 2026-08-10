@@ -79,7 +79,7 @@ believe controls exist that do not.** Fixing the wording is part of the work.
 | 3.1.3 | SQLCipher-encrypted local SQLite on device | "On device" row | **Partially complete:** user-scoped SQLite cache payloads use AES-256-GCM with a keystore key, authenticated context, expiry, and purge. Whole-file SQLCipher remains a threat-model decision because cache metadata is not encrypted |
 | 3.1.4 | Encrypted backups with second-approver restore | "Backups" row | Guarded backup and `_restore_test` scripts exist; production scheduling, encrypted storage, access approval, and a recorded drill remain |
 | 3.1.5 | No standing production access, audited break-glass | "Access control" section, present tense | No production exists; no access control process exists |
-| 3.1.6 | Deletion purge job at +30 days | `02-data-model.md` previously described it as present | Implemented and proven against PostgreSQL; production still needs to schedule the command |
+| 3.1.6 | Deletion purge job at +30 days | `02-data-model.md` previously described it as present | Implemented and proven against PostgreSQL; the production image now runs the compiled purge command, but the host still needs to schedule it |
 
 The security and data-model documents now distinguish implemented controls from
 targets. The infrastructure-backed controls below still need a real production
