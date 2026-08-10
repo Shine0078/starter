@@ -146,11 +146,13 @@ class SecureSessionStore implements SessionStore {
   @override
   Future<void> write(SessionTokens tokens) async {
     try {
-      // Remove the tombstone before publishing the new session. If the token
-      // write then fails, the safe result is signed out, never stale-session
-      // resurrection.
-      await _storage.delete(key: _signedOutKey);
+      // Publish the replacement token before removing the tombstone. If the
+      // token write fails, the old token remains hidden by the tombstone; the
+      // next launch can never resurrect a session after a failed sign-in or
+      // refresh rotation. If tombstone deletion fails after a successful
+      // write, the new token stays safely hidden until the next retry.
       await _storage.write(key: _key, value: jsonEncode(tokens.toJson()));
+      await _storage.delete(key: _signedOutKey);
     } catch (error) {
       throw SessionStoreUnavailableException(error);
     }
