@@ -266,13 +266,13 @@ stopped running.
 
 ## Notes on what is and isn't verified
 
-- **The API and its domain logic run and are tested.** 416 tests run with no
-  database; the full suite is **517 passing** against real PostgreSQL, including
+- **The API and its domain logic run and are tested.** 417 tests run with no
+  database; the full suite is **518 passing** against real PostgreSQL, including
   the store contract — which runs as the restricted role, so it executes with the
   row-level security policies in force — and a suite that issues deliberately
   unfiltered SQL to prove the database withholds other users' rows on its own.
   The slice is also exercised end to end over HTTP.
-- **The Flutter app is verified by static analysis, 69 tests, and real
+- **The Flutter app is verified by static analysis, 70 tests, and real
   Android release APK and web builds.** Android and iOS platform projects can be generated
   locally. See the
   [cheap launch path](docs/06-cheap-launch-path.md).
