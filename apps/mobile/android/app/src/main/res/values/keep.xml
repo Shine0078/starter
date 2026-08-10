@@ -1,0 +1,3 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <item type="mipmap" name="ic_launcher_finverse" tools:keep="true" />
+</resources>
