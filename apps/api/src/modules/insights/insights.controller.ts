@@ -1,6 +1,7 @@
 ﻿import { BadRequestException, Controller, Get, Query, UseGuards } from '@nestjs/common';
 
 import { formatMoney, money } from '../../domain/money';
+import { displayName } from '../../domain/categories';
 import { StreamableFile } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { renderMonthlyReportPdf } from '../../infra/reports/monthly-report-pdf';
@@ -59,6 +60,107 @@ export class InsightsController {
       },
       insights: report.insights,
       raw: { summary, previous: report.previous },
+    };
+  }
+
+  @Get('analytics')
+  async analytics(
+    @CurrentUser() userId: string,
+    @Query('period') period = 'month',
+    @Query('asOf') asOf?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('currency') currency = 'USD',
+  ) {
+    if (!['week', 'month', '3m', '6m', 'year', 'lifetime', 'custom'].includes(period)) {
+      throw new BadRequestException('period must be week, month, 3m, 6m, lifetime, or custom.');
+    }
+    if (asOf && !isIsoCalendarDate(asOf)) {
+      throw new BadRequestException('asOf must be a valid date in YYYY-MM-DD format.');
+    }
+    if (from && !isIsoCalendarDate(from)) {
+      throw new BadRequestException('from must be a valid date in YYYY-MM-DD format.');
+    }
+    if (to && !isIsoCalendarDate(to)) {
+      throw new BadRequestException('to must be a valid date in YYYY-MM-DD format.');
+    }
+    if ((period === 'custom' || from || to) && (!from || !to)) {
+      throw new BadRequestException('custom analytics requires both from and to.');
+    }
+    if (from && to && from > to) {
+      throw new BadRequestException('from cannot be after to.');
+    }
+    assertCurrency(currency);
+
+    const report = await this.insights.analytics(
+      userId,
+      period as 'week' | 'month' | '3m' | '6m' | 'year' | 'lifetime' | 'custom',
+      asOf,
+      from && to ? { start: from, end: to } : undefined,
+      currency,
+    );
+    const formatTotal = (total: number) => formatMoney(money(total, currency));
+    return {
+      ...report,
+      grossExpensesFormatted: formatTotal(report.grossExpenses),
+      refundsFormatted: formatTotal(report.refunds),
+      refundMatches: report.refundMatches.map((match) => ({
+        ...match,
+        amountFormatted: formatTotal(match.amount),
+        purchaseAmountFormatted: formatTotal(match.purchaseAmount),
+      })),
+      netExpensesFormatted: formatTotal(report.netExpenses),
+      averageExpenseFormatted: formatTotal(report.averageExpense),
+      medianExpenseFormatted: formatTotal(report.medianExpense),
+      recurringSpendingFormatted: formatTotal(report.recurringSpending),
+      discretionarySpendingFormatted: formatTotal(report.discretionarySpending),
+      essentialSpendingFormatted: formatTotal(report.essentialSpending),
+      totalIncomeFormatted: formatTotal(report.totalIncome),
+      recurringIncomeFormatted: formatTotal(report.recurringIncome),
+      irregularIncomeFormatted: formatTotal(report.irregularIncome),
+      savingsFormatted: formatTotal(report.savings),
+      averageMonthlySavingsFormatted: formatTotal(report.averageMonthlySavings),
+      largestExpense: report.largestExpense && {
+        ...report.largestExpense,
+        amountFormatted: formatTotal(report.largestExpense.amount),
+      },
+      spendingByCategory: report.spendingByCategory.map((row) => ({
+        categorySlug: row.key,
+        categoryName: displayName(row.key),
+        total: row.total,
+        totalFormatted: formatTotal(row.total),
+        transactionCount: row.count,
+      })),
+      spendingByMerchant: report.spendingByMerchant.map((row) => ({
+        merchant: row.key,
+        total: row.total,
+        totalFormatted: formatTotal(row.total),
+        transactionCount: row.count,
+      })),
+      spendingByAccount: report.spendingByAccount.map((row) => ({
+        accountId: row.key,
+        total: row.total,
+        totalFormatted: formatTotal(row.total),
+        transactionCount: row.count,
+      })),
+      incomeBySource: report.incomeBySource.map((row) => ({
+        source: row.key,
+        total: row.total,
+        totalFormatted: formatTotal(row.total),
+        transactionCount: row.count,
+      })),
+      velocity: {
+        ...report.velocity,
+        currentPeriodSpendFormatted: formatTotal(report.velocity.currentPeriodSpend),
+        projectedPeriodSpendFormatted: formatTotal(report.velocity.projectedPeriodSpend),
+        historicalAverageSpendFormatted: report.velocity.historicalAverageSpend === null
+          ? null
+          : formatTotal(report.velocity.historicalAverageSpend),
+      },
+      timeline: report.timeline.map((event) => ({
+        ...event,
+        amountFormatted: formatTotal(event.amount),
+      })),
     };
   }
 

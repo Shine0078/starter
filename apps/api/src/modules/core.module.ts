@@ -3,6 +3,7 @@ import { Global, Logger, Module, type Provider } from '@nestjs/common';
 
 import { loadConfig } from '../config';
 import { SystemClock } from '../infra/clock';
+import { FinanceEventBus } from '../infra/events/finance-event-bus';
 import {
   InMemoryAccountStore,
   InMemoryBudgetStore,
@@ -203,6 +204,7 @@ function storeProviders(): Provider[] {
 @Global()
 @Module({
   providers: [
+    FinanceEventBus,
     { provide: CLOCK, useClass: SystemClock },
     {
       provide: AGGREGATOR,
@@ -298,6 +300,7 @@ function storeProviders(): Provider[] {
     ...storeProviders(),
   ],
   exports: [
+    FinanceEventBus,
     CLOCK,
     ACCOUNT_STORE,
     TRANSACTION_STORE,
