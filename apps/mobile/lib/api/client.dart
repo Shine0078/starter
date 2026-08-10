@@ -90,6 +90,19 @@ const Duration kRequestTimeout = Duration(seconds: 20);
 
 enum _RefreshFailure { none, unavailable, rejected }
 
+/// The server did not receive this idempotent change because the device was
+/// offline. The UI may keep its optimistic state; [ApiClient] will replay the
+/// request when the session next resumes with connectivity.
+class OfflineMutationQueuedException implements Exception {
+  const OfflineMutationQueuedException(this.path);
+
+  final String path;
+
+  @override
+  String toString() =>
+      'Saved on this device. It will sync automatically when you are online.';
+}
+
 /// Thin client over the FINVERSE API.
 ///
 /// It parses JSON into models but contains no financial business logic. The
@@ -122,6 +135,10 @@ class ApiClient {
   _RefreshFailure _lastRefreshFailure = _RefreshFailure.none;
   final ValueNotifier<DateTime?> offlineCacheStatus = ValueNotifier(null);
 
+  /// Number of idempotent writes waiting for connectivity. This is exposed so
+  /// the shell can explain why an offline edit is still pending.
+  final ValueNotifier<int> pendingMutationCount = ValueNotifier(0);
+
   /// Monotonically increasing revision for successful authenticated writes.
   ///
   /// Screens in the IndexedStack stay alive while the user moves between
@@ -143,7 +160,10 @@ class ApiClient {
   Future<bool> restoreSession() async {
     _tokens = await sessionStore.read();
     final stored = _tokens;
-    if (stored == null) return false;
+    if (stored == null) {
+      pendingMutationCount.value = 0;
+      return false;
+    }
 
     // Do not let an already-expired refresh token create a confusing loop of
     // failed API calls. The server remains authoritative, but the timestamp
@@ -167,6 +187,10 @@ class ApiClient {
         await signOut(notifyServer: false);
         return false;
       }
+    }
+    if (_tokens != null) {
+      await _refreshPendingMutationCount();
+      await replayOfflineMutations();
     }
     return _tokens != null;
   }
@@ -302,6 +326,94 @@ class ApiClient {
     // successful writes can change data that an already-mounted screen reads.
     if (!path.startsWith('/auth/')) dataRevision.value++;
     return response.body.isEmpty ? null : jsonDecode(response.body);
+  }
+
+  Future<void> _refreshPendingMutationCount() async {
+    final owner = _cacheOwner;
+    if (owner == null) {
+      pendingMutationCount.value = 0;
+      return;
+    }
+    try {
+      pendingMutationCount.value =
+          (await offlineCache.pendingMutations(owner)).length;
+    } catch (_) {
+      // A cache/keystore outage should not make the online session unusable.
+    }
+  }
+
+  /// Replays queued idempotent writes in order. Network failures leave the
+  /// remaining rows intact; client errors are discarded because retrying them
+  /// forever would hide a permanent validation or permission problem.
+  Future<int> replayOfflineMutations() async {
+    final owner = _cacheOwner;
+    if (owner == null) return 0;
+    List<QueuedApiMutation> pending;
+    try {
+      pending = await offlineCache.pendingMutations(owner);
+    } catch (_) {
+      return 0;
+    }
+
+    var replayed = 0;
+    for (final mutation in pending) {
+      dynamic body;
+      try {
+        body = jsonDecode(mutation.body);
+      } catch (_) {
+        await offlineCache.removeMutation(
+            owner, mutation.method, mutation.path);
+        continue;
+      }
+
+      http.Response response;
+      try {
+        response = await _perform(
+          mutation.method,
+          mutation.path,
+          body,
+          true,
+        );
+      } on TimeoutException {
+        break;
+      } on http.ClientException {
+        break;
+      }
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        await offlineCache.removeMutation(
+            owner, mutation.method, mutation.path);
+        replayed++;
+        dataRevision.value++;
+        continue;
+      }
+      if (response.statusCode == 401 &&
+          _lastRefreshFailure == _RefreshFailure.unavailable) {
+        break;
+      }
+      if (response.statusCode >= 400 && response.statusCode < 500) {
+        await offlineCache.removeMutation(
+            owner, mutation.method, mutation.path);
+        continue;
+      }
+      // A server-side outage is transient. Keep this and all following rows.
+      break;
+    }
+    await _refreshPendingMutationCount();
+    return replayed;
+  }
+
+  Future<Never> _queueOfflineMutation(
+      String method, String path, Object body) async {
+    final owner = _cacheOwner;
+    if (owner == null) {
+      throw StateError(
+          'Cannot queue a mutation without an authenticated user.');
+    }
+    await offlineCache.enqueueMutation(owner, method, path, jsonEncode(body));
+    offlineCacheStatus.value ??= DateTime.now().toUtc();
+    await _refreshPendingMutationCount();
+    throw OfflineMutationQueuedException(path);
   }
 
   // ------------------------------------------------------------------ auth
@@ -445,6 +557,7 @@ class ApiClient {
     _tokens = SessionTokens.fromJson(decoded['tokens'] as Map<String, dynamic>)
         .withUserId(user.id);
     await sessionStore.write(_tokens!);
+    await _refreshPendingMutationCount();
     return user;
   }
 
@@ -527,6 +640,8 @@ class ApiClient {
     _tokens = null;
     await sessionStore.clear();
     if (owner != null) await offlineCache.clearOwner(owner);
+    pendingMutationCount.value = 0;
+    offlineCacheStatus.value = null;
   }
 
   /// Clears the local session, and by default tells the server to revoke it.
@@ -546,6 +661,8 @@ class ApiClient {
     _tokens = null;
     await sessionStore.clear();
     if (owner != null) await offlineCache.clearOwner(owner);
+    pendingMutationCount.value = 0;
+    offlineCacheStatus.value = null;
   }
 
   /// Schedules irreversible erasure after a 30-day recovery window.
@@ -800,13 +917,18 @@ class ApiClient {
       body['excludedFromAnalytics'] = excludedFromAnalytics;
     }
     if (isRecurring != null) body['isRecurring'] = isRecurring;
-    if (duplicateReported != null) body['duplicateReported'] = duplicateReported;
-    final json = await _send(
-      'PATCH',
-      '/transactions/$transactionId/preferences',
-      body,
-    ) as Map<String, dynamic>;
-    return Transaction.fromJson(json['transaction'] as Map<String, dynamic>);
+    if (duplicateReported != null) {
+      body['duplicateReported'] = duplicateReported;
+    }
+    final path = '/transactions/$transactionId/preferences';
+    try {
+      final json = await _send('PATCH', path, body) as Map<String, dynamic>;
+      return Transaction.fromJson(json['transaction'] as Map<String, dynamic>);
+    } on TimeoutException {
+      return _queueOfflineMutation('PATCH', path, body);
+    } on http.ClientException {
+      return _queueOfflineMutation('PATCH', path, body);
+    }
   }
 
   Future<List<BudgetProgress>> budgetProgress() async {

@@ -129,6 +129,15 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
       });
     } catch (error) {
       if (mounted) {
+        if (error is OfflineMutationQueuedException) {
+          setState(() {
+            if (note) {
+              _note = value;
+            } else {
+              _merchantOverride = value;
+            }
+          });
+        }
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(error.toString())));
       }
@@ -153,7 +162,9 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
       }
     } catch (error) {
       if (mounted) {
-        setState(() => _excludedFromAnalytics = previous);
+        if (error is! OfflineMutationQueuedException) {
+          setState(() => _excludedFromAnalytics = previous);
+        }
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(error.toString())));
       }
@@ -183,10 +194,12 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
       }
     } catch (error) {
       if (mounted) {
-        setState(() {
-          _isRecurring = previous;
-          _recurringOverride = previousOverride;
-        });
+        if (error is! OfflineMutationQueuedException) {
+          setState(() {
+            _isRecurring = previous;
+            _recurringOverride = previousOverride;
+          });
+        }
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(error.toString())));
       }
@@ -206,10 +219,14 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
         widget.transaction.id,
         duplicateReported: value,
       );
-      if (mounted) setState(() => _duplicateReported = updated.duplicateReported);
+      if (mounted) {
+        setState(() => _duplicateReported = updated.duplicateReported);
+      }
     } catch (error) {
       if (mounted) {
-        setState(() => _duplicateReported = previous);
+        if (error is! OfflineMutationQueuedException) {
+          setState(() => _duplicateReported = previous);
+        }
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(error.toString())));
       }

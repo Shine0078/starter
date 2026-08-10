@@ -34,38 +34,43 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) => Scaffold(
         body: ValueListenableBuilder<DateTime?>(
           valueListenable: widget.api.offlineCacheStatus,
-          builder: (context, cachedAt, _) => Column(
-            children: [
-              if (cachedAt != null)
-                Material(
-                  color: Theme.of(context).colorScheme.tertiaryContainer,
-                  child: ListTile(
-                    dense: true,
-                    leading: const Icon(Icons.cloud_off_outlined),
-                    title: const Text('Offline — showing saved data'),
-                    subtitle: Text(
-                      'Last updated ${DateFormat.yMMMd().add_jm().format(cachedAt.toLocal())}. Changes require a connection.',
+          builder: (context, cachedAt, _) => ValueListenableBuilder<int>(
+            valueListenable: widget.api.pendingMutationCount,
+            builder: (context, pending, _) => Column(
+              children: [
+                if (cachedAt != null || pending > 0)
+                  Material(
+                    color: Theme.of(context).colorScheme.tertiaryContainer,
+                    child: ListTile(
+                      dense: true,
+                      leading: const Icon(Icons.cloud_off_outlined),
+                      title: Text(pending > 0
+                          ? 'Offline changes pending'
+                          : 'Offline - showing saved data'),
+                      subtitle: Text(pending > 0
+                          ? '$pending change${pending == 1 ? '' : 's'} saved on this device and will sync automatically when you are online.'
+                          : 'Last updated ${DateFormat.yMMMd().add_jm().format(cachedAt!.toLocal())}. Changes are read-only until you reconnect.'),
                     ),
                   ),
+                Expanded(
+                  child: IndexedStack(
+                    index: _index,
+                    children: [
+                      DashboardScreen(
+                        api: widget.api,
+                        appLockController: widget.appLockController,
+                        onSignOut: widget.onSignOut,
+                        onAccountDeleted: widget.onAccountDeleted,
+                      ),
+                      TransactionsScreen(api: widget.api),
+                      BudgetsScreen(api: widget.api),
+                      GoalsScreen(api: widget.api),
+                      BankConnectionsScreen(api: widget.api),
+                    ],
+                  ),
                 ),
-              Expanded(
-                child: IndexedStack(
-                  index: _index,
-                  children: [
-                    DashboardScreen(
-                      api: widget.api,
-                      appLockController: widget.appLockController,
-                      onSignOut: widget.onSignOut,
-                      onAccountDeleted: widget.onAccountDeleted,
-                    ),
-                    TransactionsScreen(api: widget.api),
-                    BudgetsScreen(api: widget.api),
-                    GoalsScreen(api: widget.api),
-                    BankConnectionsScreen(api: widget.api),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
         bottomNavigationBar: NavigationBar(

@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -40,7 +40,7 @@ class EncryptedSqliteOfflineCache implements OfflineCacheStore {
     if (_database != null) return _database!;
     final db = await openDatabase(
       _databaseName,
-      version: 1,
+      version: 2,
       onCreate: (db, _) async {
         await db.execute('''
           CREATE TABLE api_cache (
@@ -53,11 +53,44 @@ class EncryptedSqliteOfflineCache implements OfflineCacheStore {
             PRIMARY KEY (owner_hash, cache_key)
           )
         ''');
+        await db.execute('''
+          CREATE TABLE api_mutations (
+            owner_hash TEXT NOT NULL,
+            method TEXT NOT NULL,
+            path TEXT NOT NULL,
+            nonce BLOB NOT NULL,
+            mac BLOB NOT NULL,
+            ciphertext BLOB NOT NULL,
+            enqueued_at TEXT NOT NULL,
+            PRIMARY KEY (owner_hash, method, path)
+          )
+        ''');
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute('''
+            CREATE TABLE api_mutations (
+              owner_hash TEXT NOT NULL,
+              method TEXT NOT NULL,
+              path TEXT NOT NULL,
+              nonce BLOB NOT NULL,
+              mac BLOB NOT NULL,
+              ciphertext BLOB NOT NULL,
+              enqueued_at TEXT NOT NULL,
+              PRIMARY KEY (owner_hash, method, path)
+            )
+          ''');
+        }
       },
     );
     await db.delete(
       'api_cache',
       where: 'updated_at < ?',
+      whereArgs: [DateTime.now().toUtc().subtract(_maxAge).toIso8601String()],
+    );
+    await db.delete(
+      'api_mutations',
+      where: 'enqueued_at < ?',
       whereArgs: [DateTime.now().toUtc().subtract(_maxAge).toIso8601String()],
     );
     _database = db;
@@ -88,6 +121,11 @@ class EncryptedSqliteOfflineCache implements OfflineCacheStore {
 
   List<int> _aad(String ownerHash, String key, String updatedAt) => utf8
       .encode('finverse-cache-v1\u0000$ownerHash\u0000$key\u0000$updatedAt');
+
+  List<int> _mutationAad(
+          String ownerHash, String method, String path, String enqueuedAt) =>
+      utf8.encode(
+          'finverse-mutation-v1\u0000$ownerHash\u0000$method\u0000$path\u0000$enqueuedAt');
 
   @override
   Future<CachedApiPayload?> read(String owner, String key) async {
@@ -158,11 +196,130 @@ class EncryptedSqliteOfflineCache implements OfflineCacheStore {
   }
 
   @override
-  Future<void> clearOwner(String owner) async {
+  Future<List<QueuedApiMutation>> pendingMutations(String owner) async {
+    final ownerHash = await _ownerHash(owner);
+    final db = await _db;
+    final rows = await db.query(
+      'api_mutations',
+      where: 'owner_hash = ?',
+      whereArgs: [ownerHash],
+      orderBy: 'enqueued_at ASC',
+    );
+    final pending = <QueuedApiMutation>[];
+    for (final row in rows) {
+      final method = row['method']! as String;
+      final path = row['path']! as String;
+      final enqueuedAtString = row['enqueued_at']! as String;
+      try {
+        final body = await _cipher.decrypt(
+          EncryptedCacheEnvelope(
+            ciphertext: (row['ciphertext']! as Uint8List).toList(),
+            nonce: (row['nonce']! as Uint8List).toList(),
+            mac: (row['mac']! as Uint8List).toList(),
+          ),
+          await _key,
+          _mutationAad(ownerHash, method, path, enqueuedAtString),
+        );
+        pending.add(QueuedApiMutation(
+          method: method,
+          path: path,
+          body: body,
+          enqueuedAt: DateTime.parse(enqueuedAtString).toUtc(),
+        ));
+      } catch (_) {
+        // A missing keystore key or modified row must not be replayed.
+        await db.delete(
+          'api_mutations',
+          where: 'owner_hash = ? AND method = ? AND path = ?',
+          whereArgs: [ownerHash, method, path],
+        );
+      }
+    }
+    return pending;
+  }
+
+  @override
+  Future<void> enqueueMutation(
+      String owner, String method, String path, String body) async {
+    final ownerHash = await _ownerHash(owner);
+    final enqueuedAt = DateTime.now().toUtc().toIso8601String();
+    final db = await _db;
+    var mergedBody = body;
+    final existing = await db.query(
+      'api_mutations',
+      where: 'owner_hash = ? AND method = ? AND path = ?',
+      whereArgs: [ownerHash, method, path],
+      limit: 1,
+    );
+    if (existing.isNotEmpty) {
+      final row = existing.single;
+      try {
+        final oldBody = await _cipher.decrypt(
+          EncryptedCacheEnvelope(
+            ciphertext: (row['ciphertext']! as Uint8List).toList(),
+            nonce: (row['nonce']! as Uint8List).toList(),
+            mac: (row['mac']! as Uint8List).toList(),
+          ),
+          await _key,
+          _mutationAad(
+            ownerHash,
+            method,
+            path,
+            row['enqueued_at']! as String,
+          ),
+        );
+        final oldJson = jsonDecode(oldBody);
+        final newJson = jsonDecode(body);
+        if (oldJson is Map<String, dynamic> &&
+            newJson is Map<String, dynamic>) {
+          mergedBody = jsonEncode({...oldJson, ...newJson});
+        }
+      } catch (_) {
+        // Keep the newest body if the previous row cannot be authenticated.
+      }
+    }
+    final box = await _cipher.encrypt(
+      mergedBody,
+      await _key,
+      _mutationAad(ownerHash, method, path, enqueuedAt),
+    );
+    await db.insert(
+      'api_mutations',
+      {
+        'owner_hash': ownerHash,
+        'method': method,
+        'path': path,
+        'nonce': Uint8List.fromList(box.nonce),
+        'mac': Uint8List.fromList(box.mac),
+        'ciphertext': Uint8List.fromList(box.ciphertext),
+        'enqueued_at': enqueuedAt,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  @override
+  Future<void> removeMutation(String owner, String method, String path) async {
     await (await _db).delete(
+      'api_mutations',
+      where: 'owner_hash = ? AND method = ? AND path = ?',
+      whereArgs: [await _ownerHash(owner), method, path],
+    );
+  }
+
+  @override
+  Future<void> clearOwner(String owner) async {
+    final db = await _db;
+    final ownerHash = await _ownerHash(owner);
+    await db.delete(
       'api_cache',
       where: 'owner_hash = ?',
-      whereArgs: [await _ownerHash(owner)],
+      whereArgs: [ownerHash],
+    );
+    await db.delete(
+      'api_mutations',
+      where: 'owner_hash = ?',
+      whereArgs: [ownerHash],
     );
   }
 }

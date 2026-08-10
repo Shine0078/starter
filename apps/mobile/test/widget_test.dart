@@ -617,6 +617,54 @@ void main() {
     expect(await cache.read('user-1', '/accounts'), isNull);
   });
 
+  test('queues offline preference edits and replays the latest value',
+      () async {
+    final store = InMemorySessionStore();
+    final cache = InMemoryOfflineCacheStore();
+    await store.write(const SessionTokens(
+      accessToken: 'access',
+      refreshToken: 'refresh',
+      refreshExpiresAt: '2026-09-08T00:00:00.000Z',
+      userId: 'user-1',
+    ));
+    var online = false;
+    var replayRequests = 0;
+    final api = clientWith(
+      MockClient((request) async {
+        if (!online) throw http.ClientException('offline');
+        replayRequests++;
+        return http.Response('{"transaction":{}}', 200);
+      }),
+      store: store,
+      offlineCache: cache,
+    );
+    await api.restoreSession();
+
+    await expectLater(
+      api.updateTransactionPreferences('txn-1', isRecurring: false),
+      throwsA(isA<OfflineMutationQueuedException>()),
+    );
+    await expectLater(
+      api.updateTransactionPreferences('txn-1', isRecurring: true),
+      throwsA(isA<OfflineMutationQueuedException>()),
+    );
+    await expectLater(
+      api.updateTransactionPreferences('txn-1', duplicateReported: true),
+      throwsA(isA<OfflineMutationQueuedException>()),
+    );
+    expect(api.pendingMutationCount.value, 1);
+    final pending = await cache.pendingMutations('user-1');
+    expect(pending, hasLength(1));
+    expect(pending.single.body, contains('"isRecurring":true'));
+    expect(pending.single.body, contains('"duplicateReported":true'));
+
+    online = true;
+    expect(await api.replayOfflineMutations(), 1);
+    expect(replayRequests, 1);
+    expect(api.pendingMutationCount.value, 0);
+    expect(await cache.pendingMutations('user-1'), isEmpty);
+  });
+
   test('portable export confirms the password and attaches the active session',
       () async {
     final store = InMemorySessionStore();
@@ -1167,7 +1215,8 @@ void main() {
               'categoryConfidence': 0.91,
               'pending': false,
               'isRecurring': recurring,
-              'recurringOverride': body.containsKey('isRecurring') ? recurring : null,
+              'recurringOverride':
+                  body.containsKey('isRecurring') ? recurring : null,
               'duplicateReported': duplicate,
             },
           }),

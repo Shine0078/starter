@@ -95,6 +95,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   Future<void> _refreshAfterResume() async {
     try {
+      await widget.api.replayOfflineMutations();
       await widget.api.refreshConnectedBanks();
     } catch (_) {
       // The explicit pull-to-refresh path reports failures; lifecycle refresh
