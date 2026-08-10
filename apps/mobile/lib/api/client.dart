@@ -40,7 +40,7 @@ String resolveBaseUrl() {
 
 /// Validates and canonicalises an API origin before it is used to construct a
 /// request. A trailing slash is removed so paths cannot become `//api/...`.
-String normalizeBaseUrl(String raw) {
+String normalizeBaseUrl(String raw, {bool? release}) {
   final value = raw.trim();
   final uri = Uri.tryParse(value);
   if (uri == null ||
@@ -56,13 +56,15 @@ String normalizeBaseUrl(String raw) {
       'must not contain embedded credentials',
     );
   }
-  final localHost =
-      uri.host == 'localhost' || uri.host == '127.0.0.1' || uri.host == '::1';
-  if (kReleaseMode && uri.scheme != 'https' && !localHost) {
+  // A release artifact must never silently target a loopback or cleartext
+  // origin. Debug builds retain the emulator/simulator localhost defaults;
+  // physical phones use the public HTTPS deployment path.
+  final isRelease = release ?? kReleaseMode;
+  if (isRelease && uri.scheme != 'https') {
     throw ArgumentError.value(
       raw,
       'API_BASE_URL',
-      'native release builds require HTTPS',
+      'release builds require HTTPS',
     );
   }
   if (uri.query.isNotEmpty || uri.fragment.isNotEmpty) {

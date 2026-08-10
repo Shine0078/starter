@@ -1457,6 +1457,14 @@ void main() {
         throwsArgumentError);
     expect(() => normalizeBaseUrl('https://user:pass@api.example.com'),
         throwsArgumentError);
+    expect(
+      () => normalizeBaseUrl('http://localhost:3000', release: true),
+      throwsArgumentError,
+    );
+    expect(
+      normalizeBaseUrl('https://api.example.com/', release: true),
+      'https://api.example.com',
+    );
   });
 
   test('formats date filters as local calendar dates', () {
