@@ -62,6 +62,14 @@ describe('spendForCategory', () => {
     expect(spendForCategory(rows, 'restaurants', PERIOD)).toBe(8_000);
   });
 
+  it('can scope spend to the budget currency', () => {
+    const rows = [
+      txn({ amount: -5_000 }),
+      txn({ amount: -9_000, currency: 'CAD' }),
+    ];
+    expect(spendForCategory(rows, 'restaurants', PERIOD, 'USD')).toBe(5_000);
+  });
+
   it('ignores transactions outside the period', () => {
     const rows = [txn({ amount: -5_000, postedAt: '2026-07-31' })];
     expect(spendForCategory(rows, 'restaurants', PERIOD)).toBe(0);

@@ -41,6 +41,26 @@ describe('detectSubscriptions', () => {
     expect(sub?.occurrences).toBe(4);
   });
 
+  it('keeps the same merchant separate when currencies differ', () => {
+    const usd = series('streaming service', 'streaming', [
+      { date: '2026-05-14', amount: 1_000 },
+      { date: '2026-06-14', amount: 1_000 },
+      { date: '2026-07-14', amount: 1_000 },
+    ]);
+    const cad = series('streaming service', 'streaming', [
+      { date: '2026-05-14', amount: 1_300 },
+      { date: '2026-06-14', amount: 1_300 },
+      { date: '2026-07-14', amount: 1_300 },
+    ]).map((transaction) => ({ ...transaction, currency: 'CAD' }));
+
+    const detected = detectSubscriptions([...usd, ...cad]);
+
+    expect(detected).toHaveLength(2);
+    expect(new Set(detected.map((subscription) => subscription.currency))).toEqual(
+      new Set(['USD', 'CAD']),
+    );
+  });
+
   it('needs at least three charges', () => {
     const rows = series('netflix com', 'streaming', [
       { date: '2026-06-14', amount: 1_549 },

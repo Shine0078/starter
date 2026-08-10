@@ -68,14 +68,14 @@ export class InsightsService {
     this.events?.subscribe((event) => this.invalidateForEvent(event));
   }
 
-  async monthlyReport(userId: string, asOf?: string): Promise<MonthlyReport> {
+  async monthlyReport(userId: string, asOf?: string, currency = 'USD'): Promise<MonthlyReport> {
     const today = asOf ?? this.clock.today();
     const transactions = await this.transactions.list(userId);
 
     // Month-to-date against the same elapsed window last month, so the
     // comparison isn't dominated by how far into the month we are.
-    const summary = summarizePeriod(transactions, monthToDateRange(today), 'USD');
-    const previous = summarizePeriod(transactions, comparablePreviousRange(today), 'USD');
+    const summary = summarizePeriod(transactions, monthToDateRange(today), currency);
+    const previous = summarizePeriod(transactions, comparablePreviousRange(today), currency);
 
     const insights = compareCategoryTotals(summary, previous, transactions);
     const cashFlow = cashFlowInsight(summary);
@@ -104,6 +104,7 @@ export class InsightsService {
   async subscriptions(
     userId: string,
     asOf?: string,
+    currency = 'USD',
   ): Promise<{
     subscriptions: DetectedSubscription[];
     annualTotal: number;
@@ -112,7 +113,8 @@ export class InsightsService {
     possiblyCancelled: DetectedSubscription[];
   }> {
     const today = asOf ?? this.clock.today();
-    const transactions = await this.transactions.list(userId);
+    const transactions = (await this.transactions.list(userId))
+      .filter((transaction) => transaction.currency === currency);
     const detected = detectSubscriptions(transactions);
     const annualTotal = totalAnnualSubscriptionCost(detected);
 
@@ -186,23 +188,25 @@ export class InsightsService {
     }
   }
 
-  async healthScore(userId: string, asOf?: string): Promise<HealthScore> {
+  async healthScore(userId: string, asOf?: string, currency = 'USD'): Promise<HealthScore> {
     const today = asOf ?? this.clock.today();
     const [transactions, accounts, adherence] = await Promise.all([
       this.transactions.list(userId),
       this.accounts.list(userId),
-      this.budgets.adherenceRatio(userId, today),
+      this.budgets.adherenceRatio(userId, today, currency),
     ]);
+    const currencyTransactions = transactions.filter((transaction) => transaction.currency === currency);
+    const currencyAccounts = accounts.filter((account) => account.currency === currency);
 
     // Trailing 30 days, not month-to-date. The emergency-fund component divides
     // savings by "monthly expenses"; feeding it a 7-day figure on the 7th would
     // report 30 months of runway where there are 7.
-    const summary = summarizePeriod(transactions, { start: addDays(today, -29), end: today }, 'USD');
+    const summary = summarizePeriod(currencyTransactions, { start: addDays(today, -29), end: today }, currency);
 
     return computeHealthScore({
       summary,
-      accounts,
-      transactions,
+      accounts: currencyAccounts,
+      transactions: currencyTransactions,
       budgetAdherenceRatio: adherence,
     });
   }
@@ -248,14 +252,15 @@ export class InsightsService {
   async professionalMonthlyReport(
     userId: string,
     asOf?: string,
+    currency = 'USD',
   ): Promise<ProfessionalMonthlyReport> {
     const today = asOf ?? this.clock.today();
     const [report, budgets, subscriptions, health, forecast, creditCards] = await Promise.all([
-      this.monthlyReport(userId, today),
+      this.monthlyReport(userId, today, currency),
       this.budgets.progress(userId, today),
-      this.subscriptions(userId, today),
-      this.healthScore(userId, today),
-      this.cashFlowForecast(userId, 30, today),
+      this.subscriptions(userId, today, currency),
+      this.healthScore(userId, today, currency),
+      this.cashFlowForecast(userId, 30, today, currency),
       this.creditCardPlans(userId, today),
     ]);
 

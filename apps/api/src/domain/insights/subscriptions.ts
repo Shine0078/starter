@@ -174,8 +174,11 @@ export function detectSubscriptions(
     // A standing transfer into savings is recurring but it is not a cost, and
     // listing it under "what you're paying for" would be actively misleading.
     if (!isSpendingCategory(txn.categorySlug)) continue;
-    const key = txn.normalizedDescriptor;
-    if (!key) continue;
+    // A merchant descriptor is not globally unique across currencies. Keep
+    // each currency in its own detection bucket so annual totals and price
+    // changes never compare unlike minor units.
+    if (!txn.normalizedDescriptor) continue;
+    const key = `${txn.normalizedDescriptor}\u0000${txn.currency}`;
     const bucket = groups.get(key);
     if (bucket) bucket.push(txn);
     else groups.set(key, [txn]);
@@ -183,10 +186,11 @@ export function detectSubscriptions(
 
   const detected: DetectedSubscription[] = [];
 
-  for (const [descriptor, rawGroup] of groups) {
+  for (const rawGroup of groups.values()) {
     if (rawGroup.length < MIN_OCCURRENCES) continue;
 
     const group = [...rawGroup].sort((a, b) => a.postedAt.localeCompare(b.postedAt));
+    const descriptor = group[0]!.normalizedDescriptor;
     const amounts = group.map((t) => Math.abs(t.amount));
 
     // Reject groups whose amounts vary too much — a coffee shop visited weekly

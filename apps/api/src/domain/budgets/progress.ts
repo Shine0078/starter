@@ -66,11 +66,13 @@ export function spendForCategory(
   transactions: readonly Transaction[],
   categorySlug: string,
   period: DateRange,
+  currency?: string,
 ): number {
   let net = 0;
   for (const txn of transactions) {
     if (txn.excludedFromAnalytics) continue;
     if (txn.categorySlug !== categorySlug) continue;
+    if (currency && txn.currency !== currency) continue;
     if (!isWithin(txn.postedAt, period)) continue;
     if (!isSpendingCategory(txn.categorySlug)) continue;
     if (txn.pending) continue;
@@ -87,7 +89,12 @@ export function computeBudgetProgress(
   period: DateRange,
   today: IsoDate,
 ): BudgetProgress {
-  const spentAmount = spendForCategory(transactions, budget.categorySlug, period);
+  const spentAmount = spendForCategory(
+    transactions,
+    budget.categorySlug,
+    period,
+    budget.currency,
+  );
   const percentUsed = percentOf(spentAmount, budget.limitAmount);
 
   const totalDays = daysBetweenInclusive(period.start, period.end);

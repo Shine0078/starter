@@ -33,8 +33,13 @@ export class InsightsController {
   constructor(private readonly insights: InsightsService) {}
 
   @Get('insights')
-  async monthly(@CurrentUser() userId: string, @Query('asOf') asOf?: string) {
-    const report = await this.insights.monthlyReport(userId, asOf);
+  async monthly(
+    @CurrentUser() userId: string,
+    @Query('asOf') asOf?: string,
+    @Query('currency') currency = 'USD',
+  ) {
+    assertCurrency(currency);
+    const report = await this.insights.monthlyReport(userId, asOf, currency);
     const { summary } = report;
 
     return {
@@ -192,11 +197,13 @@ export class InsightsController {
   async monthlyPdf(
     @CurrentUser() userId: string,
     @Query('asOf') asOf?: string,
+    @Query('currency') currency = 'USD',
   ) {
     if (asOf && !isIsoCalendarDate(asOf)) {
       throw new BadRequestException('asOf must be a valid date in YYYY-MM-DD format.');
     }
-    const bundle = await this.insights.professionalMonthlyReport(userId, asOf);
+    assertCurrency(currency);
+    const bundle = await this.insights.professionalMonthlyReport(userId, asOf, currency);
     const pdf = await renderMonthlyReportPdf(bundle);
     return new StreamableFile(pdf, {
       type: 'application/pdf',
@@ -206,12 +213,18 @@ export class InsightsController {
   }
 
   @Get('subscriptions')
-  async subscriptions(@CurrentUser() userId: string, @Query('asOf') asOf?: string) {
-    const result = await this.insights.subscriptions(userId, asOf);
+  async subscriptions(
+    @CurrentUser() userId: string,
+    @Query('asOf') asOf?: string,
+    @Query('currency') currency = 'USD',
+  ) {
+    assertCurrency(currency);
+    const result = await this.insights.subscriptions(userId, asOf, currency);
     return {
       count: result.subscriptions.length,
-      annualTotalFormatted: formatMoney(money(result.annualTotal, 'USD')),
-      monthlyTotalFormatted: formatMoney(money(result.monthlyTotal, 'USD')),
+      currency,
+      annualTotalFormatted: formatMoney(money(result.annualTotal, currency)),
+      monthlyTotalFormatted: formatMoney(money(result.monthlyTotal, currency)),
       subscriptions: result.subscriptions.map((s) => ({
         ...s,
         typicalAmountFormatted: formatMoney(money(s.typicalAmount, s.currency)),
@@ -235,8 +248,13 @@ export class InsightsController {
   }
 
   @Get('health-score')
-  async healthScore(@CurrentUser() userId: string, @Query('asOf') asOf?: string) {
-    return this.insights.healthScore(userId, asOf);
+  async healthScore(
+    @CurrentUser() userId: string,
+    @Query('asOf') asOf?: string,
+    @Query('currency') currency = 'USD',
+  ) {
+    assertCurrency(currency);
+    return this.insights.healthScore(userId, asOf, currency);
   }
 
   /**
@@ -260,7 +278,7 @@ export class InsightsController {
 
     const [report, subscriptions] = await Promise.all([
       this.insights.analytics(userId, 'month', undefined, undefined, currency),
-      this.insights.subscriptions(userId),
+      this.insights.subscriptions(userId, undefined, currency),
     ]);
     const answer = answerFinancialQuestion(normalizedQuestion, {
       report,

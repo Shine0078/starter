@@ -111,9 +111,16 @@ export class BudgetsService {
 
   /** Share of budgets currently within their limit. Null when there are none —
    *  feeds the health score, which treats "no budgets" as neutral, not bad. */
-  async adherenceRatio(userId: string, asOf?: string): Promise<number | null> {
+  async adherenceRatio(
+    userId: string,
+    asOf?: string,
+    currency?: string,
+  ): Promise<number | null> {
     const rows = await this.progress(userId, asOf);
-    if (rows.length === 0) return null;
-    return rows.filter((r) => r.status !== 'exceeded').length / rows.length;
+    const scopedRows = currency
+      ? rows.filter((row) => row.currency === currency)
+      : rows;
+    if (scopedRows.length === 0) return null;
+    return scopedRows.filter((r) => r.status !== 'exceeded').length / scopedRows.length;
   }
 }

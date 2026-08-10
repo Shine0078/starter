@@ -40,7 +40,10 @@ export interface PeriodSummary {
 
 function settled(transactions: readonly Transaction[], period: DateRange): Transaction[] {
   return transactions.filter(
-    (t) => !t.pending && !t.excludedFromAnalytics && isWithin(t.postedAt, period),
+    (t) =>
+      !t.pending &&
+      !t.excludedFromAnalytics &&
+      isWithin(t.postedAt, period),
   );
 }
 
@@ -49,7 +52,7 @@ export function summarizePeriod(
   period: DateRange,
   currency: string,
 ): PeriodSummary {
-  const rows = settled(transactions, period);
+  const rows = settled(transactions, period).filter((t) => t.currency === currency);
 
   let income = 0;
   let expenses = 0;
@@ -168,7 +171,13 @@ export function compareCategoryTotals(
     if (Math.abs(pct) < SIGNIFICANT_CHANGE_PCT) continue;
 
     const evidence = transactions
-      .filter((t) => t.categorySlug === slug && isWithin(t.postedAt, current.period) && !t.pending)
+      .filter(
+        (t) =>
+          t.currency === current.currency &&
+          t.categorySlug === slug &&
+          isWithin(t.postedAt, current.period) &&
+          !t.pending,
+      )
       .map((t) => t.id);
 
     const name = displayName(slug);

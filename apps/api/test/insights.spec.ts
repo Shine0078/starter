@@ -45,6 +45,23 @@ describe('summarizePeriod', () => {
     expect(s.savingsRate).toBeCloseTo(70, 5);
   });
 
+  it('does not mix currencies when producing a reporting period', () => {
+    const rows = [
+      txn({ amount: 500_000, categorySlug: 'salary', currency: 'USD' }),
+      txn({ amount: -120_000, categorySlug: 'rent', currency: 'USD' }),
+      txn({ amount: 700_000, categorySlug: 'salary', currency: 'CAD' }),
+      txn({ amount: -300_000, categorySlug: 'rent', currency: 'CAD' }),
+    ];
+
+    const usd = summarizePeriod(rows, AUGUST, 'USD');
+    const cad = summarizePeriod(rows, AUGUST, 'CAD');
+
+    expect(usd.income).toBe(500_000);
+    expect(usd.expenses).toBe(120_000);
+    expect(cad.income).toBe(700_000);
+    expect(cad.expenses).toBe(300_000);
+  });
+
   it('excludes transfers from both sides', () => {
     const rows = [
       txn({ amount: 500_000, categorySlug: 'salary' }),
