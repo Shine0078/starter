@@ -14,7 +14,8 @@
     "db:start": "ts-node scripts/with-postgres.ts --serve",
     "demo": "ts-node src/seed/demo.ts",
     "migrate": "ts-node src/infra/postgres/migrate.ts",
-    "purge:accounts": "ts-node src/infra/auth/purge-due-accounts.ts",
+    "purge:accounts": "node dist/infra/auth/purge-due-accounts.js",
+    "purge:accounts:dev": "ts-node src/infra/auth/purge-due-accounts.ts",
     "plaid:configure": "ts-node scripts/configure-plaid.ts",
     "typecheck": "tsc --noEmit"
   },
