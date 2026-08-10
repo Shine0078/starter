@@ -102,18 +102,29 @@ class SecureSessionStore implements SessionStore {
             );
 
   static const _key = 'finverse.session';
+  // A clear can be interrupted while the device is locked. Keeping a small
+  // tombstone lets a later launch stay signed out even if the old token could
+  // not be deleted yet. A successful sign-in removes the tombstone first.
+  static const _signedOutKey = 'finverse.session.signed_out';
 
   final FlutterSecureStorage _storage;
 
   @override
   Future<SessionTokens?> read() async {
-    final String? raw;
+    final String? signedOut;
     try {
-      raw = await _storage.read(key: _key);
+      signedOut = await _storage.read(key: _signedOutKey);
     } catch (error) {
       // Do not clear a keystore we could not read. A locked Keychain or a
       // transient platform-channel failure is not evidence that the session
       // was revoked.
+      throw SessionStoreUnavailableException(error);
+    }
+    if (signedOut == '1') return null;
+    final String? raw;
+    try {
+      raw = await _storage.read(key: _key);
+    } catch (error) {
       throw SessionStoreUnavailableException(error);
     }
     if (raw == null) return null;
@@ -133,11 +144,44 @@ class SecureSessionStore implements SessionStore {
   }
 
   @override
-  Future<void> write(SessionTokens tokens) =>
-      _storage.write(key: _key, value: jsonEncode(tokens.toJson()));
+  Future<void> write(SessionTokens tokens) async {
+    try {
+      // Remove the tombstone before publishing the new session. If the token
+      // write then fails, the safe result is signed out, never stale-session
+      // resurrection.
+      await _storage.delete(key: _signedOutKey);
+      await _storage.write(key: _key, value: jsonEncode(tokens.toJson()));
+    } catch (error) {
+      throw SessionStoreUnavailableException(error);
+    }
+  }
 
   @override
-  Future<void> clear() => _storage.delete(key: _key);
+  Future<void> clear() async {
+    try {
+      // Publish the tombstone first. If deletion is interrupted, the next
+      // launch still observes signed-out state and cannot resurrect the old
+      // refresh token.
+      await _storage.write(key: _signedOutKey, value: '1');
+      var tokenDeleted = false;
+      try {
+        await _storage.delete(key: _key);
+        tokenDeleted = true;
+      } finally {
+        // A leftover tombstone is harmless and will be removed by the next
+        // successful sign-in. Never remove it after a failed token delete.
+        if (tokenDeleted) {
+          try {
+            await _storage.delete(key: _signedOutKey);
+          } catch (_) {
+            // The token is already gone; retaining the tombstone is safe.
+          }
+        }
+      }
+    } catch (error) {
+      throw SessionStoreUnavailableException(error);
+    }
+  }
 }
 
 /// Test double. Also used by widget tests so they never touch a platform channel.

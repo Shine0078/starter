@@ -774,7 +774,6 @@ class ApiClient {
   /// Schedules irreversible erasure after a 30-day recovery window.
   /// Credentials are cleared only after the server accepts the request.
   Future<DateTime> requestAccountDeletion(String password) async {
-    final owner = _cacheOwner;
     final response = await _perform(
       'DELETE',
       '/auth/account',
@@ -789,9 +788,10 @@ class ApiClient {
     }
 
     final scheduledFor = DateTime.parse(decoded['purgeScheduledFor'] as String);
-    _tokens = null;
-    await sessionStore.clear();
-    if (owner != null) await offlineCache.clearOwner(owner);
+    // The server has accepted the deletion. Reuse the same best-effort local
+    // cleanup as logout so a locked keystore cannot make a scheduled deletion
+    // look like a failed request or resurrect the session on the next launch.
+    await signOut(notifyServer: false);
     return scheduledFor;
   }
 

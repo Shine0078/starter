@@ -70,8 +70,22 @@ class UnavailableSessionStore implements SessionStore {
 }
 
 class FailingClearSessionStore extends InMemorySessionStore {
+  bool signedOut = false;
+
   @override
-  Future<void> clear() => Future<void>.error(StateError('keystore locked'));
+  Future<SessionTokens?> read() async => signedOut ? null : super.read();
+
+  @override
+  Future<void> write(SessionTokens tokens) async {
+    signedOut = false;
+    await super.write(tokens);
+  }
+
+  @override
+  Future<void> clear() async {
+    signedOut = true;
+    throw StateError('keystore locked');
+  }
 }
 
 class FailingClearCacheStore extends InMemoryOfflineCacheStore {
@@ -723,6 +737,39 @@ void main() {
 
     await expectLater(api.signOut(), completes);
     expect(api.isAuthenticated, isFalse);
+    final nextLaunch = clientWith(
+      MockClient((request) async => http.Response('{}', 200)),
+      store: store,
+      offlineCache: cache,
+    );
+    expect(await nextLaunch.restoreSession(), isFalse);
+  });
+
+  test('account deletion still completes when local cleanup is unavailable',
+      () async {
+    final store = FailingClearSessionStore();
+    await store.write(const SessionTokens(
+      accessToken: 'active-access',
+      refreshToken: 'active-refresh',
+      refreshExpiresAt: '',
+      userId: 'user-1',
+    ));
+    final api = clientWith(
+      MockClient((request) async => http.Response(
+            '{"purgeScheduledFor":"2026-09-07T00:00:00.000Z"}',
+            202,
+          )),
+      store: store,
+    );
+    await api.restoreSession();
+
+    await expectLater(api.requestAccountDeletion('my current password'), completes);
+    expect(api.isAuthenticated, isFalse);
+    final nextLaunch = clientWith(
+      MockClient((request) async => http.Response('{}', 200)),
+      store: store,
+    );
+    expect(await nextLaunch.restoreSession(), isFalse);
   });
 
   test('queues offline preference edits and replays the latest value',
