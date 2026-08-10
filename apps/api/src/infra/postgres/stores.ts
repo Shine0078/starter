@@ -169,10 +169,11 @@ const TXN_COLUMNS = `
   id, account_id, provider_txn_id, posted_at, amount, currency,
   raw_descriptor, normalized_descriptor, merchant,
   merchant_override, note, excluded_from_analytics,
-  category_slug, category_source, category_confidence, is_recurring, recurring_override, pending
+  category_slug, category_source, category_confidence, is_recurring, recurring_override,
+  duplicate_reported, pending
 `;
 
-const TXN_INSERT_COLUMNS = 19;
+const TXN_INSERT_COLUMNS = 20;
 
 export class PostgresTransactionStore implements TransactionStore {
   constructor(private readonly pg: Pool) {}
@@ -285,6 +286,7 @@ export class PostgresTransactionStore implements TransactionStore {
             txn.categoryConfidence,
             txn.isRecurring,
             txn.recurringOverride ?? null,
+            txn.duplicateReported ?? false,
             txn.pending,
           );
         });
@@ -294,7 +296,8 @@ export class PostgresTransactionStore implements TransactionStore {
              id, user_id, account_id, provider_txn_id, posted_at, amount, currency,
              raw_descriptor, normalized_descriptor, merchant,
              merchant_override, note, excluded_from_analytics,
-             category_slug, category_source, category_confidence, is_recurring, recurring_override, pending
+             category_slug, category_source, category_confidence, is_recurring, recurring_override,
+             duplicate_reported, pending
            ) VALUES ${tuples.join(', ')}
            ON CONFLICT (user_id, account_id, provider_txn_id) DO UPDATE SET
              posted_at             = EXCLUDED.posted_at,
@@ -323,6 +326,7 @@ export class PostgresTransactionStore implements TransactionStore {
                  THEN transactions.category_confidence
                ELSE EXCLUDED.category_confidence END,
              recurring_override = transactions.recurring_override,
+             duplicate_reported = transactions.duplicate_reported,
              updated_at = now()
            RETURNING (xmax = 0) AS inserted`,
           values,
@@ -358,6 +362,7 @@ export class PostgresTransactionStore implements TransactionStore {
       categoryConfidence: 'category_confidence',
       isRecurring: 'is_recurring',
       recurringOverride: 'recurring_override',
+      duplicateReported: 'duplicate_reported',
       pending: 'pending',
     };
 

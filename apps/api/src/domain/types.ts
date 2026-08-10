@@ -78,6 +78,8 @@ export interface Transaction {
   /** When set, the user explicitly chose the recurring state. Otherwise the
    * recurring engine may derive it from the transaction history. */
   recurringOverride?: boolean;
+  /** User-reported possible duplicate; never removes or mutates bank evidence. */
+  duplicateReported?: boolean;
   /** Pending transactions can change amount or disappear entirely. */
   pending: boolean;
 }

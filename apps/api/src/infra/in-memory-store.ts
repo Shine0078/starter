@@ -153,12 +153,14 @@ export class InMemoryTransactionStore implements TransactionStore {
               categorySource: existing.categorySource,
               categoryConfidence: existing.categoryConfidence,
               recurringOverride: existing.recurringOverride,
+              duplicateReported: existing.duplicateReported,
               isRecurring: existing.recurringOverride ?? txn.isRecurring,
             }
           : {
               ...txn,
               id: existing.id,
               recurringOverride: existing.recurringOverride,
+              duplicateReported: existing.duplicateReported,
               isRecurring: existing.recurringOverride ?? txn.isRecurring,
             };
         updated += 1;

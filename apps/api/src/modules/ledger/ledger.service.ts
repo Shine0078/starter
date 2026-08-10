@@ -222,6 +222,7 @@ export class LedgerService {
       note?: unknown;
       excludedFromAnalytics?: unknown;
       isRecurring?: unknown;
+      duplicateReported?: unknown;
     },
   ): Promise<Transaction> {
     const existing = await this.transactions.get(userId, transactionId);
@@ -250,6 +251,11 @@ export class LedgerService {
         }
         next.isRecurring = value;
         next.recurringOverride = value;
+      } else if (key === 'duplicateReported') {
+        if (typeof value !== 'boolean') {
+          throw new BadRequestException('duplicateReported must be a boolean');
+        }
+        next.duplicateReported = value;
       }
     }
 
