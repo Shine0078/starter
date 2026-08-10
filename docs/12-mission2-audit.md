@@ -19,8 +19,8 @@ file would be required to verify any requirements unique to that document.
   reports, alerts, subscriptions, and cash-flow planning.
 - Plaid adapter with encrypted access tokens, password step-up for Link,
   Android native Link, native iOS LinkKit bridge, browser Link for the iPhone
-  PWA, exchange, initial sync, complete active-account reconciliation on the
-  first pull (including accounts with no recent transactions),
+  PWA, exchange, initial sync, complete active-account reconciliation on every
+  pull (including quiet accounts and no-delta balance refreshes),
   cursor-based `/transactions/sync`, mutation-safe pagination, pending/posted
   reconciliation, removed rows, reconnect, webhook verification/retry, and
   multiple-institution support.
