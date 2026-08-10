@@ -1137,6 +1137,7 @@ void main() {
 
   testWidgets('shows transaction evidence and category controls',
       (tester) async {
+    final preferenceRequests = <http.Request>[];
     final api = clientWith(MockClient((request) async {
       if (request.url.path.endsWith('/categories')) {
         return http.Response(
@@ -1145,6 +1146,7 @@ void main() {
         );
       }
       if (request.url.path.endsWith('/preferences')) {
+        preferenceRequests.add(request);
         final body = jsonDecode(request.body) as Map<String, dynamic>;
         final recurring = body['isRecurring'] as bool? ?? false;
         final duplicate = body['duplicateReported'] as bool? ?? false;
@@ -1211,10 +1213,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Mark as recurring'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('marked by you'), findsOneWidget);
+    expect(preferenceRequests.single.body, contains('"isRecurring":true'));
 
     await tester.tap(find.text('Flag possible duplicate'));
     await tester.pumpAndSettle();
+    expect(preferenceRequests.last.body, contains('"duplicateReported":true'));
     expect(find.textContaining('Kept as a review marker'), findsOneWidget);
   });
 

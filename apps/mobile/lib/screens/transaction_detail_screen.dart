@@ -218,6 +218,35 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
     }
   }
 
+  Future<void> _markTransfer() async {
+    if (_category == 'transfer' || _saving) return;
+    final previous = _category;
+    setState(() {
+      _category = 'transfer';
+      _saving = true;
+    });
+    try {
+      await widget.api.recategorize(
+        widget.transaction.id,
+        'transfer',
+        createRule: false,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Marked as a transfer.')),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() => _category = previous);
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.toString())));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final transaction = widget.transaction;
@@ -336,6 +365,15 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                   trailing: const Icon(Icons.chevron_right),
                   onTap: _saving ? null : () => _editText(note: true),
                 ),
+                if (_category != 'transfer')
+                  ListTile(
+                    leading: const Icon(Icons.swap_horiz),
+                    title: const Text('Mark as transfer'),
+                    subtitle: const Text(
+                      'Exclude money moved between accounts from income and spending',
+                    ),
+                    onTap: _saving ? null : _markTransfer,
+                  ),
                 SwitchListTile.adaptive(
                   secondary: const Icon(Icons.autorenew),
                   title: const Text('Mark as recurring'),
