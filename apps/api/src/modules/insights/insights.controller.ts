@@ -47,6 +47,12 @@ export class InsightsController {
         averageDailySpend: formatMoney(money(summary.averageDailySpend, summary.currency)),
         transactionCount: summary.transactionCount,
       },
+      comparison: {
+        income: comparisonMoney(summary.income, report.previous.income, summary.currency),
+        expenses: comparisonMoney(summary.expenses, report.previous.expenses, summary.currency),
+        netCashFlow: comparisonMoney(summary.netCashFlow, report.previous.netCashFlow, summary.currency),
+        savingsRate: comparisonRate(summary.savingsRate, report.previous.savingsRate),
+      },
       topCategories: summary.topCategories.slice(0, 8).map((c) => ({
         ...c,
         totalFormatted: formatMoney(money(c.total, summary.currency)),
@@ -361,6 +367,27 @@ export class InsightsController {
       endingBalanceFormatted: formatMoney(money(scenario.endingBalance, scenario.currency)),
     };
   }
+}
+
+/**
+ * Present a comparison as a small, safe sentence rather than exposing the
+ * raw previous-period summary. A missing previous baseline remains explicit;
+ * it must not become a misleading 100% claim.
+ */
+function comparisonMoney(current: number, previous: number, currency: string): string | null {
+  const delta = current - previous;
+  if (delta === 0) return null;
+  const direction = delta > 0 ? 'higher' : 'lower';
+  const magnitude = formatMoney(money(Math.abs(delta), currency));
+  if (previous === 0) return `${magnitude} ${direction} than last period`;
+  const percent = Math.round((Math.abs(delta) / Math.abs(previous)) * 100);
+  return `${magnitude} (${percent}%) ${direction} than last period`;
+}
+
+function comparisonRate(current: number, previous: number): string | null {
+  const delta = current - previous;
+  if (Math.abs(delta) < 0.05) return null;
+  return `${Math.abs(delta).toFixed(1)} percentage points ${delta > 0 ? 'higher' : 'lower'} than last period`;
 }
 
 function assertCurrency(value: string): void {

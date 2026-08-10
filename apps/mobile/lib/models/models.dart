@@ -645,6 +645,7 @@ class InsightsReport {
     required this.savingsRate,
     required this.topCategories,
     required this.insights,
+    this.comparison,
   });
 
   factory InsightsReport.fromJson(Map<String, dynamic> json) {
@@ -660,6 +661,10 @@ class InsightsReport {
       insights: (json['insights'] as List<dynamic>)
           .map((e) => Insight.fromJson(e as Map<String, dynamic>))
           .toList(),
+      comparison: json['comparison'] == null
+          ? null
+          : InsightsComparison.fromJson(
+              json['comparison'] as Map<String, dynamic>),
     );
   }
 
@@ -669,6 +674,35 @@ class InsightsReport {
   final String savingsRate;
   final List<CategorySpend> topCategories;
   final List<Insight> insights;
+  final InsightsComparison? comparison;
+}
+
+class InsightsComparison {
+  const InsightsComparison({
+    this.income,
+    this.expenses,
+    this.netCashFlow,
+    this.savingsRate,
+  });
+
+  factory InsightsComparison.fromJson(Map<String, dynamic> json) =>
+      InsightsComparison(
+        income: json['income'] as String?,
+        expenses: json['expenses'] as String?,
+        netCashFlow: json['netCashFlow'] as String?,
+        savingsRate: json['savingsRate'] as String?,
+      );
+
+  final String? income;
+  final String? expenses;
+  final String? netCashFlow;
+  final String? savingsRate;
+
+  bool get hasAny =>
+      income != null ||
+      expenses != null ||
+      netCashFlow != null ||
+      savingsRate != null;
 }
 
 class AnalyticsBucket {

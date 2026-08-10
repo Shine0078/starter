@@ -484,6 +484,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ),
               ),
             ),
+            if (_insights!.comparison?.hasAny == true) ...[
+              const SizedBox(height: 8),
+              _comparisonCard(theme, _insights!.comparison!),
+            ],
             const SizedBox(height: 20),
             if (_insights!.topCategories.isNotEmpty) ...[
               SpendingChart(categories: _insights!.topCategories),
@@ -557,6 +561,40 @@ class _DashboardScreenState extends State<DashboardScreen>
           style: theme.textTheme.labelSmall?.copyWith(
             letterSpacing: 1.1,
             color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      );
+
+  Widget _comparisonCard(ThemeData theme, InsightsComparison comparison) =>
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Compared with last period',
+                  style: theme.textTheme.titleSmall),
+              const SizedBox(height: 6),
+              for (final entry in [
+                ('Income', comparison.income),
+                ('Expenses', comparison.expenses),
+                ('Net cash flow', comparison.netCashFlow),
+                ('Savings rate', comparison.savingsRate),
+              ])
+                if (entry.$2 != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(entry.$1),
+                        Flexible(
+                          child: Text(entry.$2!, textAlign: TextAlign.end),
+                        ),
+                      ],
+                    ),
+                  ),
+            ],
           ),
         ),
       );
