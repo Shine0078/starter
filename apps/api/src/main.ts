@@ -65,10 +65,12 @@ async function bootstrap(): Promise<void> {
   // for BREACH, and the bundle is where all the bytes actually are.
   app.use(['/app', '/dev'], compression());
 
-  // The developer dashboard is mounted only outside production. It can
-  // fabricate a sample ledger from the mock aggregator, so it must not be
-  // exposed by a real deployment.
-  if (!config.isProduction) {
+  // The developer dashboard is mounted only for the in-memory development
+  // adapter. It fabricates a sample ledger from the mock aggregator, so a
+  // persistent deployment must never expose it just because NODE_ENV was
+  // omitted or mistyped.
+  const developmentDashboard = !config.isProduction && config.store === 'memory';
+  if (developmentDashboard) {
     app.useStaticAssets(join(__dirname, '..', 'public'), { prefix: '/dev' });
   }
 
@@ -99,7 +101,7 @@ async function bootstrap(): Promise<void> {
   app.use((request: Request, response: Response, next: NextFunction) => {
     if (request.path !== '/') return next();
     if (webAppBuilt) return response.redirect('/app/');
-    if (!config.isProduction) return response.redirect('/dev/');
+    if (developmentDashboard) return response.redirect('/dev/');
     return response.status(404).send('FINVERSE web app is not deployed.');
   });
 
@@ -118,7 +120,7 @@ async function bootstrap(): Promise<void> {
   logger.log(`FINVERSE API listening on http://localhost:${PORT}`);
   logger.log(`Store      ${config.store}`);
   logger.log(`Health     http://localhost:${PORT}/healthz`);
-  if (!config.isProduction) {
+  if (developmentDashboard) {
     logger.log(`Dev tools  http://localhost:${PORT}/dev/  (sample data lives here)`);
   }
   if (webAppBuilt) {
