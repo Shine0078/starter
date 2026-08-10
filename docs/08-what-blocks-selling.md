@@ -25,7 +25,7 @@ Stated so the rest of this document is not read as "nothing works".
 | Authentication | Argon2id, rotating refresh tokens with reuse detection, email verification, password reset, TOTP MFA/recovery codes, device app lock, recoverable deletion, global guard, per-account lockout, session list, audit trail |
 | Persistence | Postgres behind ports, contract-tested against both adapters, migrations |
 | Isolation | Row-level security, app connects as a non-superuser role, 21 dedicated tests |
-| Tests | 388 without a database, 489 against real PostgreSQL, 62 Flutter tests, Android release and web release builds; all passing |
+| Tests | 389 without a database, 490 against real PostgreSQL, 62 Flutter tests, Android release and web release builds; all passing |
 | CI | GitHub Actions: API typecheck/test/build/image + Flutter analyze/test, Android release compile, native iOS no-signing compile, and tagged API/APK/web artifacts |
 
 That is a solid Phase-0 foundation. It is not a product.
@@ -57,7 +57,7 @@ measured in weeks. Nothing else on this list matters until these move.
 | 2.1 | **Production bank access** | Plaid Sandbox credentials are configured only in this workstation's ignored `.env`; a disposable Sandbox public token was exchanged through the Postgres API into 2 accounts and 125 transactions, a second sync returned 0 changes, and the link/user were removed. No production key, production institution approval, or real-customer bank data exists. Charging users still requires Plaid production approval and its security/commercial review | external approval |
 | 2.2 | **Link flow** | Completed in source for Android and iOS with Plaid's official native SDKs, authenticated Link-token creation, public-token exchange, encrypted permanent tokens, and a mobile Accounts screen; the PWA uses Plaid Link for Web. Android Sandbox Link-token creation is currently refused by Plaid until `com.finverse.finance` is saved in the dashboard allowlist; saving it requires the owner's Google identity verification | owner action in Plaid Dashboard + Mac/Xcode device verification remain |
 | 2.3 | **Reauth / broken-link handling** | Completed: `ITEM_LOGIN_REQUIRED` becomes a visible reconnect state and Link update mode reuses the Item | production institution testing remains |
-| 2.4 | **Real sync engine** | Completed: `/transactions/sync` cursors, all-page draining, mutation-safe pagination restart, added/modified/removed reconciliation, pending-to-posted changes, serialized link sync, retry queue, and manual refresh | production load/rate-limit testing remains |
+| 2.4 | **Real sync engine** | Completed: `/transactions/sync` cursors, all-page draining, mutation-safe pagination restart, complete active-account reconciliation on the first pull (including quiet accounts), added/modified/removed reconciliation, pending-to-posted changes, serialized link sync, retry queue, and manual refresh | production load/rate-limit testing remains |
 | 2.5 | **Merchant lexicon is tiny** | Categorisation quality on real data is unknown. The top ~2,000 merchants cover most volume; the current lexicon is a fraction of that | 1–2 weeks + ongoing |
 | 2.6 | **Categorisation accuracy unmeasured** | 92% coverage on synthetic data the same codebase generated is not evidence. Needs a held-out set of real transactions | ongoing |
 | 2.7 | **Multi-currency partially implemented** | The mobile net-position chart never combines currencies, and cash-flow/purchase planning is explicitly currency-selectable and API-tested. Monthly insights, budgets, subscriptions, goals, and reports still assume one reporting currency at a time; live mixed-currency institution testing remains | 1 week |
@@ -247,7 +247,7 @@ Worth fixing because they cause bad decisions later.
 | 9.1 | Security controls described in the present tense that do not exist | `03-security-privacy.md` — see §3.1 |
 | 9.2 | The deletion purge is described in operational detail as though it runs | `02-data-model.md` |
 | 9.3 | Unused Redis was provisioned despite zero application references | Fixed: shared rate limits and webhook jobs use PostgreSQL, and Redis was removed from the cheap-launch stack |
-| 9.4 | Test counts drift out of date and are then quoted as evidence — older counts were stale until re-measured at 388/489/62 | fixed in `07-session-notes.md`, but the pattern will recur |
+| 9.4 | Test counts drift out of date and are then quoted as evidence — older counts were stale until re-measured at 389/490/62 | fixed in `07-session-notes.md`, but the pattern will recur |
 | 9.5 | `06-cheap-launch-path.md` describes a *personal beta*, not a sellable product. It is correct for what it is, and should say so at the top so it is not mistaken for a launch plan | `06-cheap-launch-path.md` |
 
 ---

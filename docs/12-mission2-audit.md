@@ -19,7 +19,8 @@ file would be required to verify any requirements unique to that document.
   reports, alerts, subscriptions, and cash-flow planning.
 - Plaid adapter with encrypted access tokens, password step-up for Link,
   Android native Link, native iOS LinkKit bridge, browser Link for the iPhone
-  PWA, exchange, initial sync,
+  PWA, exchange, initial sync, complete active-account reconciliation on the
+  first pull (including accounts with no recent transactions),
   cursor-based `/transactions/sync`, mutation-safe pagination, pending/posted
   reconciliation, removed rows, reconnect, webhook verification/retry, and
   multiple-institution support.
@@ -99,8 +100,8 @@ file would be required to verify any requirements unique to that document.
 
 ## Evidence
 
-- API in-memory suite: 388 passing, 5 database-only skips.
-- PostgreSQL contract/RLS suite: 489 passing in embedded PostgreSQL.
+- API in-memory suite: 389 passing, 5 database-only skips.
+- PostgreSQL contract/RLS suite: 490 passing in embedded PostgreSQL.
 - Flutter: 62 widget/design tests passing, `flutter analyze` clean.
 - Android release APK and web release build both compile. The Android emulator
   booted but its package/activity services were unavailable during an install

@@ -14,6 +14,7 @@ import { InMemoryBankLinkStore, InMemoryBankWebhookStore } from '../src/infra/ba
 import { AesGcmBankTokenCipher } from '../src/infra/banking/token-cipher';
 import { verifyPlaidWebhookJwt } from '../src/infra/banking/plaid-provider';
 import { BankingService } from '../src/modules/banking/banking.service';
+import type { Account } from '../src/domain/types';
 import type { BankProvider, BankSyncPage } from '../src/ports/banking';
 import { billingHarness } from './billing-fixtures';
 
@@ -22,11 +23,15 @@ class FakeProvider implements BankProvider {
   configured = true;
   pages: Array<BankSyncPage | Error> = [];
   cursors: Array<string | null> = [];
+  initialAccounts: Account[] | null = null;
   async createLinkToken() {
     return { token: 'link-sandbox-token', expiresAt: '2026-08-08T16:00:00.000Z' };
   }
   async exchangePublicToken() {
     return { accessToken: 'access-sandbox-secret', itemId: 'item-sandbox-1' };
+  }
+  async listAccounts() {
+    return this.initialAccounts ?? [];
   }
   async sync(_accessToken: string, cursor: string | null) {
     this.cursors.push(cursor);
@@ -175,6 +180,47 @@ describe('banking integration', () => {
 
     await service.disconnect('user-1', link.id);
     expect(await links.get('user-1', link.id)).toBeNull();
+  });
+
+  it('shows quiet active accounts during the initial sync', async () => {
+    const provider = new FakeProvider();
+    provider.initialAccounts = [
+      account,
+      {
+        ...account,
+        id: 'plaid-savings-2',
+        name: 'Sandbox Savings',
+        type: 'savings',
+        balanceCurrent: 250_000,
+      },
+    ];
+    provider.pages.push({
+      accounts: [account], added: [transaction], modified: [], removedProviderTxnIds: [],
+      nextCursor: 'quiet-account-cursor', hasMore: false,
+    });
+
+    const accounts = new InMemoryAccountStore();
+    const service = new BankingService(
+      new InMemoryBankLinkStore(),
+      provider,
+      new AesGcmBankTokenCipher(randomBytes(32)),
+      new InMemoryBankWebhookStore(),
+      accounts,
+      new InMemoryTransactionStore(),
+      new InMemoryRuleStore(),
+      new InMemoryNotificationStore(),
+      new FixedClock('2026-08-08'),
+      billingHarness().billing,
+    );
+
+    await service.exchange('user-quiet', 'public-sandbox', 'First Platypus Bank', null);
+
+    await expect(accounts.list('user-quiet')).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: account.id, name: 'Sandbox Checking' }),
+        expect.objectContaining({ id: 'plaid-savings-2', name: 'Sandbox Savings' }),
+      ]),
+    );
   });
 
   it('derives recurring flags after a complete provider sync, not per page', async () => {

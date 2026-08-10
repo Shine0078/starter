@@ -95,6 +95,11 @@ export class PlaidBankProvider implements BankProvider {
     return { accessToken: response.data.access_token, itemId: response.data.item_id };
   }
 
+  async listAccounts(accessToken: string): Promise<Account[]> {
+    const response = await this.requireClient().accountsGet({ access_token: accessToken });
+    return response.data.accounts.map(toAccount);
+  }
+
   async sync(accessToken: string, cursor: string | null): Promise<BankSyncPage> {
     const response = await this.requireClient().transactionsSync({
       access_token: accessToken,

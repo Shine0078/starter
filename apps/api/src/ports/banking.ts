@@ -63,6 +63,12 @@ export interface BankProvider {
     platform?: LinkPlatform,
   ): Promise<{ token: string; expiresAt: string }>;
   exchangePublicToken(publicToken: string): Promise<{ accessToken: string; itemId: string }>;
+  /**
+   * Returns every active account for an Item. This is intentionally optional
+   * for provider adapters that can only expose accounts alongside transaction
+   * updates; the sync path uses it on the initial pull when available.
+   */
+  listAccounts?(accessToken: string): Promise<Account[]>;
   sync(accessToken: string, cursor: string | null): Promise<BankSyncPage>;
   verifyWebhook(rawBody: Buffer, signature: string): Promise<boolean>;
   removeItem(accessToken: string): Promise<void>;
