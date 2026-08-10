@@ -53,6 +53,19 @@ class FakeDeviceAuthenticator implements DeviceAuthenticator {
   Future<bool> isSupported() async => supported;
 }
 
+class UnavailableSessionStore implements SessionStore {
+  @override
+  Future<SessionTokens?> read() => Future<SessionTokens?>.error(
+        const SessionStoreUnavailableException('keystore locked'),
+      );
+
+  @override
+  Future<void> write(SessionTokens tokens) async {}
+
+  @override
+  Future<void> clear() async {}
+}
+
 /// Canned billing responses, so each test only overrides what it cares about.
 const _freePlanJson = '{"plan":"free","planName":"Free","status":"none",'
     '"bankLinkLimit":1,"entitlements":["data_export"],'
@@ -839,11 +852,12 @@ void main() {
   });
 
   test('refreshes an expired access token during session restore', () async {
-    String segment(Map<String, dynamic> value) => base64Url
-        .encode(utf8.encode(jsonEncode(value)))
-        .replaceAll('=', '');
-    final expiredAccess =
-        '${segment({'alg': 'HS256', 'typ': 'JWT'})}.${segment({'sub': 'user-1', 'exp': 1})}.signature';
+    String segment(Map<String, dynamic> value) =>
+        base64Url.encode(utf8.encode(jsonEncode(value))).replaceAll('=', '');
+    final expiredAccess = '${segment({
+          'alg': 'HS256',
+          'typ': 'JWT'
+        })}.${segment({'sub': 'user-1', 'exp': 1})}.signature';
     final store = InMemorySessionStore();
     await store.write(SessionTokens(
       accessToken: expiredAccess,
@@ -869,6 +883,58 @@ void main() {
     expect(await api.restoreSession(), isTrue);
     expect(refreshCalls, 1);
     expect((await store.read())?.accessToken, 'fresh');
+  });
+
+  test('keeps an expired session when refresh is unavailable offline',
+      () async {
+    String segment(Map<String, dynamic> value) =>
+        base64Url.encode(utf8.encode(jsonEncode(value))).replaceAll('=', '');
+    final expiredAccess = '${segment({
+          'alg': 'HS256',
+          'typ': 'JWT'
+        })}.${segment({'sub': 'user-1', 'exp': 1})}.signature';
+    final store = InMemorySessionStore();
+    final original = SessionTokens(
+      accessToken: expiredAccess,
+      refreshToken: 'stored-refresh',
+      refreshExpiresAt: '2099-01-01T00:00:00.000Z',
+      userId: 'user-1',
+    );
+    await store.write(original);
+    final api = clientWith(
+      MockClient((request) async {
+        if (request.url.path.endsWith('/auth/refresh')) {
+          throw http.ClientException('offline');
+        }
+        return http.Response('{}', 200);
+      }),
+      store: store,
+    );
+
+    expect(await api.restoreSession(), isTrue);
+    expect(api.isAuthenticated, isTrue);
+    expect((await store.read())?.refreshToken, original.refreshToken);
+  });
+
+  testWidgets('shows a retry state when secure session storage is unavailable',
+      (tester) async {
+    final api = clientWith(
+      MockClient((_) async => http.Response('{}', 200)),
+      store: UnavailableSessionStore(),
+    );
+    final appLock = AppLockController(
+      store: InMemoryAppLockStore(),
+      authenticator: FakeDeviceAuthenticator(),
+    );
+
+    await tester.pumpWidget(MaterialApp(
+      home: AuthGate(api: api, appLockController: appLock),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('FINVERSE is waiting for secure storage'), findsOneWidget);
+    expect(find.text('Try again'), findsOneWidget);
+    expect(find.byType(LoginScreen), findsNothing);
   });
 
   test('clears a session whose refresh expiry is already past', () async {

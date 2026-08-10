@@ -76,6 +76,19 @@ abstract class SessionStore {
   Future<void> clear();
 }
 
+/// The keystore could not be read right now (for example, iOS Keychain is
+/// still locked immediately after a device reboot). This is different from a
+/// missing or corrupt value: treating an I/O failure as a sign-out would make
+/// a valid user appear to have lost their account.
+class SessionStoreUnavailableException implements Exception {
+  const SessionStoreUnavailableException(this.cause);
+
+  final Object cause;
+
+  @override
+  String toString() => 'Secure session storage is temporarily unavailable.';
+}
+
 class SecureSessionStore implements SessionStore {
   SecureSessionStore({FlutterSecureStorage? storage})
       : _storage = storage ??
@@ -94,14 +107,27 @@ class SecureSessionStore implements SessionStore {
 
   @override
   Future<SessionTokens?> read() async {
-    final raw = await _storage.read(key: _key);
+    final String? raw;
+    try {
+      raw = await _storage.read(key: _key);
+    } catch (error) {
+      // Do not clear a keystore we could not read. A locked Keychain or a
+      // transient platform-channel failure is not evidence that the session
+      // was revoked.
+      throw SessionStoreUnavailableException(error);
+    }
     if (raw == null) return null;
     try {
       return SessionTokens.fromJson(jsonDecode(raw) as Map<String, dynamic>);
     } catch (_) {
       // Corrupt or from an older format. Treat as signed out rather than
       // crashing the app on launch.
-      await clear();
+      try {
+        await clear();
+      } catch (_) {
+        // A corrupt value is still not usable; failure to delete it must not
+        // turn the launch path into an uncaught platform exception.
+      }
       return null;
     }
   }

@@ -88,6 +88,8 @@ String dateOnly(DateTime value) {
 /// connection is accepted and then nothing ever comes back.
 const Duration kRequestTimeout = Duration(seconds: 20);
 
+enum _RefreshFailure { none, unavailable, rejected }
+
 /// Thin client over the FINVERSE API.
 ///
 /// It parses JSON into models but contains no financial business logic. The
@@ -117,6 +119,7 @@ class ApiClient {
 
   SessionTokens? _tokens;
   Future<bool>? _refreshFuture;
+  _RefreshFailure _lastRefreshFailure = _RefreshFailure.none;
   final ValueNotifier<DateTime?> offlineCacheStatus = ValueNotifier(null);
 
   /// Monotonically increasing revision for successful authenticated writes.
@@ -157,8 +160,13 @@ class ApiClient {
     // should return directly to a refreshed session, not to a dashboard that
     // flashes errors while its first batch of requests discovers the expiry.
     if (_accessTokenExpired(stored.accessToken) && !await _refresh()) {
-      await signOut(notifyServer: false);
-      return false;
+      // A network outage should leave a valid refresh credential in place so
+      // the offline cache can still render and the next resume can retry. Only
+      // an authoritative 4xx/revocation response justifies signing out.
+      if (_lastRefreshFailure == _RefreshFailure.rejected) {
+        await signOut(notifyServer: false);
+        return false;
+      }
     }
     return _tokens != null;
   }
@@ -204,8 +212,10 @@ class ApiClient {
 
     if (response.statusCode == 401 && allowRetry && _tokens != null) {
       if (await _refresh()) return _perform(method, path, body, false);
-      await signOut(notifyServer: false);
-      onSessionExpired?.call();
+      if (_lastRefreshFailure == _RefreshFailure.rejected) {
+        await signOut(notifyServer: false);
+        onSessionExpired?.call();
+      }
     }
 
     return response;
@@ -456,6 +466,8 @@ class ApiClient {
     final refreshToken = _tokens?.refreshToken;
     if (refreshToken == null) return false;
 
+    _lastRefreshFailure = _RefreshFailure.none;
+
     try {
       final response = await _http
           .post(
@@ -464,7 +476,14 @@ class ApiClient {
             body: jsonEncode({'refreshToken': refreshToken}),
           )
           .timeout(kRequestTimeout);
-      if (response.statusCode >= 400) return false;
+      if (response.statusCode >= 500) {
+        _lastRefreshFailure = _RefreshFailure.unavailable;
+        return false;
+      }
+      if (response.statusCode >= 400) {
+        _lastRefreshFailure = _RefreshFailure.rejected;
+        return false;
+      }
 
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
       // A sign-out can happen while the request is in flight. Never resurrect
@@ -476,7 +495,14 @@ class ApiClient {
               .withUserId(userId);
       await sessionStore.write(_tokens!);
       return true;
+    } on TimeoutException {
+      _lastRefreshFailure = _RefreshFailure.unavailable;
+      return false;
+    } on http.ClientException {
+      _lastRefreshFailure = _RefreshFailure.unavailable;
+      return false;
     } catch (_) {
+      _lastRefreshFailure = _RefreshFailure.rejected;
       return false;
     }
   }

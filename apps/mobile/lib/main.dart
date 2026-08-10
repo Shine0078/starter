@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'api/client.dart';
 import 'api/app_lock.dart';
 import 'api/onboarding_store.dart';
+import 'api/session_store.dart';
 import 'api/platform/device_auth.dart';
 import 'api/platform/offline_cache_factory.dart';
 import 'design/design.dart';
@@ -138,6 +139,7 @@ class AuthGate extends StatefulWidget {
 class _AuthGateState extends State<AuthGate> {
   bool _checking = true;
   bool _signedIn = false;
+  String? _restoreError;
 
   @override
   void initState() {
@@ -154,9 +156,17 @@ class _AuthGateState extends State<AuthGate> {
 
   Future<void> _restore() async {
     var restored = false;
+    String? restoreError;
+    if (mounted) setState(() => _restoreError = null);
     try {
       restored = await widget.api.restoreSession();
       await widget.appLockController.initialize();
+    } on SessionStoreUnavailableException catch (error) {
+      // A locked or temporarily unavailable Keychain/Keystore is not a
+      // revoked session. Keep the user out of the financial UI until the
+      // platform storage can be read again, with an explicit retry instead of
+      // silently presenting sign-in and encouraging a duplicate account.
+      restoreError = error.toString();
     } catch (error) {
       debugPrint('Could not restore session: $error');
     }
@@ -164,6 +174,7 @@ class _AuthGateState extends State<AuthGate> {
     setState(() {
       _signedIn = restored;
       _checking = false;
+      _restoreError = restoreError;
     });
   }
 
@@ -171,6 +182,41 @@ class _AuthGateState extends State<AuthGate> {
   Widget build(BuildContext context) {
     if (_checking) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (_restoreError != null) {
+      return Scaffold(
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.lock_clock_outlined, size: 56),
+                  const SizedBox(height: 16),
+                  Text(
+                    'FINVERSE is waiting for secure storage',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Unlock your phone, then try again. Your saved session was not deleted.',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 20),
+                  FilledButton.icon(
+                    onPressed: _checking ? null : _restore,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Try again'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
     }
 
     if (!_signedIn) {
