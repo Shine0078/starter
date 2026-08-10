@@ -3,8 +3,8 @@
 Written for whoever picks this up next — including a fresh agent session with no
 memory of how any of it got here. Last updated after the MFA, professional
 monthly-report, smart-alert, core-accessibility, shared-rate-limit, load-smoke,
-analytics-cache, session-restore, Plaid Sandbox, deterministic-assistant, and
-protected-metrics verification milestones on
+analytics-cache, session-restore, Plaid Sandbox, deterministic-assistant,
+protected-metrics, and secure-session-error verification milestones on
 2026-08-10.
 
 Read [`MISSION.md`](../MISSION.md) for the product, [`HANDOVER.md`](../HANDOVER.md)
@@ -33,7 +33,7 @@ Every number below was produced by running the thing, not by reading the code.
 | API tests, in-memory | 407 passed |
 | API tests, real Postgres | 508 passed |
 | `tsc --noEmit`, `npm run build` | clean |
-| `flutter analyze`, `flutter test` | clean, 68 passed |
+| `flutter analyze`, `flutter test` | clean, 69 passed |
 | Android debug compile | `com.finverse.finance`, API 36, 170.9 MB APK; debug-only artifact built successfully |
 | Authenticated load smoke, memory | 250 requests, concurrency 10, 0 failures, 43.3 ms p95, 298.5 req/s |
 | Authenticated load smoke, real Postgres | 250 requests, concurrency 10, 0 failures, 229.1 ms p95, 146.8 req/s |

@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../api/client.dart';
+import '../api/session_store.dart';
 import '../models/models.dart';
+
+const _sessionPersistenceError =
+    'Your credentials were accepted, but this device could not save the secure session. Unlock your phone and try again.';
 
 /// Sign in or create an account.
 ///
@@ -127,6 +131,10 @@ class _LoginScreenState extends State<LoginScreen> {
         if (mounted) {
           setState(() => _error = error.displayMessage);
         }
+      } on SessionStoreUnavailableException {
+        if (mounted) {
+          setState(() => _error = _sessionPersistenceError);
+        }
       } catch (error) {
         if (mounted) {
           setState(() => _error = 'Verification failed. Try signing in again.');
@@ -135,6 +143,9 @@ class _LoginScreenState extends State<LoginScreen> {
     } on AuthException catch (error) {
       if (!mounted) return;
       setState(() => _error = error.displayMessage);
+    } on SessionStoreUnavailableException {
+      if (!mounted) return;
+      setState(() => _error = _sessionPersistenceError);
     } catch (error) {
       if (!mounted) return;
       setState(

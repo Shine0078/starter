@@ -1023,6 +1023,35 @@ void main() {
     expect(find.text('Incorrect email or password.'), findsOneWidget);
   });
 
+  testWidgets('explains secure-session persistence failures after login',
+      (tester) async {
+    final api = clientWith(
+      MockClient((request) async => http.Response(
+            '{"user":{"id":"user-1","email":"sam@example.com"},'
+            '"tokens":{"accessToken":"access","refreshToken":"refresh",'
+            '"refreshExpiresAt":"2099-01-01T00:00:00.000Z"}}',
+            200,
+          )),
+      store: FailingWriteSessionStore(failuresRemaining: 99),
+    );
+
+    await tester.pumpWidget(MaterialApp(
+      home: LoginScreen(api: api, onSignedIn: () => fail('must not sign in')),
+    ));
+    await tester.enterText(find.byType(TextFormField).first, 'sam@example.com');
+    await tester.enterText(
+        find.byType(TextFormField).last, 'correct horse battery staple');
+    await tester.tap(find.text('Sign in').last);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Your credentials were accepted, but this device could not save the secure session. Unlock your phone and try again.',
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('completes an authenticator challenge before signing in',
       (tester) async {
     var signedIn = false;
