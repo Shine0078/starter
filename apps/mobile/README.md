@@ -22,7 +22,11 @@ local firewall.
 ## Plaid Link
 
 The Android application ID is `com.finverse.finance`. Add that exact package
-name under Plaid Dashboard > Developers > API > Allowed Android package names.
+name under Plaid Dashboard > Developers > API > Allowed Android package names,
+then complete Plaid's identity verification if the dashboard prompts for it.
+Until that save succeeds, Android Link-token creation fails closed with a
+direct message explaining the missing allowlist entry. The web/PWA path can be
+used while the owner completes this step.
 The app requests a short-lived Link token from the authenticated FINVERSE API,
 opens Plaid's native UI, and returns only the temporary public token to the API.
 Plaid secrets and permanent access tokens never enter Flutter.

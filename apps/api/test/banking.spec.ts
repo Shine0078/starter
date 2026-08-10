@@ -97,7 +97,7 @@ describe('banking integration', () => {
       constructor: ServiceUnavailableException,
       response: {
         code: 'PLAID_CONFIGURATION',
-        message: 'Bank connection setup is incomplete on this server.',
+        message: 'Android bank connection setup is incomplete. Save com.finverse.finance under Plaid Dashboard > Developers > API > Allowed Android package names, then try again.',
       },
     });
     await expect(

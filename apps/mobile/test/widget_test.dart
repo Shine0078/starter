@@ -348,6 +348,38 @@ void main() {
     expect(find.textContaining('connects up to 1 institution'), findsOneWidget);
   });
 
+  testWidgets('shows the Plaid Android allowlist guidance from the API',
+      (tester) async {
+    final api = clientWith(MockClient((request) async {
+      final billing = _billingResponse(request);
+      if (billing != null) return billing;
+      if (request.url.path.endsWith('/bank-links')) {
+        return http.Response('{"count":0,"links":[]}', 200);
+      }
+      if (request.url.path.endsWith('/accounts')) {
+        return http.Response('[]', 200);
+      }
+      if (request.url.path.endsWith('/bank-links/link-token')) {
+        return http.Response(
+          '{"code":"PLAID_CONFIGURATION","message":"Android bank connection setup is incomplete. Save com.finverse.finance under Plaid Dashboard > Developers > API > Allowed Android package names, then try again."}',
+          503,
+        );
+      }
+      return http.Response('{}', 200);
+    }));
+
+    await tester.pumpWidget(MaterialApp(home: BankConnectionsScreen(api: api)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Connect bank'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.byType(TextField).last, 'correct horse battery staple');
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Save com.finverse.finance'), findsOneWidget);
+  });
+
   testWidgets('never waits forever on a server that accepts and goes quiet',
       (tester) async {
     // The failure this guards against is not an error, it is silence: a host

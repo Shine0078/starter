@@ -96,19 +96,21 @@ file would be required to verify any requirements unique to that document.
 
 - API in-memory suite: 384 passing, 5 database-only skips.
 - PostgreSQL contract/RLS suite: 485 passing in embedded PostgreSQL.
-- Flutter: 57 widget/design tests passing, `flutter analyze` clean.
+- Flutter: 58 widget/design tests passing, `flutter analyze` clean.
 - Android debug APK and web release build both compile. The Android emulator
   booted but its package/activity services were unavailable during an install
   attempt; that is an emulator image issue, not a compile failure.
 - Windows Flutter cannot compile iOS; Xcode/macOS remains required for the
   LinkKit package resolution, Universal Link OAuth return, and device test.
   The iPhone PWA remains available as a browser fallback.
-- The live Plaid Sandbox path was verified on 2026-08-10: web Link-token
-  creation, public-token exchange, five-account import, and idempotent
-  incremental sync all completed against the Postgres API. The Android path
-  now fails closed with `PLAID_CONFIGURATION` until the package identifier is
-  allowlisted in Plaid. Provider failures no longer expose SDK request details
-  or credentials in logs.
+- The live Plaid Sandbox credentials were configured locally (never committed)
+  and authenticated web Link-token creation was verified on 2026-08-10 against
+  the Postgres API. The Android path fails closed with an actionable
+  `PLAID_CONFIGURATION` response until the owner saves `com.finverse.finance`
+  in Plaid's Allowed Android package names; Plaid requires Google identity
+  verification before that dashboard change can be saved. No production key or
+  real-customer bank data is claimed. Provider failures no longer expose SDK
+  request details or credentials in logs.
 - Persisted mobile sessions now reject expired refresh tokens and refresh an
   expired access token before showing the dashboard, with widget coverage for
   both paths.
@@ -120,7 +122,7 @@ file would be required to verify any requirements unique to that document.
   user-scoped storage, latest-value collapse, optimistic retry semantics, and
   successful replay.
 - Data-quality domain checks and authenticated route protection are covered by
-  focused API tests; Flutter analyzer and the 57-test mobile suite remain clean.
+  focused API tests; Flutter analyzer and the 58-test mobile suite remain clean.
 - A provider-neutral public deployment path now runs the tagged API image behind
   Caddy with automatic HTTPS. Port 3000 remains private to the Docker network,
   and the phone can be built against that public origin instead of Tailscale.

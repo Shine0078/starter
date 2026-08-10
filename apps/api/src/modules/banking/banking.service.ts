@@ -93,7 +93,7 @@ export class BankingService implements OnModuleInit, OnModuleDestroy {
     try {
       return await this.provider.createLinkToken(userId, accessToken, platform);
     } catch (error) {
-      throw this.providerFailure(error, 'Could not start the bank connection.');
+      throw this.providerFailure(error, 'Could not start the bank connection.', platform);
     }
   }
 
@@ -481,13 +481,16 @@ export class BankingService implements OnModuleInit, OnModuleDestroy {
    * would print the Plaid secret alongside the stack trace. Keep only the
    * provider error code and return a safe, actionable message to the client.
    */
-  private providerFailure(error: unknown, fallback: string): Error {
+  private providerFailure(error: unknown, fallback: string, platform?: LinkPlatform): Error {
     const code = plaidErrorCode(error);
     this.logger.warn(`Plaid bank operation failed (${code}).`);
 
     if (code === 'INVALID_FIELD') {
+      const message = platform === 'android'
+        ? 'Android bank connection setup is incomplete. Save com.finverse.finance under Plaid Dashboard > Developers > API > Allowed Android package names, then try again.'
+        : 'Bank connection setup is incomplete on this server.';
       return new ServiceUnavailableException({
-        message: 'Bank connection setup is incomplete on this server.',
+        message,
         code: 'PLAID_CONFIGURATION',
       });
     }

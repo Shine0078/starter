@@ -25,7 +25,7 @@ Stated so the rest of this document is not read as "nothing works".
 | Authentication | Argon2id, rotating refresh tokens with reuse detection, email verification, password reset, TOTP MFA/recovery codes, device app lock, recoverable deletion, global guard, per-account lockout, session list, audit trail |
 | Persistence | Postgres behind ports, contract-tested against both adapters, migrations |
 | Isolation | Row-level security, app connects as a non-superuser role, 21 dedicated tests |
-| Tests | 384 without a database, 485 against real PostgreSQL, 57 Flutter tests, Android debug and web release builds; all passing |
+| Tests | 384 without a database, 485 against real PostgreSQL, 58 Flutter tests, Android debug and web release builds; all passing |
 | CI | GitHub Actions: API typecheck/test/build/image + Flutter analyze/test/Android compile; tagged API/APK releases |
 
 That is a solid Phase-0 foundation. It is not a product.
@@ -54,8 +54,8 @@ measured in weeks. Nothing else on this list matters until these move.
 
 | # | Item | Detail | Effort |
 |---|---|---|---|
-| 2.1 | **Production bank access** | The Plaid Sandbox adapter is implemented and this workstation has user-scoped Sandbox credentials; the live Sandbox path has been verified through Link-token creation, exchange, five-account import, idempotent incremental sync, and cleanup. No production key or institution approval exists. Charging users still requires Plaid production approval and its security/commercial review | external approval |
-| 2.2 | **Link flow** | Completed in source for Android and iOS with Plaid's official native SDKs, authenticated Link-token creation, public-token exchange, encrypted permanent tokens, and a mobile Accounts screen; the PWA uses Plaid Link for Web | Plaid Dashboard package/redirect allowlisting and Mac/Xcode device verification remain owner-approved |
+| 2.1 | **Production bank access** | Plaid Sandbox credentials are configured only in this workstation's ignored `.env`; the authenticated web Link-token path was verified against Plaid on 2026-08-10. No production key, production institution approval, or real-customer bank data exists. Charging users still requires Plaid production approval and its security/commercial review | external approval |
+| 2.2 | **Link flow** | Completed in source for Android and iOS with Plaid's official native SDKs, authenticated Link-token creation, public-token exchange, encrypted permanent tokens, and a mobile Accounts screen; the PWA uses Plaid Link for Web. Android Sandbox Link-token creation is currently refused by Plaid until `com.finverse.finance` is saved in the dashboard allowlist; saving it requires the owner's Google identity verification | owner action in Plaid Dashboard + Mac/Xcode device verification remain |
 | 2.3 | **Reauth / broken-link handling** | Completed: `ITEM_LOGIN_REQUIRED` becomes a visible reconnect state and Link update mode reuses the Item | production institution testing remains |
 | 2.4 | **Real sync engine** | Completed: `/transactions/sync` cursors, all-page draining, mutation-safe pagination restart, added/modified/removed reconciliation, pending-to-posted changes, serialized link sync, retry queue, and manual refresh | production load/rate-limit testing remains |
 | 2.5 | **Merchant lexicon is tiny** | Categorisation quality on real data is unknown. The top ~2,000 merchants cover most volume; the current lexicon is a fraction of that | 1–2 weeks + ongoing |
@@ -150,7 +150,7 @@ smaller than the complete MISSION.md product.
 | 5.5 | **Android identity and launcher** | **Completed:** `com.finverse.finance`, FINVERSE label, versioned platform project, and branded launcher asset | Store listing still external |
 | 5.6 | **Release signing credentials** | Gradle and the release workflow are wired for an upload key and refuse a distributable release without secrets | User must generate and protect the upload key |
 | 5.7 | **iOS never built** | Requires a Mac. Untested and unverified | 1 week |
-| 5.8 | **Mobile testing is still thin** | 57 widget/design tests cover auth protocol, persisted-session refresh, concurrent refresh, recovery, deletion, navigation, transaction filters, offline cache, accessibility scaling, analytics visuals, reactive data invalidation, notification preferences, connectivity diagnostics, and plan/paywall paths. No device integration or golden tests | 2 weeks |
+| 5.8 | **Mobile testing is still thin** | 58 widget/design tests cover auth protocol, persisted-session refresh, concurrent refresh, recovery, deletion, navigation, transaction filters, offline cache, accessibility scaling, analytics visuals, reactive data invalidation, notification preferences, connectivity diagnostics, Plaid allowlist guidance, and plan/paywall paths. No device integration or golden tests | 2 weeks |
 | 5.9 | **Accessibility audit incomplete** | Core spending, budget, and health visuals now have spoken equivalents and an automated 200% text-scaling overflow test. Physical VoiceOver/TalkBack, contrast, colour-blind, and one-handed audits remain | device testing + 1–2 weeks |
 | 5.10 | **No localisation** | Mission asks for multiple languages. Single hardcoded locale | 1–2 weeks |
 | 5.11 | **No crash reporting** | "Crash-free above 99.9%" cannot be claimed without measuring it | days |
@@ -246,7 +246,7 @@ Worth fixing because they cause bad decisions later.
 | 9.1 | Security controls described in the present tense that do not exist | `03-security-privacy.md` — see §3.1 |
 | 9.2 | The deletion purge is described in operational detail as though it runs | `02-data-model.md` |
 | 9.3 | Unused Redis was provisioned despite zero application references | Fixed: shared rate limits and webhook jobs use PostgreSQL, and Redis was removed from the cheap-launch stack |
-| 9.4 | Test counts drift out of date and are then quoted as evidence — older counts were stale until re-measured at 384/485/57 | fixed in `07-session-notes.md`, but the pattern will recur |
+| 9.4 | Test counts drift out of date and are then quoted as evidence — older counts were stale until re-measured at 384/485/58 | fixed in `07-session-notes.md`, but the pattern will recur |
 | 9.5 | `06-cheap-launch-path.md` describes a *personal beta*, not a sellable product. It is correct for what it is, and should say so at the top so it is not mistaken for a launch plan | `06-cheap-launch-path.md` |
 
 ---

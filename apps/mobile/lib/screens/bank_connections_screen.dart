@@ -470,6 +470,7 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
           final code = decoded['code'];
           final message = decoded['message'];
           if (code == 'PLAID_CONFIGURATION') {
+            if (message is String && message.isNotEmpty) return message;
             return 'Bank connection setup is incomplete on this server. '
                 'Finish the Plaid app configuration and try again.';
           }
