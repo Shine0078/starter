@@ -1212,6 +1212,7 @@ class Subscription {
 class SubscriptionsReport {
   SubscriptionsReport({
     required this.count,
+    required this.currency,
     required this.monthlyTotalFormatted,
     required this.annualTotalFormatted,
     required this.subscriptions,
@@ -1222,6 +1223,7 @@ class SubscriptionsReport {
   factory SubscriptionsReport.fromJson(Map<String, dynamic> json) =>
       SubscriptionsReport(
         count: json['count'] as int,
+        currency: json['currency'] as String? ?? 'USD',
         monthlyTotalFormatted: json['monthlyTotalFormatted'] as String,
         annualTotalFormatted: json['annualTotalFormatted'] as String,
         subscriptions: (json['subscriptions'] as List<dynamic>)
@@ -1237,6 +1239,7 @@ class SubscriptionsReport {
       );
 
   final int count;
+  final String currency;
   final String monthlyTotalFormatted;
   final String annualTotalFormatted;
   final List<Subscription> subscriptions;

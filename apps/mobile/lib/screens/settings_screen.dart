@@ -442,7 +442,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _shareMonthlyReport() async {
     setState(() => _reporting = true);
     try {
-      final bytes = await widget.api.monthlyReportPdf();
+      final accounts = await widget.api.accounts();
+      final currencies = accounts
+          .map((account) => account.currency)
+          .where((currency) => currency.isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort();
+      final currency = currencies.isEmpty ? 'USD' : currencies.first;
+      final bytes = await widget.api.monthlyReportPdf(currency: currency);
       final month = DateFormat('yyyy-MM').format(DateTime.now());
       await shareGeneratedFile(
         bytes: Uint8List.fromList(bytes),

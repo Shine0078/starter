@@ -131,12 +131,14 @@ class _DashboardScreenState extends State<DashboardScreen>
       if (sync) await widget.api.refreshConnectedBanks();
       unawaited(_loadQuality());
 
+      final accounts = await widget.api.accounts();
+      final currency = _reportingCurrency(accounts);
       final results = await Future.wait([
-        widget.api.accounts(),
-        widget.api.healthScore(),
+        Future.value(accounts),
+        widget.api.healthScore(currency: currency),
         widget.api.budgetProgress(),
         widget.api.transactions(limit: 20),
-        widget.api.insights(),
+        widget.api.insights(currency: currency),
       ]);
 
       if (!mounted) return;
@@ -155,6 +157,16 @@ class _DashboardScreenState extends State<DashboardScreen>
         _loading = false;
       });
     }
+  }
+
+  String _reportingCurrency(List<Account> accounts) {
+    final currencies = accounts
+        .map((account) => account.currency)
+        .where((currency) => currency.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+    return currencies.isEmpty ? 'USD' : currencies.first;
   }
 
   Future<void> _confirmSignOut() async {

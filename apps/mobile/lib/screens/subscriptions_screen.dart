@@ -15,6 +15,7 @@ class SubscriptionsScreen extends StatefulWidget {
 class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   SubscriptionsReport? _report;
   String? _error;
+  String _currency = 'USD';
   var _loading = true;
 
   @override
@@ -30,7 +31,15 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
       _error = null;
     });
     try {
-      final report = await widget.api.subscriptions();
+      final accounts = await widget.api.accounts();
+      final currencies = accounts
+          .map((account) => account.currency)
+          .where((currency) => currency.isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort();
+      if (currencies.isNotEmpty) _currency = currencies.first;
+      final report = await widget.api.subscriptions(currency: _currency);
       if (!mounted) return;
       setState(() {
         _report = report;
@@ -95,7 +104,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${report.count} recurring payment${report.count == 1 ? '' : 's'}',
+                    '${report.count} recurring payment${report.count == 1 ? '' : 's'} in ${report.currency}',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 14),

@@ -852,8 +852,12 @@ class ApiClient {
     return response.body;
   }
 
-  Future<List<int>> monthlyReportPdf() async {
-    final response = await _perform('GET', '/reports/monthly.pdf', null, true);
+  Future<List<int>> monthlyReportPdf({String currency = 'USD'}) async {
+    final response = await _perform(
+        'GET',
+        '/reports/monthly.pdf?currency=${Uri.encodeQueryComponent(currency)}',
+        null,
+        true);
     if (response.statusCode >= 400) {
       throw ApiException(
           '/reports/monthly.pdf', response.statusCode, response.body);
@@ -1221,13 +1225,17 @@ class ApiClient {
     return NotificationPreferences.fromJson(json);
   }
 
-  Future<HealthScore> healthScore() async {
-    final json = await _get('/health-score') as Map<String, dynamic>;
+  Future<HealthScore> healthScore({String currency = 'USD'}) async {
+    final json = await _get(
+            '/health-score?currency=${Uri.encodeQueryComponent(currency)}')
+        as Map<String, dynamic>;
     return HealthScore.fromJson(json);
   }
 
-  Future<InsightsReport> insights() async {
-    final json = await _get('/insights') as Map<String, dynamic>;
+  Future<InsightsReport> insights({String currency = 'USD'}) async {
+    final json =
+        await _get('/insights?currency=${Uri.encodeQueryComponent(currency)}')
+            as Map<String, dynamic>;
     return InsightsReport.fromJson(json);
   }
 
@@ -1269,8 +1277,10 @@ class ApiClient {
     );
   }
 
-  Future<SubscriptionsReport> subscriptions() async {
-    final json = await _get('/subscriptions') as Map<String, dynamic>;
+  Future<SubscriptionsReport> subscriptions({String currency = 'USD'}) async {
+    final json = await _get(
+            '/subscriptions?currency=${Uri.encodeQueryComponent(currency)}')
+        as Map<String, dynamic>;
     return SubscriptionsReport.fromJson(json);
   }
 

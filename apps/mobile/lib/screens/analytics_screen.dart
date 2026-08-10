@@ -28,6 +28,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   bool _loading = true;
   String? _error;
   String _period = 'month';
+  String _currency = 'USD';
   DateTime? _customFrom;
   DateTime? _customTo;
   int _loadGeneration = 0;
@@ -58,15 +59,24 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       _error = null;
     });
     try {
+      final accounts = await widget.api.accounts();
+      final currencies = accounts
+          .map((account) => account.currency)
+          .where((currency) => currency.isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort();
+      if (currencies.isNotEmpty) _currency = currencies.first;
       final results = await Future.wait([
         widget.api.analytics(
           period: _period,
+          currency: _currency,
           from: _period == 'custom' ? _customFrom : null,
           to: _period == 'custom' ? _customTo : null,
         ),
-        widget.api.insights(),
-        widget.api.healthScore(),
-        widget.api.subscriptions(),
+        widget.api.insights(currency: _currency),
+        widget.api.healthScore(currency: _currency),
+        widget.api.subscriptions(currency: _currency),
       ]);
       if (!mounted || generation != _loadGeneration) return;
       setState(() {
