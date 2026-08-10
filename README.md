@@ -26,7 +26,8 @@ Run the whole pipeline in-process and watch it work — no server, no database:
 npm run demo
 ```
 
-Or start the API with its developer dashboard at <http://localhost:3000/>:
+Or start the API with its in-memory developer dashboard at <http://localhost:3000/>:
+(`STORE=postgres` deliberately disables the fabricated dashboard):
 
 ```bash
 npm run dev
@@ -58,7 +59,7 @@ apps/
     src/ports/    interfaces the domain needs satisfied
     src/infra/    in-memory, Postgres, mock, email, and Plaid adapters
     src/modules/  controllers and services — thin wiring
-    public/       developer dashboard
+    public/       in-memory development dashboard (never served by persistent stores)
     test/         domain, HTTP, persistence, isolation, and Plaid tests
   mobile/       Flutter Android client with native Plaid Link
 packages/

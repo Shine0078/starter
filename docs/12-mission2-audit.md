@@ -87,8 +87,10 @@ file would be required to verify any requirements unique to that document.
 - A small internal finance event bus publishes import, update, categorisation,
   account, and bank-sync events inside the NestJS monolith without adding a
   queue or a second service.
-- The mock-data developer dashboard is now development-only; production serves
-  the Flutter bundle or fails closed instead of exposing fabricated ledger data.
+- The mock-data developer dashboard is now limited to the in-memory development
+  adapter; persistent stores fail closed even when `NODE_ENV` is omitted.
+  Production serves the Flutter bundle or fails closed instead of exposing
+  fabricated ledger data.
   The legacy `/api/sync` sample route is also refused for every persistent
   Postgres deployment, not only for `NODE_ENV=production`.
 
