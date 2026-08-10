@@ -74,6 +74,10 @@ file would be required to verify any requirements unique to that document.
   dashboard, transactions, budgets, goals, analytics, and bank-connection
   screens immediately after sync or another successful mutation, including
   when those screens are kept alive in the tab stack.
+- Auth maintenance now runs on API startup and hourly while an instance is
+  alive, purging due account deletions and expired sessions independently so a
+  transient failure in one cleanup path cannot stall the other. A standalone
+  purge command remains available for scale-to-zero deployments.
 - The API now has a bounded 30-second, per-process analytics cache keyed by
   user, period, date range, and currency. Transaction/account/bank events
   invalidate affected users immediately; raw transactions remain the only
