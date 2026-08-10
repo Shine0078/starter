@@ -5,19 +5,22 @@ import 'plaid_link.dart';
 
 /// Small Flutter bridge over Plaid's officially supported native Android SDK.
 ///
-/// iOS falls through to `isSupported == false`: the method channel below is
-/// implemented only in the Android project, and an iPhone is expected to run
-/// the installable web build, which uses Plaid's JavaScript SDK instead.
+/// Android and iOS use Plaid's native Link SDKs through the same method
+/// channel. The web implementation remains separate because it uses Plaid's
+/// JavaScript SDK and redirect-based OAuth.
 class NativePlaidLink extends PlaidLink {
   const NativePlaidLink();
 
   static const _channel = MethodChannel('com.finverse.finance/plaid_link');
 
   @override
-  bool get isSupported => defaultTargetPlatform == TargetPlatform.android;
+  bool get isSupported =>
+      defaultTargetPlatform == TargetPlatform.android ||
+      defaultTargetPlatform == TargetPlatform.iOS;
 
   @override
-  String get platform => 'android';
+  String get platform =>
+      defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android';
 
   @override
   Future<PlaidLinkResult> open(String linkToken) async {

@@ -16,8 +16,9 @@ export class CreateLinkTokenDto {
    * Which Plaid Link surface will open this token.
    *
    * It matters: a token created with `android_package_name` is bound to the
-   * Android app and Plaid rejects it in a browser. Defaults to `android` so
-   * existing clients that predate the web build keep working unchanged.
+   * Android app and Plaid rejects it in a browser. iOS and web use the
+   * configured Universal Link redirect URI. Defaults to `android` so existing
+   * clients that predate the web build keep working unchanged.
    */
   @IsOptional()
   @IsString()

@@ -14,11 +14,11 @@ export type BankLinkStatus = 'healthy' | 'syncing' | 'needs_reauth' | 'error' | 
  * Android app and Plaid refuses it in a browser, and vice versa. The client
  * says which one it is, and the provider configures the token to match.
  */
-export const LINK_PLATFORMS = ['android', 'web'] as const;
+export const LINK_PLATFORMS = ['android', 'ios', 'web'] as const;
 export type LinkPlatform = (typeof LINK_PLATFORMS)[number];
 
 export function isLinkPlatform(value: unknown): value is LinkPlatform {
-  return value === 'android' || value === 'web';
+  return value === 'android' || value === 'ios' || value === 'web';
 }
 
 export interface BankLink {

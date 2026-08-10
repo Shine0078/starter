@@ -1,12 +1,9 @@
 /// Plaid Link, across the surfaces this app runs on.
 ///
-/// Plaid ships a native SDK for Android and a JavaScript SDK for the browser.
-/// They are different products with the same job, so this file holds the shared
-/// types and the platform-agnostic interface, and the implementation is chosen
-/// by conditional export.
-///
-/// iOS has neither yet: the native SDK has no platform channel here, and an
-/// iPhone runs the web implementation through the installable PWA instead.
+/// Plaid ships native SDKs for Android/iOS and a JavaScript SDK for the
+/// browser. They are different products with the same job, so this file holds
+/// the shared types and the platform-agnostic interface, and the implementation
+/// is chosen by conditional export.
 library;
 
 export 'plaid_link_web.dart' if (dart.library.io) 'plaid_link_native.dart';
@@ -31,7 +28,8 @@ class PlaidLinkResult {
       );
 
   /// The user closed Link without finishing. Not an error to report.
-  factory PlaidLinkResult.cancelled() => const PlaidLinkResult(succeeded: false);
+  factory PlaidLinkResult.cancelled() =>
+      const PlaidLinkResult(succeeded: false);
 
   final bool succeeded;
   final String? publicToken;
@@ -49,8 +47,8 @@ abstract class PlaidLink {
   /// rather than offering a button that could only ever fail.
   bool get isSupported;
 
-  /// Which Link surface this is, so the server mints a matching token. A token
-  /// carrying `android_package_name` is refused in a browser, and vice versa.
+  /// Which Link surface this is, so the server mints a matching token. Android
+  /// uses `android_package_name`; iOS and web use the registered redirect URI.
   String get platform;
 
   Future<PlaidLinkResult> open(String linkToken);

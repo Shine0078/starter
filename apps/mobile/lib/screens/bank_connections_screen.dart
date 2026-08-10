@@ -473,7 +473,9 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
             return 'Bank connection setup is incomplete on this server. '
                 'Finish the Plaid app configuration and try again.';
           }
-          if (error.statusCode == 503 && message is String && message.isNotEmpty) {
+          if (error.statusCode == 503 &&
+              message is String &&
+              message.isNotEmpty) {
             return message;
           }
         }
@@ -610,7 +612,7 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
                           title: Text('Not available in this build'),
                           subtitle: Text(
                             'Bank connection is not wired up for this platform yet. It '
-                            'works in the browser and on Android. You can still add your '
+                            'works in the browser, Android, and iOS. You can still add your '
                             'accounts and cards with "Add manual" and set budgets and '
                             'goals against them.',
                           ),

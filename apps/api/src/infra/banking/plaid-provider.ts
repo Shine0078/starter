@@ -71,7 +71,7 @@ export class PlaidBankProvider implements BankProvider {
     // and only when one is configured — it must be registered in the Plaid
     // dashboard first, and an unregistered value is refused outright.
     const surface =
-      platform === 'web'
+      platform === 'web' || platform === 'ios'
         ? this.options.webRedirectUri
           ? { redirect_uri: this.options.webRedirectUri }
           : {}
