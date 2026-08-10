@@ -118,7 +118,9 @@ async function bootstrap(): Promise<void> {
   logger.log(`FINVERSE API listening on http://localhost:${PORT}`);
   logger.log(`Store      ${config.store}`);
   logger.log(`Health     http://localhost:${PORT}/healthz`);
-  logger.log(`Dev tools  http://localhost:${PORT}/dev/  (sample data lives here)`);
+  if (!config.isProduction) {
+    logger.log(`Dev tools  http://localhost:${PORT}/dev/  (sample data lives here)`);
+  }
   if (webAppBuilt) {
     logger.log(`App        http://localhost:${PORT}/app/`);
   } else {

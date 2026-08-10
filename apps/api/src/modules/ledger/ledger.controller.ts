@@ -135,8 +135,15 @@ export class LedgerController {
 
   @Post('sync')
   sync(@CurrentUser() userId: string) {
-    if (loadConfig().isProduction) {
-      throw new BadRequestException('Development sample sync is disabled. Connect a bank account.');
+    const config = loadConfig();
+    // The legacy route is deliberately retained for the in-memory demo and
+    // its contract tests, but it must never be able to populate a persistent
+    // user account with fabricated balances or transactions. Real Postgres
+    // deployments use the provider-backed /bank-links/:id/sync flow only.
+    if (config.isProduction || config.store !== 'memory') {
+      throw new BadRequestException(
+        'Development sample sync is disabled. Connect a bank account.',
+      );
     }
     return this.ledger.sync(userId);
   }
