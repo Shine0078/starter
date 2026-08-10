@@ -75,6 +75,11 @@ The notification centre can request native Android/iPhone permission and surface
 unread FINVERSE alerts as device-local notifications. Remote push and OS-level
 background refresh still require provider credentials and native scheduling.
 
+Settings includes an offline-friendly Help & Support centre with a credential-free
+API readiness check and copyable diagnostics. Release builds may configure a
+staffed contact address with `--dart-define=SUPPORT_EMAIL=support@example.com`;
+the default build intentionally sends no email anywhere.
+
 ## Verification
 
 ```powershell

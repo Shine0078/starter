@@ -25,7 +25,7 @@ Stated so the rest of this document is not read as "nothing works".
 | Authentication | Argon2id, rotating refresh tokens with reuse detection, email verification, password reset, TOTP MFA/recovery codes, device app lock, recoverable deletion, global guard, per-account lockout, session list, audit trail |
 | Persistence | Postgres behind ports, contract-tested against both adapters, migrations |
 | Isolation | Row-level security, app connects as a non-superuser role, 21 dedicated tests |
-| Tests | 384 without a database, 485 against real PostgreSQL, 56 Flutter tests, Android debug and web release builds; all passing |
+| Tests | 384 without a database, 485 against real PostgreSQL, 57 Flutter tests, Android debug and web release builds; all passing |
 | CI | GitHub Actions: API typecheck/test/build/image + Flutter analyze/test/Android compile; tagged API/APK releases |
 
 That is a solid Phase-0 foundation. It is not a product.
@@ -150,7 +150,7 @@ smaller than the complete MISSION.md product.
 | 5.5 | **Android identity and launcher** | **Completed:** `com.finverse.finance`, FINVERSE label, versioned platform project, and branded launcher asset | Store listing still external |
 | 5.6 | **Release signing credentials** | Gradle and the release workflow are wired for an upload key and refuse a distributable release without secrets | User must generate and protect the upload key |
 | 5.7 | **iOS never built** | Requires a Mac. Untested and unverified | 1 week |
-| 5.8 | **Mobile testing is still thin** | 56 widget/design tests cover auth protocol, persisted-session refresh, concurrent refresh, recovery, deletion, navigation, transaction filters, offline cache, accessibility scaling, analytics visuals, reactive data invalidation, notification preferences, and plan/paywall paths. No device integration or golden tests | 2 weeks |
+| 5.8 | **Mobile testing is still thin** | 57 widget/design tests cover auth protocol, persisted-session refresh, concurrent refresh, recovery, deletion, navigation, transaction filters, offline cache, accessibility scaling, analytics visuals, reactive data invalidation, notification preferences, connectivity diagnostics, and plan/paywall paths. No device integration or golden tests | 2 weeks |
 | 5.9 | **Accessibility audit incomplete** | Core spending, budget, and health visuals now have spoken equivalents and an automated 200% text-scaling overflow test. Physical VoiceOver/TalkBack, contrast, colour-blind, and one-handed audits remain | device testing + 1–2 weeks |
 | 5.10 | **No localisation** | Mission asks for multiple languages. Single hardcoded locale | 1–2 weeks |
 | 5.11 | **No crash reporting** | "Crash-free above 99.9%" cannot be claimed without measuring it | days |
@@ -184,12 +184,12 @@ and a second integration for the mobile stores.
 
 | # | Item |
 |---|---|
-| 7.1 | No support channel, help centre, or in-app contact route |
+| 7.1 | Help centre and in-app contact route are implemented in Settings. The optional `SUPPORT_EMAIL` build define opens a prefilled mail message and never includes credentials or financial payloads | Owner must configure a staffed support mailbox and escalation process |
 | 7.2 | No admin tooling — no way to look up a user's problem without raw SQL, which RLS now (correctly) blocks |
 | 7.3 | No incident process, on-call, or status page |
 | 7.4 | No analytics or product telemetry is installed. A default-off, versioned consent surface now exists before any analytics SDK is introduced |
 | 7.5 | The versioned registration gate, document links, and evidence trail exist, but no counsel-approved Terms of Service or Privacy Notice is shipped |
-| 7.6 | No onboarding or user documentation |
+| 7.6 | First-launch onboarding and an offline-friendly in-app help centre are implemented | Public help articles and customer-facing docs remain |
 
 ---
 
@@ -246,7 +246,7 @@ Worth fixing because they cause bad decisions later.
 | 9.1 | Security controls described in the present tense that do not exist | `03-security-privacy.md` — see §3.1 |
 | 9.2 | The deletion purge is described in operational detail as though it runs | `02-data-model.md` |
 | 9.3 | Unused Redis was provisioned despite zero application references | Fixed: shared rate limits and webhook jobs use PostgreSQL, and Redis was removed from the cheap-launch stack |
-| 9.4 | Test counts drift out of date and are then quoted as evidence — older counts were stale until re-measured at 384/485/56 | fixed in `07-session-notes.md`, but the pattern will recur |
+| 9.4 | Test counts drift out of date and are then quoted as evidence — older counts were stale until re-measured at 384/485/57 | fixed in `07-session-notes.md`, but the pattern will recur |
 | 9.5 | `06-cheap-launch-path.md` describes a *personal beta*, not a sellable product. It is correct for what it is, and should say so at the top so it is not mistaken for a launch plan | `06-cheap-launch-path.md` |
 
 ---
