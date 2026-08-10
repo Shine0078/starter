@@ -144,8 +144,9 @@ file would be required to verify any requirements unique to that document.
   real-customer bank data is claimed. Provider failures no longer expose SDK
   request details or credentials in logs.
 - The live Postgres API smoke registered a disposable user, answered a protected
-  `/api/assistant` request with the deterministic response shape, and deleted
-  the user again; no raw transaction evidence crossed the route.
+  `/api/assistant` request with the deterministic response shape, returned the
+  authenticated analytics trend series, and deleted the user again; no raw
+  transaction evidence crossed the route.
 - Persisted mobile sessions now reject expired refresh tokens, write a signed-out
   tombstone before secure cleanup, publish replacement tokens before removing
   that tombstone, and refresh an expired access token before showing the
