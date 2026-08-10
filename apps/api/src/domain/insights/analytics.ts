@@ -1,4 +1,4 @@
-import { addDays, daysBetweenInclusive, isWithin } from '../dates';
+import { addDays, addMonths, daysBetweenInclusive, isWithin, startOfMonth, weekRange } from '../dates';
 import { displayName, isEssentialCategory, isIncomeCategory, isSpendingCategory } from '../categories';
 import { matchRefunds, type RefundMatch } from '../transactions/refund-matching';
 import type { DateRange, Transaction } from '../types';
@@ -26,6 +26,17 @@ export interface SpendingVelocity {
   enoughHistory: boolean;
 }
 
+/** One deliberately small chart series: money in versus money out. */
+export interface AnalyticsTrendPoint {
+  /** The start of the calendar bucket represented by this point. */
+  date: string;
+  income: number;
+  expenses: number;
+  refunds: number;
+  /** Income + refunds - expenses, never mixing currencies. */
+  net: number;
+}
+
 export interface AnalyticsReport {
   period: DateRange;
   currency: string;
@@ -51,6 +62,7 @@ export interface AnalyticsReport {
   savingsRate: number;
   averageMonthlySavings: number;
   velocity: SpendingVelocity;
+  trend: AnalyticsTrendPoint[];
   timeline: TimelineEvent[];
 }
 
@@ -97,6 +109,66 @@ function toEvent(transaction: Transaction): TimelineEvent {
     amount: transaction.amount,
     accountId: transaction.accountId,
   };
+}
+
+type TrendBucket = 'day' | 'week' | 'month';
+
+function trendBucket(period: DateRange): TrendBucket {
+  const days = daysBetweenInclusive(period.start, period.end);
+  if (days <= 62) return 'day';
+  if (days <= 370) return 'week';
+  return 'month';
+}
+
+function trendBucketStart(date: string, bucket: TrendBucket): string {
+  if (bucket === 'day') return date;
+  if (bucket === 'week') return weekRange(date as DateRange['start']).start;
+  return startOfMonth(date as DateRange['start']);
+}
+
+function nextTrendBucket(date: string, bucket: TrendBucket): string {
+  if (bucket === 'day') return addDays(date as DateRange['start'], 1);
+  if (bucket === 'week') return addDays(date as DateRange['start'], 7);
+  return addMonths(date as DateRange['start'], 1);
+}
+
+function emptyTrendPoint(date: string): AnalyticsTrendPoint {
+  return { date, income: 0, expenses: 0, refunds: 0, net: 0 };
+}
+
+/**
+ * Builds a complete, gap-filled series so a chart never joins two distant
+ * transactions as if the days between them did not exist. Long ranges are
+ * intentionally downsampled to weeks/months to keep the visual readable.
+ */
+function buildTrend(
+  rows: readonly Transaction[],
+  period: DateRange,
+): AnalyticsTrendPoint[] {
+  const bucket = trendBucket(period);
+  const points = new Map<string, AnalyticsTrendPoint>();
+  let date = trendBucketStart(period.start, bucket);
+  const end = trendBucketStart(period.end, bucket);
+  while (date <= end) {
+    points.set(date, emptyTrendPoint(date));
+    date = nextTrendBucket(date, bucket);
+  }
+
+  for (const transaction of rows) {
+    const key = trendBucketStart(transaction.postedAt, bucket);
+    const point = points.get(key) ?? emptyTrendPoint(key);
+    if (isIncomeCategory(transaction.categorySlug) && transaction.amount > 0 && transaction.categorySlug !== 'refunds') {
+      point.income += transaction.amount;
+    } else if (transaction.categorySlug === 'refunds' && transaction.amount > 0) {
+      point.refunds += transaction.amount;
+    } else if (isSpendingCategory(transaction.categorySlug) && transaction.amount < 0) {
+      point.expenses += expenseAmount(transaction);
+    }
+    point.net = point.income + point.refunds - point.expenses;
+    points.set(key, point);
+  }
+
+  return [...points.values()].sort((a, b) => a.date.localeCompare(b.date));
 }
 
 /**
@@ -253,6 +325,7 @@ export function computeAnalytics(
       percentDelta,
       enoughHistory: historyRows.length >= 3,
     },
+    trend: buildTrend(rows, period),
     timeline: timeline.slice(0, 200),
   };
 }

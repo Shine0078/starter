@@ -61,6 +61,19 @@ describe('computeAnalytics', () => {
     expect(report.timeline.map((event) => event.id)).toContain('salary');
     expect(report.timeline.find((event) => event.id === 'transfer')?.kind).toBe('transfer');
     expect(report.timeline.find((event) => event.id === 'refund')?.kind).toBe('refund');
+    expect(report.trend.length).toBe(31);
+    expect(report.trend[0]).toEqual(
+      expect.objectContaining({ date: '2026-08-01', income: 0, expenses: 0, net: 0 }),
+    );
+    expect(report.trend.find((point) => point.date === '2026-08-05')).toEqual(
+      expect.objectContaining({ income: 300_000, expenses: 150_000, refunds: 5_000, net: 155_000 }),
+    );
+    expect(report.trend.find((point) => point.date === '2026-08-06')).toEqual(
+      expect.objectContaining({ income: 50_000, expenses: 0, net: 50_000 }),
+    );
+    expect(report.trend.at(-1)).toEqual(
+      expect.objectContaining({ date: '2026-08-31', income: 0, expenses: 0, net: 0 }),
+    );
   });
 
   it('is empty-safe and does not invent historical velocity', () => {
@@ -122,5 +135,25 @@ describe('computeAnalytics', () => {
         purchaseAmount: 10_000,
       }),
     ]);
+  });
+
+  it('downsamples long ranges into complete monthly buckets', () => {
+    const report = computeAnalytics(
+      [
+        txn({ id: 'july', postedAt: '2026-07-31', amount: -2_000 }),
+        txn({ id: 'august', postedAt: '2026-08-03', amount: 5_000, categorySlug: 'salary' }),
+        txn({ id: 'january', postedAt: '2026-01-15', amount: -1_000 }),
+      ],
+      { start: '2025-01-01', end: '2026-12-31' },
+      'USD',
+    );
+
+    expect(report.trend.length).toBe(24);
+    expect(report.trend.find((point) => point.date === '2026-07-01')).toEqual(
+      expect.objectContaining({ expenses: 2_000 }),
+    );
+    expect(report.trend.find((point) => point.date === '2026-08-01')).toEqual(
+      expect.objectContaining({ income: 5_000 }),
+    );
   });
 });

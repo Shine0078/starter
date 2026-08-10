@@ -158,6 +158,13 @@ export class InsightsController {
           ? null
           : formatTotal(report.velocity.historicalAverageSpend),
       },
+      trend: report.trend.map((point) => ({
+        ...point,
+        incomeFormatted: formatTotal(point.income),
+        expensesFormatted: formatTotal(point.expenses),
+        refundsFormatted: formatTotal(point.refunds),
+        netFormatted: formatTotal(point.net),
+      })),
       timeline: report.timeline.map((event) => ({
         ...event,
         amountFormatted: formatTotal(event.amount),

@@ -39,6 +39,7 @@ function report(overrides: Partial<AnalyticsReport> = {}): AnalyticsReport {
       percentDelta: 12.5,
       enoughHistory: true,
     },
+    trend: [],
     timeline: [],
     ...overrides,
   };
