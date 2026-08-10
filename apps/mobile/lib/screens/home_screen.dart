@@ -3,11 +3,11 @@ import 'package:intl/intl.dart';
 
 import '../api/client.dart';
 import '../api/app_lock.dart';
-import 'budgets_screen.dart';
 import 'bank_connections_screen.dart';
 import 'dashboard_screen.dart';
-import 'goals_screen.dart';
 import 'transactions_screen.dart';
+import 'analytics_screen.dart';
+import 'profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
@@ -63,9 +63,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         onAccountDeleted: widget.onAccountDeleted,
                       ),
                       TransactionsScreen(api: widget.api),
-                      BudgetsScreen(api: widget.api),
-                      GoalsScreen(api: widget.api),
+                      AnalyticsScreen(api: widget.api),
                       BankConnectionsScreen(api: widget.api),
+                      ProfileScreen(
+                        api: widget.api,
+                        appLockController: widget.appLockController,
+                        onSignOut: widget.onSignOut,
+                        onAccountDeleted: widget.onAccountDeleted,
+                      ),
                     ],
                   ),
                 ),
@@ -82,11 +87,11 @@ class _HomeScreenState extends State<HomeScreen> {
             NavigationDestination(
                 icon: Icon(Icons.receipt_long_outlined), label: 'Transactions'),
             NavigationDestination(
-                icon: Icon(Icons.pie_chart_outline), label: 'Budgets'),
-            NavigationDestination(
-                icon: Icon(Icons.flag_outlined), label: 'Goals'),
+                icon: Icon(Icons.insights_outlined), label: 'Analytics'),
             NavigationDestination(
                 icon: Icon(Icons.account_balance_outlined), label: 'Accounts'),
+            NavigationDestination(
+                icon: Icon(Icons.person_outline), label: 'Profile'),
           ],
         ),
       );
