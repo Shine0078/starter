@@ -93,8 +93,8 @@ The database now refuses the wrong rows even when a query forgets its filter.
   issues deliberately unfiltered SQL. Disabling the policies fails 16 of its 21
   tests — checked by temporarily disabling them, not assumed.
 
-The whole store contract now runs as `finverse_app`, so all 309 tests execute
-with the policies in force.
+The whole store contract now runs as `finverse_app`, so the persistence tests
+execute with the policies in force; the current suite total is recorded above.
 
 ## Completed: account deletion and retention
 
