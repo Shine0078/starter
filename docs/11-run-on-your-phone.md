@@ -1,285 +1,115 @@
 # Run FINVERSE on your phone
 
-Two ways. One is free, works from Windows, and takes about ten minutes. The
-other needs a Mac and gives you a real native app.
+FINVERSE is a Flutter app with Android, iOS, and installable web targets. The
+API origin is configuration, not a private-network assumption:
 
-| | Installable PWA | Native iOS build |
-|---|---|---|
-| Cost | **Free** | Mac (~$599) + $99/yr for more than 7 days |
-| Build from Windows | **Yes** | No — Xcode is macOS-only |
-| Home-screen icon, no browser chrome | Yes | Yes |
-| Update loop | Rebuild + pull to refresh (~90s) | Hot reload (<1s) |
-| Bank connection (Plaid) | **No** — native SDK only | Yes |
-| Biometric app lock | No | Yes |
-| Offline cache | No | Yes |
+```text
+--dart-define=API_BASE_URL=https://api.example.com
+```
 
-Start with the PWA. Everything except bank linking, the app lock, and the
-offline cache works, and none of those are needed to use the app against the
-built-in sample data.
+Use a real public HTTPS API for a phone build. The release workflow reads the
+same value from the CI `API_BASE_URL` variable. Do not commit a secret, a LAN
+address, or a private tunnel hostname.
 
----
-
-## Part 1 — The free way: install it as a PWA
-
-> **Windows PowerShell 5.1 does not support `&&`.** Every command below is
-> written for it: `;` chains, and full paths, because a `cd` that silently did
-> not happen is the most common way these steps fail. On macOS or Linux use
-> `&&` and relative paths as usual.
-
-### 1. Build the app
+## Android emulator (local development)
 
 ```powershell
-cd C:\Users\samue\OneDrive\Desktop\starter\apps\mobile; flutter build web --release --base-href=/app/
+cd C:\Users\samue\OneDrive\Desktop\starter\apps\mobile
+flutter run -d finverse_pixel
 ```
 
-Takes about 90 seconds. Output lands in `apps/mobile/build/web`.
-
-### 2. Start the API
-
-Use a second terminal — this one stays running.
+The default native development origin is `http://10.0.2.2:3000`, which is the
+Android emulator alias for the Windows host. Start the API separately:
 
 ```powershell
-cd C:\Users\samue\OneDrive\Desktop\starter; npm run dev --workspace @finverse/api
+cd C:\Users\samue\OneDrive\Desktop\starter
+npm run dev --workspace @finverse/api
 ```
 
-The API serves the compiled app at `/app/` automatically when that build exists
-— same origin as the API itself, so there is no CORS to configure and no second
-server to run. You should see `App  http://localhost:3000/app/` in the startup
-log. Open it in a desktop browser first to confirm it works.
-
-> If that line is missing, the build directory was not found. Run step 1.
-
-### 3. Let your phone reach it
-
-Two options. **Tailscale is strictly better** and is what the rest of this
-document assumes.
-
-**Option A — Tailscale (recommended).** You already have it installed.
+For a physical phone, build with an HTTPS origin:
 
 ```powershell
-tailscale serve --bg 3000
+flutter build apk --release `
+  --dart-define=API_BASE_URL=https://api.example.com
 ```
 
-First run prints a link to enable Serve on your tailnet; visit it once. The
-proxy then survives reboots, so this is a one-time step. To stop it later:
-`tailscale serve --https=443 off`.
+## iPhone and iOS simulator
 
-That publishes `https://<your-machine>.<your-tailnet>.ts.net` in front of the
-local API, with a real Let's Encrypt certificate. Install Tailscale on the
-iPhone and sign in with the same account.
+The iOS simulator uses `http://127.0.0.1:3000` by default. A physical iPhone
+must be built with `API_BASE_URL` set to the deployed HTTPS API (or a local
+HTTPS development proxy on the same Wi-Fi). No VPN client is required.
 
-Three things this buys you over the LAN address:
-
-- **It works anywhere** — mobile data, a café, your parents' house. Not just
-  your home Wi-Fi.
-- **Nothing is exposed to the internet.** Only devices on your tailnet can
-  reach it.
-- **It is HTTPS**, which is what makes the next step work properly. iOS only
-  grants service workers, offline caching, and reliable "Add to Home Screen"
-  behaviour to a *secure context*. Over plain `http://` you get a degraded
-  install.
-
-**Option B — LAN address.** Your PC is `192.168.2.152`. Windows Firewall blocks
-port 3000 by default; open it from an Administrator terminal:
-
-```bash
-netsh advfirewall firewall add rule name="FINVERSE dev" dir=in action=allow protocol=TCP localport=3000
-```
-
-Then browse to `http://192.168.2.152:3000/app/` from the phone. Works, but only
-on your home Wi-Fi, and without HTTPS the install is second-class.
-
-### 4. Install it on the iPhone
-
-1. Open the URL in **Safari**. It must be Safari — Chrome and Firefox on iOS
-   cannot install a PWA to the home screen, because Apple only allows it from
-   WebKit's own share sheet.
-2. Tap the **Share** button (square with an arrow), scroll down, tap
-   **Add to Home Screen**.
-3. Name it, tap **Add**.
-
-You now have a FINVERSE icon on your home screen. Tapping it opens full-screen
-with no address bar, its own app switcher card, and its own icon — the
-`apple-mobile-web-app-capable` meta tag in `web/index.html` is what does that.
-Without it you would get a bookmark that opens Safari.
-
-### 5. See your updates
-
-There is no automatic update, because there is no app store in this loop. After
-changing code:
+The PWA is the free Windows-to-iPhone route:
 
 ```powershell
-cd C:\Users\samue\OneDrive\Desktop\starter\apps\mobile; flutter build web --release --base-href=/app/
+cd C:\Users\samue\OneDrive\Desktop\starter\apps\mobile
+flutter build web --release --base-href=/app/ `
+  --dart-define=API_BASE_URL=https://api.example.com
 ```
 
-Then pull down to refresh inside the installed app, or close it from the app
-switcher and reopen. Roughly 90 seconds end to end.
+Deploy `build/web` at `/app/` on the same host as the API, open the HTTPS URL
+in Safari, then choose **Share → Add to Home Screen**. Plaid Link for Web is
+available in the PWA; the native app lock and encrypted offline cache are
+available in the Android/iOS binaries.
 
-**For a faster loop while actually developing**, skip the install and use the
-dev server, which has hot reload:
+## Plaid Sandbox
+
+The server adapter supports Plaid Sandbox, encrypted access-token storage,
+cursor-based `/transactions/sync`, pending-to-posted updates, removed rows,
+webhook retry, reconnect, and multiple institutions. Configure the keys only
+in `apps/api/.env` or the deployment secret manager:
+
+On Windows, the repository includes a one-time loopback helper so the secret
+never appears in a shell command or in Git:
 
 ```powershell
-cd C:\Users\samue\OneDrive\Desktop\starter\apps\mobile; flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:3000
+cd C:\Users\samue\OneDrive\Desktop\starter
+npm run plaid:configure --workspace @finverse/api
 ```
 
-Edit, save, and the browser updates in about a second. Develop there, then
-rebuild and refresh the phone when you want to see it on the real device.
+Open the private URL it prints, paste the Sandbox Client ID and secret from
+Plaid **Developers → Keys**, submit it, then restart the API and Android
+Studio. The helper stores user-level development variables and generates the
+bank-token encryption key locally.
 
-### The numbers you see are not yours
-
-Two different things are served, and confusing them is alarming in a finance
-app:
-
-| URL | What it is |
-|---|---|
-| `/` | Redirects to `/app/` when a web build exists |
-| `/app/` | **The product.** Starts empty. Your data only |
-| `/dev/` | **A development tool.** Its Sync button calls the mock aggregator, which fabricates roughly 183 transactions across three invented accounts |
-
-If you have seen bills you do not recognise — rent, subscriptions, a credit
-card — you were on `/dev/` and pressed Sync. That data is generated by
-`MockAggregator`, is deterministic, and belongs to nobody. Deleting your account
-removes it, or just register a fresh one and stay on `/app/`.
-
-The mock sync is refused outright when `NODE_ENV=production`, so it cannot
-follow you to a real deployment.
-
-### Adding your accounts
-
-**Manually — works today, on any platform.** Accounts tab → *Add manual* →
-name, type (including credit card), currency, balance. Manual accounts track
-balances and feed net position, the health score, and credit-card utilisation.
-They do not produce transactions, because nothing is importing any.
-
-**Automatically — yes, including in the iPhone PWA.** Plaid ships a JavaScript
-Link SDK as well as native ones, and the web build uses it. Connecting a bank
-works in the browser; the implementation is chosen per platform in
-`lib/api/plaid_link.dart`.
-
-| Surface | Link SDK | Works today |
-|---|---|---|
-| Web / installable PWA | Plaid Link for Web | **Yes** |
-| Android | Plaid native SDK | Yes |
-| Native iOS build | — | No platform channel written |
-
-Two things it still needs:
-
-1. **Plaid credentials on the server.** Without them the button returns a 503.
-   **Sandbox keys are free** — see below — and let you connect Plaid's test
-   institutions end to end with fake but realistic data.
-2. **Production access** before a *real* bank, which is a commercial agreement
-   (see [08-what-blocks-selling.md](08-what-blocks-selling.md) §1.2).
-
-### Getting free Plaid Sandbox credentials
-
-1. Sign up at [dashboard.plaid.com](https://dashboard.plaid.com). No payment
-   details, no commercial agreement for Sandbox.
-2. Go to **Developers → Keys** and copy the `client_id` and the **Sandbox**
-   secret.
-3. Put them in `apps/api/.env`, with an encryption key for the stored tokens:
-
-```powershell
-node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
-```
-
-```
+```text
 PLAID_CLIENT_ID=...
 PLAID_SECRET=...
 PLAID_ENVIRONMENT=sandbox
-BANK_TOKEN_ENCRYPTION_KEY=<the base64 string from above>
+PLAID_COUNTRIES=CA,US
+BANK_TOKEN_ENCRYPTION_KEY=<base64 for 32 random bytes>
 ```
 
-4. Restart the API. **Connect bank** now opens Plaid Link.
-5. In Sandbox, pick any institution and sign in with username `user_good` and
-   password `pass_good`. You will get several accounts and a few hundred
-   realistic transactions — still not your money, but a full data set to see
-   categorisation, budgets, and the forecast working against.
+Restart the API, sign in, open **Accounts → Connect bank**, and complete Link
+with Plaid's Sandbox test institution credentials. Sandbox data is synthetic;
+real institutions require Plaid production approval and a commercial account.
 
-Connecting your own real bank needs production access, which is §1.2 of the
-launch plan and takes weeks. Sandbox is the honest way to exercise everything
-until then.
+## What is platform-specific
 
-### What does not work in the browser build
+| Capability | Web/PWA | Android | iOS native |
+|---|---:|---:|---:|
+| Plaid Link | Yes (JavaScript SDK) | Yes (native SDK) | Pending Swift SDK bridge |
+| Secure session storage | Origin storage limitations | Android Keystore | iOS Keychain |
+| Encrypted offline cache | Not available | SQLite + AES-GCM | SQLite + AES-GCM |
+| Device app lock | Not available | Biometrics/PIN | Face ID/Touch ID/PIN |
 
-Stated plainly so nothing looks broken when it is merely absent:
+The checked-in iOS project is ready for Xcode. Building or signing it requires
+macOS/Xcode and an Apple team; Windows cannot run that toolchain.
 
-- **Biometric app lock.** No browser API can challenge for a device credential,
-  so the setting reports itself unavailable rather than pretending.
-- **Offline cache.** Web reads always go to the network. A failure is reported
-  as a failure rather than answered with month-old balances.
-- **Session token storage is weaker.** On a phone build, tokens live in the iOS
-  Keychain or Android Keystore. On the web they are encrypted into
-  `localStorage`, which is obfuscation rather than real protection — anything
-  that can run JavaScript on that origin can read them. Acceptable for your own
-  phone on your own tailnet; not acceptable for real customers.
+## Troubleshooting
 
----
+- **Connection refused on Android emulator:** confirm the API is running on
+  port 3000 and leave the default `10.0.2.2` origin in place.
+- **Connection refused on a physical phone:** rebuild with a reachable HTTPS
+  `API_BASE_URL`; `localhost` means the phone itself.
+- **Plaid says Link is not configured:** verify the server has both Sandbox
+  keys and `BANK_TOKEN_ENCRYPTION_KEY`, then restart it.
+- **A returning user sees sign-in:** the app rotates refresh tokens in the
+  server-backed session store. If the session was revoked or the refresh token
+  expired, sign in again; all cached finance data is purged on sign-out.
 
-## Part 2 — The native iOS build, when you have a Mac
+## Data safety reminder
 
-The repository is already prepared for this. Three things were fixed so the
-project does not fight you on day one:
-
-- **Bundle identifier** is `com.finverse.finance`, matching Android, rather
-  than the `com.example.finverse` that `flutter create` leaves behind.
-- **App Transport Security** is configured in `ios/Runner/Info.plist`.
-  Arbitrary cleartext stays **off** — a release build cannot be talked into an
-  unencrypted connection — but local networking is permitted so a dev API on
-  your LAN is reachable. Point the app at a Tailscale HTTPS hostname and no
-  exception is needed at all.
-- **`ios/` and `web/` are version-controlled**, like `android/`. They carry the
-  bundle ids, the ATS policy, the Face ID and local-network usage strings, and
-  the PWA manifest. Leaving them generated meant `flutter create` silently
-  resetting all of it.
-
-### Steps on the Mac
-
-```bash
-xcode-select --install
-```
-
-Install Xcode from the App Store, then Flutter, then:
-
-```bash
-git clone https://github.com/Shine0078/starter.git
-```
-
-Open `apps/mobile/ios/Runner.xcworkspace` in Xcode → Runner target → Signing &
-Capabilities → sign in with your Apple ID → select your personal team.
-
-A **free Apple ID is enough** to run on your own iPhone. The app expires after
-7 days and must be re-deployed; the $99/year Developer Program extends that to
-a year and is what TestFlight requires.
-
-```bash
-cd apps/mobile
-flutter devices
-flutter run --dart-define=API_BASE_URL=https://<your-machine>.<tailnet>.ts.net
-```
-
-`r` hot-reloads in under a second, `R` restarts, `q` quits. In Xcode →
-Window → Devices and Simulators, tick "Connect via network" to go wireless
-after the first cable pairing.
-
-### Still missing for iOS
-
-- **Plaid Link has no iOS platform channel.** `android/` has the Kotlin
-  bridge; the Swift equivalent has not been written. Roughly 3–5 days. Until
-  then bank connection is Android-only.
-- **App Store submission** needs the Apple Developer Program, a privacy
-  policy, and the App Privacy questionnaire. See
-  [08-what-blocks-selling.md](08-what-blocks-selling.md).
-
----
-
-## Where the API base URL comes from
-
-One rule, in `apps/mobile/lib/api/client.dart`:
-
-1. `--dart-define=API_BASE_URL=…` wins if set.
-2. Otherwise, on **web**, the app uses the origin it was served from. The same
-   build therefore works on localhost, on a LAN address, and behind a Tailscale
-   hostname with no rebuild — which matters, because the URL you install the
-   PWA from is usually not the one you developed against.
-3. Otherwise, on **native**, it defaults to `http://10.0.2.2:3000` — the
-   Android emulator's alias for the host machine.
+`/app/` is the product and starts empty for a new user. The development-only
+`/dev/` dashboard can run the deterministic mock aggregator for demonstrations;
+it is not a bank connection and is refused when `NODE_ENV=production`.

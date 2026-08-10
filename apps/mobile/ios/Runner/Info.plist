@@ -37,8 +37,8 @@
 
 	  It deliberately does NOT allow arbitrary cleartext loads. To reach a dev
 	  API on another machine — a Windows PC on your LAN, say — put HTTPS in
-	  front of it rather than widening this. `tailscale serve 3000` issues a
-	  real certificate and needs no exception at all; see docs/11-run-on-your-phone.md.
+	  front of it rather than widening this. A release build must use the
+	  configured HTTPS API origin; see docs/11-run-on-your-phone.md.
 
 	  NSAllowsLocalNetworking permits cleartext to .local and literal LAN
 	  addresses without disabling ATS for the public internet, so a release

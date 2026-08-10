@@ -2,8 +2,9 @@
 
 Written for whoever picks this up next — including a fresh agent session with no
 memory of how any of it got here. Last updated after the MFA, professional
-monthly-report, smart-alert, core-accessibility, shared-rate-limit, and load-smoke
-milestones on 2026-08-08.
+monthly-report, smart-alert, core-accessibility, shared-rate-limit, load-smoke,
+analytics-cache, session-restore, and Plaid Sandbox verification milestones on
+2026-08-10.
 
 Read [`MISSION.md`](../MISSION.md) for the product, [`HANDOVER.md`](../HANDOVER.md)
 for the backlog, and [`04-roadmap.md`](04-roadmap.md) for the sequence. This file
@@ -13,8 +14,8 @@ is the shortest path to being productive again.
 
 ```bash
 npm install
-npm test          # 306 tests, no database needed
-npm run test:db   # 405 tests, spins up a real PostgreSQL and tears it down
+npm test          # 376 tests, no database needed
+npm run test:db   # 477 tests, spins up a real PostgreSQL and tears it down
 npm run dev       # API + dev dashboard on http://localhost:3000
 ```
 
@@ -28,10 +29,10 @@ Every number below was produced by running the thing, not by reading the code.
 
 | Check | Result |
 |---|---|
-| API tests, in-memory | 306 passed |
-| API tests, real Postgres | 405 passed |
+| API tests, in-memory | 376 passed |
+| API tests, real Postgres | 477 passed |
 | `tsc --noEmit`, `npm run build` | clean |
-| `flutter analyze`, `flutter test` | clean, 21 passed |
+| `flutter analyze`, `flutter test` | clean, 52 passed |
 | Android debug compile | `com.finverse.finance`, API 36, 170.9 MB APK; debug-only artifact built successfully |
 | Authenticated load smoke, memory | 250 requests, concurrency 10, 0 failures, 43.3 ms p95, 298.5 req/s |
 | Authenticated load smoke, real Postgres | 250 requests, concurrency 10, 0 failures, 229.1 ms p95, 146.8 req/s |
@@ -175,3 +176,18 @@ An aggregator agreement (Plaid/Flinks — 4–12 weeks including their security
 review), an email provider, hosting and KMS credentials, a registered domain
 before passkeys are possible, Apple and Google developer accounts, and legal
 review of the privacy policy and terms. See [`06-cheap-launch-path.md`](06-cheap-launch-path.md).
+
+The Plaid dashboard was rechecked on 2026-08-10: the team is still Sandbox-only
+and has no account-level webhook configured. The production-access questionnaire
+requires the owner's business and identity details; it was intentionally not
+submitted by automation.
+
+The real Sandbox path was also exercised against the running Postgres API: web
+Link-token creation succeeded; a Sandbox public token exchanged into five
+accounts and transactions; incremental sync was idempotent; then the disposable
+link and user were removed. Android Link-token creation currently returns a safe
+`PLAID_CONFIGURATION` response because the Android package identifier has not
+been allowlisted in the Plaid dashboard. Provider SDK errors are mapped without
+logging request configuration or credentials. Persisted mobile sessions now
+refresh expired access tokens before the dashboard renders and clear expired
+refresh sessions instead of looping.

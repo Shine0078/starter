@@ -25,7 +25,7 @@ Stated so the rest of this document is not read as "nothing works".
 | Authentication | Argon2id, rotating refresh tokens with reuse detection, email verification, password reset, TOTP MFA/recovery codes, device app lock, recoverable deletion, global guard, per-account lockout, session list, audit trail |
 | Persistence | Postgres behind ports, contract-tested against both adapters, migrations |
 | Isolation | Row-level security, app connects as a non-superuser role, 21 dedicated tests |
-| Tests | 306 without a database, 405 against real PostgreSQL, 23 Flutter tests, and an Android debug APK build; all passing |
+| Tests | 376 without a database, 477 against real PostgreSQL, 52 Flutter tests, Android debug and web release builds; all passing |
 | CI | GitHub Actions: API typecheck/test/build/image + Flutter analyze/test/Android compile; tagged API/APK releases |
 
 That is a solid Phase-0 foundation. It is not a product.
@@ -54,7 +54,7 @@ measured in weeks. Nothing else on this list matters until these move.
 
 | # | Item | Detail | Effort |
 |---|---|---|---|
-| 2.1 | **Production bank access** | Plaid Sandbox credentials and the real adapter are configured locally. Charging users still requires Plaid production approval and its security/commercial review | external approval |
+| 2.1 | **Production bank access** | The Plaid Sandbox adapter is implemented and this workstation has user-scoped Sandbox credentials; the live Sandbox path has been verified through Link-token creation, exchange, five-account import, idempotent incremental sync, and cleanup. No production key or institution approval exists. Charging users still requires Plaid production approval and its security/commercial review | external approval |
 | 2.2 | **Link flow** | Completed for Android with Plaid's official native SDK, authenticated Link-token creation, public-token exchange, encrypted permanent tokens, and a mobile Accounts screen | Plaid Dashboard package allowlist remains owner-approved |
 | 2.3 | **Reauth / broken-link handling** | Completed: `ITEM_LOGIN_REQUIRED` becomes a visible reconnect state and Link update mode reuses the Item | production institution testing remains |
 | 2.4 | **Real sync engine** | Completed: `/transactions/sync` cursors, all-page draining, mutation-safe pagination restart, added/modified/removed reconciliation, pending-to-posted changes, serialized link sync, retry queue, and manual refresh | production load/rate-limit testing remains |
@@ -145,7 +145,7 @@ smaller than the complete MISSION.md product.
 | 5.5 | **Android identity and launcher** | **Completed:** `com.finverse.finance`, FINVERSE label, versioned platform project, and branded launcher asset | Store listing still external |
 | 5.6 | **Release signing credentials** | Gradle and the release workflow are wired for an upload key and refuse a distributable release without secrets | User must generate and protect the upload key |
 | 5.7 | **iOS never built** | Requires a Mac. Untested and unverified | 1 week |
-| 5.8 | **Mobile testing is still thin** | 30 widget tests cover auth protocol, recovery, deletion, navigation, offline cache, accessibility scaling, and the plan/paywall paths. No device integration or golden tests | 2 weeks |
+| 5.8 | **Mobile testing is still thin** | 52 widget/design tests cover auth protocol, persisted-session refresh, concurrent refresh, recovery, deletion, navigation, transaction filters, offline cache, accessibility scaling, analytics visuals, reactive data invalidation, and plan/paywall paths. No device integration or golden tests | 2 weeks |
 | 5.9 | **Accessibility audit incomplete** | Core spending, budget, and health visuals now have spoken equivalents and an automated 200% text-scaling overflow test. Physical VoiceOver/TalkBack, contrast, colour-blind, and one-handed audits remain | device testing + 1–2 weeks |
 | 5.10 | **No localisation** | Mission asks for multiple languages. Single hardcoded locale | 1–2 weeks |
 | 5.11 | **No crash reporting** | "Crash-free above 99.9%" cannot be claimed without measuring it | days |
@@ -210,9 +210,9 @@ features them.
   in-app budget, credit-utilization, low-balance, bank-sync, upcoming-bill,
   subscription-price-rise, possible-duplicate, and spending-outlier alerts exist;
   push delivery still requires platform credentials and a background delivery job
-- Fraud and anomaly detection — exact recent duplicate prompts and conservative
-  category outliers are implemented; foreign-spend rules and a trained fraud
-  model are not
+- Fraud and anomaly detection — exact and near-descriptor duplicate prompts, conservative
+  category outliers, and explainable refund matching are implemented; foreign-spend
+  rules and a trained fraud model are not
 - Receipt OCR
 
 **Named once, clearly later-phase**
@@ -225,7 +225,8 @@ features them.
 - Investment and crypto tracking
 - Financial calendar, custom automation rules, life timeline
 - Bill negotiation, merchant offers, financial marketplace
-- Weekly/quarterly/yearly/lifetime analytics — only month-to-date exists
+- Lifetime analytics and custom analytics UX now cover week/month/3m/6m/year/lifetime
+  periods and server-side custom ranges.
 - Web dashboard, tablet layouts, smartwatch notifications
 - Regional compliance layer
 
@@ -240,7 +241,7 @@ Worth fixing because they cause bad decisions later.
 | 9.1 | Security controls described in the present tense that do not exist | `03-security-privacy.md` — see §3.1 |
 | 9.2 | The deletion purge is described in operational detail as though it runs | `02-data-model.md` |
 | 9.3 | Unused Redis was provisioned despite zero application references | Fixed: shared rate limits and webhook jobs use PostgreSQL, and Redis was removed from the cheap-launch stack |
-| 9.4 | Test counts drift out of date and are then quoted as evidence — 225/288 were stale until re-measured at 243/309 | fixed in `07-session-notes.md`, but the pattern will recur |
+| 9.4 | Test counts drift out of date and are then quoted as evidence — older counts were stale until re-measured at 376/477/52 | fixed in `07-session-notes.md`, but the pattern will recur |
 | 9.5 | `06-cheap-launch-path.md` describes a *personal beta*, not a sellable product. It is correct for what it is, and should say so at the top so it is not mistaken for a launch plan | `06-cheap-launch-path.md` |
 
 ---

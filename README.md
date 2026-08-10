@@ -120,13 +120,14 @@ last 15 minutes; exchange the refresh token at `/api/auth/refresh` for a new pai
 | `DELETE` | `/bank-links/:id` | Revoke Plaid access and remove the stored token |
 | `GET` | `/accounts` | Balances and credit utilization |
 | `POST`/`PATCH`/`DELETE` | `/accounts/manual[/:id]` | User-owned cash, offline assets, investments, and debts; provider rows are never editable here |
-| `GET` | `/transactions` | `?search=&category=&account=&from=&to=&limit=` |
+| `GET` | `/transactions` | `?search=&category=&account=&kind=&pending=&recurring=&minAmount=&maxAmount=&from=&to=&before=&limit=` |
 | `GET` | `/transactions/export.csv` | Download the user-owned ledger as a CSV; spreadsheet-formula-safe text fields |
 | `GET` | `/transactions/needs-review` | What we refused to guess at |
 | `PATCH` | `/transactions/:id/category` | Correct a category, optionally create a rule |
 | `GET`/`POST` | `/budgets` | List / create |
 | `GET` | `/budgets/progress` | Spend, thresholds, projections, alerts |
 | `GET` | `/insights` | Month-to-date vs. the same window last month |
+| `GET` | `/analytics` | `?period=week|month|3m|6m|year|lifetime|custom&from=&to=&currency=`; spending, income, savings, velocity, refund matches, and timeline |
 | `GET` | `/reports/monthly.pdf?asOf=YYYY-MM-DD` | Private multi-page PDF with cash-flow charts, budgets, subscriptions, forecast, and actions |
 | `GET` | `/subscriptions` | Detected recurring charges and price rises |
 | `GET` | `/health-score` | 0–1000 with per-component actions |
@@ -264,13 +265,13 @@ stopped running.
 
 ## Notes on what is and isn't verified
 
-- **The API and its domain logic run and are tested.** 306 tests run with no
-  database; the full suite is **405 passing** against real PostgreSQL, including
+- **The API and its domain logic run and are tested.** 376 tests run with no
+  database; the full suite is **477 passing** against real PostgreSQL, including
   the store contract — which runs as the restricted role, so it executes with the
   row-level security policies in force — and a suite that issues deliberately
   unfiltered SQL to prove the database withholds other users' rows on its own.
   The slice is also exercised end to end over HTTP.
-- **The Flutter app is verified by static analysis, 23 tests, and a real
+- **The Flutter app is verified by static analysis, 52 tests, and real
   Android debug APK build.** Android and iOS platform projects can be generated
   locally. See the
   [cheap launch path](docs/06-cheap-launch-path.md).
