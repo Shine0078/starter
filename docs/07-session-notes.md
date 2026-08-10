@@ -32,7 +32,7 @@ Every number below was produced by running the thing, not by reading the code.
 | API tests, in-memory | 385 passed |
 | API tests, real Postgres | 486 passed |
 | `tsc --noEmit`, `npm run build` | clean |
-| `flutter analyze`, `flutter test` | clean, 59 passed |
+| `flutter analyze`, `flutter test` | clean, 60 passed |
 | Android debug compile | `com.finverse.finance`, API 36, 170.9 MB APK; debug-only artifact built successfully |
 | Authenticated load smoke, memory | 250 requests, concurrency 10, 0 failures, 43.3 ms p95, 298.5 req/s |
 | Authenticated load smoke, real Postgres | 250 requests, concurrency 10, 0 failures, 229.1 ms p95, 146.8 req/s |
