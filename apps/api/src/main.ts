@@ -12,7 +12,7 @@ import { existsSync } from 'node:fs';
 import { extname, join } from 'node:path';
 
 import { AppModule } from './app.module';
-import { loadConfig } from './config';
+import { loadConfig, shouldServeDevelopmentDashboard } from './config';
 import { installHttpControls } from './infra/http/controls';
 import { parseAppRole, provisionAppRole } from './infra/postgres/app-role';
 import { closePool, getPool } from './infra/postgres/pool';
@@ -69,7 +69,7 @@ async function bootstrap(): Promise<void> {
   // adapter. It fabricates a sample ledger from the mock aggregator, so a
   // persistent deployment must never expose it just because NODE_ENV was
   // omitted or mistyped.
-  const developmentDashboard = !config.isProduction && config.store === 'memory';
+  const developmentDashboard = shouldServeDevelopmentDashboard(config);
   if (developmentDashboard) {
     app.useStaticAssets(join(__dirname, '..', 'public'), { prefix: '/dev' });
   }

@@ -52,6 +52,17 @@ export interface AppConfig {
 }
 
 /**
+ * The sample dashboard fabricates a ledger, so it is safe only with the
+ * explicitly data-losing in-memory adapter. Keeping this decision pure makes
+ * the server guard easy to test without booting Nest.
+ */
+export function shouldServeDevelopmentDashboard(
+  config: Pick<AppConfig, 'isProduction' | 'store'>,
+): boolean {
+  return !config.isProduction && config.store === 'memory';
+}
+
+/**
  * The signing key.
  *
  * There is deliberately **no hardcoded fallback**. A default secret committed to

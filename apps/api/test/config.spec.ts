@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { loadConfig, resetConfigForTests } from '../src/config';
+import {
+  loadConfig,
+  resetConfigForTests,
+  shouldServeDevelopmentDashboard,
+  type AppConfig,
+} from '../src/config';
 
 const KEYS = [
   'NODE_ENV',
@@ -48,6 +53,17 @@ afterEach(() => {
 });
 
 describe.sequential('production configuration', () => {
+  it.each<[Pick<AppConfig, 'isProduction' | 'store'>, boolean]>([
+    [{ isProduction: false, store: 'memory' }, true],
+    [{ isProduction: false, store: 'postgres' }, false],
+    [{ isProduction: true, store: 'postgres' }, false],
+  ])(
+    'serves the mock dashboard only for in-memory development',
+    (config, expected) => {
+      expect(shouldServeDevelopmentDashboard(config)).toBe(expected);
+    },
+  );
+
   it('runs with only the restricted runtime database credential', () => {
     productionBase();
     process.env.TRUST_PROXY_HOPS = '1';
