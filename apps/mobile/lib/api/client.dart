@@ -790,6 +790,7 @@ class ApiClient {
     String? merchantOverride,
     String? note,
     bool? excludedFromAnalytics,
+    bool? isRecurring,
   }) async {
     final body = <String, dynamic>{};
     if (merchantOverride != null) body['merchantOverride'] = merchantOverride;
@@ -797,6 +798,7 @@ class ApiClient {
     if (excludedFromAnalytics != null) {
       body['excludedFromAnalytics'] = excludedFromAnalytics;
     }
+    if (isRecurring != null) body['isRecurring'] = isRecurring;
     final json = await _send(
       'PATCH',
       '/transactions/$transactionId/preferences',

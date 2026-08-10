@@ -24,6 +24,8 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
   late String _merchantOverride;
   late String _note;
   late bool _excludedFromAnalytics;
+  late bool _isRecurring;
+  late bool? _recurringOverride;
   var _saving = false;
 
   @override
@@ -33,6 +35,8 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
     _merchantOverride = widget.transaction.merchantOverride ?? '';
     _note = widget.transaction.note ?? '';
     _excludedFromAnalytics = widget.transaction.excludedFromAnalytics;
+    _isRecurring = widget.transaction.isRecurring;
+    _recurringOverride = widget.transaction.recurringOverride;
     _loadCategories();
   }
 
@@ -156,6 +160,39 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
     }
   }
 
+  Future<void> _toggleRecurring(bool value) async {
+    final previous = _isRecurring;
+    final previousOverride = _recurringOverride;
+    setState(() {
+      _isRecurring = value;
+      _recurringOverride = value;
+      _saving = true;
+    });
+    try {
+      final updated = await widget.api.updateTransactionPreferences(
+        widget.transaction.id,
+        isRecurring: value,
+      );
+      if (mounted) {
+        setState(() {
+          _isRecurring = updated.isRecurring;
+          _recurringOverride = updated.recurringOverride;
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _isRecurring = previous;
+          _recurringOverride = previousOverride;
+        });
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.toString())));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final transaction = widget.transaction;
@@ -236,7 +273,16 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                 _detail('Bank description', transaction.rawDescriptor),
                 _detail('Normalized name', transaction.normalizedDescriptor),
                 _detail('Status', transaction.pending ? 'Pending' : 'Posted'),
-                _detail('Recurring', transaction.isRecurring ? 'Yes' : 'No'),
+                _detail(
+                  'Recurring',
+                  _isRecurring
+                      ? (_recurringOverride == null
+                          ? 'Yes · detected from history'
+                          : 'Yes · marked by you')
+                      : (_recurringOverride == null
+                          ? 'No · not detected'
+                          : 'No · marked by you'),
+                ),
                 _detail('Account reference', transaction.accountId),
               ],
             ),
@@ -264,6 +310,15 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                       : _note),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: _saving ? null : () => _editText(note: true),
+                ),
+                SwitchListTile.adaptive(
+                  secondary: const Icon(Icons.autorenew),
+                  title: const Text('Mark as recurring'),
+                  subtitle: Text(_recurringOverride == null
+                      ? 'Override the history-based detector for this transaction'
+                      : 'Your choice is kept across future bank syncs'),
+                  value: _isRecurring,
+                  onChanged: _saving ? null : _toggleRecurring,
                 ),
                 SwitchListTile.adaptive(
                   secondary: const Icon(Icons.visibility_off_outlined),

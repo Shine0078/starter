@@ -1144,6 +1144,12 @@ void main() {
           200,
         );
       }
+      if (request.url.path.endsWith('/preferences')) {
+        return http.Response(
+          '{"transaction":{"id":"txn-1","accountId":"account-1","postedAt":"2026-08-08","amount":-1299,"currency":"CAD","amountFormatted":"-12.99","rawDescriptor":"POS GROCERY STORE 1234","normalizedDescriptor":"grocery store","merchant":"Grocery Store","categorySlug":"groceries","categorySource":"merchant_rule","categoryConfidence":0.91,"pending":false,"isRecurring":true,"recurringOverride":true}}',
+          200,
+        );
+      }
       return http.Response('{}', 200);
     }));
     final transaction = Transaction.fromJson({
@@ -1161,6 +1167,7 @@ void main() {
       'categoryConfidence': 0.91,
       'pending': false,
       'isRecurring': false,
+      'recurringOverride': null,
     });
 
     await tester.pumpWidget(MaterialApp(
@@ -1172,6 +1179,17 @@ void main() {
     expect(find.text('Grocery Store'), findsOneWidget);
     expect(find.text('Bank description'), findsOneWidget);
     expect(find.textContaining('91% confidence'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('Mark as recurring'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.drag(find.byType(ListView).first, const Offset(0, -180));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mark as recurring'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('marked by you'), findsOneWidget);
   });
 
   testWidgets('navigates to transactions, budgets, and goals', (tester) async {
