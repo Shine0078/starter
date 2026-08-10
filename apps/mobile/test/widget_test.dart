@@ -1705,7 +1705,7 @@ void main() {
       }
       if (path.endsWith('/insights')) {
         return http.Response(
-          '{"headline":{"income":"\$0.00","expenses":"\$0.00","netCashFlow":"\$0.00","savingsRate":"0.0%"},"topCategories":[],"insights":[]}',
+          '{"headline":{"income":"\$0.00","expenses":"\$0.00","netCashFlow":"\$0.00","savingsRate":"0.0%"},"comparison":{"income":"\$100.00 (10%) higher than last period","expenses":null,"netCashFlow":null,"savingsRate":"2.0 percentage points higher than last period"},"topCategories":[],"insights":[]}',
           200,
         );
       }
@@ -1726,6 +1726,7 @@ void main() {
       ),
     ));
     await tester.pumpAndSettle();
+    expect(find.text('Compared with last period'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Cash-flow planning'));
     await tester.pumpAndSettle();
