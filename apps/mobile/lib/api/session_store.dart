@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// The tokens for the signed-in session.
@@ -76,6 +77,66 @@ abstract class SessionStore {
   Future<void> clear();
 }
 
+/// A signed-out marker contains no credential material. Keeping it in a
+/// platform preferences store lets logout remain durable even when iOS
+/// Keychain or Android Keystore is temporarily locked and cannot accept a
+/// delete operation. The refresh token itself never leaves [_storage].
+abstract class SessionSignOutMarker {
+  Future<bool> read();
+  Future<void> write();
+  Future<void> clear();
+}
+
+class _PreferencesSignOutMarker implements SessionSignOutMarker {
+  _PreferencesSignOutMarker({SharedPreferencesAsync? preferences})
+      : _preferences = preferences ?? SharedPreferencesAsync();
+
+  static const _key = 'finverse.session.signed_out';
+  final SharedPreferencesAsync _preferences;
+
+  @override
+  Future<bool> read() async => await _preferences.getBool(_key) ?? false;
+
+  @override
+  Future<void> write() async => _preferences.setBool(_key, true);
+
+  @override
+  Future<void> clear() async => _preferences.remove(_key);
+}
+
+/// Used when a caller injects secure storage directly (and by tests) so the
+/// existing secure-storage tombstone remains observable without a platform
+/// preferences channel.
+class _SecureStorageSignOutMarker implements SessionSignOutMarker {
+  const _SecureStorageSignOutMarker(this._storage);
+
+  static const _key = 'finverse.session.signed_out';
+  final FlutterSecureStorage _storage;
+
+  @override
+  Future<bool> read() async => await _storage.read(key: _key) == '1';
+
+  @override
+  Future<void> write() => _storage.write(key: _key, value: '1');
+
+  @override
+  Future<void> clear() => _storage.delete(key: _key);
+}
+
+/// Small injectable marker for deterministic storage-failure tests.
+class InMemorySessionSignOutMarker implements SessionSignOutMarker {
+  bool signedOut = false;
+
+  @override
+  Future<bool> read() async => signedOut;
+
+  @override
+  Future<void> write() async => signedOut = true;
+
+  @override
+  Future<void> clear() async => signedOut = false;
+}
+
 /// The keystore could not be read right now (for example, iOS Keychain is
 /// still locked immediately after a device reboot). This is different from a
 /// missing or corrupt value: treating an I/O failure as a sign-out would make
@@ -90,7 +151,7 @@ class SessionStoreUnavailableException implements Exception {
 }
 
 class SecureSessionStore implements SessionStore {
-  SecureSessionStore({FlutterSecureStorage? storage})
+  SecureSessionStore({FlutterSecureStorage? storage, SessionSignOutMarker? marker})
       : _storage = storage ??
             const FlutterSecureStorage(
               aOptions: AndroidOptions(migrateWithBackup: true),
@@ -99,28 +160,27 @@ class SecureSessionStore implements SessionStore {
                 // boot, and never synced to iCloud or a device backup.
                 accessibility: KeychainAccessibility.first_unlock_this_device,
               ),
-            );
+            ),
+        _marker = marker ??
+            (storage == null
+                ? _PreferencesSignOutMarker()
+                : _SecureStorageSignOutMarker(storage));
 
   static const _key = 'finverse.session';
-  // A clear can be interrupted while the device is locked. Keeping a small
-  // tombstone lets a later launch stay signed out even if the old token could
-  // not be deleted yet. A successful sign-in removes the tombstone first.
-  static const _signedOutKey = 'finverse.session.signed_out';
 
   final FlutterSecureStorage _storage;
+  final SessionSignOutMarker _marker;
 
   @override
   Future<SessionTokens?> read() async {
-    final String? signedOut;
     try {
-      signedOut = await _storage.read(key: _signedOutKey);
+      if (await _marker.read()) return null;
     } catch (error) {
-      // Do not clear a keystore we could not read. A locked Keychain or a
-      // transient platform-channel failure is not evidence that the session
-      // was revoked.
+      // Do not clear a keystore or marker we could not read. A locked
+      // Keychain, or a transient platform-channel failure, is not evidence
+      // that the session was revoked.
       throw SessionStoreUnavailableException(error);
     }
-    if (signedOut == '1') return null;
     final String? raw;
     try {
       raw = await _storage.read(key: _key);
@@ -152,7 +212,7 @@ class SecureSessionStore implements SessionStore {
       // refresh rotation. If tombstone deletion fails after a successful
       // write, the new token stays safely hidden until the next retry.
       await _storage.write(key: _key, value: jsonEncode(tokens.toJson()));
-      await _storage.delete(key: _signedOutKey);
+      await _marker.clear();
     } catch (error) {
       throw SessionStoreUnavailableException(error);
     }
@@ -163,8 +223,9 @@ class SecureSessionStore implements SessionStore {
     try {
       // Publish the tombstone first. If deletion is interrupted, the next
       // launch still observes signed-out state and cannot resurrect the old
-      // refresh token.
-      await _storage.write(key: _signedOutKey, value: '1');
+      // refresh token. The marker is deliberately outside the keystore so
+      // this first step still succeeds while the device is locked.
+      await _marker.write();
       var tokenDeleted = false;
       try {
         await _storage.delete(key: _key);
@@ -174,7 +235,7 @@ class SecureSessionStore implements SessionStore {
         // successful sign-in. Never remove it after a failed token delete.
         if (tokenDeleted) {
           try {
-            await _storage.delete(key: _signedOutKey);
+            await _marker.clear();
           } catch (_) {
             // The token is already gone; retaining the tombstone is safe.
           }

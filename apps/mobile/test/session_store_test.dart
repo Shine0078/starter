@@ -18,9 +18,12 @@ const _replacement = SessionTokens(
 
 class FailingPlatform extends TestFlutterSecureStoragePlatform {
   FailingPlatform(super.data,
-      {this.failTokenWrite = false, this.failTombstoneDelete = false});
+      {this.failTokenWrite = false,
+      this.failTokenDelete = false,
+      this.failTombstoneDelete = false});
 
   final bool failTokenWrite;
+  final bool failTokenDelete;
   final bool failTombstoneDelete;
 
   @override
@@ -40,6 +43,9 @@ class FailingPlatform extends TestFlutterSecureStoragePlatform {
     required String key,
     required Map<String, String> options,
   }) {
+    if (failTokenDelete && key == 'finverse.session') {
+      return Future<void>.error(StateError('token delete failed'));
+    }
     if (failTombstoneDelete && key == 'finverse.session.signed_out') {
       return Future<void>.error(StateError('tombstone delete failed'));
     }
@@ -83,6 +89,26 @@ void main() {
     expect(await store.read(), isNull);
     expect(data['finverse.session.signed_out'], '1');
     expect(data['finverse.session'], _encode(_replacement));
+  });
+
+  test('logout marker survives a locked keystore during token deletion',
+      () async {
+    final data = <String, String>{'finverse.session': _encode(_old)};
+    final marker = InMemorySessionSignOutMarker();
+    FlutterSecureStoragePlatform.instance =
+        FailingPlatform(data, failTokenDelete: true);
+    final store = SecureSessionStore(
+      storage: const FlutterSecureStorage(),
+      marker: marker,
+    );
+
+    await expectLater(
+      store.clear(),
+      throwsA(isA<SessionStoreUnavailableException>()),
+    );
+    expect(marker.signedOut, isTrue);
+    expect(await store.read(), isNull);
+    expect(data['finverse.session'], _encode(_old));
   });
 }
 
