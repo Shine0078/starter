@@ -17,6 +17,9 @@ const KEYS = [
   'LEGAL_PRIVACY_VERSION',
   'LEGAL_PRIVACY_URL',
   'MFA_ENCRYPTION_KEY',
+  'PLAID_CLIENT_ID',
+  'PLAID_SECRET',
+  'PLAID_ENVIRONMENT',
 ] as const;
 const original = Object.fromEntries(KEYS.map((key) => [key, process.env[key]]));
 
@@ -107,5 +110,13 @@ describe.sequential('production configuration', () => {
     productionBase();
     process.env.LEGAL_TERMS_URL = 'http://finverse.example/legal/terms';
     expect(() => loadConfig()).toThrow(/LEGAL_TERMS_URL must use HTTPS/);
+  });
+
+  it('refuses to run production Plaid credentials against Sandbox', () => {
+    productionBase();
+    process.env.PLAID_CLIENT_ID = 'client-id';
+    process.env.PLAID_SECRET = 'secret';
+    process.env.PLAID_ENVIRONMENT = 'sandbox';
+    expect(() => loadConfig()).toThrow(/PLAID_ENVIRONMENT=production/);
   });
 });

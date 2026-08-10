@@ -309,6 +309,14 @@ function buildConfig(): AppConfig {
     throw new Error('Production must not run on a Stripe test key.');
   }
 
+  const plaidConfigured = Boolean(process.env.PLAID_CLIENT_ID || process.env.PLAID_SECRET);
+  if (isProduction && plaidConfigured && process.env.PLAID_ENVIRONMENT !== 'production') {
+    throw new Error(
+      'Production Plaid credentials require PLAID_ENVIRONMENT=production. ' +
+        'Refusing to run a sellable deployment against Sandbox data.',
+    );
+  }
+
   return {
     port,
     store,
