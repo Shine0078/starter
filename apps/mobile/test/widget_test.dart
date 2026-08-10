@@ -27,6 +27,7 @@ import 'package:finverse/widgets/budget_tile.dart';
 import 'package:finverse/widgets/health_score_card.dart';
 import 'package:finverse/widgets/net_position_card.dart';
 import 'package:finverse/widgets/spending_chart.dart';
+import 'package:finverse/widgets/trend_chart.dart';
 
 /// An in-memory session store keeps these tests off the platform keystore,
 /// which has no implementation in the widget-test host.
@@ -623,6 +624,48 @@ void main() {
           'Cash flow: 160 of 200 points. Income is above expenses.'),
       findsOneWidget,
     );
+    semantics.dispose();
+  });
+
+  testWidgets('trend chart exposes income and spending semantics',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: TrendChart(points: const [
+          AnalyticsTrendPoint(
+            date: '2026-08-01',
+            income: 10000,
+            incomeFormatted: r'$100.00',
+            expenses: 5000,
+            expensesFormatted: r'$50.00',
+            refunds: 0,
+            refundsFormatted: r'$0.00',
+            net: 5000,
+            netFormatted: r'$50.00',
+          ),
+          AnalyticsTrendPoint(
+            date: '2026-08-02',
+            income: 20000,
+            incomeFormatted: r'$200.00',
+            expenses: 8000,
+            expensesFormatted: r'$80.00',
+            refunds: 0,
+            refundsFormatted: r'$0.00',
+            net: 12000,
+            netFormatted: r'$120.00',
+          ),
+        ]),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(
+      find.bySemanticsLabel(
+        r'Income versus spending line chart across 2 periods. Highest income $200.00; highest spending $80.00.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('analytics-trend-chart')), findsOneWidget);
     semantics.dispose();
   });
 

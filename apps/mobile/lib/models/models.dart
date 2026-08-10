@@ -718,6 +718,43 @@ class AnalyticsTimelineEvent {
   final String accountId;
 }
 
+class AnalyticsTrendPoint {
+  const AnalyticsTrendPoint({
+    required this.date,
+    required this.income,
+    required this.incomeFormatted,
+    required this.expenses,
+    required this.expensesFormatted,
+    required this.refunds,
+    required this.refundsFormatted,
+    required this.net,
+    required this.netFormatted,
+  });
+
+  factory AnalyticsTrendPoint.fromJson(Map<String, dynamic> json) =>
+      AnalyticsTrendPoint(
+        date: json['date'] as String,
+        income: json['income'] as int,
+        incomeFormatted: json['incomeFormatted'] as String? ?? '',
+        expenses: json['expenses'] as int,
+        expensesFormatted: json['expensesFormatted'] as String? ?? '',
+        refunds: json['refunds'] as int,
+        refundsFormatted: json['refundsFormatted'] as String? ?? '',
+        net: json['net'] as int,
+        netFormatted: json['netFormatted'] as String? ?? '',
+      );
+
+  final String date;
+  final int income;
+  final String incomeFormatted;
+  final int expenses;
+  final String expensesFormatted;
+  final int refunds;
+  final String refundsFormatted;
+  final int net;
+  final String netFormatted;
+}
+
 class AnalyticsVelocity {
   const AnalyticsVelocity({
     required this.currentPeriodSpend,
@@ -819,6 +856,7 @@ class AnalyticsReport {
     required this.savingsFormatted,
     required this.savingsRate,
     required this.averageMonthlySavingsFormatted,
+    required this.trend,
     required this.velocity,
     required this.timeline,
   });
@@ -895,6 +933,10 @@ class AnalyticsReport {
       savingsRate: (json['savingsRate'] as num).toDouble(),
       averageMonthlySavingsFormatted:
           json['averageMonthlySavingsFormatted'] as String,
+      trend: (json['trend'] as List<dynamic>? ?? const [])
+          .map((row) =>
+              AnalyticsTrendPoint.fromJson(row as Map<String, dynamic>))
+          .toList(),
       velocity:
           AnalyticsVelocity.fromJson(json['velocity'] as Map<String, dynamic>),
       timeline: (json['timeline'] as List<dynamic>)
@@ -929,6 +971,7 @@ class AnalyticsReport {
   final String savingsFormatted;
   final double savingsRate;
   final String averageMonthlySavingsFormatted;
+  final List<AnalyticsTrendPoint> trend;
   final AnalyticsVelocity velocity;
   final List<AnalyticsTimelineEvent> timeline;
 }
