@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../api/client.dart';
@@ -25,6 +27,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Future<void> _load() async {
     widget.api.resetOfflineStatus();
+    unawaited(widget.api.localNotifications.initialize());
     try {
       final rows = await widget.api.notifications();
       if (mounted) {
@@ -34,6 +37,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           _error = null;
         });
       }
+      unawaited(widget.api.localNotifications.presentUnread(rows));
     } catch (error) {
       if (mounted) {
         setState(() {
@@ -152,13 +156,36 @@ class _NotificationPreferencesScreenState
     extends State<NotificationPreferencesScreen> {
   NotificationPreferences? _preferences;
   bool _saving = false;
+  bool _deviceBusy = false;
 
   @override
   void initState() {
     super.initState();
+    unawaited(widget.api.localNotifications.initialize());
     widget.api.notificationPreferences().then((value) {
       if (mounted) setState(() => _preferences = value);
     });
+  }
+
+  Future<void> _enableDeviceAlerts() async {
+    if (_deviceBusy) return;
+    setState(() => _deviceBusy = true);
+    final granted = await widget.api.localNotifications.requestPermission();
+    if (!mounted) return;
+    setState(() => _deviceBusy = false);
+    if (!granted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text(
+            'Notifications are disabled. Enable them in your device settings.'),
+      ));
+    }
+  }
+
+  Future<void> _disableDeviceAlerts() async {
+    if (_deviceBusy) return;
+    setState(() => _deviceBusy = true);
+    await widget.api.localNotifications.disable();
+    if (mounted) setState(() => _deviceBusy = false);
   }
 
   Future<void> _set(String key, bool value) async {
@@ -186,6 +213,7 @@ class _NotificationPreferencesScreenState
       body: preferences == null
           ? const Center(child: CircularProgressIndicator())
           : ListView(children: [
+              _deviceAlerts(),
               _switch('Budget progress', 'budget', preferences.budget),
               _switch('Bills and due dates', 'bills', preferences.bills),
               _switch('Credit utilization', 'creditUtilization',
@@ -200,6 +228,45 @@ class _NotificationPreferencesScreenState
             ]),
     );
   }
+
+  Widget _deviceAlerts() => ValueListenableBuilder<bool?>(
+        valueListenable: widget.api.localNotifications.permissionGranted,
+        builder: (context, granted, _) {
+          final local = widget.api.localNotifications;
+          if (!local.supported) {
+            return const ListTile(
+              leading: Icon(Icons.notifications_none_outlined),
+              title: Text('Device alerts unavailable here'),
+              subtitle: Text(
+                  'Native alerts are available in the Android and iPhone apps.'),
+            );
+          }
+          final enabled = granted == true;
+          return Card(
+            margin: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+            child: ListTile(
+              leading: Icon(enabled
+                  ? Icons.notifications_active_outlined
+                  : Icons.notifications_off_outlined),
+              title: const Text('Device alerts'),
+              subtitle: Text(enabled
+                  ? 'Unread FINVERSE alerts can appear in your notification tray.'
+                  : 'Allow local alerts for unread budgets, bills, banks, and security events.'),
+              trailing: _deviceBusy
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : TextButton(
+                      onPressed:
+                          enabled ? _disableDeviceAlerts : _enableDeviceAlerts,
+                      child: Text(enabled ? 'Turn off' : 'Enable'),
+                    ),
+            ),
+          );
+        },
+      );
 
   Widget _switch(String title, String key, bool value) => SwitchListTile(
         title: Text(title),

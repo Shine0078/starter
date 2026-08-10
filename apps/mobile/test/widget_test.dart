@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -10,6 +11,7 @@ import 'package:cryptography/cryptography.dart';
 import 'package:finverse/api/billing_policy.dart';
 import 'package:finverse/api/client.dart';
 import 'package:finverse/api/app_lock.dart';
+import 'package:finverse/api/local_notifications.dart';
 import 'package:finverse/api/onboarding_store.dart';
 import 'package:finverse/api/offline_cache.dart';
 import 'package:finverse/api/session_store.dart';
@@ -91,6 +93,30 @@ http.Response? _billingResponse(http.BaseRequest request,
 }
 
 void main() {
+  test('local alerts fail closed on unsupported targets', () async {
+    final original = debugDefaultTargetPlatformOverride;
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    try {
+      final service = LocalNotificationService();
+
+      expect(service.supported, isFalse);
+      expect(await service.initialize(), isFalse);
+      expect(service.permissionGranted.value, isFalse);
+      await service.presentUnread([
+        const FinanceNotification(
+          id: 'alert-1',
+          kind: 'budget',
+          title: 'Budget check',
+          message: 'A budget needs your attention.',
+          severity: 'warning',
+          createdAt: '2026-08-10T12:00:00.000Z',
+        ),
+      ]);
+    } finally {
+      debugDefaultTargetPlatformOverride = original;
+    }
+  });
+
   // ------------------------------------------------------------ plan and paywall
 
   testWidgets('shows the current plan and what each tier includes',

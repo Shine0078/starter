@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 
 import '../models/models.dart';
+import 'local_notifications.dart';
 import 'offline_cache.dart';
 import 'session_store.dart';
 
@@ -119,16 +120,19 @@ class ApiClient {
       {http.Client? httpClient,
       String? baseUrl,
       SessionStore? sessionStore,
-      OfflineCacheStore? offlineCache})
+      OfflineCacheStore? offlineCache,
+      LocalNotificationService? localNotifications})
       : _http = httpClient ?? http.Client(),
         sessionStore = sessionStore ?? SecureSessionStore(),
         offlineCache = offlineCache ?? NoopOfflineCacheStore(),
+        localNotifications = localNotifications ?? LocalNotificationService(),
         baseUrl = baseUrl ?? resolveBaseUrl();
 
   final http.Client _http;
   final String baseUrl;
   final SessionStore sessionStore;
   final OfflineCacheStore offlineCache;
+  final LocalNotificationService localNotifications;
 
   SessionTokens? _tokens;
   Future<bool>? _refreshFuture;
