@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../api/client.dart';
 import '../models/models.dart';
+import 'financial_calendar_screen.dart';
 
 class PlanningScreen extends StatefulWidget {
   const PlanningScreen({required this.api, super.key});
@@ -198,6 +199,14 @@ class _PlanningScreenState extends State<PlanningScreen> {
               ),
               const SizedBox(height: 12),
               _UpcomingEvents(events: forecast.events),
+              const SizedBox(height: 12),
+              FilledButton.tonalIcon(
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => FinancialCalendarScreen(api: widget.api),
+                )),
+                icon: const Icon(Icons.calendar_month_outlined),
+                label: const Text('Open financial calendar'),
+              ),
             ],
           ],
         ),

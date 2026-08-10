@@ -60,6 +60,12 @@ file would be required to verify any requirements unique to that document.
   engine and a forecast/simulator entry point. Historical income-versus-spending
   trend points are now gap-filled and downsampled by calendar range, with an
   accessible mobile line chart.
+- A dedicated financial calendar over the 90-day conservative forecast. It
+  groups expected recurring income and bills by calendar date, adds unfinished
+  savings-goal target milestones, marks projected low-balance dates, supports
+  multiple account currencies and month navigation, and exposes the same event
+  details through screen-reader labels. It is linked from both the planning
+  screen and the dashboard.
 - Explainable refund matching links settled refunds to earlier purchases using
   account, currency, merchant, amount, and timing evidence; anomaly alerts also
   catch near-duplicate merchant descriptors conservatively.
@@ -130,7 +136,7 @@ file would be required to verify any requirements unique to that document.
 
 - API in-memory suite: 417 passing, 5 database-only skips.
 - PostgreSQL contract/RLS suite: 518 passing in embedded PostgreSQL.
-- Flutter: 71 widget/design tests passing, `flutter analyze` clean.
+- Flutter: 72 widget/design tests passing, `flutter analyze` clean.
 - Android release APK and web release build both compile. The Android emulator
   booted but its package/activity services were unavailable during an install
   attempt; that is an emulator image issue, not a compile failure.
@@ -166,7 +172,7 @@ file would be required to verify any requirements unique to that document.
   user-scoped storage, latest-value collapse, optimistic retry semantics, and
   successful replay.
 - Data-quality domain checks and authenticated route protection are covered by
-  focused API tests; Flutter analyzer and the 71-test mobile suite remain clean.
+  focused API tests; Flutter analyzer and the 72-test mobile suite remain clean.
 - A provider-neutral public deployment path now runs the tagged API and optional
   Flutter web bundle behind Caddy with automatic HTTPS. Port 3000 remains
   private to the Docker network, and native phones or the `/app/` PWA can use

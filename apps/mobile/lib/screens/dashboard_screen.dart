@@ -18,6 +18,7 @@ import 'subscriptions_screen.dart';
 import 'transaction_detail_screen.dart';
 import 'analytics_screen.dart';
 import 'assistant_screen.dart';
+import 'financial_calendar_screen.dart';
 
 /// The home screen: net position, health score, budgets, recent activity.
 ///
@@ -332,6 +333,13 @@ class _DashboardScreenState extends State<DashboardScreen>
             tooltip: 'Cash-flow planning',
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(
               builder: (_) => PlanningScreen(api: widget.api),
+            )),
+          ),
+          IconButton(
+            icon: const Icon(Icons.calendar_month_outlined),
+            tooltip: 'Financial calendar',
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => FinancialCalendarScreen(api: widget.api),
             )),
           ),
           IconButton(

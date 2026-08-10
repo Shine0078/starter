@@ -99,6 +99,7 @@ ADR-0006 records the shape and what it costs.
       subscriptions, forecast, and prioritized actions
 - [x] Conservative cash-flow forecasting (7/30/90 day; repeatable income and bills only)
 - [x] One-off purchase simulator against the conservative cash-flow forecast
+- [x] Financial calendar over forecast events and projected low-balance dates
 - [ ] Receipt OCR, on-device
 - [ ] Fraud/anomaly detection
 
