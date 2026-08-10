@@ -225,7 +225,7 @@ export class BankingService implements OnModuleInit, OnModuleDestroy {
         try {
           await this.accounts.upsertMany(userId, await this.provider.listAccounts(accessToken));
         } catch {
-          this.logger.warn('Initial bank account listing unavailable; continuing transaction sync.');
+          this.logger.warn('Complete bank account listing unavailable; continuing transaction sync.');
         }
       }
       const rules = await this.rules.list(userId);

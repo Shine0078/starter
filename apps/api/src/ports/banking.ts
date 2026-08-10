@@ -66,7 +66,7 @@ export interface BankProvider {
   /**
    * Returns every active account for an Item. This is intentionally optional
    * for provider adapters that can only expose accounts alongside transaction
-   * updates; the sync path uses it on the initial pull when available.
+   * updates; the sync path uses it on every pull when available.
    */
   listAccounts?(accessToken: string): Promise<Account[]>;
   sync(accessToken: string, cursor: string | null): Promise<BankSyncPage>;
