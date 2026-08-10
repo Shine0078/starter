@@ -31,6 +31,11 @@ file would be required to verify any requirements unique to that document.
 - Debounced transaction search plus validated filters for money type, category,
   account, pending/posted state, recurring status, amount bounds, and inclusive
   date ranges. The same query contract is enforced by both store adapters.
+- Durable transaction annotations now cover local merchant names, private notes,
+  and an exclude/include analytics control. These fields are user-scoped,
+  searchable, preserved across provider re-sync, included in exports, and
+  honored by budgets, analytics, forecasts, subscriptions, health scoring, and
+  financial alerts. The original provider description remains unchanged.
 - A dedicated `AnalyticsScreen` with month metrics, category chart, financial
   health, subscriptions, evidence-backed insights, week/month/quarter/year/
   lifetime/custom period selection, spending velocity, and a financial timeline, backed by the server-side analytics
@@ -41,7 +46,10 @@ file would be required to verify any requirements unique to that document.
 - Read-only encrypted offline cache, safe stale-data banners, bounded request
   timeouts, release-build API URL validation, serialized refresh rotation
   across concurrent 401 responses, and a best-effort bank refresh when the
-  authenticated dashboard resumes after the app has been backgrounded.
+  authenticated dashboard resumes after the app has been backgrounded. A
+  network outage no longer signs a user out while an expired access token is
+  waiting for refresh, and a temporarily locked Keychain/Keystore has an
+  explicit retry state rather than looking like account loss.
 - A shared authenticated-write revision signal now invalidates the live
   dashboard, transactions, budgets, goals, analytics, and bank-connection
   screens immediately after sync or another successful mutation, including
@@ -55,12 +63,14 @@ file would be required to verify any requirements unique to that document.
   queue or a second service.
 - The mock-data developer dashboard is now development-only; production serves
   the Flutter bundle or fails closed instead of exposing fabricated ledger data.
+  The legacy `/api/sync` sample route is also refused for every persistent
+  Postgres deployment, not only for `NODE_ENV=production`.
 
 ## Evidence
 
 - API in-memory suite: 376 passing, 5 database-only skips.
 - PostgreSQL contract/RLS suite: 477 passing in embedded PostgreSQL.
-- Flutter: 52 widget/design tests passing, `flutter analyze` clean.
+- Flutter: 54 widget/design tests passing, `flutter analyze` clean.
 - Android debug APK and web release build both compile. The Android emulator
   booted but its package/activity services were unavailable during an install
   attempt; that is an emulator image issue, not a compile failure.
@@ -76,6 +86,9 @@ file would be required to verify any requirements unique to that document.
 - Persisted mobile sessions now reject expired refresh tokens and refresh an
   expired access token before showing the dashboard, with widget coverage for
   both paths.
+- The transaction annotation migration and API/mobile workflow are covered by
+  the authenticated API isolation test, the Postgres store contract, and the
+  analytics exclusion test.
 
 ## Still incomplete locally
 
