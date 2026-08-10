@@ -11,9 +11,15 @@
     # Caddy obtains and renews the certificate automatically once DNS points
     # PUBLIC_API_DOMAIN at this host. The API remains private on the Docker
     # network; only the TLS edge publishes ports to the internet.
-  handle_path /app* {
-    reverse_proxy web:80
-  }
+    # Keep the installable app URL canonical. `handle_path` strips `/app` before
+    # handing requests to nginx, while Flutter's base href remains `/app/` in
+    # the browser. The slash redirect also prevents `/app` from falling through
+    # to the API service.
+    redir /app /app/ 308
+
+    handle_path /app/* {
+        reverse_proxy web:80
+    }
 
   handle {
     reverse_proxy api:3000

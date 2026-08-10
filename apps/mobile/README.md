@@ -1,8 +1,9 @@
 # FINVERSE mobile
 
-Flutter client for FINVERSE. Android is the verified launch target; the native
-Plaid Link bridge uses Plaid's official Android SDK rather than an unsupported
-Flutter wrapper.
+Flutter client for FINVERSE. Android and iOS share the Dart product code; the
+native Plaid Link bridges use Plaid's official SDKs rather than an unsupported
+Flutter wrapper. Android release compilation is verified locally; native iOS
+signing and physical-device validation require macOS/Xcode.
 
 ## Run on the Android emulator
 
@@ -15,9 +16,18 @@ flutter pub get
 flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000
 ```
 
-`10.0.2.2` is the Android emulator's route to the host machine. For a physical
-phone, use `http://<your-computer-LAN-IP>:3000` and allow that port through the
-local firewall.
+`10.0.2.2` is the Android emulator's route to the host machine. A physical
+phone should use a deployed HTTPS origin, configured at build time:
+
+```powershell
+flutter build apk --release `
+  --dart-define=API_BASE_URL=https://api.your-domain.example
+```
+
+For temporary same-Wi-Fi development, an explicitly configured local HTTPS
+proxy is safer than exposing the API's plain HTTP port. Do not ship a LAN,
+localhost, or private-tunnel address in a release build; the public HTTPS path
+described in `docs/09-launch-operations.md` works without Tailscale/VPN.
 
 ## Plaid Link
 
@@ -83,6 +93,20 @@ Settings includes an offline-friendly Help & Support centre with a credential-fr
 API readiness check and copyable diagnostics. Release builds may configure a
 staffed contact address with `--dart-define=SUPPORT_EMAIL=support@example.com`;
 the default build intentionally sends no email anywhere.
+
+## iPhone without a VPN
+
+When a Mac/Xcode build is not available, build the web bundle and serve it from
+the public HTTPS API host:
+
+```powershell
+flutter build web --release --base-href=/app/ `
+  --dart-define=API_BASE_URL=https://api.your-domain.example
+```
+
+Copy `build/web` into `infra/web/`, start the public Caddy stack, and open
+`https://api.your-domain.example/app/` in Safari. **Add to Home Screen** creates
+an installable PWA that uses the same HTTPS API without a VPN client.
 
 ## Verification
 
