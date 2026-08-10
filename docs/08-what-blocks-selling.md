@@ -26,7 +26,7 @@ Stated so the rest of this document is not read as "nothing works".
 | Persistence | Postgres behind ports, contract-tested against both adapters, migrations |
 | Isolation | Row-level security, app connects as a non-superuser role, 21 dedicated tests |
 | Tests | 388 without a database, 489 against real PostgreSQL, 60 Flutter tests, Android debug and web release builds; all passing |
-| CI | GitHub Actions: API typecheck/test/build/image + Flutter analyze/test/Android compile; tagged API/APK releases |
+| CI | GitHub Actions: API typecheck/test/build/image + Flutter analyze/test, Android release compile, native iOS no-signing compile, and tagged API/APK/web artifacts |
 
 That is a solid Phase-0 foundation. It is not a product.
 

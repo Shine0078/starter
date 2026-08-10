@@ -104,6 +104,8 @@ file would be required to verify any requirements unique to that document.
   attempt; that is an emulator image issue, not a compile failure.
 - Windows Flutter cannot compile iOS; Xcode/macOS remains required for the
   LinkKit package resolution, Universal Link OAuth return, and device test.
+  CI now compiles the native iOS target without signing on macOS to catch source
+  and package regressions before that owner-controlled step.
   The iPhone PWA remains available as a browser fallback.
 - The live Plaid Sandbox credentials were configured locally (never committed)
   and the provider path was verified on 2026-08-10 against the Postgres API:
