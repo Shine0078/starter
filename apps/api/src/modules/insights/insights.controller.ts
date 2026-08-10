@@ -164,6 +164,14 @@ export class InsightsController {
     };
   }
 
+  @Get('data-quality')
+  async dataQuality(@CurrentUser() userId: string, @Query('asOf') asOf?: string) {
+    if (asOf && !isIsoCalendarDate(asOf)) {
+      throw new BadRequestException('asOf must be a valid date in YYYY-MM-DD format.');
+    }
+    return this.insights.dataQuality(userId, asOf);
+  }
+
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @RequiresEntitlement('monthly_pdf_report')
   @Get('reports/monthly.pdf')

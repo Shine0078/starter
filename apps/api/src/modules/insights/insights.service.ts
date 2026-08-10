@@ -19,6 +19,7 @@ import { simulatePurchase, type PurchaseScenario } from '../../domain/insights/p
 import { computeAnalytics, type AnalyticsReport } from '../../domain/insights/analytics';
 import { buildCreditCardPlans, type CreditCardPlan } from '../../domain/credit-cards/payment-plan';
 import { computeHealthScore, type HealthScore } from '../../domain/health-score/score';
+import { assessDataQuality, type DataQualityReport } from '../../domain/insights/data-quality';
 import {
   ACCOUNT_STORE,
   CLOCK,
@@ -27,6 +28,7 @@ import {
   type ClockPort,
   type TransactionStore,
 } from '../../ports';
+import { BANK_LINK_STORE, type BankLinkStore } from '../../ports/banking';
 import { BudgetsService } from '../budgets/budgets.service';
 import {
   FinanceEventBus,
@@ -58,6 +60,7 @@ export class InsightsService {
   constructor(
     @Inject(TRANSACTION_STORE) private readonly transactions: TransactionStore,
     @Inject(ACCOUNT_STORE) private readonly accounts: AccountStore,
+    @Inject(BANK_LINK_STORE) private readonly bankLinks: BankLinkStore,
     @Inject(CLOCK) private readonly clock: ClockPort,
     private readonly budgets: BudgetsService,
     @Optional() private readonly events?: FinanceEventBus,
@@ -79,6 +82,23 @@ export class InsightsService {
     if (cashFlow) insights.unshift(cashFlow);
 
     return { summary, previous, insights };
+  }
+
+  async dataQuality(userId: string, asOf?: string): Promise<DataQualityReport> {
+    const checkedAt = asOf
+      ? `${asOf}T23:59:59.999Z`
+      : this.clock.now().toISOString();
+    const [transactions, accounts, bankLinks] = await Promise.all([
+      this.transactions.list(userId),
+      this.accounts.list(userId),
+      this.bankLinks.list(userId),
+    ]);
+    return assessDataQuality({
+      transactions,
+      accounts,
+      bankLinks,
+      checkedAt,
+    });
   }
 
   async subscriptions(

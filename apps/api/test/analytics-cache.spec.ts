@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { AccountStore, TransactionStore } from '../src/ports';
+import type { BankLinkStore } from '../src/ports/banking';
 import { FixedClock } from '../src/infra/clock';
 import { FinanceEventBus } from '../src/infra/events/finance-event-bus';
 import { InsightsService } from '../src/modules/insights/insights.service';
@@ -36,6 +37,7 @@ describe('analytics cache', () => {
     const service = new InsightsService(
       transactions,
       {} as AccountStore,
+      {} as BankLinkStore,
       new FixedClock('2026-08-08'),
       {} as BudgetsService,
       events,
@@ -68,6 +70,7 @@ describe('analytics cache', () => {
     const service = new InsightsService(
       transactions,
       {} as AccountStore,
+      {} as BankLinkStore,
       new FixedClock('2026-08-08'),
       {} as BudgetsService,
       events,

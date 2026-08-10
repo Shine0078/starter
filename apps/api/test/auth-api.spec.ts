@@ -352,6 +352,7 @@ describe('auth API', () => {
       '/api/budgets/progress',
       '/api/insights',
       '/api/analytics',
+      '/api/data-quality',
       '/api/subscriptions',
       '/api/health-score',
       '/api/goals',
@@ -409,6 +410,18 @@ describe('auth API', () => {
         .get('/api/accounts')
         .set('Authorization', `Bearer ${tokens.accessToken}`)
         .expect(200);
+
+      const quality = await request(http)
+        .get('/api/data-quality')
+        .set('Authorization', `Bearer ${tokens.accessToken}`)
+        .expect(200);
+      expect(quality.body).toMatchObject({
+        status: 'no_data',
+        score: 100,
+        transactionCount: 0,
+        accountCoverage: 1,
+        issues: [],
+      });
     });
 
     it('keeps connection metadata available while Plaid credentials are absent', async () => {
