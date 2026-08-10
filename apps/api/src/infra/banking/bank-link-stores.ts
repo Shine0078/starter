@@ -5,6 +5,7 @@ import { withUserScope } from '../postgres/pool';
 
 export class InMemoryBankLinkStore implements BankLinkStore {
   private readonly rows = new Map<string, BankLink[]>();
+  private readonly syncStartedAt = new Map<string, number>();
 
   private bucket(userId: string): BankLink[] {
     const current = this.rows.get(userId) ?? [];
@@ -34,11 +35,18 @@ export class InMemoryBankLinkStore implements BankLinkStore {
     const index = rows.findIndex((row) => row.id === id);
     if (index < 0) return null;
     rows[index] = { ...rows[index]!, ...patch, id };
+    if (patch.status !== 'syncing') this.syncStartedAt.delete(`${userId}:${id}`);
     return rows[index]!;
   }
   async startSync(userId: string, id: string): Promise<BankLink | null> {
     const link = await this.get(userId, id);
-    if (!link || link.status === 'syncing') return null;
+    if (!link) return null;
+    const key = `${userId}:${id}`;
+    const startedAt = this.syncStartedAt.get(key);
+    if (link.status === 'syncing' && startedAt !== undefined && Date.now() - startedAt < 5 * 60_000) {
+      return null;
+    }
+    this.syncStartedAt.set(key, Date.now());
     return this.update(userId, id, { status: 'syncing', errorCode: null });
   }
   async remove(userId: string, id: string): Promise<boolean> {
@@ -46,10 +54,14 @@ export class InMemoryBankLinkStore implements BankLinkStore {
     const index = rows.findIndex((row) => row.id === id);
     if (index < 0) return false;
     rows.splice(index, 1);
+    this.syncStartedAt.delete(`${userId}:${id}`);
     return true;
   }
   purgeUser(userId: string): void {
     this.rows.delete(userId);
+    for (const key of this.syncStartedAt.keys()) {
+      if (key.startsWith(`${userId}:`)) this.syncStartedAt.delete(key);
+    }
   }
 }
 
