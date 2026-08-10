@@ -98,6 +98,7 @@ export function detectRecurringIncome(transactions: readonly Transaction[]): Rec
   const groups = new Map<string, Transaction[]>();
 
   for (const transaction of transactions) {
+    if (transaction.excludedFromAnalytics) continue;
     if (transaction.pending || transaction.amount <= 0 || !isIncomeCategory(transaction.categorySlug)) continue;
     const rows = groups.get(transaction.normalizedDescriptor) ?? [];
     rows.push(transaction);

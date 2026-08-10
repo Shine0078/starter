@@ -72,6 +72,22 @@ describe('computeAnalytics', () => {
     expect(report.velocity.historicalAverageSpend).toBeNull();
   });
 
+  it('omits user-excluded rows from totals while keeping the evidence model intact', () => {
+    const report = computeAnalytics(
+      [
+        txn({ id: 'included', amount: -2_000 }),
+        txn({ id: 'excluded', amount: -3_000, excludedFromAnalytics: true }),
+      ],
+      { start: '2026-08-01', end: '2026-08-31' },
+      'USD',
+      '2026-08-15',
+    );
+
+    expect(report.grossExpenses).toBe(2_000);
+    expect(report.expenseCount).toBe(1);
+    expect(report.timeline.map((event) => event.id)).toEqual(['included']);
+  });
+
   it('matches a posted refund to the earlier purchase without treating it as income', () => {
     const report = computeAnalytics(
       [

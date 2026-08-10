@@ -61,6 +61,9 @@ export interface TransactionRow {
   raw_descriptor: string;
   normalized_descriptor: string;
   merchant: string | null;
+  merchant_override: string | null;
+  note: string | null;
+  excluded_from_analytics: boolean;
   category_slug: string;
   category_source: string;
   category_confidence: number;
@@ -79,6 +82,9 @@ export function toTransaction(row: TransactionRow): Transaction {
     rawDescriptor: row.raw_descriptor,
     normalizedDescriptor: row.normalized_descriptor,
     ...(row.merchant === null ? {} : { merchant: row.merchant }),
+    ...(row.merchant_override === null ? {} : { merchantOverride: row.merchant_override }),
+    ...(row.note === null ? {} : { note: row.note }),
+    ...(row.excluded_from_analytics === true ? { excludedFromAnalytics: true } : {}),
     categorySlug: row.category_slug,
     categorySource: row.category_source as Transaction['categorySource'],
     categoryConfidence: row.category_confidence,

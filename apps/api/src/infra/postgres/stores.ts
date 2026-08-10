@@ -168,10 +168,11 @@ export class PostgresAccountStore implements AccountStore {
 const TXN_COLUMNS = `
   id, account_id, provider_txn_id, posted_at, amount, currency,
   raw_descriptor, normalized_descriptor, merchant,
+  merchant_override, note, excluded_from_analytics,
   category_slug, category_source, category_confidence, is_recurring, pending
 `;
 
-const TXN_INSERT_COLUMNS = 15;
+const TXN_INSERT_COLUMNS = 18;
 
 export class PostgresTransactionStore implements TransactionStore {
   constructor(private readonly pg: Pool) {}
@@ -203,11 +204,11 @@ export class PostgresTransactionStore implements TransactionStore {
       where.push(`(posted_at < ${date} OR (posted_at = ${date} AND id < ${id}))`);
     }
     if (query.search) {
-      // ILIKE against three columns so a search matches what the user sees
-      // (raw descriptor, merchant) as well as what we match on internally.
+      // ILIKE against provider and user-owned text so search matches what the
+      // user sees without losing the original bank descriptor.
       const needle = bind(`%${query.search}%`);
       where.push(
-        `(normalized_descriptor ILIKE ${needle} OR raw_descriptor ILIKE ${needle} OR merchant ILIKE ${needle})`,
+        `(normalized_descriptor ILIKE ${needle} OR raw_descriptor ILIKE ${needle} OR merchant ILIKE ${needle} OR merchant_override ILIKE ${needle} OR note ILIKE ${needle})`,
       );
     }
     if (query.pending !== undefined) where.push(`pending = ${bind(query.pending)}`);
@@ -276,6 +277,9 @@ export class PostgresTransactionStore implements TransactionStore {
             txn.rawDescriptor,
             txn.normalizedDescriptor,
             txn.merchant ?? null,
+            txn.merchantOverride ?? null,
+            txn.note ?? null,
+            txn.excludedFromAnalytics ?? false,
             txn.categorySlug,
             txn.categorySource,
             txn.categoryConfidence,
@@ -288,6 +292,7 @@ export class PostgresTransactionStore implements TransactionStore {
           `INSERT INTO transactions (
              id, user_id, account_id, provider_txn_id, posted_at, amount, currency,
              raw_descriptor, normalized_descriptor, merchant,
+             merchant_override, note, excluded_from_analytics,
              category_slug, category_source, category_confidence, is_recurring, pending
            ) VALUES ${tuples.join(', ')}
            ON CONFLICT (user_id, account_id, provider_txn_id) DO UPDATE SET
@@ -297,6 +302,9 @@ export class PostgresTransactionStore implements TransactionStore {
              raw_descriptor        = EXCLUDED.raw_descriptor,
              normalized_descriptor = EXCLUDED.normalized_descriptor,
              pending               = EXCLUDED.pending,
+             excluded_from_analytics = transactions.excluded_from_analytics,
+             merchant_override = transactions.merchant_override,
+             note = transactions.note,
              merchant = CASE
                WHEN transactions.category_source IN ('user_manual', 'user_rule')
                  THEN transactions.merchant
@@ -340,6 +348,9 @@ export class PostgresTransactionStore implements TransactionStore {
       rawDescriptor: 'raw_descriptor',
       normalizedDescriptor: 'normalized_descriptor',
       merchant: 'merchant',
+      merchantOverride: 'merchant_override',
+      note: 'note',
+      excludedFromAnalytics: 'excluded_from_analytics',
       categorySlug: 'category_slug',
       categorySource: 'category_source',
       categoryConfidence: 'category_confidence',

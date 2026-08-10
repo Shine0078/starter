@@ -39,7 +39,9 @@ export interface PeriodSummary {
 }
 
 function settled(transactions: readonly Transaction[], period: DateRange): Transaction[] {
-  return transactions.filter((t) => !t.pending && isWithin(t.postedAt, period));
+  return transactions.filter(
+    (t) => !t.pending && !t.excludedFromAnalytics && isWithin(t.postedAt, period),
+  );
 }
 
 export function summarizePeriod(

@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 
 import { categorizeDescriptor, coverageRate, ruleFromCorrection } from '../../domain/categorization/categorize';
@@ -209,6 +209,51 @@ export class LedgerService {
   async listNeedsReview(userId: string): Promise<Transaction[]> {
     const all = await this.transactions.list(userId);
     return all.filter((t) => t.categorySource === 'unknown');
+  }
+
+  /** Persist user-owned presentation and analytics choices without touching
+   * provider evidence. Empty strings clear optional text fields. */
+  async updatePreferences(
+    userId: string,
+    transactionId: string,
+    patch: {
+      merchantOverride?: unknown;
+      note?: unknown;
+      excludedFromAnalytics?: unknown;
+    },
+  ): Promise<Transaction> {
+    const existing = await this.transactions.get(userId, transactionId);
+    if (!existing) throw new NotFoundException(`No transaction ${transactionId}`);
+
+    const next: Partial<Transaction> = {};
+    for (const [key, value] of Object.entries(patch)) {
+      if (key === 'merchantOverride' || key === 'note') {
+        if (value !== undefined && value !== null && typeof value !== 'string') {
+          throw new BadRequestException(`${key} must be text`);
+        }
+        const text = typeof value === 'string' ? value.trim() : '';
+        const limit = key === 'merchantOverride' ? 120 : 2000;
+        if (text.length > limit) {
+          throw new BadRequestException(`${key} must be at most ${limit} characters`);
+        }
+        next[key] = text || undefined;
+      } else if (key === 'excludedFromAnalytics') {
+        if (typeof value !== 'boolean') {
+          throw new BadRequestException('excludedFromAnalytics must be a boolean');
+        }
+        next.excludedFromAnalytics = value;
+      }
+    }
+
+    const updated = await this.transactions.update(userId, transactionId, next);
+    if (!updated) throw new NotFoundException(`No transaction ${transactionId}`);
+    this.events.publish({
+      type: 'TransactionUpdated',
+      userId,
+      at: this.clock.now().toISOString(),
+      updated: 1,
+    });
+    return updated;
   }
 
   /**

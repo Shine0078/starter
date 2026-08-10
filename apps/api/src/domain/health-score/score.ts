@@ -193,7 +193,7 @@ export function computeHealthScore(input: HealthScoreInput): HealthScore {
   // ---- Payment history. Proxy until we track due dates against payments:
   //      late fees and interest charges appearing in the fees category.
   const feeTransactions = transactions.filter(
-    (t) => t.categorySlug === 'fees' && isSpendingCategory(t.categorySlug) && t.amount < 0,
+    (t) => !t.excludedFromAnalytics && t.categorySlug === 'fees' && isSpendingCategory(t.categorySlug) && t.amount < 0,
   );
   const paymentRatio = feeTransactions.length === 0 ? 1 : clamp01(1 - feeTransactions.length * 0.25);
   components.push({

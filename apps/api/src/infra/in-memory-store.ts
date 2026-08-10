@@ -99,7 +99,9 @@ export class InMemoryTransactionStore implements TransactionStore {
         (t) =>
           t.normalizedDescriptor.includes(needle) ||
           t.rawDescriptor.toLowerCase().includes(needle) ||
-          (t.merchant?.toLowerCase().includes(needle) ?? false),
+          (t.merchant?.toLowerCase().includes(needle) ?? false) ||
+          (t.merchantOverride?.toLowerCase().includes(needle) ?? false) ||
+          (t.note?.toLowerCase().includes(needle) ?? false),
       );
     }
     if (query.pending !== undefined) rows = rows.filter((t) => t.pending === query.pending);
@@ -144,6 +146,9 @@ export class InMemoryTransactionStore implements TransactionStore {
           ? {
               ...txn,
               id: existing.id,
+              merchantOverride: existing.merchantOverride,
+              note: existing.note,
+              excludedFromAnalytics: existing.excludedFromAnalytics,
               categorySlug: existing.categorySlug,
               categorySource: existing.categorySource,
               categoryConfidence: existing.categoryConfidence,

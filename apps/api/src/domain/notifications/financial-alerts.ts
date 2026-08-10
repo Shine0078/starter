@@ -99,6 +99,7 @@ export function deriveUnusualTransactionAlerts(
     .filter(
       (transaction) =>
         !transaction.pending &&
+        !transaction.excludedFromAnalytics &&
         transaction.amount < 0 &&
         transaction.postedAt >= historyStart &&
         transaction.postedAt <= today &&

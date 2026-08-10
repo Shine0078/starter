@@ -69,6 +69,7 @@ export function spendForCategory(
 ): number {
   let net = 0;
   for (const txn of transactions) {
+    if (txn.excludedFromAnalytics) continue;
     if (txn.categorySlug !== categorySlug) continue;
     if (!isWithin(txn.postedAt, period)) continue;
     if (!isSpendingCategory(txn.categorySlug)) continue;

@@ -277,6 +277,21 @@ export class LedgerController {
           : 'Updated.',
     };
   }
+
+  @Patch('transactions/:id/preferences')
+  async updateTransactionPreferences(
+    @CurrentUser() userId: string,
+    @Param('id') id: string,
+    @Body()
+    body: {
+      merchantOverride?: unknown;
+      note?: unknown;
+      excludedFromAnalytics?: unknown;
+    },
+  ) {
+    const transaction = await this.ledger.updatePreferences(userId, id, body);
+    return { transaction: present(transaction) };
+  }
 }
 
 function encodeCursor(transaction: Pick<Transaction, 'postedAt' | 'id'>): string {

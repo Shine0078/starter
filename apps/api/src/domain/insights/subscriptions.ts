@@ -168,6 +168,7 @@ export function detectSubscriptions(
   const groups = new Map<string, Transaction[]>();
 
   for (const txn of transactions) {
+    if (txn.excludedFromAnalytics) continue;
     if (txn.pending) continue;
     if (txn.amount >= 0) continue; // subscriptions are outflows
     // A standing transfer into savings is recurring but it is not a cost, and

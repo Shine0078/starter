@@ -13,6 +13,9 @@ const transaction: Transaction = {
   rawDescriptor: '=HYPERLINK("https://attacker.example")',
   normalizedDescriptor: 'hyperlink',
   merchant: 'Store "One", Inc.',
+  merchantOverride: 'Reimbursable store',
+  note: 'Keep the receipt',
+  excludedFromAnalytics: true,
   categorySlug: 'shopping',
   categorySource: 'user_manual',
   categoryConfidence: 1,
@@ -27,6 +30,9 @@ describe('transactionsToCsv', () => {
     expect(csv).toContain('"amount_minor"');
     expect(csv).toContain('"-12345"');
     expect(csv).toContain('"shopping"');
+    expect(csv).toContain('"Reimbursable store"');
+    expect(csv).toContain('"Keep the receipt"');
+    expect(csv).toContain('"true"');
     expect(csv.endsWith('\r\n')).toBe(true);
   });
 

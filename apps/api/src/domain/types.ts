@@ -64,6 +64,12 @@ export interface Transaction {
   /** Processor prefixes and reference numbers stripped. What we match against. */
   normalizedDescriptor: string;
   merchant?: string;
+  /** A user-facing label that never overwrites the provider's audit value. */
+  merchantOverride?: string;
+  /** Private context attached by the user, not sent back to the provider. */
+  note?: string;
+  /** Deliberately omitted from spending, cash-flow, and alert calculations. */
+  excludedFromAnalytics?: boolean;
   categorySlug: string;
   categorySource: CategorySource;
   /** 0–1. */

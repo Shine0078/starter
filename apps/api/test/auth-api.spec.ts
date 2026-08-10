@@ -540,6 +540,50 @@ describe('auth API', () => {
         .expect(400);
     });
 
+    it('persists private transaction annotations without crossing user boundaries', async () => {
+      const alice = await register();
+      const bob = await register();
+      const aliceAuth = { Authorization: `Bearer ${alice.tokens.accessToken}` };
+      const bobAuth = { Authorization: `Bearer ${bob.tokens.accessToken}` };
+
+      await request(http).post('/api/sync').set(aliceAuth).expect(201);
+      const rows = await request(http)
+        .get('/api/transactions?limit=1')
+        .set(aliceAuth)
+        .expect(200);
+      const id = rows.body.transactions[0].id as string;
+
+      const updated = await request(http)
+        .patch(`/api/transactions/${encodeURIComponent(id)}/preferences`)
+        .set(aliceAuth)
+        .send({
+          merchantOverride: 'My grocery store',
+          note: 'Remember the receipt for reimbursement',
+          excludedFromAnalytics: true,
+        })
+        .expect(200);
+      expect(updated.body.transaction.merchantOverride).toBe('My grocery store');
+      expect(updated.body.transaction.note).toContain('reimbursement');
+      expect(updated.body.transaction.excludedFromAnalytics).toBe(true);
+
+      const foundByNote = await request(http)
+        .get('/api/transactions?search=reimbursement')
+        .set(aliceAuth)
+        .expect(200);
+      expect(foundByNote.body.count).toBe(1);
+
+      await request(http)
+        .patch(`/api/transactions/${encodeURIComponent(id)}/preferences`)
+        .set(bobAuth)
+        .send({ note: 'should not be visible' })
+        .expect(404);
+      await request(http)
+        .patch(`/api/transactions/${encodeURIComponent(id)}/preferences`)
+        .set(aliceAuth)
+        .send({ merchantOverride: 'x'.repeat(121) })
+        .expect(400);
+    });
+
     it('keeps budgets separate', async () => {
       const alice = await register();
       const bob = await register();

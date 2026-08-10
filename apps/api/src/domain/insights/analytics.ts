@@ -115,6 +115,7 @@ export function computeAnalytics(
     (transaction) =>
       transaction.currency === currency &&
       !transaction.pending &&
+      !transaction.excludedFromAnalytics &&
       isWithin(transaction.postedAt, period),
   );
   const spending = rows.filter(
@@ -188,6 +189,7 @@ export function computeAnalytics(
     (transaction) =>
       transaction.currency === currency &&
       !transaction.pending &&
+      !transaction.excludedFromAnalytics &&
       isWithin(transaction.postedAt, { start: historyStart, end: historyEnd }) &&
       isSpendingCategory(transaction.categorySlug) &&
       transaction.amount < 0,
@@ -202,7 +204,7 @@ export function computeAnalytics(
 
   const monthlySavings = new Map<string, number>();
   for (const transaction of transactions) {
-    if (transaction.currency !== currency || transaction.pending) continue;
+    if (transaction.currency !== currency || transaction.pending || transaction.excludedFromAnalytics) continue;
     if (!isWithin(transaction.postedAt, period)) continue;
     const month = transaction.postedAt.slice(0, 7);
     const eligibleIncome = isIncomeCategory(transaction.categorySlug) && transaction.categorySlug !== 'refunds' && transaction.amount > 0
