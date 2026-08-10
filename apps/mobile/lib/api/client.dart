@@ -1084,6 +1084,11 @@ class ApiClient {
     return InsightsReport.fromJson(json);
   }
 
+  Future<DataQualityReport> dataQuality() async {
+    final json = await _get('/data-quality') as Map<String, dynamic>;
+    return DataQualityReport.fromJson(json);
+  }
+
   Future<AnalyticsReport> analytics({
     String period = 'month',
     DateTime? asOf,

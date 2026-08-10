@@ -55,6 +55,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   List<BudgetProgress> _budgets = const [];
   List<Transaction> _transactions = const [];
   InsightsReport? _insights;
+  DataQualityReport? _dataQuality;
 
   @override
   void initState() {
@@ -63,6 +64,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     widget.api.dataRevision.addListener(_onDataChanged);
     // Load persisted data immediately. Provider refreshes are explicit and
     // webhook-driven; opening the app must not inject the development mock.
+    unawaited(_loadQuality());
     _load();
   }
 
@@ -101,7 +103,18 @@ class _DashboardScreenState extends State<DashboardScreen>
       // The explicit pull-to-refresh path reports failures; lifecycle refresh
       // must never interrupt the user's current screen.
     }
+    unawaited(_loadQuality());
     if (mounted) await _load();
+  }
+
+  Future<void> _loadQuality() async {
+    try {
+      final report = await widget.api.dataQuality();
+      if (mounted) setState(() => _dataQuality = report);
+    } catch (_) {
+      // Data quality is advisory; a temporary outage must not hide the
+      // dashboard's cached financial data.
+    }
   }
 
   Future<void> _load({bool sync = false}) async {
@@ -114,6 +127,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     try {
       if (sync) await widget.api.refreshConnectedBanks();
+      unawaited(_loadQuality());
 
       final results = await Future.wait([
         widget.api.accounts(),
@@ -435,6 +449,10 @@ class _DashboardScreenState extends State<DashboardScreen>
         children: [
           NetPositionCard(accounts: _accounts),
           const SizedBox(height: 20),
+          if (_dataQuality?.needsAttention == true) ...[
+            _dataQualityCard(theme, _dataQuality!),
+            const SizedBox(height: 20),
+          ],
           if (_insights != null) ...[
             _sectionLabel(theme, 'This month'),
             Card(
@@ -523,6 +541,52 @@ class _DashboardScreenState extends State<DashboardScreen>
           style: theme.textTheme.labelSmall?.copyWith(
             letterSpacing: 1.1,
             color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      );
+
+  Widget _dataQualityCard(ThemeData theme, DataQualityReport report) => Card(
+        color: theme.colorScheme.errorContainer,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.fact_check_outlined,
+                      color: theme.colorScheme.onErrorContainer),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Some financial data needs attention',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: theme.colorScheme.onErrorContainer,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  Text('${report.score}/100',
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: theme.colorScheme.onErrorContainer,
+                      )),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Analytics remain available, but these checks show where the source data may be incomplete.',
+                style: TextStyle(color: theme.colorScheme.onErrorContainer),
+              ),
+              const SizedBox(height: 10),
+              ...report.issues.take(3).map(
+                    (issue) => Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text('• ${issue.title}: ${issue.message}',
+                          style: TextStyle(
+                              color: theme.colorScheme.onErrorContainer)),
+                    ),
+                  ),
+            ],
           ),
         ),
       );

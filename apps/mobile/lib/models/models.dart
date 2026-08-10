@@ -128,6 +128,64 @@ class BankLink {
   bool get needsReconnect => status == 'needs_reauth';
 }
 
+class DataQualityIssue {
+  const DataQualityIssue({
+    required this.code,
+    required this.severity,
+    required this.title,
+    required this.message,
+    required this.affectedCount,
+  });
+
+  factory DataQualityIssue.fromJson(Map<String, dynamic> json) =>
+      DataQualityIssue(
+        code: json['code'] as String,
+        severity: json['severity'] as String,
+        title: json['title'] as String,
+        message: json['message'] as String,
+        affectedCount: json['affectedCount'] as int,
+      );
+
+  final String code;
+  final String severity;
+  final String title;
+  final String message;
+  final int affectedCount;
+}
+
+class DataQualityReport {
+  const DataQualityReport({
+    required this.status,
+    required this.score,
+    required this.checkedAt,
+    required this.transactionCount,
+    required this.accountCoverage,
+    required this.issues,
+  });
+
+  factory DataQualityReport.fromJson(Map<String, dynamic> json) =>
+      DataQualityReport(
+        status: json['status'] as String,
+        score: json['score'] as int,
+        checkedAt: DateTime.parse(json['checkedAt'] as String),
+        transactionCount: json['transactionCount'] as int,
+        accountCoverage: (json['accountCoverage'] as num).toDouble(),
+        issues: (json['issues'] as List<dynamic>)
+            .map((issue) =>
+                DataQualityIssue.fromJson(issue as Map<String, dynamic>))
+            .toList(),
+      );
+
+  final String status;
+  final int score;
+  final DateTime checkedAt;
+  final int transactionCount;
+  final double accountCoverage;
+  final List<DataQualityIssue> issues;
+
+  bool get needsAttention => status == 'attention';
+}
+
 class FinanceNotification {
   const FinanceNotification({
     required this.id,
