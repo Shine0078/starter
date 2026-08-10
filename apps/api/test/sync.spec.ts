@@ -134,6 +134,25 @@ describe('transaction store idempotency', () => {
 
     const july = await store.list(USER, { range: { start: '2026-07-01', end: '2026-07-31' } });
     expect(july.every((t) => t.postedAt >= '2026-07-01' && t.postedAt <= '2026-07-31')).toBe(true);
+
+    const income = await store.list(USER, { categoryKind: 'income' });
+    expect(income.length).toBeGreaterThan(0);
+    expect(income.every((t) => ['income', 'salary', 'freelance', 'refunds', 'interest_income'].includes(t.categorySlug))).toBe(true);
+
+    const pending = await store.list(USER, { pending: true });
+    expect(pending.length).toBeGreaterThan(0);
+    expect(pending.every((t) => t.pending)).toBe(true);
+
+    const bounded = await store.list(USER, { amountMin: 5_000, amountMax: 20_000 });
+    expect(bounded.every((t) => Math.abs(t.amount) >= 5_000 && Math.abs(t.amount) <= 20_000)).toBe(true);
+
+    const recurringTarget = raw.map(toTransaction).find((t) => t.amount < 0);
+    expect(recurringTarget).toBeDefined();
+    await store.upsertMany(USER, [recurringTarget!]);
+    await store.update(USER, recurringTarget!.id, { isRecurring: true });
+    const recurring = await store.list(USER, { recurring: true });
+    expect(recurring.some((t) => t.id === recurringTarget!.id)).toBe(true);
+    expect(recurring.every((t) => t.isRecurring)).toBe(true);
   });
 
   it('returns transactions newest first', async () => {
@@ -145,6 +164,23 @@ describe('transaction store idempotency', () => {
     const rows = await store.list(USER, { limit: 10 });
     const dates = rows.map((r) => r.postedAt);
     expect([...dates].sort().reverse()).toEqual(dates);
+  });
+
+  it('supports a stable keyset cursor for older transaction pages', async () => {
+    const store = new InMemoryTransactionStore();
+    const aggregator = new MockAggregator({ today: '2026-08-07' });
+    const { transactions: raw } = await aggregator.fetchTransactions('link');
+    await store.upsertMany(USER, raw.map(toTransaction));
+
+    const first = await store.list(USER, { limit: 10 });
+    const next = await store.list(USER, {
+      before: { postedAt: first.at(-1)!.postedAt, id: first.at(-1)!.id },
+      limit: 10,
+    });
+
+    expect(next).toHaveLength(10);
+    expect(next.some((row) => first.some((older) => older.id === row.id))).toBe(false);
+    expect(next[0]!.postedAt <= first.at(-1)!.postedAt).toBe(true);
   });
 });
 

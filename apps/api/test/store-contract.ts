@@ -252,6 +252,26 @@ export function runStoreContract(name: string, create: () => Promise<StoreSet>):
           txn({ providerTxnId: 'a', postedAt: '2026-07-05', categorySlug: 'coffee' }),
           txn({ providerTxnId: 'b', postedAt: '2026-08-05', categorySlug: 'groceries' }),
           txn({
+            providerTxnId: 'income',
+            postedAt: '2026-08-06',
+            amount: 50_000,
+            categorySlug: 'salary',
+          }),
+          txn({
+            providerTxnId: 'pending',
+            postedAt: '2026-08-07',
+            pending: true,
+            amount: -7_500,
+            categorySlug: 'groceries',
+          }),
+          txn({
+            providerTxnId: 'recurring',
+            postedAt: '2026-08-08',
+            isRecurring: true,
+            amount: -12_000,
+            categorySlug: 'subscriptions',
+          }),
+          txn({
             providerTxnId: 'c',
             postedAt: '2026-08-15',
             accountId: 'acc_credit',
@@ -265,11 +285,17 @@ export function runStoreContract(name: string, create: () => Promise<StoreSet>):
 
         expect(await stores.transactions.list(USER, { accountId: 'acc_credit' })).toHaveLength(1);
         expect(await stores.transactions.list(USER, { categorySlug: 'coffee' })).toHaveLength(2);
+        expect(await stores.transactions.list(USER, { categoryKind: 'income' })).toHaveLength(1);
+        expect(await stores.transactions.list(USER, { pending: true })).toHaveLength(1);
+        expect(await stores.transactions.list(USER, { recurring: true })).toHaveLength(1);
+        expect(
+          await stores.transactions.list(USER, { amountMin: 7_000, amountMax: 8_000 }),
+        ).toHaveLength(1);
         expect(
           await stores.transactions.list(USER, {
             range: { start: '2026-08-01', end: '2026-08-31' },
           }),
-        ).toHaveLength(2);
+        ).toHaveLength(5);
         expect(await stores.transactions.list(USER, { search: 'starbucks' })).toHaveLength(1);
         expect(await stores.transactions.list(USER, { limit: 2 })).toHaveLength(2);
       });

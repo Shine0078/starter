@@ -103,6 +103,42 @@ export function isIncomeCategory(slug: string): boolean {
   return BY_SLUG.get(slug)?.kind === 'income';
 }
 
+/** Categories that normally represent necessary living costs. This is a
+ * transparent product convention, not a judgement about an individual user's
+ * choices; unknown and discretionary categories stay separate in analytics. */
+const ESSENTIAL_ROOTS = new Set([
+  'housing',
+  'food',
+  'transportation',
+  'healthcare',
+  'debt',
+  'taxes',
+  'fees',
+]);
+
+const DISCRETIONARY_CATEGORIES = new Set([
+  'restaurants',
+  'coffee',
+  'fast_food',
+  'food_delivery',
+  'parking',
+  'rideshare',
+  'shopping',
+  'clothing',
+  'electronics',
+  'entertainment',
+  'streaming',
+  'gaming',
+  'fitness',
+  'travel',
+  'subscriptions',
+  'software',
+]);
+
+export function isEssentialCategory(slug: string): boolean {
+  return !DISCRETIONARY_CATEGORIES.has(slug) && ESSENTIAL_ROOTS.has(rootCategoryOf(slug));
+}
+
 /** Walks to the top-level ancestor. Returns the slug itself if already top-level. */
 export function rootCategoryOf(slug: string): string {
   let current = BY_SLUG.get(slug);

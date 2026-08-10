@@ -103,6 +103,27 @@ describe('derived financial alerts', () => {
     expect(alerts[0]!.message.toLowerCase()).not.toContain('fraud');
   });
 
+  it('flags near-duplicate descriptors when the amount is effectively the same', () => {
+    const rows = [
+      transaction('first', '2026-08-07', -4_250, {
+        categorySlug: 'restaurants',
+        normalizedDescriptor: 'blue bottle coffee',
+        merchant: 'Blue Bottle Coffee',
+      }),
+      transaction('second', '2026-08-08', -4_300, {
+        categorySlug: 'restaurants',
+        normalizedDescriptor: 'blue bottle cafe coffee',
+        merchant: 'Blue Bottle Cafe',
+      }),
+    ];
+
+    const alerts = deriveUnusualTransactionAlerts(rows, '2026-08-08');
+
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0]!.title).toBe('Possible duplicate charge');
+    expect(alerts[0]!.message).toContain('similar merchant details');
+  });
+
   it('requires a material six-transaction baseline before flagging a category outlier', () => {
     const history = [
       '2026-02-15',

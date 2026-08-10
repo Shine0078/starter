@@ -5,6 +5,7 @@ import { categorizeDescriptor, coverageRate, ruleFromCorrection } from '../../do
 import { normalizeDescriptor } from '../../domain/categorization/normalize';
 import { isKnownCategory } from '../../domain/categories';
 import { detectSubscriptions } from '../../domain/insights/subscriptions';
+import { FinanceEventBus } from '../../infra/events/finance-event-bus';
 import type { Account, RawTransaction, Transaction } from '../../domain/types';
 import {
   ACCOUNT_STORE,
@@ -39,6 +40,7 @@ export class LedgerService {
     @Inject(TRANSACTION_STORE) private readonly transactions: TransactionStore,
     @Inject(RULE_STORE) private readonly rules: RuleStore,
     @Inject(CLOCK) private readonly clock: ClockPort,
+    private readonly events: FinanceEventBus,
   ) {}
 
   /**
@@ -79,7 +81,7 @@ export class LedgerService {
       }
     }
 
-    return {
+    const result = {
       accounts: remoteAccounts.length,
       fetched: raw.length,
       inserted,
@@ -88,6 +90,31 @@ export class LedgerService {
       needsReview: results.filter((r) => r.categorization.source === 'unknown').length,
       recurringDetected: subscriptions.length,
     };
+    this.events.publish({
+      type: 'BankSyncCompleted',
+      userId,
+      at: this.clock.now().toISOString(),
+      fetched: result.fetched,
+      inserted: result.inserted,
+      updated: result.updated,
+    });
+    if (result.inserted > 0) {
+      this.events.publish({
+        type: 'TransactionImported',
+        userId,
+        at: this.clock.now().toISOString(),
+        inserted: result.inserted,
+      });
+    }
+    if (result.updated > 0) {
+      this.events.publish({
+        type: 'TransactionUpdated',
+        userId,
+        at: this.clock.now().toISOString(),
+        updated: result.updated,
+      });
+    }
+    return result;
   }
 
   private toTransaction(
@@ -129,6 +156,11 @@ export class LedgerService {
       source: 'manual',
     };
     await this.accounts.upsertMany(userId, [account]);
+    this.events.publish({
+      type: 'AccountConnected',
+      userId,
+      at: this.clock.now().toISOString(),
+    });
     return account;
   }
 
@@ -148,6 +180,11 @@ export class LedgerService {
       source: 'manual',
     };
     await this.accounts.upsertMany(userId, [account]);
+    this.events.publish({
+      type: 'AccountUpdated',
+      userId,
+      at: this.clock.now().toISOString(),
+    });
     return account;
   }
 
@@ -157,6 +194,11 @@ export class LedgerService {
       throw new NotFoundException('No editable manual account was found.');
     }
     await this.accounts.remove(userId, accountId);
+    this.events.publish({
+      type: 'AccountDisconnected',
+      userId,
+      at: this.clock.now().toISOString(),
+    });
   }
 
   listTransactions(userId: string, query: TransactionQuery): Promise<Transaction[]> {
@@ -220,6 +262,13 @@ export class LedgerService {
       }
     }
 
+    this.events.publish({
+      type: 'TransactionCategorized',
+      userId,
+      at: this.clock.now().toISOString(),
+      transactionIds: [transactionId],
+      updated: alsoUpdated + 1,
+    });
     return { transaction: updated!, alsoUpdated };
   }
 

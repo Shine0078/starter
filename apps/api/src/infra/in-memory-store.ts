@@ -20,6 +20,7 @@ import type {
   Transaction,
 } from '../domain/types';
 import { isWithin } from '../domain/dates';
+import { getCategory } from '../domain/categories';
 import type {
   AccountStore,
   BudgetStore,
@@ -79,9 +80,18 @@ export class InMemoryTransactionStore implements TransactionStore {
 
     if (query.accountId) rows = rows.filter((t) => t.accountId === query.accountId);
     if (query.categorySlug) rows = rows.filter((t) => t.categorySlug === query.categorySlug);
+    if (query.categoryKind) {
+      rows = rows.filter((t) => getCategory(t.categorySlug)?.kind === query.categoryKind);
+    }
     if (query.range) {
       const range = query.range;
       rows = rows.filter((t) => isWithin(t.postedAt, range));
+    }
+    if (query.before) {
+      const { postedAt, id } = query.before;
+      rows = rows.filter(
+        (t) => t.postedAt < postedAt || (t.postedAt === postedAt && t.id < id),
+      );
     }
     if (query.search) {
       const needle = query.search.toLowerCase();
@@ -91,6 +101,16 @@ export class InMemoryTransactionStore implements TransactionStore {
           t.rawDescriptor.toLowerCase().includes(needle) ||
           (t.merchant?.toLowerCase().includes(needle) ?? false),
       );
+    }
+    if (query.pending !== undefined) rows = rows.filter((t) => t.pending === query.pending);
+    if (query.recurring !== undefined) {
+      rows = rows.filter((t) => t.isRecurring === query.recurring);
+    }
+    if (query.amountMin !== undefined) {
+      rows = rows.filter((t) => Math.abs(t.amount) >= query.amountMin!);
+    }
+    if (query.amountMax !== undefined) {
+      rows = rows.filter((t) => Math.abs(t.amount) <= query.amountMax!);
     }
 
     rows.sort((a, b) => b.postedAt.localeCompare(a.postedAt) || b.id.localeCompare(a.id));

@@ -351,6 +351,7 @@ describe('auth API', () => {
       '/api/budgets',
       '/api/budgets/progress',
       '/api/insights',
+      '/api/analytics',
       '/api/subscriptions',
       '/api/health-score',
       '/api/goals',
@@ -477,6 +478,13 @@ describe('auth API', () => {
         .expect(200);
 
       const victimId = aliceRows.body.transactions[0].id;
+      expect(aliceRows.body.nextCursor).toEqual(expect.any(String));
+
+      const olderRows = await request(http)
+        .get(`/api/transactions?limit=1&before=${encodeURIComponent(aliceRows.body.nextCursor)}`)
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .expect(200);
+      expect(olderRows.body.transactions[0].id).not.toBe(victimId);
 
       // Bob guesses Alice's transaction id and tries to recategorize it.
       await request(http)
@@ -484,6 +492,52 @@ describe('auth API', () => {
         .set('Authorization', `Bearer ${bob.tokens.accessToken}`)
         .send({ categorySlug: 'coffee', createRule: false })
         .expect(404);
+    });
+
+    it('supports validated transaction feed filters', async () => {
+      const alice = await register();
+      await request(http)
+        .post('/api/sync')
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .expect(201);
+
+      const filtered = await request(http)
+        .get('/api/transactions?kind=income&pending=false&minAmount=1&maxAmount=100000000')
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .expect(200);
+
+      expect(filtered.body.count).toBeGreaterThan(0);
+      expect(filtered.body.transactions.every((row: { categorySlug: string; pending: boolean; amount: number }) =>
+        ['income', 'salary', 'freelance', 'refunds', 'interest_income'].includes(row.categorySlug) &&
+        row.pending === false && Math.abs(row.amount) >= 1 && Math.abs(row.amount) <= 100000000,
+      )).toBe(true);
+
+      const analytics = await request(http)
+        .get('/api/analytics?period=3m&asOf=2026-08-07&currency=USD')
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .expect(200);
+      expect(analytics.body.period).toEqual({ start: '2026-05-10', end: '2026-08-07' });
+      expect(analytics.body.grossExpenses).toBeGreaterThan(0);
+      expect(analytics.body.spendingByCategory.length).toBeGreaterThan(0);
+      expect(analytics.body.velocity).toHaveProperty('projectedPeriodSpendFormatted');
+      expect(analytics.body.timeline.length).toBeGreaterThan(0);
+
+      const lifetime = await request(http)
+        .get('/api/analytics?period=lifetime&asOf=2026-08-07&currency=USD')
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .expect(200);
+      expect(lifetime.body.period.start).toBeDefined();
+      expect(lifetime.body.period.start <= lifetime.body.period.end).toBe(true);
+      expect(lifetime.body.period.end).toBe('2026-08-07');
+
+      await request(http)
+        .get('/api/transactions?pending=maybe')
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .expect(400);
+      await request(http)
+        .get('/api/transactions?from=2026-02-01')
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .expect(400);
     });
 
     it('keeps budgets separate', async () => {

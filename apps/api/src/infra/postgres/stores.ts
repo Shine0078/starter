@@ -27,6 +27,7 @@ import type {
   UserNotification,
   Transaction,
 } from '../../domain/types';
+import { CATEGORIES } from '../../domain/categories';
 import type {
   AccountStore,
   BudgetStore,
@@ -186,9 +187,20 @@ export class PostgresTransactionStore implements TransactionStore {
 
     if (query.accountId) where.push(`account_id = ${bind(query.accountId)}`);
     if (query.categorySlug) where.push(`category_slug = ${bind(query.categorySlug)}`);
+    if (query.categoryKind) {
+      const slugs = CATEGORIES.filter((category) => category.kind === query.categoryKind)
+        .map((category) => category.slug);
+      if (slugs.length === 0) return [];
+      where.push(`category_slug = ANY(${bind(slugs)}::text[])`);
+    }
     if (query.range) {
       where.push(`posted_at >= ${bind(query.range.start)}`);
       where.push(`posted_at <= ${bind(query.range.end)}`);
+    }
+    if (query.before) {
+      const date = bind(query.before.postedAt);
+      const id = bind(query.before.id);
+      where.push(`(posted_at < ${date} OR (posted_at = ${date} AND id < ${id}))`);
     }
     if (query.search) {
       // ILIKE against three columns so a search matches what the user sees
@@ -198,6 +210,10 @@ export class PostgresTransactionStore implements TransactionStore {
         `(normalized_descriptor ILIKE ${needle} OR raw_descriptor ILIKE ${needle} OR merchant ILIKE ${needle})`,
       );
     }
+    if (query.pending !== undefined) where.push(`pending = ${bind(query.pending)}`);
+    if (query.recurring !== undefined) where.push(`is_recurring = ${bind(query.recurring)}`);
+    if (query.amountMin !== undefined) where.push(`ABS(amount) >= ${bind(query.amountMin)}`);
+    if (query.amountMax !== undefined) where.push(`ABS(amount) <= ${bind(query.amountMax)}`);
 
     // Tie-break on id so pagination is stable when many rows share a date.
     let sql = `SELECT ${TXN_COLUMNS} FROM transactions

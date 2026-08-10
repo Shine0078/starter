@@ -1,4 +1,5 @@
 import { displayName, isSpendingCategory } from '../categories';
+import { descriptorTokens } from '../categorization/normalize';
 import { addDays, daysBetweenInclusive } from '../dates';
 import { detectSubscriptions } from '../insights/subscriptions';
 import { formatMoney, majorToMinor, money } from '../money';
@@ -80,6 +81,8 @@ export function deriveSubscriptionAlerts(
  * Conservative transaction review alerts:
  *
  * - exact merchant/amount repeats within two days are possible duplicates;
+ * - near-identical merchant descriptors with a near-identical amount are also
+ *   reviewed, which catches bank formatting differences without declaring fraud;
  * - category outliers require six earlier observations, at least 3x the
  *   median, and at least 100 major currency units above that median.
  *
@@ -104,6 +107,7 @@ export function deriveUnusualTransactionAlerts(
     .sort((a, b) => a.postedAt.localeCompare(b.postedAt) || a.id.localeCompare(b.id));
 
   const latestExact = new Map<string, Transaction>();
+  const priorTransactions: Transaction[] = [];
   const categoryHistory = new Map<string, Transaction[]>();
   const alerts: DerivedFinancialAlert[] = [];
 
@@ -119,6 +123,7 @@ export function deriveUnusualTransactionAlerts(
     const priorExact = exactKey ? latestExact.get(exactKey) : undefined;
     const isCandidate = transaction.postedAt >= candidateStart;
     let duplicateFound = false;
+    let duplicateMatch: Transaction | undefined;
 
     if (isCandidate && priorExact) {
       const separation =
@@ -135,6 +140,38 @@ export function deriveUnusualTransactionAlerts(
             'Review both transactions before disputing either charge.',
           severity: 'warning',
           dedupeKey: `possible-duplicate:${priorExact.id}:${transaction.id}`,
+        });
+        duplicateFound = true;
+        duplicateMatch = priorExact;
+      }
+    }
+
+    if (isCandidate && !duplicateFound) {
+      duplicateMatch = [...priorTransactions].reverse().find((prior) => {
+        if (prior.currency !== transaction.currency || prior.categorySlug !== transaction.categorySlug) {
+          return false;
+        }
+        const separation = daysBetweenInclusive(prior.postedAt, transaction.postedAt) - 1;
+        if (separation > DUPLICATE_WINDOW_DAYS) return false;
+        const amountDifference = Math.abs(Math.abs(prior.amount) - Math.abs(transaction.amount));
+        const amountTolerance = Math.max(100, Math.round(Math.abs(transaction.amount) * 0.01));
+        return amountDifference <= amountTolerance && similarDescriptor(
+          prior.normalizedDescriptor,
+          transaction.normalizedDescriptor,
+        );
+      });
+      if (duplicateMatch) {
+        const separation = daysBetweenInclusive(duplicateMatch.postedAt, transaction.postedAt) - 1;
+        const merchant = transaction.merchant ?? transaction.normalizedDescriptor;
+        alerts.push({
+          kind: 'unusual_transaction',
+          title: 'Possible duplicate charge',
+          message:
+            `Two ${merchant} charges have similar merchant details and amounts ` +
+            `within ${separation === 0 ? 'the same day' : `${separation} day${separation === 1 ? '' : 's'}`}. ` +
+            'Review both transactions before disputing either charge.',
+          severity: 'warning',
+          dedupeKey: `possible-duplicate:${duplicateMatch.id}:${transaction.id}`,
         });
         duplicateFound = true;
       }
@@ -174,10 +211,20 @@ export function deriveUnusualTransactionAlerts(
     }
 
     if (exactKey) latestExact.set(exactKey, transaction);
+    priorTransactions.push(transaction);
     categoryHistory.set(categoryKey, [...baseline, transaction]);
   }
 
   return alerts;
+}
+
+function similarDescriptor(left: string, right: string): boolean {
+  const leftTokens = new Set(descriptorTokens(left));
+  const rightTokens = new Set(descriptorTokens(right));
+  if (leftTokens.size < 2 || rightTokens.size < 2) return false;
+  const intersection = [...leftTokens].filter((token) => rightTokens.has(token)).length;
+  const union = new Set([...leftTokens, ...rightTokens]).size;
+  return intersection / union >= 0.75;
 }
 
 function median(values: readonly number[]): number {

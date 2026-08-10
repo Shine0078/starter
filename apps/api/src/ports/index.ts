@@ -41,9 +41,20 @@ export interface AccountStore {
 export interface TransactionQuery {
   accountId?: string;
   categorySlug?: string;
+  /** Filter by the seeded category kind, e.g. income, expense, or transfer. */
+  categoryKind?: 'expense' | 'income' | 'transfer' | 'special';
   range?: DateRange;
   /** Case-insensitive substring over the normalized descriptor. */
   search?: string;
+  /** Pending or settled rows only. */
+  pending?: boolean;
+  /** Recurring series only, or one-off rows only. */
+  recurring?: boolean;
+  /** Inclusive absolute amount bounds in minor units. */
+  amountMin?: number;
+  amountMax?: number;
+  /** Stable keyset cursor: return rows strictly older than this transaction. */
+  before?: { postedAt: string; id: string };
   limit?: number;
 }
 

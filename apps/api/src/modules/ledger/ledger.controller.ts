@@ -186,15 +186,45 @@ export class LedgerController {
     @Query('from') from?: string,
     @Query('to') to?: string,
     @Query('limit') limit?: string,
+    @Query('before') before?: string,
+    @Query('kind') kind?: string,
+    @Query('pending') pending?: string,
+    @Query('recurring') recurring?: string,
+    @Query('minAmount') minAmount?: string,
+    @Query('maxAmount') maxAmount?: string,
   ) {
+    const cursor = decodeCursor(before);
+    const pageSize = parseLimit(limit);
+    const parsedFrom = parseDate(from, 'from');
+    const parsedTo = parseDate(to, 'to');
+    const parsedMinAmount = parseAmount(minAmount, 'minAmount');
+    const parsedMaxAmount = parseAmount(maxAmount, 'maxAmount');
+    if ((parsedFrom === undefined) !== (parsedTo === undefined)) {
+      throw new BadRequestException('from and to must be provided together.');
+    }
+    if (parsedMinAmount !== undefined && parsedMaxAmount !== undefined && parsedMinAmount > parsedMaxAmount) {
+      throw new BadRequestException('minAmount cannot be greater than maxAmount.');
+    }
     const rows = await this.ledger.listTransactions(userId, {
       search,
       categorySlug: category,
       accountId: account,
-      range: from && to ? { start: from, end: to } : undefined,
-      limit: limit ? Number(limit) : 50,
+      categoryKind: parseCategoryKind(kind),
+      pending: parseOptionalBoolean(pending, 'pending'),
+      recurring: parseOptionalBoolean(recurring, 'recurring'),
+      amountMin: parsedMinAmount,
+      amountMax: parsedMaxAmount,
+      range: parsedFrom && parsedTo ? { start: parsedFrom, end: parsedTo } : undefined,
+      before: cursor,
+      limit: pageSize,
     });
-    return { count: rows.length, transactions: rows.map(present) };
+    return {
+      count: rows.length,
+      transactions: rows.map(present),
+      nextCursor: rows.length > 0 && rows.length === pageSize
+        ? encodeCursor(rows[rows.length - 1]!)
+        : null,
+    };
   }
 
   @Get('transactions/export.csv')
@@ -240,4 +270,76 @@ export class LedgerController {
           : 'Updated.',
     };
   }
+}
+
+function encodeCursor(transaction: Pick<Transaction, 'postedAt' | 'id'>): string {
+  return Buffer.from(
+    JSON.stringify({ postedAt: transaction.postedAt, id: transaction.id }),
+    'utf8',
+  ).toString('base64url');
+}
+
+function decodeCursor(value: string | undefined): { postedAt: string; id: string } | undefined {
+  if (!value) return undefined;
+  try {
+    const decoded = JSON.parse(Buffer.from(value, 'base64url').toString('utf8')) as Record<string, unknown>;
+    if (
+      typeof decoded.postedAt !== 'string' ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(decoded.postedAt) ||
+      typeof decoded.id !== 'string' ||
+      decoded.id.length < 1 ||
+      decoded.id.length > 200
+    ) throw new Error('invalid');
+    return { postedAt: decoded.postedAt, id: decoded.id };
+  } catch {
+    throw new BadRequestException('before must be a valid transaction cursor.');
+  }
+}
+
+function parseLimit(value: string | undefined): number {
+  if (value === undefined) return 50;
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < 1 || parsed > 1_000) {
+    throw new BadRequestException('limit must be a whole number from 1 through 1000.');
+  }
+  return parsed;
+}
+
+function parseOptionalBoolean(value: string | undefined, field: string): boolean | undefined {
+  if (value === undefined || value === '') return undefined;
+  if (value !== 'true' && value !== 'false') {
+    throw new BadRequestException(`${field} must be true or false.`);
+  }
+  return value === 'true';
+}
+
+function parseCategoryKind(
+  value: string | undefined,
+): 'expense' | 'income' | 'transfer' | 'special' | undefined {
+  if (value === undefined || value === '') return undefined;
+  if (!['expense', 'income', 'transfer', 'special'].includes(value)) {
+    throw new BadRequestException('kind must be expense, income, transfer, or special.');
+  }
+  return value as 'expense' | 'income' | 'transfer' | 'special';
+}
+
+function parseDate(value: string | undefined, field: string): string | undefined {
+  if (value === undefined || value === '') return undefined;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw new BadRequestException(`${field} must be an ISO date (YYYY-MM-DD).`);
+  }
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value) {
+    throw new BadRequestException(`${field} must be a real calendar date.`);
+  }
+  return value;
+}
+
+function parseAmount(value: string | undefined, field: string): number | undefined {
+  if (value === undefined || value === '') return undefined;
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < 0 || parsed > 10_000_000_000_000) {
+    throw new BadRequestException(`${field} must be a non-negative minor-unit integer.`);
+  }
+  return parsed;
 }
