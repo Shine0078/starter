@@ -189,6 +189,21 @@ export function runAuthStoreContract(name: string, create: () => Promise<AuthSto
         expect(found?.revokedReason).toBe('rotated');
       });
 
+      it('spends a live refresh session exactly once with its successor', async () => {
+        const user = await makeUser();
+        const current = makeSession(user.id, { familyId: 'family-rotate' });
+        const successor = makeSession(user.id, {
+          familyId: current.familyId,
+          issuedAt: new Date(NOW.getTime() + 1),
+        });
+        await stores.sessions.create(current);
+
+        expect(await stores.sessions.rotate(current.id, successor, NOW)).toBe(true);
+        expect(await stores.sessions.rotate(current.id, makeSession(user.id), NOW)).toBe(false);
+        expect((await stores.sessions.findByTokenHash(current.tokenHash))?.revokedReason).toBe('rotated');
+        expect(await stores.sessions.findByTokenHash(successor.tokenHash)).not.toBeNull();
+      });
+
       it('revokes an entire family', async () => {
         const user = await makeUser();
         const a = makeSession(user.id, { familyId: 'fam-a' });

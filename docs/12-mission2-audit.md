@@ -96,7 +96,8 @@ file would be required to verify any requirements unique to that document.
   value, keep the optimistic UI state, show a pending-sync banner, and replay
   automatically on session restore or dashboard resume. Safe stale-data
   banners, bounded request timeouts, release-build API URL validation,
-  serialized refresh rotation across concurrent 401 responses, and a
+  serialized client refresh plus atomic server rotation across concurrent
+  requests, and a
   best-effort bank refresh are also covered. A network outage no longer signs
   a user out while an expired access token is waiting for refresh, and a
   temporarily locked Keychain/Keystore has an explicit retry state rather than
@@ -156,8 +157,8 @@ file would be required to verify any requirements unique to that document.
 
 ## Evidence
 
-- API in-memory suite: 425 passing, 5 database-only skips.
-- PostgreSQL contract/RLS suite: 526 passing in embedded PostgreSQL.
+- API in-memory suite: 427 passing, 5 database-only skips.
+- PostgreSQL contract/RLS suite: 529 passing in embedded PostgreSQL.
 - Flutter: 74 widget/design tests passing, `flutter analyze` clean.
 - Android release APK and web release build both compile. The Android emulator
   booted but its package/activity services were unavailable during an install

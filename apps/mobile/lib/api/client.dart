@@ -729,12 +729,13 @@ class ApiClient {
         await sessionStore.write(nextTokens);
         _tokens = nextTokens;
         _pendingSessionWrite = null;
-      } on SessionStoreUnavailableException {
+      } catch (_) {
         // The server has already rotated the refresh token, so retaining the
         // old token would guarantee the next request fails as token reuse.
         // Keep the valid replacement in memory and retry persistence on the
-        // next request; a process restart still fails closed if storage never
-        // becomes available.
+        // next request. Platform plugins can throw a raw exception before the
+        // concrete store has a chance to wrap it, so every storage failure is
+        // treated as temporarily unavailable here.
         _tokens = nextTokens;
         _pendingSessionWrite = nextTokens;
       }
