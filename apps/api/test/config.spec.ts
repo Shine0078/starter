@@ -31,6 +31,11 @@ const KEYS = [
 ] as const;
 const original = Object.fromEntries(KEYS.map((key) => [key, process.env[key]]));
 
+// A clean production baseline. Anything not explicitly set here must be
+// unset so a developer's local `.env` (which loads before the test module
+// imports its first config dependency) cannot mask the guarded behaviour
+// the test intends to assert. Tests that exercise Plaid/iOS rules set
+// them explicitly after calling this.
 function productionBase(): void {
   process.env.NODE_ENV = 'production';
   process.env.STORE = 'postgres';
@@ -44,6 +49,11 @@ function productionBase(): void {
   process.env.LEGAL_PRIVACY_VERSION = 'privacy-2026-08';
   process.env.LEGAL_PRIVACY_URL = 'https://finverse.example/legal/privacy';
   process.env.MFA_ENCRYPTION_KEY = Buffer.alloc(32, 9).toString('base64');
+  delete process.env.PLAID_CLIENT_ID;
+  delete process.env.PLAID_SECRET;
+  delete process.env.PLAID_ENVIRONMENT;
+  delete process.env.PLAID_IOS_REDIRECT_URI;
+  delete process.env.IOS_TEAM_ID;
 }
 
 afterEach(() => {
