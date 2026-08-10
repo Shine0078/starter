@@ -126,6 +126,11 @@ has a `docker-compose.yml` for local development and a CI workflow. That is all.
 | 4.11 | **No staging environment** | Nowhere to verify a release before users get it | with 4.2 |
 | 4.12 | **Production migration orchestration** | Idempotence is tested and the image defaults `MIGRATE_ON_BOOT=false`; the release guide defines the step | Must wire into selected host |
 
+The repository now includes a provider-neutral Caddy/Docker Compose public-edge
+recipe. It removes the Tailscale dependency once an owner supplies a domain,
+public host, and managed PostgreSQL instance; no provider has been selected or
+operated yet.
+
 ---
 
 ## 5. The mobile app is an early product

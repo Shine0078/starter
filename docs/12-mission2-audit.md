@@ -121,6 +121,9 @@ file would be required to verify any requirements unique to that document.
   successful replay.
 - Data-quality domain checks and authenticated route protection are covered by
   focused API tests; Flutter analyzer and the 56-test mobile suite remain clean.
+- A provider-neutral public deployment path now runs the tagged API image behind
+  Caddy with automatic HTTPS. Port 3000 remains private to the Docker network,
+  and the phone can be built against that public origin instead of Tailscale.
 
 ## Still incomplete locally
 
@@ -134,7 +137,7 @@ file would be required to verify any requirements unique to that document.
 ## External launch gates
 
 The Plaid dashboard available to this workspace is Sandbox-only. Production bank
-access, a public HTTPS deployment/domain, managed Postgres/backups/monitoring,
+access, choosing and operating a public HTTPS deployment/domain, managed Postgres/backups/monitoring,
 SMTP/push credentials, Stripe and mobile-store accounts, Apple signing, legal
 documents/regulatory review, and an independent penetration test require owner
 accounts or approvals. The code has configuration hooks and refuses unsafe
