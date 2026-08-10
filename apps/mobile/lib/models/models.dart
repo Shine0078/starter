@@ -930,6 +930,48 @@ class AnalyticsReport {
   final List<AnalyticsTimelineEvent> timeline;
 }
 
+class AssistantFact {
+  const AssistantFact({required this.label, required this.value});
+
+  factory AssistantFact.fromJson(Map<String, dynamic> json) => AssistantFact(
+        label: json['label'] as String,
+        value: json['value'] as String,
+      );
+
+  final String label;
+  final String value;
+}
+
+class AssistantAnswer {
+  const AssistantAnswer({
+    required this.question,
+    required this.intent,
+    required this.answer,
+    required this.facts,
+    required this.source,
+    required this.caveat,
+  });
+
+  factory AssistantAnswer.fromJson(Map<String, dynamic> json) =>
+      AssistantAnswer(
+        question: json['question'] as String,
+        intent: json['intent'] as String,
+        answer: json['answer'] as String,
+        facts: (json['facts'] as List<dynamic>? ?? const [])
+            .map((row) => AssistantFact.fromJson(row as Map<String, dynamic>))
+            .toList(),
+        source: json['source'] as String,
+        caveat: json['caveat'] as String,
+      );
+
+  final String question;
+  final String intent;
+  final String answer;
+  final List<AssistantFact> facts;
+  final String source;
+  final String caveat;
+}
+
 class CategorySpend {
   CategorySpend({
     required this.categorySlug,

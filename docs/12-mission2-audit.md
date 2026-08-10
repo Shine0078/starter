@@ -87,6 +87,10 @@ file would be required to verify any requirements unique to that document.
   links, and provider connections needing re-authentication. It is exposed at
   authenticated `GET /api/data-quality` and the dashboard shows a plain-language
   warning card instead of presenting questionable analytics without context.
+- A privacy-safe deterministic finance assistant now answers common spending,
+  merchant, savings, subscription, and spending-change questions from the same
+  aggregate analytics used by the dashboard. It returns evidence and caveats,
+  never raw transactions, and does not require an external AI provider.
 - Native local-alert delivery is now wired through a platform-safe Flutter
   service. Users can grant Android/iPhone notification permission from the
   notification preferences screen; unread server alerts are presented once per
@@ -104,9 +108,9 @@ file would be required to verify any requirements unique to that document.
 
 ## Evidence
 
-- API in-memory suite: 396 passing, 5 database-only skips.
-- PostgreSQL contract/RLS suite: 497 passing in embedded PostgreSQL.
-- Flutter: 67 widget/design tests passing, `flutter analyze` clean.
+- API in-memory suite: 402 passing, 5 database-only skips.
+- PostgreSQL contract/RLS suite: 503 passing in embedded PostgreSQL.
+- Flutter: 68 widget/design tests passing, `flutter analyze` clean.
 - Android release APK and web release build both compile. The Android emulator
   booted but its package/activity services were unavailable during an install
   attempt; that is an emulator image issue, not a compile failure.
@@ -126,6 +130,9 @@ file would be required to verify any requirements unique to that document.
   verification before that dashboard change can be saved. No production key or
   real-customer bank data is claimed. Provider failures no longer expose SDK
   request details or credentials in logs.
+- The live Postgres API smoke registered a disposable user, answered a protected
+  `/api/assistant` request with the deterministic response shape, and deleted
+  the user again; no raw transaction evidence crossed the route.
 - Persisted mobile sessions now reject expired refresh tokens, write a signed-out
   tombstone before secure cleanup, publish replacement tokens before removing
   that tombstone, and refresh an expired access token before showing the
@@ -138,7 +145,7 @@ file would be required to verify any requirements unique to that document.
   user-scoped storage, latest-value collapse, optimistic retry semantics, and
   successful replay.
 - Data-quality domain checks and authenticated route protection are covered by
-  focused API tests; Flutter analyzer and the 67-test mobile suite remain clean.
+  focused API tests; Flutter analyzer and the 68-test mobile suite remain clean.
 - A provider-neutral public deployment path now runs the tagged API and optional
   Flutter web bundle behind Caddy with automatic HTTPS. Port 3000 remains
   private to the Docker network, and native phones or the `/app/` PWA can use

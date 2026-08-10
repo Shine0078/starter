@@ -2,6 +2,7 @@
 
 import { formatMoney, money } from '../../domain/money';
 import { displayName } from '../../domain/categories';
+import { answerFinancialQuestion } from '../../domain/assistant/financial-assistant';
 import { StreamableFile } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { renderMonthlyReportPdf } from '../../infra/reports/monthly-report-pdf';
@@ -223,6 +224,42 @@ export class InsightsController {
   @Get('health-score')
   async healthScore(@CurrentUser() userId: string, @Query('asOf') asOf?: string) {
     return this.insights.healthScore(userId, asOf);
+  }
+
+  /**
+   * Privacy-safe assistant fallback. It answers from server-side aggregates;
+   * no raw ledger rows or user identifiers leave this process. A future
+   * zero-retention LLM adapter can use the same response shape without making
+   * the product dependent on an external model.
+   */
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @Get('assistant')
+  async assistant(
+    @CurrentUser() userId: string,
+    @Query('question') question?: string,
+    @Query('currency') currency = 'USD',
+  ) {
+    const normalizedQuestion = typeof question === 'string' ? question.trim() : '';
+    if (normalizedQuestion.length < 2 || normalizedQuestion.length > 500) {
+      throw new BadRequestException('question must be from 2 through 500 characters.');
+    }
+    assertCurrency(currency);
+
+    const [report, subscriptions] = await Promise.all([
+      this.insights.analytics(userId, 'month', undefined, undefined, currency),
+      this.insights.subscriptions(userId),
+    ]);
+    const answer = answerFinancialQuestion(normalizedQuestion, {
+      report,
+      subscriptions: subscriptions.subscriptions.filter((item) => item.currency === currency),
+      formatMoney: (minorUnits) => formatMoney(money(minorUnits, currency)),
+    });
+    return {
+      question: normalizedQuestion,
+      period: report.period,
+      currency,
+      ...answer,
+    };
   }
 
   @RequiresEntitlement('cash_flow_planning')

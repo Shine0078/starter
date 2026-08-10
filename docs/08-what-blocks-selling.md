@@ -25,7 +25,7 @@ Stated so the rest of this document is not read as "nothing works".
 | Authentication | Argon2id, rotating refresh tokens with reuse detection, email verification, password reset, TOTP MFA/recovery codes, device app lock, recoverable deletion, global guard, per-account lockout, session list, audit trail |
 | Persistence | Postgres behind ports, contract-tested against both adapters, migrations |
 | Isolation | Row-level security, app connects as a non-superuser role, 21 dedicated tests |
-| Tests | 396 without a database, 497 against real PostgreSQL, 67 Flutter tests, Android release and web release builds; all passing |
+| Tests | 402 without a database, 503 against real PostgreSQL, 68 Flutter tests, Android release and web release builds; all passing |
 | CI | GitHub Actions: API typecheck/test/build/image + Flutter analyze/test, Android release compile, native iOS no-signing compile, and tagged API/APK/web artifacts |
 
 That is a solid Phase-0 foundation. It is not a product.
@@ -144,14 +144,14 @@ smaller than the complete MISSION.md product.
 
 | # | Item | Detail | Effort |
 |---|---|---|---|
-| 5.1 | **Core navigation started** | Onboarding, currency-safe net position, user-managed cash/offline assets/loans, cash-flow planning and purchase scenarios, transaction search/detail/correction, budgets, goals, bank accounts, subscriptions, notifications, plan and paywall, settings/session controls, portable export, versioned legal/optional consent history, device app lock, and recent security activity are implemented | 2–3 weeks for remaining breadth/polish |
+| 5.1 | **Core navigation started** | Onboarding, currency-safe net position, user-managed cash/offline assets/loans, cash-flow planning and purchase scenarios, transaction search/detail/correction, budgets, goals, bank accounts, subscriptions, notifications, plan and paywall, settings/session controls, portable export, versioned legal/optional consent history, device app lock, recent security activity, and a privacy-safe deterministic finance assistant are implemented | 2–3 weeks for remaining breadth/polish |
 | 5.2 | **Offline cache and idempotent preference queue implemented** | Authenticated GET responses fall back to a 30-day, user-scoped encrypted cache; transaction preference edits queue offline, collapse to the latest value, replay on resume, and show pending/stale state. Bank balances remain server-authoritative; OS background reconciliation and broader conflict UX remain | native background scheduling + 1–2 weeks |
 | 5.3 | **No state management** | `setState` only. Honest at one screen, unworkable at twenty | with 5.1 |
 | 5.4 | **Remote push still absent; local alerts implemented** | Persistent preferences and the mobile centre cover budgets, utilization, low balances, bank sync, upcoming bills, subscription price rises, possible duplicates, and conservative spending outliers. Android/iPhone local delivery can surface unread alerts after a refresh; remote push delivery remains | external push credentials + background job |
 | 5.5 | **Android identity and launcher** | **Completed:** `com.finverse.finance`, FINVERSE label, versioned platform project, and branded launcher asset | Store listing still external |
 | 5.6 | **Release signing credentials** | Gradle and the release workflow are wired for an upload key and refuse a distributable release without secrets | User must generate and protect the upload key |
 | 5.7 | **iOS never built** | Requires a Mac. Untested and unverified | 1 week |
-| 5.8 | **Mobile testing is still thin** | 67 widget/design tests cover auth protocol, persisted-session refresh, concurrent refresh, keystore write/cleanup failure, recovery, deletion, navigation, grouped transaction filters, offline cache, accessibility scaling, analytics visuals, reactive data invalidation, notification preferences, connectivity diagnostics, Plaid allowlist guidance, offline global logout, and plan/paywall paths. No device integration or golden tests | 2 weeks |
+| 5.8 | **Mobile testing is still thin** | 68 widget/design tests cover auth protocol, persisted-session refresh, concurrent refresh, keystore write/cleanup failure, recovery, deletion, navigation, grouped transaction filters, offline cache, accessibility scaling, analytics visuals, reactive data invalidation, notification preferences, connectivity diagnostics, Plaid allowlist guidance, offline global logout, plan/paywall paths, and assistant response parsing. No device integration or golden tests | 2 weeks |
 | 5.9 | **Accessibility audit incomplete** | Core spending, budget, and health visuals now have spoken equivalents and an automated 200% text-scaling overflow test. Physical VoiceOver/TalkBack, contrast, colour-blind, and one-handed audits remain | device testing + 1–2 weeks |
 | 5.10 | **No localisation** | Mission asks for multiple languages. Single hardcoded locale | 1–2 weeks |
 | 5.11 | **No crash reporting** | "Crash-free above 99.9%" cannot be claimed without measuring it | days |
@@ -202,7 +202,7 @@ features them.
 
 **Named repeatedly / core to the pitch**
 
-- Conversational AI assistant (needs a zero-retention LLM agreement first)
+- Conversational AI assistant — **deterministic aggregate answers are now implemented** for common spending, merchant, savings, subscription, and comparison questions. A zero-retention LLM agreement is still required before adding free-form model prompts.
 - ML categoriser trained on user corrections — rules-only today
 - Monthly PDF report core is complete — a private three-page report now covers
   summary metrics, cash-flow comparisons, spending categories, budgets,
@@ -247,7 +247,7 @@ Worth fixing because they cause bad decisions later.
 | 9.1 | Security controls described in the present tense that do not exist | `03-security-privacy.md` — see §3.1 |
 | 9.2 | The deletion purge is described in operational detail as though it runs | `02-data-model.md` |
 | 9.3 | Unused Redis was provisioned despite zero application references | Fixed: shared rate limits and webhook jobs use PostgreSQL, and Redis was removed from the cheap-launch stack |
-| 9.4 | Test counts drift out of date and are then quoted as evidence — older counts were stale until re-measured at 396/497/67 | fixed in `07-session-notes.md`, but the pattern will recur |
+| 9.4 | Test counts drift out of date and are then quoted as evidence — older counts were stale until re-measured at 402/503/68 | fixed in `07-session-notes.md`, but the pattern will recur |
 | 9.5 | `06-cheap-launch-path.md` describes a *personal beta*, not a sellable product. It is correct for what it is, and should say so at the top so it is not mistaken for a launch plan | `06-cheap-launch-path.md` |
 
 ---
@@ -270,7 +270,7 @@ is pure calendar time.
 6. Billing (§6) — only once there is something worth paying for
 
 **Blocked until §1 lands:** everything in §2, passkeys (needs the domain), the
-LLM assistant (needs a zero-retention contract), app store submission.
+free-form LLM assistant (needs a zero-retention contract), app store submission.
 
 ---
 

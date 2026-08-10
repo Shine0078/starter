@@ -3,7 +3,8 @@
 Written for whoever picks this up next — including a fresh agent session with no
 memory of how any of it got here. Last updated after the MFA, professional
 monthly-report, smart-alert, core-accessibility, shared-rate-limit, load-smoke,
-analytics-cache, session-restore, and Plaid Sandbox verification milestones on
+analytics-cache, session-restore, Plaid Sandbox, and deterministic-assistant
+verification milestones on
 2026-08-10.
 
 Read [`MISSION.md`](../MISSION.md) for the product, [`HANDOVER.md`](../HANDOVER.md)
@@ -14,8 +15,8 @@ is the shortest path to being productive again.
 
 ```bash
 npm install
-npm test          # 396 tests, no database needed
-npm run test:db   # 497 tests, spins up a real PostgreSQL and tears it down
+npm test          # 402 tests, no database needed
+npm run test:db   # 503 tests, spins up a real PostgreSQL and tears it down
 npm run dev       # API + dev dashboard on http://localhost:3000
 ```
 
@@ -29,10 +30,10 @@ Every number below was produced by running the thing, not by reading the code.
 
 | Check | Result |
 |---|---|
-| API tests, in-memory | 396 passed |
-| API tests, real Postgres | 497 passed |
+| API tests, in-memory | 402 passed |
+| API tests, real Postgres | 503 passed |
 | `tsc --noEmit`, `npm run build` | clean |
-| `flutter analyze`, `flutter test` | clean, 65 passed |
+| `flutter analyze`, `flutter test` | clean, 68 passed |
 | Android debug compile | `com.finverse.finance`, API 36, 170.9 MB APK; debug-only artifact built successfully |
 | Authenticated load smoke, memory | 250 requests, concurrency 10, 0 failures, 43.3 ms p95, 298.5 req/s |
 | Authenticated load smoke, real Postgres | 250 requests, concurrency 10, 0 failures, 229.1 ms p95, 146.8 req/s |

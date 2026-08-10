@@ -75,4 +75,21 @@ void main() {
     expect(report.velocity.percentDelta, 33.3);
     expect(report.largestExpense?.amountFormatted, r'-$75.00');
   });
+
+  test('parses the privacy-safe assistant answer and evidence', () {
+    final answer = AssistantAnswer.fromJson({
+      'question': 'Where did I spend the most?',
+      'intent': 'top_category',
+      'answer': 'Restaurants were your largest category.',
+      'facts': [
+        {'label': 'Restaurants', 'value': r'$600.00'},
+      ],
+      'source': 'deterministic',
+      'caveat': 'Based on posted transactions.',
+    });
+
+    expect(answer.intent, 'top_category');
+    expect(answer.facts.single.value, r'$600.00');
+    expect(answer.source, 'deterministic');
+  });
 }

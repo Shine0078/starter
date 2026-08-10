@@ -1254,6 +1254,19 @@ class ApiClient {
     );
   }
 
+  Future<AssistantAnswer> askAssistant(
+    String question, {
+    String currency = 'USD',
+  }) async {
+    final query = Uri(queryParameters: {
+      'question': question.trim(),
+      'currency': currency,
+    }).query;
+    return AssistantAnswer.fromJson(
+      await _get('/assistant?$query') as Map<String, dynamic>,
+    );
+  }
+
   Future<SubscriptionsReport> subscriptions() async {
     final json = await _get('/subscriptions') as Map<String, dynamic>;
     return SubscriptionsReport.fromJson(json);

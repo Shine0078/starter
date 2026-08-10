@@ -17,6 +17,7 @@ import 'settings_screen.dart';
 import 'subscriptions_screen.dart';
 import 'transaction_detail_screen.dart';
 import 'analytics_screen.dart';
+import 'assistant_screen.dart';
 
 /// The home screen: net position, health score, budgets, recent activity.
 ///
@@ -338,6 +339,13 @@ class _DashboardScreenState extends State<DashboardScreen>
             tooltip: 'Analytics',
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(
               builder: (_) => AnalyticsScreen(api: widget.api),
+            )),
+          ),
+          IconButton(
+            icon: const Icon(Icons.auto_awesome_outlined),
+            tooltip: 'Ask FINVERSE',
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => AssistantScreen(api: widget.api),
             )),
           ),
           IconButton(

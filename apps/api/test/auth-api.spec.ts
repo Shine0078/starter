@@ -355,6 +355,7 @@ describe('auth API', () => {
       '/api/data-quality',
       '/api/subscriptions',
       '/api/health-score',
+      '/api/assistant',
       '/api/goals',
       '/api/notifications',
       '/api/bank-links',
@@ -534,6 +535,15 @@ describe('auth API', () => {
       expect(analytics.body.spendingByCategory.length).toBeGreaterThan(0);
       expect(analytics.body.velocity).toHaveProperty('projectedPeriodSpendFormatted');
       expect(analytics.body.timeline.length).toBeGreaterThan(0);
+
+      const assistant = await request(http)
+        .get('/api/assistant?question=Where%20did%20I%20spend%20the%20most%3F')
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .expect(200);
+      expect(assistant.body.intent).toBe('top_category');
+      expect(assistant.body.source).toBe('deterministic');
+      expect(assistant.body.answer).toContain('$');
+      expect(JSON.stringify(assistant.body)).not.toContain('providerTxnId');
 
       const lifetime = await request(http)
         .get('/api/analytics?period=lifetime&asOf=2026-08-07&currency=USD')

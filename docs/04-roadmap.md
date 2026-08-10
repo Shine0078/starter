@@ -90,7 +90,8 @@ ADR-0006 records the shape and what it costs.
 ## Phase 2 — Intelligence
 
 - [ ] ML categorizer trained on accumulated user corrections
-- [ ] Conversational assistant over aggregates (zero-retention LLM contract required)
+- [x] Privacy-safe deterministic assistant over aggregates; a zero-retention
+      LLM contract is still required before adding free-form model prompts
 - [x] Credit-card payment planner: statement/due dates, utilization alerts, safe payment window
 - [ ] Financial health score surfaced with actionable steps
 - [x] User-owned ledger CSV export (formula-injection safe)

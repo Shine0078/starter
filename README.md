@@ -266,16 +266,20 @@ stopped running.
 
 ## Notes on what is and isn't verified
 
-- **The API and its domain logic run and are tested.** 396 tests run with no
-  database; the full suite is **497 passing** against real PostgreSQL, including
+- **The API and its domain logic run and are tested.** 402 tests run with no
+  database; the full suite is **503 passing** against real PostgreSQL, including
   the store contract — which runs as the restricted role, so it executes with the
   row-level security policies in force — and a suite that issues deliberately
   unfiltered SQL to prove the database withholds other users' rows on its own.
   The slice is also exercised end to end over HTTP.
-- **The Flutter app is verified by static analysis, 67 tests, and real
+- **The Flutter app is verified by static analysis, 68 tests, and real
   Android release APK and web builds.** Android and iOS platform projects can be generated
   locally. See the
   [cheap launch path](docs/06-cheap-launch-path.md).
+- **Ask FINVERSE is available without an external AI provider.** The protected
+  `/api/assistant` route answers common spending, savings, merchant, and
+  subscription questions from explainable aggregates; a zero-retention LLM is
+  optional and never required for core functionality.
 - **Users can share a professional monthly PDF from Settings.** The report is
   generated on demand and includes summary metrics, vector charts, category and
   budget performance, recurring costs, a 30-day forecast, and prioritized actions.
