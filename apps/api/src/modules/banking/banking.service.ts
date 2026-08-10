@@ -498,10 +498,12 @@ export class BankingService implements OnModuleInit, OnModuleDestroy {
     const code = plaidErrorCode(error);
     this.logger.warn(`Plaid bank operation failed (${code}).`);
 
-    if (code === 'INVALID_FIELD') {
+    if (code === 'INVALID_FIELD' || isIosRedirectConfigurationError(error)) {
       const message = platform === 'android'
         ? 'Android bank connection setup is incomplete. Save com.finverse.finance under Plaid Dashboard > Developers > API > Allowed Android package names, then try again.'
-        : 'Bank connection setup is incomplete on this server.';
+        : platform === 'ios'
+          ? 'iOS bank connection setup is incomplete. Set PLAID_IOS_REDIRECT_URI to a registered Universal Link, then try again.'
+          : 'Bank connection setup is incomplete on this server.';
       return new ServiceUnavailableException({
         message,
         code: 'PLAID_CONFIGURATION',
@@ -520,6 +522,10 @@ export class BankingService implements OnModuleInit, OnModuleDestroy {
     }
     return new ServiceUnavailableException({ message: fallback, code });
   }
+}
+
+function isIosRedirectConfigurationError(error: unknown): boolean {
+  return error instanceof Error && error.message.startsWith('PLAID_IOS_REDIRECT_URI');
 }
 
 function plaidErrorCode(error: unknown): string {

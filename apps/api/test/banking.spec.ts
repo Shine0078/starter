@@ -24,7 +24,11 @@ class FakeProvider implements BankProvider {
   pages: Array<BankSyncPage | Error> = [];
   cursors: Array<string | null> = [];
   initialAccounts: Account[] | null = null;
-  async createLinkToken() {
+  async createLinkToken(
+    _userId?: string,
+    _accessToken?: string,
+    _platform?: 'android' | 'ios' | 'web',
+  ) {
     return { token: 'link-sandbox-token', expiresAt: '2026-08-08T16:00:00.000Z' };
   }
   async exchangePublicToken() {
@@ -61,6 +65,19 @@ class FailingProvider extends FakeProvider {
     throw Object.assign(new Error('provider request failed'), {
       response: { data: { error_code: 'INVALID_PUBLIC_TOKEN' } },
     });
+  }
+}
+
+class MissingIosRedirectProvider extends FakeProvider {
+  override async createLinkToken(
+    _userId?: string,
+    _accessToken?: string,
+    platform?: 'android' | 'ios' | 'web',
+  ) {
+    if (platform === 'ios') {
+      throw new Error('PLAID_IOS_REDIRECT_URI must be configured for native iOS Link.');
+    }
+    return super.createLinkToken(_userId, _accessToken, platform);
   }
 }
 
@@ -110,6 +127,28 @@ describe('banking integration', () => {
     ).rejects.toMatchObject({
       response: {
         message: 'That bank connection session is invalid or expired. Start again.',
+      },
+    });
+  });
+
+  it('maps a missing iOS Universal Link to an actionable configuration error', async () => {
+    const service = new BankingService(
+      new InMemoryBankLinkStore(),
+      new MissingIosRedirectProvider(),
+      new AesGcmBankTokenCipher(randomBytes(32)),
+      new InMemoryBankWebhookStore(),
+      new InMemoryAccountStore(),
+      new InMemoryTransactionStore(),
+      new InMemoryRuleStore(),
+      new InMemoryNotificationStore(),
+      new FixedClock('2026-08-08'),
+      billingHarness().billing,
+    );
+
+    await expect(service.createLinkToken('user-1', undefined, 'ios')).rejects.toMatchObject({
+      response: {
+        code: 'PLAID_CONFIGURATION',
+        message: 'iOS bank connection setup is incomplete. Set PLAID_IOS_REDIRECT_URI to a registered Universal Link, then try again.',
       },
     });
   });
