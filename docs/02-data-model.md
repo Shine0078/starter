@@ -197,12 +197,16 @@ The implemented lifecycle is:
   `npm run purge:accounts:dev --workspace @finverse/api` instead.
   Foreign-key cascades remove accounts, transactions, budgets, rules, and sessions;
   the job explicitly removes identity-linked and email-linked auth events first.
+- The API's `AuthMaintenanceService` runs the same purge at startup and hourly
+  while an instance is alive; the dedicated command remains available for a
+  platform job or a zero-downtime/scale-to-zero deployment.
 - The PostgreSQL acceptance test verifies physical absence using the schema owner,
   not an RLS-scoped query that could return an empty result while rows still exist.
 
-The deployment platform must schedule the purge command at least daily. Aggregator
-link revocation must be added with the real bank adapter. Analytics retention and
-backup roll-off cannot be claimed until those systems exist and have been tested.
+If the deployment can scale to zero, it must still schedule the purge command at
+least daily. Aggregator link revocation must be added with the real bank adapter.
+Analytics retention and backup roll-off cannot be claimed until those systems
+exist and have been tested.
 
 ## Related
 

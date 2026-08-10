@@ -25,7 +25,7 @@ Stated so the rest of this document is not read as "nothing works".
 | Authentication | Argon2id, rotating refresh tokens with reuse detection, email verification, password reset, TOTP MFA/recovery codes, device app lock, recoverable deletion, global guard, per-account lockout, session list, audit trail |
 | Persistence | Postgres behind ports, contract-tested against both adapters, migrations |
 | Isolation | Row-level security, app connects as a non-superuser role, 21 dedicated tests |
-| Tests | 389 without a database, 490 against real PostgreSQL, 63 Flutter tests, Android release and web release builds; all passing |
+| Tests | 392 without a database, 493 against real PostgreSQL, 63 Flutter tests, Android release and web release builds; all passing |
 | CI | GitHub Actions: API typecheck/test/build/image + Flutter analyze/test, Android release compile, native iOS no-signing compile, and tagged API/APK/web artifacts |
 
 That is a solid Phase-0 foundation. It is not a product.
@@ -79,7 +79,7 @@ believe controls exist that do not.** Fixing the wording is part of the work.
 | 3.1.3 | SQLCipher-encrypted local SQLite on device | "On device" row | **Partially complete:** user-scoped SQLite cache payloads use AES-256-GCM with a keystore key, authenticated context, expiry, and purge. Whole-file SQLCipher remains a threat-model decision because cache metadata is not encrypted |
 | 3.1.4 | Encrypted backups with second-approver restore | "Backups" row | Guarded backup and `_restore_test` scripts exist; production scheduling, encrypted storage, access approval, and a recorded drill remain |
 | 3.1.5 | No standing production access, audited break-glass | "Access control" section, present tense | No production exists; no access control process exists |
-| 3.1.6 | Deletion purge job at +30 days | `02-data-model.md` previously described it as present | Implemented and proven against PostgreSQL; the production image now runs the compiled purge command, but the host still needs to schedule it |
+| 3.1.6 | Deletion purge job at +30 days | `02-data-model.md` previously described it as present | Implemented and proven against PostgreSQL; the API now runs hourly maintenance while alive, with the compiled purge command retained for scale-to-zero deployments |
 
 The security and data-model documents now distinguish implemented controls from
 targets. The infrastructure-backed controls below still need a real production
@@ -89,7 +89,7 @@ environment before they can be claimed.
 
 | # | Item | Why it blocks selling | Effort |
 |---|---|---|---|
-| 3.2.1 | **Account deletion** | **Completed:** password re-verification, typed confirmation, immediate session revocation, 30-day recovery, mobile UI, purge command, and owner-level PostgreSQL erasure proof | Deployment must schedule the job |
+| 3.2.1 | **Account deletion** | **Completed:** password re-verification, typed confirmation, immediate session revocation, 30-day recovery, mobile UI, hourly in-process maintenance, purge command, and owner-level PostgreSQL erasure proof | Scale-to-zero deployments must schedule the fallback command |
 | 3.2.2 | **Email verification** | One-time hashed-token API, mobile confirmation, and SMTP adapter are complete | Real email provider credentials and deliverability setup remain |
 | 3.2.3 | **Password reset** | Enumeration-safe request, one-time reset, password policy, session revocation, mobile flow, and SMTP adapter are complete | Real email provider credentials remain |
 | 3.2.4 | **MFA / TOTP** | **Completed technically:** AES-256-GCM encrypted secrets, five-minute hashed login challenges, replay-resistant TOTP, ten one-time hashed recovery codes, audit events, account erasure, API/mobile enrollment and login UI | Configure and protect `MFA_ENCRYPTION_KEY`; validate enrollment/recovery on physical devices |
@@ -121,7 +121,7 @@ has a `docker-compose.yml` for local development and a CI workflow. That is all.
 | 4.6 | **No monitoring, metrics, or alerting** | `/healthz` now fails with HTTP 503 when PostgreSQL is down; nothing external scrapes or alerts on it | 1 week |
 | 4.7 | **External error tracking absent** | Structured request logs now carry correlation ids and deliberately omit headers, bodies, queries, users, merchants, and amounts; no external log/error service is configured | external account + days |
 | 4.8 | **Shared rate limiting** | **Completed for the PostgreSQL launch path:** opaque fixed-window counters and block state are atomic across API instances and survive restarts. The memory development path remains process-local by design | production load testing remains |
-| 4.9 | **No general scheduler** | Plaid webhooks use a durable PostgreSQL retry queue, but scheduled purge, proactive notification refresh, and recurring report delivery still need platform jobs | external host + days |
+| 4.9 | **Limited scheduler coverage** | The API now runs hourly account-purge/session cleanup while alive and Plaid webhooks use a durable PostgreSQL retry queue; proactive notification refresh and recurring report delivery still need platform jobs | external host + days |
 | 4.10 | **Production capacity not established** | A guarded authenticated smoke now runs in CI against PostgreSQL and fails on any error or p95 above 750 ms. Local 250-request/concurrency-10 baseline: 0 failures, 229.1 ms p95, 146.8 req/s. Staging soak and provider-limit tests remain | selected host + days |
 | 4.11 | **No staging environment** | Nowhere to verify a release before users get it | with 4.2 |
 | 4.12 | **Production migration orchestration** | Idempotence is tested and the image defaults `MIGRATE_ON_BOOT=false`; the release guide defines the step | Must wire into selected host |
@@ -247,7 +247,7 @@ Worth fixing because they cause bad decisions later.
 | 9.1 | Security controls described in the present tense that do not exist | `03-security-privacy.md` — see §3.1 |
 | 9.2 | The deletion purge is described in operational detail as though it runs | `02-data-model.md` |
 | 9.3 | Unused Redis was provisioned despite zero application references | Fixed: shared rate limits and webhook jobs use PostgreSQL, and Redis was removed from the cheap-launch stack |
-| 9.4 | Test counts drift out of date and are then quoted as evidence — older counts were stale until re-measured at 389/490/63 | fixed in `07-session-notes.md`, but the pattern will recur |
+| 9.4 | Test counts drift out of date and are then quoted as evidence — older counts were stale until re-measured at 392/493/63 | fixed in `07-session-notes.md`, but the pattern will recur |
 | 9.5 | `06-cheap-launch-path.md` describes a *personal beta*, not a sellable product. It is correct for what it is, and should say so at the top so it is not mistaken for a launch plan | `06-cheap-launch-path.md` |
 
 ---

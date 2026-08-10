@@ -100,8 +100,8 @@ file would be required to verify any requirements unique to that document.
 
 ## Evidence
 
-- API in-memory suite: 389 passing, 5 database-only skips.
-- PostgreSQL contract/RLS suite: 490 passing in embedded PostgreSQL.
+- API in-memory suite: 392 passing, 5 database-only skips.
+- PostgreSQL contract/RLS suite: 493 passing in embedded PostgreSQL.
 - Flutter: 63 widget/design tests passing, `flutter analyze` clean.
 - Android release APK and web release build both compile. The Android emulator
   booted but its package/activity services were unavailable during an install

@@ -14,8 +14,8 @@ is the shortest path to being productive again.
 
 ```bash
 npm install
-npm test          # 389 tests, no database needed
-npm run test:db   # 490 tests, spins up a real PostgreSQL and tears it down
+npm test          # 392 tests, no database needed
+npm run test:db   # 493 tests, spins up a real PostgreSQL and tears it down
 npm run dev       # API + dev dashboard on http://localhost:3000
 ```
 
@@ -29,8 +29,8 @@ Every number below was produced by running the thing, not by reading the code.
 
 | Check | Result |
 |---|---|
-| API tests, in-memory | 389 passed |
-| API tests, real Postgres | 490 passed |
+| API tests, in-memory | 392 passed |
+| API tests, real Postgres | 493 passed |
 | `tsc --noEmit`, `npm run build` | clean |
 | `flutter analyze`, `flutter test` | clean, 63 passed |
 | Android debug compile | `com.finverse.finance`, API 36, 170.9 MB APK; debug-only artifact built successfully |
@@ -101,7 +101,9 @@ execute with the policies in force; the current suite total is recorded above.
 
 Implemented in migration `004_account_deletion.sql`, the auth API, both persistence
 adapters, the Flutter UI, and a PostgreSQL erasure acceptance test. The production
-deployment must run `npm run purge:accounts --workspace @finverse/api` at least daily.
+The API runs `AuthMaintenanceService` hourly while an instance is alive. A
+scale-to-zero deployment must still run `npm run purge:accounts
+--workspace @finverse/api` at least daily.
 
 The implemented contract is:
 
