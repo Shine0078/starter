@@ -76,6 +76,9 @@ hashed, shown once, and consumed atomically. Production refuses to start without
 `MFA_ENCRYPTION_KEY`.
 Account deletion, portable data export, and new/reconnected bank Link sessions
 re-verify the current password; deletion also requires explicit typed confirmation.
+Before the deletion window starts, every active provider Item is revoked and its
+webhook jobs are purged; a provider outage fails closed instead of leaving bank
+access alive behind a deleted local row.
 
 The blocklist is a small built-in set. Production should check a real corpus —
 the Have I Been Pwned k-anonymity range API never receives the password itself.

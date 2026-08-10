@@ -78,6 +78,10 @@ file would be required to verify any requirements unique to that document.
   alive, purging due account deletions and expired sessions independently so a
   transient failure in one cleanup path cannot stall the other. A standalone
   purge command remains available for scale-to-zero deployments.
+- Account deletion now revokes every active Plaid Item before entering the
+  recovery window, purges queued webhook jobs, marks the link revoked, and
+  fails closed when provider access cannot be revoked. This prevents a deleted
+  local account from continuing to receive external bank updates.
 - The API now has a bounded 30-second, per-process analytics cache keyed by
   user, period, date range, and currency. Transaction/account/bank events
   invalidate affected users immediately; raw transactions remain the only
@@ -114,8 +118,8 @@ file would be required to verify any requirements unique to that document.
 
 ## Evidence
 
-- API in-memory suite: 410 passing, 5 database-only skips.
-- PostgreSQL contract/RLS suite: 511 passing in embedded PostgreSQL.
+- API in-memory suite: 415 passing, 5 database-only skips.
+- PostgreSQL contract/RLS suite: 516 passing in embedded PostgreSQL.
 - Flutter: 69 widget/design tests passing, `flutter analyze` clean.
 - Android release APK and web release build both compile. The Android emulator
   booted but its package/activity services were unavailable during an install

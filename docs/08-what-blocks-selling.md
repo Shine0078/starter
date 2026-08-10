@@ -25,7 +25,7 @@ Stated so the rest of this document is not read as "nothing works".
 | Authentication | Argon2id, rotating refresh tokens with reuse detection, email verification, password reset, TOTP MFA/recovery codes, device app lock, recoverable deletion, global guard, per-account lockout, session list, audit trail |
 | Persistence | Postgres behind ports, contract-tested against both adapters, migrations |
 | Isolation | Row-level security, app connects as a non-superuser role, 21 dedicated tests |
-| Tests | 410 without a database, 511 against real PostgreSQL, 69 Flutter tests, Android release and web release builds; all passing |
+| Tests | 415 without a database, 516 against real PostgreSQL, 69 Flutter tests, Android release and web release builds; all passing |
 | CI | GitHub Actions: API typecheck/test/build/image + Flutter analyze/test, Android release compile, native iOS no-signing compile, and tagged API/APK/web artifacts |
 
 That is a solid Phase-0 foundation. It is not a product.
@@ -89,7 +89,7 @@ environment before they can be claimed.
 
 | # | Item | Why it blocks selling | Effort |
 |---|---|---|---|
-| 3.2.1 | **Account deletion** | **Completed:** password re-verification, typed confirmation, immediate session revocation, 30-day recovery, mobile UI, hourly in-process maintenance, purge command, and owner-level PostgreSQL erasure proof | Scale-to-zero deployments must schedule the fallback command |
+| 3.2.1 | **Account deletion** | **Completed:** password re-verification, typed confirmation, provider Item revocation before the recovery window, webhook purge, immediate session revocation, 30-day recovery, mobile UI, hourly in-process maintenance, purge command, and owner-level PostgreSQL erasure proof | Scale-to-zero deployments must schedule the fallback command |
 | 3.2.2 | **Email verification** | One-time hashed-token API, mobile confirmation, and SMTP adapter are complete | Real email provider credentials and deliverability setup remain |
 | 3.2.3 | **Password reset** | Enumeration-safe request, one-time reset, password policy, session revocation, mobile flow, and SMTP adapter are complete | Real email provider credentials remain |
 | 3.2.4 | **MFA / TOTP** | **Completed technically:** AES-256-GCM encrypted secrets, five-minute hashed login challenges, replay-resistant TOTP, ten one-time hashed recovery codes, audit events, account erasure, API/mobile enrollment and login UI | Configure and protect `MFA_ENCRYPTION_KEY`; validate enrollment/recovery on physical devices |
@@ -247,7 +247,7 @@ Worth fixing because they cause bad decisions later.
 | 9.1 | Security controls described in the present tense that do not exist | `03-security-privacy.md` — see §3.1 |
 | 9.2 | The deletion purge is described in operational detail as though it runs | `02-data-model.md` |
 | 9.3 | Unused Redis was provisioned despite zero application references | Fixed: shared rate limits and webhook jobs use PostgreSQL, and Redis was removed from the cheap-launch stack |
-| 9.4 | Test counts drift out of date and are then quoted as evidence — older counts were stale until re-measured at 410/511/69 | fixed in `07-session-notes.md`, but the pattern will recur |
+| 9.4 | Test counts drift out of date and are then quoted as evidence — older counts were stale until re-measured at 415/516/69 | fixed in `07-session-notes.md`, but the pattern will recur |
 | 9.5 | `06-cheap-launch-path.md` describes a *personal beta*, not a sellable product. It is correct for what it is, and should say so at the top so it is not mistaken for a launch plan | `06-cheap-launch-path.md` |
 
 ---

@@ -188,8 +188,10 @@ opaque counters but cannot change schema or migration history.
 The implemented lifecycle is:
 
 - `DELETE /auth/account` requires the current password and the literal confirmation
-  `DELETE`. It immediately sets `pending_deletion`, records the request, and revokes
-  every session.
+  `DELETE`. It first revokes every active provider Item and purges its webhook jobs;
+  if the provider is unavailable the request fails closed and the account remains
+  active. Only after external access is revoked does it set `pending_deletion`,
+  record the request, and revoke every session.
 - `POST /auth/cancel-deletion` re-verifies email and password during the 30-day
   recovery window, restores the account, and issues a new session.
 - The built runtime command `npm run purge:accounts --workspace @finverse/api`
