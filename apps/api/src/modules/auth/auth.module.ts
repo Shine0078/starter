@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
 
 import { AuthController } from './auth.controller';
+import { AuthMaintenanceService } from './auth-maintenance.service';
 import { AuthService } from './auth.service';
 
 @Module({
   controllers: [AuthController],
-  providers: [AuthService],
+  providers: [AuthService, AuthMaintenanceService],
   // Exported because AuthGuard is registered globally in AppModule and needs it.
   exports: [AuthService],
 })
