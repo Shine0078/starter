@@ -74,6 +74,11 @@ file would be required to verify any requirements unique to that document.
   user, period, date range, and currency. Transaction/account/bank events
   invalidate affected users immediately; raw transactions remain the only
   source of truth and cache misses recompute the report.
+- A deterministic server-side data-quality report now checks account coverage,
+  malformed dates and currencies, duplicate provider evidence, stale bank
+  links, and provider connections needing re-authentication. It is exposed at
+  authenticated `GET /api/data-quality` and the dashboard shows a plain-language
+  warning card instead of presenting questionable analytics without context.
 - A small internal finance event bus publishes import, update, categorisation,
   account, and bank-sync events inside the NestJS monolith without adding a
   queue or a second service.
@@ -84,7 +89,7 @@ file would be required to verify any requirements unique to that document.
 
 ## Evidence
 
-- API in-memory suite: 379 passing, 5 database-only skips.
+- API in-memory suite: 383 passing, 5 database-only skips.
 - PostgreSQL contract/RLS suite: 480 passing in embedded PostgreSQL.
 - Flutter: 55 widget/design tests passing, `flutter analyze` clean.
 - Android debug APK and web release build both compile. The Android emulator
@@ -109,6 +114,8 @@ file would be required to verify any requirements unique to that document.
 - The mobile offline mutation queue has widget coverage for encrypted
   user-scoped storage, latest-value collapse, optimistic retry semantics, and
   successful replay.
+- Data-quality domain checks and authenticated route protection are covered by
+  focused API tests; Flutter analyzer and the 55-test mobile suite remain clean.
 
 ## Still incomplete locally
 
