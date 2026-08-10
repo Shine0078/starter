@@ -13,6 +13,10 @@ file would be required to verify any requirements unique to that document.
 - Flutter design tokens, semantic colour themes, typography, skeleton/error/
   empty states, reduced-motion handling, chart semantics, and 200% text-scale
   tests.
+- A five-destination primary shell matching MISSION2 (Home, Transactions,
+  Analytics, Accounts, Profile). Secondary planning, budget, goal, calendar,
+  subscription, notification, and settings workflows are grouped in the
+  Profile hub without removing their existing deep links.
 - Authenticated dashboard, budgets, goals, manual assets/debts/credit cards,
   searchable transactions, category corrections with durable rules, session
   controls, MFA, device lock, privacy/consent, export, deletion recovery, PDF
