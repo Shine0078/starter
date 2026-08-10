@@ -37,6 +37,19 @@ services:
     networks:
       - finverse
 
+  # Copy the output of `flutter build web --release --base-href=/app/` into
+  # infra/web before starting this service. Keeping it separate from the API
+  # image lets the same tagged backend serve native clients while the PWA is
+  # updated independently.
+  web:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    volumes:
+      - ./web:/usr/share/nginx/html:ro
+      - ./web.nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - finverse
+
 networks:
   finverse:
     driver: bridge
