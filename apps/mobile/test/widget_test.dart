@@ -1607,7 +1607,8 @@ void main() {
     expect(find.textContaining('Kept as a review marker'), findsOneWidget);
   });
 
-  testWidgets('navigates to transactions, budgets, and goals', (tester) async {
+  testWidgets('keeps primary navigation simple and exposes secondary tools',
+      (tester) async {
     final semantics = tester.ensureSemantics();
     var manualAccountCreated = false;
     final api = clientWith(MockClient((request) async {
@@ -1821,17 +1822,27 @@ void main() {
     await tester.tap(find.text('Clear all'));
     await tester.pumpAndSettle();
 
+    await tester.tap(find.text('Analytics'));
+    await tester.pumpAndSettle();
+    expect(find.text('Analytics'), findsWidgets);
+
+    await tester.tap(find.text('Profile').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Settings and privacy'), findsOneWidget);
+    expect(find.text('Budgets'), findsOneWidget);
+    expect(find.text('Goals'), findsOneWidget);
     await tester.tap(find.text('Budgets'));
     await tester.pumpAndSettle();
     expect(find.text('New budget'), findsOneWidget);
-    expect(find.text('Create a budget to start tracking progress.'),
-        findsOneWidget);
-
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Profile').last);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Goals'));
     await tester.pumpAndSettle();
     expect(find.text('New goal'), findsOneWidget);
-    expect(find.text('Create a goal and turn saving into a plan.'),
-        findsOneWidget);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('Accounts'));
     await tester.pumpAndSettle();
