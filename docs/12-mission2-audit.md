@@ -105,6 +105,9 @@ file would be required to verify any requirements unique to that document.
 - Bounded Prometheus-compatible HTTP metrics are now collected from route
   templates only (never raw URLs) and exposed at protected `/api/metrics` with
   an optional development path and a production `METRICS_TOKEN` requirement.
+- Native and web release builds now reject every cleartext API origin,
+  including an explicitly configured localhost, so a shippable artifact cannot
+  silently depend on a VPN, LAN address, or loopback server.
 - Native iOS Plaid OAuth now has a checked-in Associated Domains entitlement,
   validated `IOS_TEAM_ID`/redirect configuration, and public Apple App Site
   Association routes that fail closed until the deployment supplies both.
