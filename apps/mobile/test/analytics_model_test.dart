@@ -92,4 +92,28 @@ void main() {
     expect(answer.facts.single.value, r'$600.00');
     expect(answer.source, 'deterministic');
   });
+
+  test('parses safe period comparisons for the home dashboard', () {
+    final report = InsightsReport.fromJson({
+      'headline': {
+        'income': r'\$1,000.00',
+        'expenses': r'\$400.00',
+        'netCashFlow': r'\$600.00',
+        'savingsRate': '60.0%',
+      },
+      'topCategories': [],
+      'insights': [],
+      'comparison': {
+        'income': r'\$100.00 (11%) higher than last period',
+        'expenses': r'\$50.00 (14%) lower than last period',
+        'netCashFlow': null,
+        'savingsRate': '5.0 percentage points higher than last period',
+      },
+    });
+
+    expect(report.comparison?.income, contains('higher'));
+    expect(report.comparison?.expenses, contains('lower'));
+    expect(report.comparison?.netCashFlow, isNull);
+    expect(report.comparison?.hasAny, isTrue);
+  });
 }
