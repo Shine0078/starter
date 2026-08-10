@@ -4,6 +4,7 @@ import { addDays, comparablePreviousRange, monthToDateRange } from '../../domain
 import {
   cashFlowInsight,
   compareCategoryTotals,
+  rankInsights,
   summarizePeriod,
   type Insight,
   type PeriodSummary,
@@ -79,9 +80,9 @@ export class InsightsService {
 
     const insights = compareCategoryTotals(summary, previous, transactions);
     const cashFlow = cashFlowInsight(summary);
-    if (cashFlow) insights.unshift(cashFlow);
+    if (cashFlow) insights.push(cashFlow);
 
-    return { summary, previous, insights };
+    return { summary, previous, insights: rankInsights(insights) };
   }
 
   async dataQuality(userId: string, asOf?: string): Promise<DataQualityReport> {

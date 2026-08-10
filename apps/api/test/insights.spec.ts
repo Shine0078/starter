@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { cashFlowInsight, compareCategoryTotals, summarizePeriod } from '../src/domain/insights/insights';
+import { cashFlowInsight, compareCategoryTotals, rankInsights, summarizePeriod } from '../src/domain/insights/insights';
 import { computeHealthScore } from '../src/domain/health-score/score';
 import { detectRecurringIncome, forecastCashFlow } from '../src/domain/insights/cash-flow-forecast';
 import { buildCreditCardPlans } from '../src/domain/credit-cards/payment-plan';
@@ -197,6 +197,54 @@ describe('cashFlowInsight', () => {
       txn({ amount: -20_000, categorySlug: 'rent' }),
     ];
     expect(cashFlowInsight(summarizePeriod(rows, AUGUST, 'USD'))).toBeNull();
+  });
+});
+
+describe('rankInsights', () => {
+  it('surfaces a material cash shortfall above trend noise', () => {
+    const categoryChange = compareCategoryTotals(
+      summarizePeriod([
+        txn({ amount: -30_000, categorySlug: 'restaurants', postedAt: '2026-08-05' }),
+      ], AUGUST, 'USD'),
+      summarizePeriod([
+        txn({ amount: -10_000, categorySlug: 'restaurants', postedAt: '2026-07-05' }),
+      ], JULY, 'USD'),
+      [],
+    )[0]!;
+    const shortfall = cashFlowInsight(summarizePeriod([
+      txn({ amount: 100_000, categorySlug: 'salary' }),
+      txn({ amount: -180_000, categorySlug: 'rent' }),
+    ], AUGUST, 'USD'))!;
+
+    const ranked = rankInsights([categoryChange, shortfall]);
+
+    expect(ranked[0]).toMatchObject({
+      kind: 'overspending',
+      priority: 'critical',
+    });
+    expect(ranked[0]!.priorityScore).toBeGreaterThan(ranked[1]!.priorityScore!);
+  });
+
+  it('keeps equal scores in their original order and adds an explainable tier', () => {
+    const insights = rankInsights([
+      {
+        kind: 'positive_trend',
+        severity: 'info',
+        title: 'A',
+        detail: 'A',
+        evidenceTransactionIds: [],
+      },
+      {
+        kind: 'positive_trend',
+        severity: 'info',
+        title: 'B',
+        detail: 'B',
+        evidenceTransactionIds: [],
+      },
+    ]);
+
+    expect(insights.map((insight) => insight.title)).toEqual(['A', 'B']);
+    expect(insights[0]).toMatchObject({ priority: 'informational', priorityScore: 10 });
   });
 });
 

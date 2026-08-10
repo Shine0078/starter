@@ -617,6 +617,8 @@ class Insight {
     required this.title,
     required this.detail,
     required this.evidenceCount,
+    this.priority = 'informational',
+    this.priorityScore = 0,
   });
 
   factory Insight.fromJson(Map<String, dynamic> json) => Insight(
@@ -625,12 +627,16 @@ class Insight {
         title: json['title'] as String,
         detail: json['detail'] as String,
         evidenceCount: (json['evidenceTransactionIds'] as List<dynamic>).length,
+        priority: json['priority'] as String? ?? 'informational',
+        priorityScore: (json['priorityScore'] as num?)?.toInt() ?? 0,
       );
 
   final String kind;
   final String severity;
   final String title;
   final String detail;
+  final String priority;
+  final int priorityScore;
 
   /// How many transactions produced this insight. Every insight must be
   /// traceable back to the data behind it.

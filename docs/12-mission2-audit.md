@@ -70,6 +70,11 @@ file would be required to verify any requirements unique to that document.
   engine and a forecast/simulator entry point. Historical income-versus-spending
   trend points are now gap-filled and downsampled by calendar range, with an
   accessible mobile line chart.
+- Insights are now ranked by a deterministic priority engine using severity,
+  financial impact, abnormality, urgency, and supporting-evidence count. The
+  API returns `critical`, `important`, or `informational` tiers plus a bounded
+  score, and the Home/Analytics cards surface the tier without inventing AI
+  statements.
 - A dedicated financial calendar over the 90-day conservative forecast. It
   groups expected recurring income and bills by calendar date, adds unfinished
   savings-goal target milestones, marks projected low-balance dates, supports
@@ -144,8 +149,8 @@ file would be required to verify any requirements unique to that document.
 
 ## Evidence
 
-- API in-memory suite: 420 passing, 5 database-only skips.
-- PostgreSQL contract/RLS suite: 521 passing in embedded PostgreSQL.
+- API in-memory suite: 422 passing, 5 database-only skips.
+- PostgreSQL contract/RLS suite: 523 passing in embedded PostgreSQL.
 - Flutter: 73 widget/design tests passing, `flutter analyze` clean.
 - Android release APK and web release build both compile. The Android emulator
   booted but its package/activity services were unavailable during an install

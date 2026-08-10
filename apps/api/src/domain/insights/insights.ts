@@ -129,6 +129,10 @@ export type InsightKind =
 export interface Insight {
   kind: InsightKind;
   severity: 'info' | 'warning' | 'positive';
+  /** Deterministic user-facing urgency tier, assigned by rankInsights. */
+  priority?: InsightPriority;
+  /** Explainable 0-100 score used to keep the ordering stable. */
+  priorityScore?: number;
   title: string;
   detail: string;
   categorySlug?: string;
@@ -138,6 +142,8 @@ export interface Insight {
   /** The transactions behind this insight. Non-negotiable — see the file header. */
   evidenceTransactionIds: string[];
 }
+
+export type InsightPriority = 'critical' | 'important' | 'informational';
 
 /** Ignore swings on trivial amounts. A 300% increase on a $2 category is noise. */
 const MATERIALITY_FLOOR = 2_000; // $20.00
@@ -225,4 +231,45 @@ export function cashFlowInsight(summary: PeriodSummary): Insight | null {
     deltaAmount: -shortfall,
     evidenceTransactionIds: [],
   };
+}
+
+/**
+ * Put the small number of insights a user sees in a useful order.
+ *
+ * This deliberately does not pretend to know a user's risk tolerance. It uses
+ * only facts available in the insight: severity, dollar impact, the size of
+ * the change, and the amount of supporting evidence. The score is exposed so
+ * clients can explain why a warning was surfaced, while the tier keeps the
+ * mobile UI readable.
+ */
+export function rankInsights(insights: readonly Insight[]): Insight[] {
+  return insights
+    .map((insight, index) => ({
+      insight,
+      index,
+      score: insightPriorityScore(insight),
+    }))
+    .sort((a, b) => b.score - a.score || a.index - b.index)
+    .map(({ insight, score }) => ({
+      ...insight,
+      priorityScore: score,
+      priority: score >= 75
+        ? 'critical'
+        : score >= 45
+          ? 'important'
+          : 'informational',
+    }));
+}
+
+function insightPriorityScore(insight: Insight): number {
+  const severity = insight.severity === 'warning'
+    ? 35
+    : insight.severity === 'positive'
+      ? 15
+      : 10;
+  const impact = Math.min(35, Math.round(Math.abs(insight.deltaAmount ?? 0) / MATERIALITY_FLOOR * 10));
+  const abnormality = Math.min(15, Math.round(Math.abs(insight.deltaPercent ?? 0) / 10));
+  const evidence = Math.min(10, insight.evidenceTransactionIds.length * 2);
+  const urgency = insight.kind === 'overspending' ? 20 : 0;
+  return Math.min(100, severity + impact + abnormality + evidence + urgency);
 }

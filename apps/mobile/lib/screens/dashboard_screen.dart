@@ -530,6 +530,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                             : theme.colorScheme.error,
                       ),
                       title: Text(insight.title),
+                      trailing: _priorityChip(theme, insight.priority),
                       subtitle: Text(
                         '${insight.detail}\nBased on ${insight.evidenceCount} transaction(s)',
                       ),
@@ -672,4 +673,18 @@ class _DashboardScreenState extends State<DashboardScreen>
           ],
         ),
       );
+
+  Widget _priorityChip(ThemeData theme, String priority) {
+    final (label, color) = switch (priority) {
+      'critical' => ('Critical', theme.colorScheme.error),
+      'important' => ('Important', theme.colorScheme.tertiary),
+      _ => ('Info', theme.colorScheme.outline),
+    };
+    return Chip(
+      label: Text(label),
+      visualDensity: VisualDensity.compact,
+      side: BorderSide(color: color.withValues(alpha: 0.35)),
+      labelStyle: TextStyle(color: color, fontSize: 11),
+    );
+  }
 }
