@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../api/client.dart';
 import '../models/models.dart';
 import '../widgets/transaction_tile.dart';
+import 'transaction_feed_groups.dart';
 import 'transaction_detail_screen.dart';
 
 class TransactionsScreen extends StatefulWidget {
@@ -263,20 +264,45 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     if (_rows.isEmpty) {
       return const Center(child: Text('No matching transactions.'));
     }
+    final groups = groupTransactionsByDate(_rows);
+    final items = <Object>[];
+    for (final group in groups) {
+      items
+        ..add(group)
+        ..addAll(group.transactions);
+    }
+    if (_loadingMore) items.add(const _LoadingMoreTransactions());
+
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView.builder(
         controller: _scroll,
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: _rows.length + (_loadingMore ? 1 : 0),
+        itemCount: items.length,
         itemBuilder: (context, index) {
-          if (index >= _rows.length) {
+          final item = items[index];
+          if (item is TransactionDateGroup) {
+            return Padding(
+              key: ValueKey('transaction-date-${item.label}'),
+              padding: const EdgeInsets.only(top: 16, bottom: 8),
+              child: Semantics(
+                header: true,
+                child: Text(
+                  item.label,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ),
+            );
+          }
+          if (item is _LoadingMoreTransactions) {
             return const Padding(
               padding: EdgeInsets.all(20),
               child: Center(child: CircularProgressIndicator()),
             );
           }
-          final row = _rows[index];
+          final row = item as Transaction;
           return TransactionTile(
             transaction: row,
             onTap: () async {
@@ -297,6 +323,10 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       ),
     );
   }
+}
+
+class _LoadingMoreTransactions {
+  const _LoadingMoreTransactions();
 }
 
 class _TransactionFilterValues {
