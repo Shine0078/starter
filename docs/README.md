@@ -39,7 +39,8 @@ against both adapters — and, since [ADR-0006](adr/0006-row-level-security.md),
 row-level security underneath it, with the API connecting as a role that cannot
 bypass the policies.
 
-Plaid Sandbox is integrated end to end on Android: native Link, encrypted access
+Plaid Sandbox is integrated end to end on Android, with the iOS LinkKit bridge
+also wired in the checked-in Xcode project: native Link, encrypted access
 tokens, cursor sync, reconnect, signed webhook jobs, and revoke. Production bank
 connections still require Plaid approval. Account deletion, goals, in-app alert
 generation, subscription monitoring, session controls, release packaging, and

@@ -88,13 +88,16 @@ real institutions require Plaid production approval and a commercial account.
 
 | Capability | Web/PWA | Android | iOS native |
 |---|---:|---:|---:|
-| Plaid Link | Yes (JavaScript SDK) | Yes (native SDK) | Pending Swift SDK bridge |
+| Plaid Link | Yes (JavaScript SDK) | Yes (native SDK) | LinkKit bridge wired; Mac/Xcode smoke test pending |
 | Secure session storage | Origin storage limitations | Android Keystore | iOS Keychain |
 | Encrypted offline cache | Not available | SQLite + AES-GCM | SQLite + AES-GCM |
 | Device app lock | Not available | Biometrics/PIN | Face ID/Touch ID/PIN |
 
-The checked-in iOS project is ready for Xcode. Building or signing it requires
-macOS/Xcode and an Apple team; Windows cannot run that toolchain.
+The checked-in iOS project includes Plaid LinkKit 7 through Swift Package
+Manager and the Flutter method-channel bridge. Building or signing it requires
+macOS/Xcode and an Apple team; Windows cannot run that toolchain. Before an
+OAuth bank test, register a Plaid Universal Link redirect URI and host the
+matching `apple-app-site-association` file for `com.finverse.finance`.
 
 ## Troubleshooting
 

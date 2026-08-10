@@ -18,7 +18,8 @@ file would be required to verify any requirements unique to that document.
   controls, MFA, device lock, privacy/consent, export, deletion recovery, PDF
   reports, alerts, subscriptions, and cash-flow planning.
 - Plaid adapter with encrypted access tokens, password step-up for Link,
-  Android native Link, browser Link for the iPhone PWA, exchange, initial sync,
+  Android native Link, native iOS LinkKit bridge, browser Link for the iPhone
+  PWA, exchange, initial sync,
   cursor-based `/transactions/sync`, mutation-safe pagination, pending/posted
   reconciliation, removed rows, reconnect, webhook verification/retry, and
   multiple-institution support.
@@ -55,13 +56,16 @@ file would be required to verify any requirements unique to that document.
 - Explainable refund matching links settled refunds to earlier purchases using
   account, currency, merchant, amount, and timing evidence; anomaly alerts also
   catch near-duplicate merchant descriptors conservatively.
-- Read-only encrypted offline cache, safe stale-data banners, bounded request
-  timeouts, release-build API URL validation, serialized refresh rotation
-  across concurrent 401 responses, and a best-effort bank refresh when the
-  authenticated dashboard resumes after the app has been backgrounded. A
-  network outage no longer signs a user out while an expired access token is
-  waiting for refresh, and a temporarily locked Keychain/Keystore has an
-  explicit retry state rather than looking like account loss.
+- Encrypted offline cache plus an encrypted, user-scoped mutation queue for
+  idempotent transaction preference edits. Queued edits collapse to the latest
+  value, keep the optimistic UI state, show a pending-sync banner, and replay
+  automatically on session restore or dashboard resume. Safe stale-data
+  banners, bounded request timeouts, release-build API URL validation,
+  serialized refresh rotation across concurrent 401 responses, and a
+  best-effort bank refresh are also covered. A network outage no longer signs
+  a user out while an expired access token is waiting for refresh, and a
+  temporarily locked Keychain/Keystore has an explicit retry state rather than
+  looking like account loss.
 - A shared authenticated-write revision signal now invalidates the live
   dashboard, transactions, budgets, goals, analytics, and bank-connection
   screens immediately after sync or another successful mutation, including
@@ -82,13 +86,13 @@ file would be required to verify any requirements unique to that document.
 
 - API in-memory suite: 379 passing, 5 database-only skips.
 - PostgreSQL contract/RLS suite: 480 passing in embedded PostgreSQL.
-- Flutter: 54 widget/design tests passing, `flutter analyze` clean.
+- Flutter: 55 widget/design tests passing, `flutter analyze` clean.
 - Android debug APK and web release build both compile. The Android emulator
   booted but its package/activity services were unavailable during an install
   attempt; that is an emulator image issue, not a compile failure.
-- Windows Flutter cannot compile iOS; Xcode/macOS remains required. Native iOS
-  Plaid Link still needs its Swift SDK bridge; the iPhone PWA uses Plaid Link
-  for Web today.
+- Windows Flutter cannot compile iOS; Xcode/macOS remains required for the
+  LinkKit package resolution, Universal Link OAuth return, and device test.
+  The iPhone PWA remains available as a browser fallback.
 - The live Plaid Sandbox path was verified on 2026-08-10: web Link-token
   creation, public-token exchange, five-account import, and idempotent
   incremental sync all completed against the Postgres API. The Android path
@@ -102,11 +106,16 @@ file would be required to verify any requirements unique to that document.
   API/mobile workflows are covered by the authenticated API isolation test, the
   Postgres store contract, the analytics exclusion test, and a provider-sync
   recurrence integration test.
+- The mobile offline mutation queue has widget coverage for encrypted
+  user-scoped storage, latest-value collapse, optimistic retry semantics, and
+  successful replay.
 
 ## Still incomplete locally
 
 - OS-level background mobile sync, push delivery, receipts/OCR, localisation,
-  passkeys/WebAuthn, and native iOS Plaid Link.
+  and passkeys/WebAuthn. Native iOS LinkKit is wired in source and the Xcode
+  project, but still needs a Mac/Xcode build, a registered Universal Link, and
+  an iPhone OAuth smoke test.
 - Remaining screens still have inline styling and `setState`; the design system
   foundation is complete but adoption is partial.
 
