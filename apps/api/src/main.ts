@@ -65,11 +65,12 @@ async function bootstrap(): Promise<void> {
   // for BREACH, and the bundle is where all the bytes actually are.
   app.use(['/app', '/dev'], compression());
 
-  // The developer dashboard, at an explicit path. It is a development tool
-  // that can fabricate a sample ledger from the mock aggregator, so it must
-  // not be what someone lands on when they open the site — seeing invented
-  // bills in a finance app is alarming, and reasonably so.
-  app.useStaticAssets(join(__dirname, '..', 'public'), { prefix: '/dev' });
+  // The developer dashboard is mounted only outside production. It can
+  // fabricate a sample ledger from the mock aggregator, so it must not be
+  // exposed by a real deployment.
+  if (!config.isProduction) {
+    app.useStaticAssets(join(__dirname, '..', 'public'), { prefix: '/dev' });
+  }
 
   // The Flutter app, compiled for the web, served from the same origin as the
   // API it talks to. Same-origin means no CORS to configure and no second host
@@ -92,11 +93,14 @@ async function bootstrap(): Promise<void> {
     });
   }
 
-  // The root sends you to the real app when one is built, and to the developer
-  // dashboard otherwise. Nobody should have to know which path is which.
+  // The root sends you to the real app when one is built. Only development
+  // falls back to the mock-data dashboard; production fails closed if its
+  // frontend bundle is missing.
   app.use((request: Request, response: Response, next: NextFunction) => {
     if (request.path !== '/') return next();
-    response.redirect(webAppBuilt ? '/app/' : '/dev/');
+    if (webAppBuilt) return response.redirect('/app/');
+    if (!config.isProduction) return response.redirect('/dev/');
+    return response.status(404).send('FINVERSE web app is not deployed.');
   });
 
   // Drain in-flight requests and close the pool on SIGTERM/SIGINT, so a
