@@ -1020,6 +1020,15 @@ describe('auth API', () => {
         .patch(`/api/notifications/${notificationId}/read`)
         .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
         .expect(204);
+      await request(http)
+        .patch('/api/notifications/read-all')
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .expect(204);
+      const cleared = await request(http)
+        .get('/api/notifications')
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .expect(200);
+      expect(cleared.body.unread).toBe(0);
       const bobRows = await request(http)
         .get('/api/notifications')
         .set('Authorization', `Bearer ${bob.tokens.accessToken}`)

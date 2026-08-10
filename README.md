@@ -136,6 +136,8 @@ last 15 minutes; exchange the refresh token at `/api/auth/refresh` for a new pai
 | `GET` | `/cash-flow-forecast?days=7|30|90&currency=CAD` | Currency-specific conservative liquid-cash outlook from repeatable income and bills |
 | `GET` | `/purchase-scenario?days=7|30|90&amount=<minor>&date=YYYY-MM-DD&currency=CAD` | One-off purchase impact against the same currency-specific outlook |
 | `GET` | `/credit-cards` | Utilization, pay-down target, and an early payment window |
+| `PATCH` | `/notifications/:id/read` | Mark one alert read |
+| `PATCH` | `/notifications/read-all` | Mark all alerts read |
 | `GET` | `/billing/subscription` | Current plan, entitlements, and renewal state |
 | `POST` | `/billing/checkout-session` | Start hosted checkout for a plan. Returns a URL; no card data reaches this API |
 | `POST` | `/billing/portal-session` | Link to the provider's page for cancellation, card changes, and invoices |

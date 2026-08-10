@@ -20,6 +20,12 @@ export class NotificationsController {
     return this.notifications.markRead(userId, id);
   }
 
+  @Patch('read-all')
+  @HttpCode(204)
+  markAllRead(@CurrentUser() userId: string) {
+    return this.notifications.markAllRead(userId);
+  }
+
   @Get('preferences')
   preferences(@CurrentUser() userId: string) {
     return this.notifications.preferences(userId);

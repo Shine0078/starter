@@ -42,6 +42,9 @@ file would be required to verify any requirements unique to that document.
   users inspect and delete those durable merchant rules. Deleting a rule is
   explicit and leaves the original bank evidence and existing transaction edits
   unchanged.
+- The notification centre now supports an optimistic, user-scoped “mark all
+  read” action. Low-balance alerts format their configured threshold in the
+  account's currency instead of assuming dollars.
 - Stable transaction keyset pagination (`before` cursor) in the Postgres and
   in-memory stores, API, client, and mobile feed. The feed loads older pages as
   the user scrolls.

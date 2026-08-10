@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 
 import type { NotificationPreferences, UserNotification } from '../../domain/types';
+import { formatMoney, money } from '../../domain/money';
 import {
   deriveSubscriptionAlerts,
   deriveUnusualTransactionAlerts,
@@ -50,6 +51,19 @@ export class NotificationsService {
     if (!(await this.notifications.markRead(userId, id, this.clock.now().toISOString()))) {
       throw new NotFoundException('Notification not found.');
     }
+  }
+
+  async markAllRead(userId: string): Promise<void> {
+    const unread = (await this.notifications.list(userId)).filter(
+      (notification) => notification.readAt === null,
+    );
+    if (unread.length === 0) return;
+    const readAt = this.clock.now().toISOString();
+    await Promise.all(
+      unread.map((notification) =>
+        this.notifications.markRead(userId, notification.id, readAt),
+      ),
+    );
   }
 
   private async refreshDerived(userId: string): Promise<void> {
@@ -123,7 +137,7 @@ export class NotificationsService {
           id: randomUUID(),
           kind: 'low_balance',
           title: 'Low balance',
-          message: `${account.name} has fallen below the configured $200.00 early-warning threshold.`,
+          message: `${account.name} has fallen below the configured ${formatMoney(money(20_000, account.currency))} early-warning threshold.`,
           severity: account.balanceCurrent < 0 ? 'critical' : 'warning',
           dedupeKey: `low-balance:${account.id}:${today.slice(0, 7)}`,
           readAt: null,

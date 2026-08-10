@@ -64,6 +64,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         appBar: AppBar(
           title: const Text('Notifications'),
           actions: [
+            if (_rows.any((row) => row.unread))
+              TextButton(
+                onPressed: _markAllRead,
+                child: const Text('Mark all read'),
+              ),
             IconButton(
               icon: const Icon(Icons.tune),
               tooltip: 'Notification preferences',
@@ -105,6 +110,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 ),
               ),
       );
+
+  Future<void> _markAllRead() async {
+    final unread = _rows.where((row) => row.unread).length;
+    if (unread == 0) return;
+    final previous = _rows;
+    setState(() => _rows = _rows.map((row) => row.asRead()).toList());
+    try {
+      await widget.api.markAllNotificationsRead();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$unread alert${unread == 1 ? '' : 's'} marked as read.')),
+      );
+    } catch (_) {
+      if (mounted) setState(() => _rows = previous);
+    }
+  }
 
   Widget _tile(int index, FinanceNotification row) => Card(
         elevation: row.unread ? 2 : 0,

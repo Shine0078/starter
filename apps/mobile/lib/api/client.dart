@@ -1222,6 +1222,10 @@ class ApiClient {
     await _send('PATCH', '/notifications/$id/read');
   }
 
+  Future<void> markAllNotificationsRead() async {
+    await _send('PATCH', '/notifications/read-all');
+  }
+
   Future<NotificationPreferences> notificationPreferences() async {
     final json =
         await _get('/notifications/preferences') as Map<String, dynamic>;
