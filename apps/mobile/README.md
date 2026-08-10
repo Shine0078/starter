@@ -114,7 +114,13 @@ an installable PWA that uses the same HTTPS API without a VPN client.
 flutter analyze
 flutter test
 flutter build apk --debug
+flutter build web --release --base-href=/app/
 ```
+
+The `/app/` base href is required because the public Caddy/API stack mounts
+the PWA below that path. CI asserts the generated `index.html` keeps this
+mount point, preventing a bundle built with the default `/` href from shipping
+an install that cannot load its own assets.
 
 The Android project is versioned because it contains the Plaid bridge, release
 signing setup, application ID, launcher assets, and platform configuration.
