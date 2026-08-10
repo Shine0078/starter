@@ -272,7 +272,7 @@ stopped running.
   row-level security policies in force — and a suite that issues deliberately
   unfiltered SQL to prove the database withholds other users' rows on its own.
   The slice is also exercised end to end over HTTP.
-- **The Flutter app is verified by static analysis, 70 tests, and real
+- **The Flutter app is verified by static analysis, 71 tests, and real
   Android release APK and web builds.** Android and iOS platform projects can be generated
   locally. See the
   [cheap launch path](docs/06-cheap-launch-path.md).

@@ -73,6 +73,10 @@ file would be required to verify any requirements unique to that document.
   a user out while an expired access token is waiting for refresh, and a
   temporarily locked Keychain/Keystore has an explicit retry state rather than
   looking like account loss.
+- Sign-out now writes a non-sensitive platform-preferences tombstone before
+  deleting the secure token. A locked Keychain/Keystore therefore cannot make
+  an explicit logout reappear on the next launch; the token itself remains
+  exclusively in secure storage.
 - A shared authenticated-write revision signal now invalidates the live
   dashboard, transactions, budgets, goals, analytics, and bank-connection
   screens immediately after sync or another successful mutation, including
@@ -123,7 +127,7 @@ file would be required to verify any requirements unique to that document.
 
 - API in-memory suite: 417 passing, 5 database-only skips.
 - PostgreSQL contract/RLS suite: 518 passing in embedded PostgreSQL.
-- Flutter: 70 widget/design tests passing, `flutter analyze` clean.
+- Flutter: 71 widget/design tests passing, `flutter analyze` clean.
 - Android release APK and web release build both compile. The Android emulator
   booted but its package/activity services were unavailable during an install
   attempt; that is an emulator image issue, not a compile failure.
@@ -147,9 +151,9 @@ file would be required to verify any requirements unique to that document.
   `/api/assistant` request with the deterministic response shape, returned the
   authenticated analytics trend series, and deleted the user again; no raw
   transaction evidence crossed the route.
-- Persisted mobile sessions now reject expired refresh tokens, write a signed-out
-  tombstone before secure cleanup, publish replacement tokens before removing
-  that tombstone, and refresh an expired access token before showing the
+- Persisted mobile sessions now reject expired refresh tokens, write a
+  platform-available signed-out tombstone before secure cleanup, publish
+  replacement tokens before removing that tombstone, and refresh an expired access token before showing the
   dashboard, with widget coverage for failure-safe cleanup and rotation.
 - The transaction annotation and recurring-override migrations plus their
   API/mobile workflows are covered by the authenticated API isolation test, the
@@ -159,7 +163,7 @@ file would be required to verify any requirements unique to that document.
   user-scoped storage, latest-value collapse, optimistic retry semantics, and
   successful replay.
 - Data-quality domain checks and authenticated route protection are covered by
-  focused API tests; Flutter analyzer and the 70-test mobile suite remain clean.
+  focused API tests; Flutter analyzer and the 71-test mobile suite remain clean.
 - A provider-neutral public deployment path now runs the tagged API and optional
   Flutter web bundle behind Caddy with automatic HTTPS. Port 3000 remains
   private to the Docker network, and native phones or the `/app/` PWA can use
