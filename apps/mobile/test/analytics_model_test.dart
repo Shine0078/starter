@@ -116,4 +116,18 @@ void main() {
     expect(report.comparison?.netCashFlow, isNull);
     expect(report.comparison?.hasAny, isTrue);
   });
+
+  test('parses durable categorization rules', () {
+    final rule = CategorizationRule.fromJson({
+      'id': 'rule-1',
+      'matchType': 'contains',
+      'pattern': 'whole foods',
+      'categorySlug': 'groceries',
+      'priority': 0,
+    });
+
+    expect(rule.pattern, 'whole foods');
+    expect(rule.categorySlug, 'groceries');
+    expect(rule.priority, 0);
+  });
 }

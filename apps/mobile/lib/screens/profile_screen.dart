@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api/app_lock.dart';
 import '../api/client.dart';
 import 'analytics_screen.dart';
+import 'categorization_rules_screen.dart';
 import 'financial_calendar_screen.dart';
 import 'goals_screen.dart';
 import 'budgets_screen.dart';
@@ -127,6 +128,13 @@ class ProfileScreen extends StatelessWidget {
                 title: 'Notifications',
                 subtitle: 'Review alerts and notification preferences',
                 screen: NotificationsScreen(api: api),
+              ),
+              _destination(
+                context,
+                icon: Icons.auto_fix_high_outlined,
+                title: 'Categorization rules',
+                subtitle: 'Review or remove saved merchant rules',
+                screen: CategorizationRulesScreen(api: api),
               ),
             ]),
             const SizedBox(height: 20),

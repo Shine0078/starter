@@ -1053,6 +1053,20 @@ class ApiClient {
     return json['message'] as String? ?? 'Updated.';
   }
 
+  Future<List<CategorizationRule>> categorizationRules() async {
+    final json = await _get('/categorization-rules') as Map<String, dynamic>;
+    return (json['rules'] as List<dynamic>)
+        .map((e) => CategorizationRule.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> deleteCategorizationRule(String ruleId) async {
+    await _send(
+      'DELETE',
+      '/categorization-rules/${Uri.encodeComponent(ruleId)}',
+    );
+  }
+
   Future<Transaction> updateTransactionPreferences(
     String transactionId, {
     String? merchantOverride,

@@ -444,6 +444,31 @@ class CategoryDefinition {
   final String kind;
 }
 
+class CategorizationRule {
+  const CategorizationRule({
+    required this.id,
+    required this.matchType,
+    required this.pattern,
+    required this.categorySlug,
+    required this.priority,
+  });
+
+  factory CategorizationRule.fromJson(Map<String, dynamic> json) =>
+      CategorizationRule(
+        id: json['id'] as String,
+        matchType: json['matchType'] as String,
+        pattern: json['pattern'] as String,
+        categorySlug: json['categorySlug'] as String,
+        priority: (json['priority'] as num?)?.toInt() ?? 0,
+      );
+
+  final String id;
+  final String matchType;
+  final String pattern;
+  final String categorySlug;
+  final int priority;
+}
+
 class Budget {
   Budget({
     required this.id,
