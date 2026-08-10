@@ -36,6 +36,11 @@ file would be required to verify any requirements unique to that document.
   searchable, preserved across provider re-sync, included in exports, and
   honored by budgets, analytics, forecasts, subscriptions, health scoring, and
   financial alerts. The original provider description remains unchanged.
+- Recurring detection now runs after every complete Plaid incremental sync (not
+  only the legacy demo sync), across the full stored history. Transaction detail
+  also supports a durable user override; an explicit choice survives later bank
+  pages, webhook retries, and re-syncs while automatic flags continue to be
+  recomputed for untouched rows.
 - A dedicated `AnalyticsScreen` with month metrics, category chart, financial
   health, subscriptions, evidence-backed insights, week/month/quarter/year/
   lifetime/custom period selection, spending velocity, and a financial timeline, backed by the server-side analytics
@@ -68,9 +73,9 @@ file would be required to verify any requirements unique to that document.
 
 ## Evidence
 
-- API in-memory suite: 378 passing, 5 database-only skips.
-- PostgreSQL contract/RLS suite: 479 passing in embedded PostgreSQL.
-- Flutter: 54 widget/design tests passing, `flutter analyze` clean.
+- API in-memory suite: 379 passing, 5 database-only skips.
+- PostgreSQL contract/RLS suite: 480 passing in embedded PostgreSQL.
+- Flutter: 55 widget/design tests passing, `flutter analyze` clean.
 - Android debug APK and web release build both compile. The Android emulator
   booted but its package/activity services were unavailable during an install
   attempt; that is an emulator image issue, not a compile failure.
@@ -86,9 +91,10 @@ file would be required to verify any requirements unique to that document.
 - Persisted mobile sessions now reject expired refresh tokens and refresh an
   expired access token before showing the dashboard, with widget coverage for
   both paths.
-- The transaction annotation migration and API/mobile workflow are covered by
-  the authenticated API isolation test, the Postgres store contract, and the
-  analytics exclusion test.
+- The transaction annotation and recurring-override migrations plus their
+  API/mobile workflows are covered by the authenticated API isolation test, the
+  Postgres store contract, the analytics exclusion test, and a provider-sync
+  recurrence integration test.
 
 ## Still incomplete locally
 
