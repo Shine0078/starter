@@ -757,7 +757,8 @@ class ApiClient {
       await sessionStore.clear();
     } catch (_) {
       // The in-memory session is authoritative for this process. The next
-      // launch will retry the platform cleanup before restoring a session.
+      // platform unlock may be required before secure-storage cleanup can
+      // succeed; never keep the current process inside the financial UI.
     }
     if (owner != null) {
       try {
