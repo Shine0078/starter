@@ -1293,6 +1293,40 @@ void main() {
     expect((await store.read())?.refreshToken, original.refreshToken);
   });
 
+  test('serves cached reads when a stale access token cannot refresh offline',
+      () async {
+    String segment(Map<String, dynamic> value) =>
+        base64Url.encode(utf8.encode(jsonEncode(value))).replaceAll('=', '');
+    final expiredAccess = '${segment({
+          'alg': 'HS256',
+          'typ': 'JWT'
+        })}.${segment({'sub': 'user-1', 'exp': 1})}.signature';
+    final store = InMemorySessionStore();
+    await store.write(SessionTokens(
+      accessToken: expiredAccess,
+      refreshToken: 'stored-refresh',
+      refreshExpiresAt: '2099-01-01T00:00:00.000Z',
+      userId: 'user-1',
+    ));
+    final cache = InMemoryOfflineCacheStore();
+    await cache.write('user-1', '/accounts', '[]');
+
+    final api = clientWith(
+      MockClient((request) async {
+        if (request.url.path.endsWith('/auth/refresh')) {
+          throw http.ClientException('offline');
+        }
+        return http.Response('expired', 401);
+      }),
+      store: store,
+      offlineCache: cache,
+    );
+
+    expect(await api.restoreSession(), isTrue);
+    expect(await api.accounts(), isEmpty);
+    expect(api.isAuthenticated, isTrue);
+  });
+
   testWidgets('shows a retry state when secure session storage is unavailable',
       (tester) async {
     final api = clientWith(

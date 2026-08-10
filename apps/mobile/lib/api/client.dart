@@ -363,6 +363,18 @@ class ApiClient {
     try {
       final response = await _perform('GET', path, null, true);
       if (response.statusCode >= 400) {
+        // If the access token was stale but the refresh request could not
+        // reach the server, this is an offline condition rather than an
+        // authorization decision. Prefer the user-scoped encrypted cache and
+        // keep the refresh credential for the next resume.
+        if (response.statusCode == 401 &&
+            _lastRefreshFailure == _RefreshFailure.unavailable) {
+          return _cachedOrThrow(
+            owner,
+            path,
+            ApiException(path, response.statusCode, response.body),
+          );
+        }
         if (response.statusCode < 500) {
           throw PlanUpgradeRequiredException.maybeFrom(path, response) ??
               ApiException(path, response.statusCode, response.body);
