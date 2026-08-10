@@ -96,8 +96,11 @@ real institutions require Plaid production approval and a commercial account.
 The checked-in iOS project includes Plaid LinkKit 7 through Swift Package
 Manager and the Flutter method-channel bridge. Building or signing it requires
 macOS/Xcode and an Apple team; Windows cannot run that toolchain. Before an
-OAuth bank test, register a Plaid Universal Link redirect URI and host the
-matching `apple-app-site-association` file for `com.finverse.finance`.
+OAuth bank test, set `PLAID_IOS_REDIRECT_URI` to a registered Universal Link,
+add the matching Associated Domains entitlement, and host the
+`apple-app-site-association` file for `com.finverse.finance`. The API now fails
+closed with an actionable error if native iOS Link is requested without that
+redirect configuration.
 
 ## Troubleshooting
 

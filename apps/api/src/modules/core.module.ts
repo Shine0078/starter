@@ -228,6 +228,7 @@ function storeProviders(): Provider[] {
           countries: (process.env.PLAID_COUNTRIES ?? 'CA,US').split(',').filter(Boolean),
           androidPackageName: 'com.finverse.finance',
           webRedirectUri: process.env.PLAID_WEB_REDIRECT_URI,
+          iosRedirectUri: process.env.PLAID_IOS_REDIRECT_URI,
         }),
     },
     {

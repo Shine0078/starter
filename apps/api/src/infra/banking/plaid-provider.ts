@@ -23,6 +23,8 @@ export interface PlaidProviderOptions {
   /** Registered OAuth return URL for Plaid Link on the web. Optional: the
    *  Sandbox test institutions do not need one. */
   webRedirectUri?: string;
+  /** Registered iOS Universal Link for OAuth. Required for native iOS Link. */
+  iosRedirectUri?: string;
 }
 
 export class PlaidBankProvider implements BankProvider {
@@ -66,16 +68,24 @@ export class PlaidBankProvider implements BankProvider {
   ): Promise<{ token: string; expiresAt: string }> {
     const client = this.requireClient();
 
-    // `android_package_name` binds the token to the Android app; Plaid rejects
-    // such a token in a browser. The web surface takes a redirect_uri instead,
-    // and only when one is configured — it must be registered in the Plaid
-    // dashboard first, and an unregistered value is refused outright.
-    const surface =
-      platform === 'web' || platform === 'ios'
-        ? this.options.webRedirectUri
-          ? { redirect_uri: this.options.webRedirectUri }
-          : {}
-        : { android_package_name: this.options.androidPackageName };
+    // Android binds the token to the app package. Web and iOS use registered
+    // redirect URIs, and native iOS requires its Universal Link.
+    // Every configured redirect must be registered in the Plaid dashboard.
+    let surface: { redirect_uri?: string; android_package_name?: string };
+    if (platform === 'android') {
+      surface = { android_package_name: this.options.androidPackageName };
+    } else if (platform === 'ios') {
+      if (!this.options.iosRedirectUri) {
+        throw new Error(
+          'PLAID_IOS_REDIRECT_URI must be configured for native iOS Link.',
+        );
+      }
+      surface = { redirect_uri: this.options.iosRedirectUri };
+    } else {
+      surface = this.options.webRedirectUri
+        ? { redirect_uri: this.options.webRedirectUri }
+        : {};
+    }
 
     const response = await client.linkTokenCreate({
       client_name: 'FINVERSE',

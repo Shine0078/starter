@@ -266,7 +266,7 @@ stopped running.
 
 ## Notes on what is and isn't verified
 
-- **The API and its domain logic run and are tested.** 392 tests run with no
+- **The API and its domain logic run and are tested.** 395 tests run with no
   database; the full suite is **493 passing** against real PostgreSQL, including
   the store contract — which runs as the restricted role, so it executes with the
   row-level security policies in force — and a suite that issues deliberately

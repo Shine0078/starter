@@ -54,7 +54,14 @@ PLAID_ENVIRONMENT=production
 PLAID_COUNTRIES=CA,US
 BANK_TOKEN_ENCRYPTION_KEY=<32 random bytes, base64 encoded>
 PLAID_WEBHOOK_URL=https://api.your-domain.example/api/bank-webhooks/plaid
+PLAID_WEB_REDIRECT_URI=https://api.your-domain.example/app/
+PLAID_IOS_REDIRECT_URI=https://api.your-domain.example/plaid/
 ```
+
+Register both redirect URIs in Plaid Developers -> API before enabling the
+corresponding clients. The iOS URI must also be a Universal Link with an Apple
+App Association file and Associated Domains entitlement; a native iOS Link
+request fails closed when it is absent.
 
 The production API refuses to start with the in-memory store, without the
 restricted `DATABASE_APP_URL`, or with migrations enabled on boot. The runtime
