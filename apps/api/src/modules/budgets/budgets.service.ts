@@ -97,16 +97,19 @@ export class BudgetsService {
   async progress(
     userId: string,
     asOf?: string,
+    currency?: string,
   ): Promise<Array<BudgetProgress & { alerts: BudgetAlert[]; period: DateRange }>> {
     const today = asOf ?? this.clock.today();
     const budgets = await this.budgets.list(userId);
     const transactions = await this.transactions.list(userId);
 
-    return budgets.map((budget) => {
-      const period = this.rangeFor(budget.period, today);
-      const progress = computeBudgetProgress(budget, transactions, period, today);
-      return { ...progress, period, alerts: budgetAlerts(progress) };
-    });
+    return budgets
+      .filter((budget) => !currency || budget.currency === currency)
+      .map((budget) => {
+        const period = this.rangeFor(budget.period, today);
+        const progress = computeBudgetProgress(budget, transactions, period, today);
+        return { ...progress, period, alerts: budgetAlerts(progress) };
+      });
   }
 
   /** Share of budgets currently within their limit. Null when there are none —
@@ -116,10 +119,7 @@ export class BudgetsService {
     asOf?: string,
     currency?: string,
   ): Promise<number | null> {
-    const rows = await this.progress(userId, asOf);
-    const scopedRows = currency
-      ? rows.filter((row) => row.currency === currency)
-      : rows;
+    const scopedRows = await this.progress(userId, asOf, currency);
     if (scopedRows.length === 0) return null;
     return scopedRows.filter((r) => r.status !== 'exceeded').length / scopedRows.length;
   }

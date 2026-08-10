@@ -149,8 +149,8 @@ file would be required to verify any requirements unique to that document.
 
 ## Evidence
 
-- API in-memory suite: 422 passing, 5 database-only skips.
-- PostgreSQL contract/RLS suite: 523 passing in embedded PostgreSQL.
+- API in-memory suite: 423 passing, 5 database-only skips.
+- PostgreSQL contract/RLS suite: 524 passing in embedded PostgreSQL.
 - Flutter: 73 widget/design tests passing, `flutter analyze` clean.
 - Android release APK and web release build both compile. The Android emulator
   booted but its package/activity services were unavailable during an install

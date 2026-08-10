@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
+import { FixedClock } from '../src/infra/clock';
+import { InMemoryBudgetStore, InMemoryTransactionStore } from '../src/infra/in-memory-store';
+import { BudgetsService } from '../src/modules/budgets/budgets.service';
 import {
   budgetAlerts,
   computeBudgetProgress,
@@ -178,5 +181,31 @@ describe('budgetAlerts', () => {
     const p = computeBudgetProgress(BUDGET, rows, PERIOD, '2026-08-30');
     expect(p.daysRemaining).toBe(1);
     expect(budgetAlerts(p).some((a) => a.threshold === 'projection')).toBe(false);
+  });
+});
+
+describe('BudgetsService currency scoping', () => {
+  it('keeps a reporting PDF from mixing budget currencies', async () => {
+    const budgetStore = new InMemoryBudgetStore();
+    const transactionStore = new InMemoryTransactionStore();
+    const service = new BudgetsService(
+      budgetStore,
+      transactionStore,
+      new FixedClock('2026-08-10'),
+    );
+    await budgetStore.create('user-1', { ...BUDGET, id: 'usd-budget' });
+    await budgetStore.create('user-1', { ...BUDGET, id: 'cad-budget', currency: 'CAD' });
+    await transactionStore.upsertMany('user-1', [
+      txn({ id: 'usd-tx', providerTxnId: 'usd-provider', amount: -5_000, currency: 'USD' }),
+      txn({ id: 'cad-tx', providerTxnId: 'cad-provider', amount: -7_000, currency: 'CAD' }),
+    ]);
+
+    const usd = await service.progress('user-1', '2026-08-10', 'USD');
+    const cad = await service.progress('user-1', '2026-08-10', 'CAD');
+
+    expect(usd.map((row) => row.currency)).toEqual(['USD']);
+    expect(usd[0]?.spentAmount).toBe(5_000);
+    expect(cad.map((row) => row.currency)).toEqual(['CAD']);
+    expect(cad[0]?.spentAmount).toBe(7_000);
   });
 });

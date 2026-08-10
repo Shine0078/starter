@@ -258,7 +258,7 @@ export class InsightsService {
     const today = asOf ?? this.clock.today();
     const [report, budgets, subscriptions, health, forecast, creditCards] = await Promise.all([
       this.monthlyReport(userId, today, currency),
-      this.budgets.progress(userId, today),
+      this.budgets.progress(userId, today, currency),
       this.subscriptions(userId, today, currency),
       this.healthScore(userId, today, currency),
       this.cashFlowForecast(userId, 30, today, currency),
