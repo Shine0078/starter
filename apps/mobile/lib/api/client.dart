@@ -785,6 +785,26 @@ class ApiClient {
     return json['message'] as String? ?? 'Updated.';
   }
 
+  Future<Transaction> updateTransactionPreferences(
+    String transactionId, {
+    String? merchantOverride,
+    String? note,
+    bool? excludedFromAnalytics,
+  }) async {
+    final body = <String, dynamic>{};
+    if (merchantOverride != null) body['merchantOverride'] = merchantOverride;
+    if (note != null) body['note'] = note;
+    if (excludedFromAnalytics != null) {
+      body['excludedFromAnalytics'] = excludedFromAnalytics;
+    }
+    final json = await _send(
+      'PATCH',
+      '/transactions/$transactionId/preferences',
+      body,
+    ) as Map<String, dynamic>;
+    return Transaction.fromJson(json['transaction'] as Map<String, dynamic>);
+  }
+
   Future<List<BudgetProgress>> budgetProgress() async {
     final json = await _get('/budgets/progress') as Map<String, dynamic>;
     return (json['budgets'] as List<dynamic>)

@@ -66,6 +66,10 @@ class TransactionTile extends StatelessWidget {
             const SizedBox(width: 6),
             _badge(theme, 'review', emphasis: true),
           ],
+          if (transaction.excludedFromAnalytics) ...[
+            const SizedBox(width: 6),
+            _badge(theme, 'excluded'),
+          ],
           if (transaction.isRecurring) ...[
             const SizedBox(width: 6),
             Icon(Icons.autorenew, size: 12, color: theme.colorScheme.outline),

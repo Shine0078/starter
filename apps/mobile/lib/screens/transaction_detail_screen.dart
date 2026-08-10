@@ -21,12 +21,18 @@ class TransactionDetailScreen extends StatefulWidget {
 class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
   List<CategoryDefinition> _categories = const [];
   late String _category;
+  late String _merchantOverride;
+  late String _note;
+  late bool _excludedFromAnalytics;
   var _saving = false;
 
   @override
   void initState() {
     super.initState();
     _category = widget.transaction.categorySlug;
+    _merchantOverride = widget.transaction.merchantOverride ?? '';
+    _note = widget.transaction.note ?? '';
+    _excludedFromAnalytics = widget.transaction.excludedFromAnalytics;
     _loadCategories();
   }
 
@@ -38,7 +44,9 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
       setState(() {
         _categories = categories
             .where((category) =>
-                category.parent != null || category.slug == _category)
+                category.parent != null ||
+                category.slug == _category ||
+                category.slug == 'transfer')
             .toList()
           ..sort((a, b) => a.name.compareTo(b.name));
       });
@@ -64,6 +72,85 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
       setState(() => _category = previous);
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(error.toString())));
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _editText({required bool note}) async {
+    final controller =
+        TextEditingController(text: note ? _note : _merchantOverride);
+    final value = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(note ? 'Add a note' : 'Rename merchant'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLength: note ? 2000 : 120,
+          maxLines: note ? 5 : 1,
+          decoration: InputDecoration(
+            hintText: note
+                ? 'Only you can see this note'
+                : 'Your local merchant name',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (!mounted || value == null) return;
+    setState(() => _saving = true);
+    try {
+      final updated = await widget.api.updateTransactionPreferences(
+        widget.transaction.id,
+        merchantOverride: note ? null : value,
+        note: note ? value : null,
+      );
+      if (!mounted) return;
+      setState(() {
+        _merchantOverride = updated.merchantOverride ?? '';
+        _note = updated.note ?? '';
+      });
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.toString())));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _toggleExcluded(bool value) async {
+    final previous = _excludedFromAnalytics;
+    setState(() {
+      _excludedFromAnalytics = value;
+      _saving = true;
+    });
+    try {
+      final updated = await widget.api.updateTransactionPreferences(
+        widget.transaction.id,
+        excludedFromAnalytics: value,
+      );
+      if (mounted) {
+        setState(() => _excludedFromAnalytics = updated.excludedFromAnalytics);
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() => _excludedFromAnalytics = previous);
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.toString())));
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -151,6 +238,42 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                 _detail('Status', transaction.pending ? 'Pending' : 'Posted'),
                 _detail('Recurring', transaction.isRecurring ? 'Yes' : 'No'),
                 _detail('Account reference', transaction.accountId),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.storefront_outlined),
+                  title: Text(_merchantOverride.isEmpty
+                      ? 'Rename merchant'
+                      : _merchantOverride),
+                  subtitle: Text(_merchantOverride.isEmpty
+                      ? 'Use a name that makes sense to you'
+                      : 'Local name; bank description is preserved below'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: _saving ? null : () => _editText(note: false),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.notes_outlined),
+                  title: Text(_note.isEmpty ? 'Add a note' : 'Edit note'),
+                  subtitle: Text(_note.isEmpty
+                      ? 'Private context for this transaction'
+                      : _note),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: _saving ? null : () => _editText(note: true),
+                ),
+                SwitchListTile.adaptive(
+                  secondary: const Icon(Icons.visibility_off_outlined),
+                  title: const Text('Exclude from analytics'),
+                  subtitle: const Text(
+                    'Keep the transaction, but omit it from totals and alerts',
+                  ),
+                  value: _excludedFromAnalytics,
+                  onChanged: _saving ? null : _toggleExcluded,
+                ),
               ],
             ),
           ),

@@ -302,6 +302,9 @@ class Transaction {
     required this.pending,
     required this.isRecurring,
     this.merchant,
+    this.merchantOverride,
+    this.note,
+    this.excludedFromAnalytics = false,
   });
 
   factory Transaction.fromJson(Map<String, dynamic> json) => Transaction(
@@ -319,6 +322,9 @@ class Transaction {
         pending: json['pending'] as bool,
         isRecurring: json['isRecurring'] as bool,
         merchant: json['merchant'] as String?,
+        merchantOverride: json['merchantOverride'] as String?,
+        note: json['note'] as String?,
+        excludedFromAnalytics: json['excludedFromAnalytics'] as bool? ?? false,
       );
 
   final String id;
@@ -335,8 +341,11 @@ class Transaction {
   final bool pending;
   final bool isRecurring;
   final String? merchant;
+  final String? merchantOverride;
+  final String? note;
+  final bool excludedFromAnalytics;
 
-  String get displayName => merchant ?? rawDescriptor;
+  String get displayName => merchantOverride ?? merchant ?? rawDescriptor;
 
   /// True when the user set this category themselves. The UI should never
   /// present a user's own choice as a suggestion.
@@ -654,13 +663,17 @@ class AnalyticsVelocity {
     required this.enoughHistory,
   });
 
-  factory AnalyticsVelocity.fromJson(Map<String, dynamic> json) => AnalyticsVelocity(
+  factory AnalyticsVelocity.fromJson(Map<String, dynamic> json) =>
+      AnalyticsVelocity(
         currentPeriodSpend: json['currentPeriodSpend'] as int,
-        currentPeriodSpendFormatted: json['currentPeriodSpendFormatted'] as String,
+        currentPeriodSpendFormatted:
+            json['currentPeriodSpendFormatted'] as String,
         projectedPeriodSpend: json['projectedPeriodSpend'] as int,
-        projectedPeriodSpendFormatted: json['projectedPeriodSpendFormatted'] as String,
+        projectedPeriodSpendFormatted:
+            json['projectedPeriodSpendFormatted'] as String,
         historicalAverageSpend: json['historicalAverageSpend'] as int?,
-        historicalAverageSpendFormatted: json['historicalAverageSpendFormatted'] as String?,
+        historicalAverageSpendFormatted:
+            json['historicalAverageSpendFormatted'] as String?,
         percentDelta: (json['percentDelta'] as num?)?.toDouble(),
         enoughHistory: json['enoughHistory'] as bool,
       );
@@ -781,7 +794,8 @@ class AnalyticsReport {
       grossExpensesFormatted: json['grossExpensesFormatted'] as String,
       refundsFormatted: json['refundsFormatted'] as String,
       refundMatches: (json['refundMatches'] as List<dynamic>? ?? const [])
-          .map((row) => AnalyticsRefundMatch.fromJson(row as Map<String, dynamic>))
+          .map((row) =>
+              AnalyticsRefundMatch.fromJson(row as Map<String, dynamic>))
           .toList(),
       netExpensesFormatted: json['netExpensesFormatted'] as String,
       expenseCount: json['expenseCount'] as int,
@@ -789,7 +803,8 @@ class AnalyticsReport {
       medianExpenseFormatted: json['medianExpenseFormatted'] as String,
       largestExpense: json['largestExpense'] == null
           ? null
-          : AnalyticsTimelineEvent.fromJson(json['largestExpense'] as Map<String, dynamic>),
+          : AnalyticsTimelineEvent.fromJson(
+              json['largestExpense'] as Map<String, dynamic>),
       spendingByCategory: (json['spendingByCategory'] as List<dynamic>)
           .map((row) => category(row as Map<String, dynamic>))
           .toList(),
@@ -800,7 +815,8 @@ class AnalyticsReport {
           .map((row) => account(row as Map<String, dynamic>))
           .toList(),
       recurringSpendingFormatted: json['recurringSpendingFormatted'] as String,
-      discretionarySpendingFormatted: json['discretionarySpendingFormatted'] as String,
+      discretionarySpendingFormatted:
+          json['discretionarySpendingFormatted'] as String,
       essentialSpendingFormatted: json['essentialSpendingFormatted'] as String,
       totalIncomeFormatted: json['totalIncomeFormatted'] as String,
       recurringIncomeFormatted: json['recurringIncomeFormatted'] as String,
@@ -810,10 +826,13 @@ class AnalyticsReport {
           .toList(),
       savingsFormatted: json['savingsFormatted'] as String,
       savingsRate: (json['savingsRate'] as num).toDouble(),
-      averageMonthlySavingsFormatted: json['averageMonthlySavingsFormatted'] as String,
-      velocity: AnalyticsVelocity.fromJson(json['velocity'] as Map<String, dynamic>),
+      averageMonthlySavingsFormatted:
+          json['averageMonthlySavingsFormatted'] as String,
+      velocity:
+          AnalyticsVelocity.fromJson(json['velocity'] as Map<String, dynamic>),
       timeline: (json['timeline'] as List<dynamic>)
-          .map((row) => AnalyticsTimelineEvent.fromJson(row as Map<String, dynamic>))
+          .map((row) =>
+              AnalyticsTimelineEvent.fromJson(row as Map<String, dynamic>))
           .toList(),
     );
   }
@@ -1266,8 +1285,8 @@ class PlanSummary {
         // treated as enforcing. Assuming the permissive case would show a free
         // user a "everything included" screen that the API then contradicts.
         gatesEnforced: json['gatesEnforced'] as bool? ?? true,
-        intervals:
-            (json['intervals'] as List<dynamic>? ?? const ['month']).cast<String>(),
+        intervals: (json['intervals'] as List<dynamic>? ?? const ['month'])
+            .cast<String>(),
         trialDays: json['trialDays'] as int? ?? 0,
         currentPeriodEnd: _parseDate(json['currentPeriodEnd']),
         trialEnd: _parseDate(json['trialEnd']),
@@ -1319,7 +1338,8 @@ class PlanSummary {
 class CheckoutSession {
   const CheckoutSession({required this.url, this.expiresAt});
 
-  factory CheckoutSession.fromJson(Map<String, dynamic> json) => CheckoutSession(
+  factory CheckoutSession.fromJson(Map<String, dynamic> json) =>
+      CheckoutSession(
         url: json['url'] as String,
         expiresAt: PlanSummary._parseDate(json['expiresAt']),
       );
