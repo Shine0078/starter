@@ -70,3 +70,23 @@ jobs:
           name: finverse-android-${{ github.ref_name }}
           path: apps/mobile/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
+
+  web:
+    name: Build installable web/PWA bundle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - working-directory: apps/mobile
+        run: flutter pub get
+      - name: Build same-origin web bundle
+        working-directory: apps/mobile
+        run: flutter build web --release --base-href=/app/
+      - uses: actions/upload-artifact@v7
+        with:
+          name: finverse-web-${{ github.ref_name }}
+          path: apps/mobile/build/web
+          if-no-files-found: error
