@@ -88,6 +88,21 @@ class FailingClearSessionStore extends InMemorySessionStore {
   }
 }
 
+class FailingWriteSessionStore extends InMemorySessionStore {
+  FailingWriteSessionStore({this.failuresRemaining = 1});
+
+  int failuresRemaining;
+
+  @override
+  Future<void> write(SessionTokens tokens) async {
+    if (failuresRemaining > 0) {
+      failuresRemaining--;
+      throw const SessionStoreUnavailableException('keystore locked');
+    }
+    await super.write(tokens);
+  }
+}
+
 class FailingClearCacheStore extends InMemoryOfflineCacheStore {
   @override
   Future<void> clearOwner(String owner) =>
@@ -763,7 +778,8 @@ void main() {
     );
     await api.restoreSession();
 
-    await expectLater(api.requestAccountDeletion('my current password'), completes);
+    await expectLater(
+        api.requestAccountDeletion('my current password'), completes);
     expect(api.isAuthenticated, isFalse);
     final nextLaunch = clientWith(
       MockClient((request) async => http.Response('{}', 200)),
@@ -1047,6 +1063,30 @@ void main() {
     expect(verification?.body, contains('123456'));
   });
 
+  test('does not keep a fresh login in memory when secure storage fails',
+      () async {
+    final store = FailingWriteSessionStore(failuresRemaining: 99);
+    final api = clientWith(
+      MockClient((request) async {
+        expect(request.url.path, endsWith('/auth/login'));
+        return http.Response(
+          '{"user":{"id":"user-1","email":"sam@example.com"},'
+          '"tokens":{"accessToken":"access","refreshToken":"refresh",'
+          '"refreshExpiresAt":"2099-01-01T00:00:00.000Z"}}',
+          200,
+        );
+      }),
+      store: store,
+    );
+
+    await expectLater(
+      api.signIn('sam@example.com', 'correct horse battery staple'),
+      throwsA(isA<SessionStoreUnavailableException>()),
+    );
+    expect(api.isAuthenticated, isFalse);
+    expect(await store.read(), isNull);
+  });
+
   testWidgets('restores a stored session straight to the dashboard',
       (tester) async {
     final store = InMemorySessionStore();
@@ -1106,6 +1146,48 @@ void main() {
     expect(await api.restoreSession(), isTrue);
     expect(refreshCalls, 1);
     expect((await store.read())?.accessToken, 'fresh');
+  });
+
+  test('keeps a rotated token in memory until secure storage recovers',
+      () async {
+    String segment(Map<String, dynamic> value) =>
+        base64Url.encode(utf8.encode(jsonEncode(value))).replaceAll('=', '');
+    final expiredAccess = '${segment({
+          'alg': 'HS256',
+          'typ': 'JWT'
+        })}.${segment({'sub': 'user-1', 'exp': 1})}.signature';
+    final store = FailingWriteSessionStore(failuresRemaining: 0);
+    await store.write(SessionTokens(
+      accessToken: expiredAccess,
+      refreshToken: 'stored-refresh',
+      refreshExpiresAt: '2099-01-01T00:00:00.000Z',
+      userId: 'user-1',
+    ));
+    store.failuresRemaining = 1;
+
+    final api = clientWith(
+      MockClient((request) async {
+        if (request.url.path.endsWith('/auth/refresh')) {
+          return http.Response(
+            '{"tokens":{"accessToken":"fresh","refreshToken":"next",'
+            '"refreshExpiresAt":"2099-01-01T00:00:00.000Z"}}',
+            200,
+          );
+        }
+        if (request.url.path.endsWith('/accounts')) {
+          return http.Response('[]', 200);
+        }
+        return http.Response('{}', 200);
+      }),
+      store: store,
+    );
+
+    expect(await api.restoreSession(), isTrue);
+    expect(api.isAuthenticated, isTrue);
+    expect((await store.read())?.refreshToken, 'stored-refresh');
+
+    await api.accounts();
+    expect((await store.read())?.refreshToken, 'next');
   });
 
   test('keeps an expired session when refresh is unavailable offline',

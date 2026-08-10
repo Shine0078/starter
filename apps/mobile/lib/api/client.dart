@@ -154,6 +154,11 @@ class ApiClient {
   final LocalNotificationService localNotifications;
 
   SessionTokens? _tokens;
+  // A refresh rotation can succeed on the server while the platform keystore
+  // is temporarily unavailable. Keep the new token in memory and retry the
+  // durable write on the next authenticated request instead of falling back to
+  // a server-revoked refresh token.
+  SessionTokens? _pendingSessionWrite;
   Future<bool>? _refreshFuture;
   _RefreshFailure _lastRefreshFailure = _RefreshFailure.none;
   final ValueNotifier<DateTime?> offlineCacheStatus = ValueNotifier(null);
@@ -295,6 +300,7 @@ class ApiClient {
     Object? body,
     bool allowRetry,
   ) async {
+    await _retryPendingSessionWrite();
     final request = http.Request(method, _uri(path))
       ..headers.addAll(_headers(json: body != null));
     if (body != null) request.body = jsonEncode(body);
@@ -623,9 +629,15 @@ class ApiClient {
     }
 
     final user = PublicUser.fromJson(decoded['user'] as Map<String, dynamic>);
-    _tokens = SessionTokens.fromJson(decoded['tokens'] as Map<String, dynamic>)
-        .withUserId(user.id);
-    await sessionStore.write(_tokens!);
+    final nextTokens = SessionTokens.fromJson(
+      decoded['tokens'] as Map<String, dynamic>,
+    ).withUserId(user.id);
+    // Do not expose an in-memory session until its durable copy exists. A
+    // failed keystore write must leave a fresh login signed out, not half
+    // authenticated until the next restart.
+    await sessionStore.write(nextTokens);
+    _tokens = nextTokens;
+    _pendingSessionWrite = null;
     await _refreshPendingMutationCount();
     return user;
   }
@@ -672,10 +684,22 @@ class ApiClient {
       // that local session with a late refresh response.
       if (_tokens?.refreshToken != refreshToken) return false;
       final userId = _cacheOwner;
-      _tokens =
-          SessionTokens.fromJson(decoded['tokens'] as Map<String, dynamic>)
-              .withUserId(userId);
-      await sessionStore.write(_tokens!);
+      final nextTokens = SessionTokens.fromJson(
+        decoded['tokens'] as Map<String, dynamic>,
+      ).withUserId(userId);
+      try {
+        await sessionStore.write(nextTokens);
+        _tokens = nextTokens;
+        _pendingSessionWrite = null;
+      } on SessionStoreUnavailableException {
+        // The server has already rotated the refresh token, so retaining the
+        // old token would guarantee the next request fails as token reuse.
+        // Keep the valid replacement in memory and retry persistence on the
+        // next request; a process restart still fails closed if storage never
+        // becomes available.
+        _tokens = nextTokens;
+        _pendingSessionWrite = nextTokens;
+      }
       return true;
     } on TimeoutException {
       _lastRefreshFailure = _RefreshFailure.unavailable;
@@ -686,6 +710,20 @@ class ApiClient {
     } catch (_) {
       _lastRefreshFailure = _RefreshFailure.rejected;
       return false;
+    }
+  }
+
+  Future<void> _retryPendingSessionWrite() async {
+    final pending = _pendingSessionWrite;
+    if (pending == null) return;
+    try {
+      await sessionStore.write(pending);
+      if (identical(_pendingSessionWrite, pending)) {
+        _pendingSessionWrite = null;
+      }
+    } catch (_) {
+      // Keep the in-memory replacement alive; the next request gets another
+      // bounded opportunity to persist it.
     }
   }
 
@@ -749,6 +787,7 @@ class ApiClient {
       }
     }
     _tokens = null;
+    _pendingSessionWrite = null;
     // Local auth state must end even when the platform keystore or cache is
     // temporarily unavailable (for example while an iPhone is locked). A
     // cleanup failure must never leave the current UI authenticated or make
