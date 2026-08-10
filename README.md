@@ -127,10 +127,10 @@ last 15 minutes; exchange the refresh token at `/api/auth/refresh` for a new pai
 | `PATCH` | `/transactions/:id/category` | Correct a category, optionally create a rule |
 | `GET`/`POST` | `/budgets` | List / create |
 | `GET` | `/budgets/progress` | Spend, thresholds, projections, alerts |
-| `GET` | `/insights` | Month-to-date vs. the same window last month |
+| `GET` | `/insights` | `?currency=USD`; month-to-date vs. the same window last month without mixing currencies |
 | `GET` | `/analytics` | `?period=week|month|3m|6m|year|lifetime|custom&from=&to=&currency=`; spending, income, savings, velocity, refund matches, and timeline |
-| `GET` | `/reports/monthly.pdf?asOf=YYYY-MM-DD` | Private multi-page PDF with cash-flow charts, budgets, subscriptions, forecast, and actions |
-| `GET` | `/subscriptions` | Detected recurring charges and price rises |
+| `GET` | `/reports/monthly.pdf?asOf=YYYY-MM-DD&currency=CAD` | Private multi-page PDF with currency-specific cash-flow charts, budgets, subscriptions, forecast, and actions |
+| `GET` | `/subscriptions?currency=CAD` | Currency-specific detected recurring charges and price rises |
 | `GET` | `/health-score` | 0–1000 with per-component actions |
 | `GET` | `/cash-flow-forecast?days=7|30|90&currency=CAD` | Currency-specific conservative liquid-cash outlook from repeatable income and bills |
 | `GET` | `/purchase-scenario?days=7|30|90&amount=<minor>&date=YYYY-MM-DD&currency=CAD` | One-off purchase impact against the same currency-specific outlook |
@@ -266,8 +266,8 @@ stopped running.
 
 ## Notes on what is and isn't verified
 
-- **The API and its domain logic run and are tested.** 417 tests run with no
-  database; the full suite is **518 passing** against real PostgreSQL, including
+- **The API and its domain logic run and are tested.** 420 tests run with no
+  database; the full suite is **521 passing** against real PostgreSQL, including
   the store contract — which runs as the restricted role, so it executes with the
   row-level security policies in force — and a suite that issues deliberately
   unfiltered SQL to prove the database withholds other users' rows on its own.

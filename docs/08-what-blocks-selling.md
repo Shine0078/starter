@@ -25,7 +25,7 @@ Stated so the rest of this document is not read as "nothing works".
 | Authentication | Argon2id, rotating refresh tokens with reuse detection, email verification, password reset, TOTP MFA/recovery codes, device app lock, recoverable deletion, global guard, per-account lockout, session list, audit trail |
 | Persistence | Postgres behind ports, contract-tested against both adapters, migrations |
 | Isolation | Row-level security, app connects as a non-superuser role, 21 dedicated tests |
-| Tests | 417 without a database, 518 against real PostgreSQL, 73 Flutter tests, Android release and web release builds; all passing |
+| Tests | 420 without a database, 521 against real PostgreSQL, 73 Flutter tests, Android release and web release builds; all passing |
 | CI | GitHub Actions: API typecheck/test/build/image + Flutter analyze/test, Android release compile, native iOS no-signing compile, and tagged API/APK/web artifacts |
 
 That is a solid Phase-0 foundation. It is not a product.
@@ -60,7 +60,7 @@ measured in weeks. Nothing else on this list matters until these move.
 | 2.4 | **Real sync engine** | Completed: `/transactions/sync` cursors, all-page draining, mutation-safe pagination restart, complete active-account reconciliation on every pull (including quiet accounts and no-delta balance refreshes), added/modified/removed reconciliation, pending-to-posted changes, serialized link sync, retry queue, and manual refresh | production load/rate-limit testing remains |
 | 2.5 | **Merchant lexicon is tiny** | Categorisation quality on real data is unknown. The top ~2,000 merchants cover most volume; the current lexicon is a fraction of that | 1–2 weeks + ongoing |
 | 2.6 | **Categorisation accuracy unmeasured** | 92% coverage on synthetic data the same codebase generated is not evidence. Needs a held-out set of real transactions | ongoing |
-| 2.7 | **Multi-currency partially implemented** | The mobile net-position chart never combines currencies, and cash-flow/purchase planning is explicitly currency-selectable and API-tested. Monthly insights, budgets, subscriptions, goals, and reports still assume one reporting currency at a time; live mixed-currency institution testing remains | 1 week |
+| 2.7 | **Multi-currency partially implemented** | Reporting is now currency-safe for analytics, monthly insights, health score, budgets, subscriptions, cash-flow planning, purchase planning, and the monthly PDF; the mobile dashboard and analytics screen choose a deterministic account currency and never add unlike currencies. The net-position chart remains separated by currency, while goals still operate one reporting currency at a time; live mixed-currency institution testing remains | 1 week |
 
 ---
 
@@ -247,7 +247,7 @@ Worth fixing because they cause bad decisions later.
 | 9.1 | Security controls described in the present tense that do not exist | `03-security-privacy.md` — see §3.1 |
 | 9.2 | The deletion purge is described in operational detail as though it runs | `02-data-model.md` |
 | 9.3 | Unused Redis was provisioned despite zero application references | Fixed: shared rate limits and webhook jobs use PostgreSQL, and Redis was removed from the cheap-launch stack |
-| 9.4 | Test counts drift out of date and are then quoted as evidence — older counts were stale until re-measured at 417/518/73 | fixed in `07-session-notes.md`, but the pattern will recur |
+| 9.4 | Test counts drift out of date and are then quoted as evidence — older counts were stale until re-measured at 420/521/73 | fixed in `07-session-notes.md`, but the pattern will recur |
 | 9.5 | `06-cheap-launch-path.md` describes a *personal beta*, not a sellable product. It is correct for what it is, and should say so at the top so it is not mistaken for a launch plan | `06-cheap-launch-path.md` |
 
 ---

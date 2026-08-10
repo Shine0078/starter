@@ -20,7 +20,9 @@ file would be required to verify any requirements unique to that document.
 - The Home dashboard now shows safe current-versus-comparable-period summaries
   for income, expenses, net cash flow, and savings rate when a meaningful prior
   period exists; insufficient history stays blank rather than inventing a
-  percentage.
+  percentage. The API and mobile callers carry the selected reporting currency
+  through monthly insights and health scoring, so mixed-currency ledgers are not
+  silently summed together.
 - Authenticated dashboard, budgets, goals, manual assets/debts/credit cards,
   searchable transactions, category corrections with durable rules, session
   controls, MFA, device lock, privacy/consent, export, deletion recovery, PDF
@@ -142,8 +144,8 @@ file would be required to verify any requirements unique to that document.
 
 ## Evidence
 
-- API in-memory suite: 417 passing, 5 database-only skips.
-- PostgreSQL contract/RLS suite: 518 passing in embedded PostgreSQL.
+- API in-memory suite: 420 passing, 5 database-only skips.
+- PostgreSQL contract/RLS suite: 521 passing in embedded PostgreSQL.
 - Flutter: 73 widget/design tests passing, `flutter analyze` clean.
 - Android release APK and web release build both compile. The Android emulator
   booted but its package/activity services were unavailable during an install
