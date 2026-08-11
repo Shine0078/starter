@@ -9,8 +9,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   http: ^1.2.2
-  intl: ^0.19.0
+  intl: ^0.20.2
   # Browser bindings for the web build's Plaid Link implementation.
   web: ^1.1.0
   cryptography: ^2.9.0

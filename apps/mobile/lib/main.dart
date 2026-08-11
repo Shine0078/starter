@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'api/client.dart';
 import 'api/app_lock.dart';
@@ -50,6 +51,12 @@ class FinverseApp extends StatelessWidget {
       darkTheme: FinTheme.dark(),
       // Follow the OS. A finance app opened at night should not flashbang you.
       themeMode: ThemeMode.system,
+      // Localisation plumbing for the date pickers, tooltips, and text-selection
+      // menus. English is the single shipped locale today; adding a locale file
+      // under l10n/ is all a translation needs from here.
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      supportedLocales: const [Locale('en')],
+      locale: const Locale('en'),
       home: OnboardingGate(
         api: api,
         store: onboardingStore,
