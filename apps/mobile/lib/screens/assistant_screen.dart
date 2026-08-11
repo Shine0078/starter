@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api/client.dart';
+import '../l10n/app_localizations.dart';
 import '../models/models.dart';
 
 /// A private, deterministic finance guide. The server answers from aggregates
@@ -15,13 +16,6 @@ class AssistantScreen extends StatefulWidget {
 }
 
 class _AssistantScreenState extends State<AssistantScreen> {
-  static const prompts = [
-    'Where did I spend the most?',
-    'How much did I save?',
-    'Which subscriptions am I paying for?',
-    'Is my spending higher than usual?',
-  ];
-
   final _question = TextEditingController();
   AssistantAnswer? _answer;
   bool _loading = false;
@@ -36,7 +30,8 @@ class _AssistantScreenState extends State<AssistantScreen> {
   Future<void> _ask([String? prompt]) async {
     final value = (prompt ?? _question.text).trim();
     if (value.length < 2) {
-      setState(() => _error = 'Ask a question about your spending or savings.');
+      setState(() =>
+          _error = AppLocalizations.of(context).assistantQuestionRequired);
       return;
     }
     _question.text = value;
@@ -57,8 +52,15 @@ class _AssistantScreenState extends State<AssistantScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    final prompts = [
+      l10n.assistantPromptSpending,
+      l10n.assistantPromptSavings,
+      l10n.assistantPromptSubscriptions,
+      l10n.assistantPromptHigherSpending,
+    ];
     return Scaffold(
-      appBar: AppBar(title: const Text('Ask FINVERSE')),
+      appBar: AppBar(title: Text(l10n.assistantTitle)),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
@@ -68,11 +70,11 @@ class _AssistantScreenState extends State<AssistantScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('A clear view of your money',
+                  Text(l10n.assistantHeading,
                       style: theme.textTheme.titleMedium),
                   const SizedBox(height: 6),
                   Text(
-                    'Ask about spending, savings, merchants, or recurring charges. Answers use your selected-period aggregates and stay on FINVERSE.',
+                    l10n.assistantDescription,
                     style: theme.textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 14),
@@ -81,11 +83,11 @@ class _AssistantScreenState extends State<AssistantScreen> {
                     textInputAction: TextInputAction.send,
                     onSubmitted: (_) => _ask(),
                     decoration: InputDecoration(
-                      labelText: 'Your question',
-                      hintText: 'Where did I spend the most?',
+                      labelText: l10n.assistantQuestionLabel,
+                      hintText: l10n.assistantQuestionHint,
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
-                        tooltip: 'Ask',
+                        tooltip: l10n.assistantAskTooltip,
                         onPressed: _loading ? null : _ask,
                         icon: const Icon(Icons.send_outlined),
                       ),
@@ -96,7 +98,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          Text('Try one of these', style: theme.textTheme.titleSmall),
+          Text(l10n.assistantPromptHeading, style: theme.textTheme.titleSmall),
           const SizedBox(height: 6),
           Wrap(
             spacing: 8,
@@ -118,7 +120,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
               color: theme.colorScheme.errorContainer,
               child: ListTile(
                 leading: const Icon(Icons.error_outline),
-                title: const Text('Could not answer that yet'),
+                title: Text(l10n.assistantCouldNotAnswer),
                 subtitle: Text(_error!),
               ),
             ),
@@ -139,7 +141,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
                           Icon(Icons.auto_awesome_outlined,
                               color: theme.colorScheme.primary),
                           const SizedBox(width: 8),
-                          Text('Your answer',
+                          Text(l10n.assistantAnswerTitle,
                               style: theme.textTheme.titleMedium),
                         ],
                       ),

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../api/client.dart';
+import '../l10n/app_localizations.dart';
 import '../models/models.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -60,56 +61,58 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(
-          title: const Text('Notifications'),
-          actions: [
-            if (_rows.any((row) => row.unread))
-              TextButton(
-                onPressed: _markAllRead,
-                child: const Text('Mark all read'),
-              ),
-            IconButton(
-              icon: const Icon(Icons.tune),
-              tooltip: 'Notification preferences',
-              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => NotificationPreferencesScreen(api: widget.api),
-              )),
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(l10n.notificationsTitle),
+        actions: [
+          if (_rows.any((row) => row.unread))
+            TextButton(
+              onPressed: _markAllRead,
+              child: Text(l10n.notificationsMarkAllRead),
             ),
-          ],
-        ),
-        body: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : RefreshIndicator(
-                onRefresh: _load,
-                child: ListView(
-                  padding: const EdgeInsets.all(12),
-                  children: [
-                    if (_error != null)
-                      Card(
-                        color: Theme.of(context).colorScheme.errorContainer,
-                        child: ListTile(title: Text(_error!), onTap: _load),
-                      ),
-                    if (_rows.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 72),
-                        child: Column(children: [
-                          Icon(Icons.notifications_none, size: 56),
-                          SizedBox(height: 12),
-                          Text('You are all caught up',
-                              style: TextStyle(
-                                  fontSize: 20, fontWeight: FontWeight.w600)),
-                          SizedBox(height: 6),
-                          Text(
-                              'Budget, bill, subscription, unusual spending, balance, credit, and security alerts will appear here.'),
-                        ]),
-                      ),
-                    for (var index = 0; index < _rows.length; index++)
-                      _tile(index, _rows[index]),
-                  ],
-                ),
+          IconButton(
+            icon: const Icon(Icons.tune),
+            tooltip: l10n.notificationsPreferencesTooltip,
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => NotificationPreferencesScreen(api: widget.api),
+            )),
+          ),
+        ],
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView(
+                padding: const EdgeInsets.all(12),
+                children: [
+                  if (_error != null)
+                    Card(
+                      color: Theme.of(context).colorScheme.errorContainer,
+                      child: ListTile(title: Text(_error!), onTap: _load),
+                    ),
+                  if (_rows.isEmpty)
+                    Padding(
+                      padding: EdgeInsets.symmetric(vertical: 72),
+                      child: Column(children: [
+                        const Icon(Icons.notifications_none, size: 56),
+                        const SizedBox(height: 12),
+                        Text(l10n.notificationsEmptyTitle,
+                            style: TextStyle(
+                                fontSize: 20, fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 6),
+                        Text(l10n.notificationsEmptyDetail),
+                      ]),
+                    ),
+                  for (var index = 0; index < _rows.length; index++)
+                    _tile(index, _rows[index]),
+                ],
               ),
-      );
+            ),
+    );
+  }
 
   Future<void> _markAllRead() async {
     final unread = _rows.where((row) => row.unread).length;
@@ -121,8 +124,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content:
-                Text('$unread alert${unread == 1 ? '' : 's'} marked as read.')),
+            content: Text(
+                AppLocalizations.of(context).notificationsMarkedRead(unread))),
       );
     } catch (_) {
       if (mounted) setState(() => _rows = previous);
@@ -231,23 +234,28 @@ class _NotificationPreferencesScreenState
   @override
   Widget build(BuildContext context) {
     final preferences = _preferences;
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Alert preferences')),
+      appBar: AppBar(title: Text(l10n.notificationPreferencesTitle)),
       body: preferences == null
           ? const Center(child: CircularProgressIndicator())
           : ListView(children: [
               _deviceAlerts(),
-              _switch('Budget progress', 'budget', preferences.budget),
-              _switch('Bills and due dates', 'bills', preferences.bills),
-              _switch('Credit utilization', 'creditUtilization',
+              _switch(l10n.notificationBudgetProgress, 'budget',
+                  preferences.budget),
+              _switch(l10n.notificationBills, 'bills', preferences.bills),
+              _switch(l10n.notificationCreditUtilization, 'creditUtilization',
                   preferences.creditUtilization),
-              _switch('Subscription changes', 'subscriptions',
+              _switch(l10n.notificationSubscriptionChanges, 'subscriptions',
                   preferences.subscriptions),
-              _switch('Low balance', 'lowBalance', preferences.lowBalance),
-              _switch('Unusual transactions', 'unusualTransactions',
-                  preferences.unusualTransactions),
-              _switch('Bank synchronization', 'bankSync', preferences.bankSync),
-              _switch('Security events', 'security', preferences.security),
+              _switch(l10n.notificationLowBalance, 'lowBalance',
+                  preferences.lowBalance),
+              _switch(l10n.notificationUnusualTransactions,
+                  'unusualTransactions', preferences.unusualTransactions),
+              _switch(
+                  l10n.notificationBankSync, 'bankSync', preferences.bankSync),
+              _switch(l10n.notificationSecurityEvents, 'security',
+                  preferences.security),
             ]),
     );
   }
@@ -255,13 +263,13 @@ class _NotificationPreferencesScreenState
   Widget _deviceAlerts() => ValueListenableBuilder<bool?>(
         valueListenable: widget.api.localNotifications.permissionGranted,
         builder: (context, granted, _) {
+          final l10n = AppLocalizations.of(context);
           final local = widget.api.localNotifications;
           if (!local.supported) {
-            return const ListTile(
-              leading: Icon(Icons.notifications_none_outlined),
-              title: Text('Device alerts unavailable here'),
-              subtitle: Text(
-                  'Native alerts are available in the Android and iPhone apps.'),
+            return ListTile(
+              leading: const Icon(Icons.notifications_none_outlined),
+              title: Text(l10n.notificationDeviceUnavailable),
+              subtitle: Text(l10n.notificationDeviceUnavailableDetail),
             );
           }
           final enabled = granted == true;
@@ -271,10 +279,10 @@ class _NotificationPreferencesScreenState
               leading: Icon(enabled
                   ? Icons.notifications_active_outlined
                   : Icons.notifications_off_outlined),
-              title: const Text('Device alerts'),
+              title: Text(l10n.notificationDeviceAlerts),
               subtitle: Text(enabled
-                  ? 'Unread FINVERSE alerts can appear in your notification tray.'
-                  : 'Allow local alerts for unread budgets, bills, banks, and security events.'),
+                  ? l10n.notificationDeviceAlertsEnabled
+                  : l10n.notificationDeviceAlertsDisabled),
               trailing: _deviceBusy
                   ? const SizedBox(
                       width: 22,
@@ -284,7 +292,9 @@ class _NotificationPreferencesScreenState
                   : TextButton(
                       onPressed:
                           enabled ? _disableDeviceAlerts : _enableDeviceAlerts,
-                      child: Text(enabled ? 'Turn off' : 'Enable'),
+                      child: Text(enabled
+                          ? l10n.notificationTurnOff
+                          : l10n.notificationEnable),
                     ),
             ),
           );

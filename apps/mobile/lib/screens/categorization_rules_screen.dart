@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api/client.dart';
+import '../l10n/app_localizations.dart';
 import '../models/models.dart';
 
 /// Lets users see and remove the durable rules created by category corrections.
@@ -58,23 +59,23 @@ class _CategorizationRulesScreenState extends State<CategorizationRulesScreen> {
   }
 
   Future<void> _delete(CategorizationRule rule) async {
+    final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete this rule?'),
-        content: Text(
-          'Future matching transactions will use the normal categorization '
-          'pipeline again. Existing transaction choices stay unchanged.\n\n'
-          '“${rule.pattern}” → ${_categoryNames[rule.categorySlug] ?? rule.categorySlug}',
-        ),
+        title: Text(l10n.categorizationRulesDeleteTitle),
+        content: Text(l10n.categorizationRulesDeleteDescription(
+          rule.pattern,
+          _categoryNames[rule.categorySlug] ?? rule.categorySlug,
+        )),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Keep rule'),
+            child: Text(l10n.categorizationRulesKeep),
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Delete'),
+            child: Text(l10n.commonDelete),
           ),
         ],
       ),
@@ -87,30 +88,38 @@ class _CategorizationRulesScreenState extends State<CategorizationRulesScreen> {
       setState(
           () => _rules = _rules.where((item) => item.id != rule.id).toList());
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Rule deleted.')),
+        SnackBar(content: Text(l10n.categorizationRulesDeleted)),
       );
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not delete rule: $error')),
+        SnackBar(
+          content: Text(l10n.categorizationRulesDeleteFailed(
+            friendlyErrorMessage(error),
+          )),
+        ),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Categorization rules')),
+        appBar: AppBar(
+          title: Text(
+              AppLocalizations.of(context).profileCategorizationRulesTitle),
+        ),
         body: _body(),
       );
 
   Widget _body() {
+    final l10n = AppLocalizations.of(context);
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_error != null) {
       return Center(
         child: FilledButton.icon(
           onPressed: _load,
           icon: const Icon(Icons.refresh),
-          label: const Text('Retry'),
+          label: Text(l10n.commonRetry),
         ),
       );
     }
@@ -120,18 +129,17 @@ class _CategorizationRulesScreenState extends State<CategorizationRulesScreen> {
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(24),
-          children: const [
-            Icon(Icons.auto_fix_high_outlined, size: 48),
-            SizedBox(height: 16),
+          children: [
+            const Icon(Icons.auto_fix_high_outlined, size: 48),
+            const SizedBox(height: 16),
             Text(
-              'No saved rules yet',
+              l10n.categorizationRulesEmptyTitle,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text(
-              'When you correct a transaction category, FINVERSE can remember '
-              'that choice for matching merchants.',
+              l10n.categorizationRulesEmptyDetail,
               textAlign: TextAlign.center,
             ),
           ],
@@ -144,10 +152,7 @@ class _CategorizationRulesScreenState extends State<CategorizationRulesScreen> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
-          const Text(
-            'These rules apply to your account on every device. Deleting a '
-            'rule does not rewrite the original bank record or existing edits.',
-          ),
+          Text(l10n.categorizationRulesIntro),
           const SizedBox(height: 12),
           ..._rules.map(
             (rule) => Card(
@@ -155,10 +160,10 @@ class _CategorizationRulesScreenState extends State<CategorizationRulesScreen> {
                 leading: const Icon(Icons.auto_fix_high_outlined),
                 title: Text(rule.pattern),
                 subtitle: Text(
-                  '${rule.matchType} → ${_categoryNames[rule.categorySlug] ?? rule.categorySlug}',
+                  '${rule.matchType} -> ${_categoryNames[rule.categorySlug] ?? rule.categorySlug}',
                 ),
                 trailing: IconButton(
-                  tooltip: 'Delete rule',
+                  tooltip: l10n.categorizationRulesDeleteTooltip,
                   icon: const Icon(Icons.delete_outline),
                   onPressed: () => _delete(rule),
                 ),

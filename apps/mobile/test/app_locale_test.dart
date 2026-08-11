@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:finverse/api/client.dart';
+import 'package:finverse/api/session_store.dart';
 import 'package:finverse/app_locale.dart';
 import 'package:finverse/l10n/app_localizations.dart';
+import 'package:finverse/screens/assistant_screen.dart';
 
 void main() {
   test('restores only a supported persisted display language', () async {
@@ -73,5 +76,26 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Accueil'), findsOneWidget);
+  });
+
+  testWidgets('localizes the finance guide prompt content', (tester) async {
+    final api = ApiClient(
+      baseUrl: 'http://example.com',
+      sessionStore: InMemorySessionStore(),
+    );
+    addTearDown(api.close);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('fr'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: AssistantScreen(api: api),
+      ),
+    );
+
+    expect(find.text('Demander à FINVERSE'), findsOneWidget);
+    expect(find.text('Une vision claire de votre argent'), findsOneWidget);
+    expect(find.text('Essayez une de ces questions'), findsOneWidget);
   });
 }

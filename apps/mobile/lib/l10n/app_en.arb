@@ -52,6 +52,68 @@
   "profileNotificationsDetail": "Review alerts and notification preferences",
   "profileCategorizationRulesTitle": "Categorization rules",
   "profileCategorizationRulesDetail": "Review or remove saved merchant rules",
+  "commonDelete": "Delete",
+  "assistantTitle": "Ask FINVERSE",
+  "assistantHeading": "A clear view of your money",
+  "assistantDescription": "Ask about spending, savings, merchants, or recurring charges. Answers use your selected-period aggregates and stay on FINVERSE.",
+  "assistantQuestionLabel": "Your question",
+  "assistantQuestionHint": "Where did I spend the most?",
+  "assistantAskTooltip": "Ask",
+  "assistantPromptHeading": "Try one of these",
+  "assistantPromptSpending": "Where did I spend the most?",
+  "assistantPromptSavings": "How much did I save?",
+  "assistantPromptSubscriptions": "Which subscriptions am I paying for?",
+  "assistantPromptHigherSpending": "Is my spending higher than usual?",
+  "assistantQuestionRequired": "Ask a question about your spending or savings.",
+  "assistantCouldNotAnswer": "Could not answer that yet",
+  "assistantAnswerTitle": "Your answer",
+  "notificationsMarkAllRead": "Mark all read",
+  "notificationsPreferencesTooltip": "Notification preferences",
+  "notificationsEmptyTitle": "You are all caught up",
+  "notificationsEmptyDetail": "Budget, bill, subscription, unusual spending, balance, credit, and security alerts will appear here.",
+  "notificationsMarkedRead": "{count, plural, =1{1 alert marked as read.} other{{count} alerts marked as read.}}",
+  "@notificationsMarkedRead": {
+    "placeholders": {
+      "count": {"type": "num"}
+    }
+  },
+  "notificationPreferencesTitle": "Alert preferences",
+  "notificationPermissionDenied": "Notifications are disabled. Enable them in your device settings.",
+  "notificationBudgetProgress": "Budget progress",
+  "notificationBills": "Bills and due dates",
+  "notificationCreditUtilization": "Credit utilization",
+  "notificationSubscriptionChanges": "Subscription changes",
+  "notificationLowBalance": "Low balance",
+  "notificationUnusualTransactions": "Unusual transactions",
+  "notificationBankSync": "Bank synchronization",
+  "notificationSecurityEvents": "Security events",
+  "notificationDeviceUnavailable": "Device alerts unavailable here",
+  "notificationDeviceUnavailableDetail": "Native alerts are available in the Android and iPhone apps.",
+  "notificationDeviceAlerts": "Device alerts",
+  "notificationDeviceAlertsEnabled": "Unread FINVERSE alerts can appear in your notification tray.",
+  "notificationDeviceAlertsDisabled": "Allow local alerts for unread budgets, bills, banks, and security events.",
+  "notificationTurnOff": "Turn off",
+  "notificationEnable": "Enable",
+  "categorizationRulesDeleteTitle": "Delete this rule?",
+  "categorizationRulesDeleteDescription": "Future matching transactions will use the normal categorization pipeline again. Existing transaction choices stay unchanged.\n\n“{pattern}” → {category}",
+  "@categorizationRulesDeleteDescription": {
+    "placeholders": {
+      "pattern": {"type": "String"},
+      "category": {"type": "String"}
+    }
+  },
+  "categorizationRulesKeep": "Keep rule",
+  "categorizationRulesDeleted": "Rule deleted.",
+  "categorizationRulesDeleteFailed": "Could not delete this rule. {detail}",
+  "@categorizationRulesDeleteFailed": {
+    "placeholders": {
+      "detail": {"type": "String"}
+    }
+  },
+  "categorizationRulesEmptyTitle": "No saved rules yet",
+  "categorizationRulesEmptyDetail": "When you correct a transaction category, FINVERSE can remember that choice for matching merchants.",
+  "categorizationRulesIntro": "These rules apply to your account on every device. Deleting a rule does not rewrite the original bank record or existing edits.",
+  "categorizationRulesDeleteTooltip": "Delete rule",
   "errorConnection": "Couldn't reach the server. Check your connection.",
   "errorServerUnavailable": "The server is temporarily unavailable. Try again shortly.",
   "errorSessionInvalid": "Your session is no longer valid. Sign in again.",

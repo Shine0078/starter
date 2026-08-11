@@ -62,8 +62,7 @@ import 'app_localizations_fr.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale)
-      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -71,8 +70,7 @@ abstract class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations)!;
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate =
-      _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
 
   /// A list of this localizations delegate along with the default localizations
   /// delegates.
@@ -84,8 +82,7 @@ abstract class AppLocalizations {
   /// Additional delegates can be added by appending to this list in
   /// MaterialApp. This list does not have to be used at all if a custom list
   /// of delegates is preferred or required.
-  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
-      <LocalizationsDelegate<dynamic>>[
+  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates = <LocalizationsDelegate<dynamic>>[
     delegate,
     GlobalMaterialLocalizations.delegate,
     GlobalCupertinoLocalizations.delegate,
@@ -410,6 +407,282 @@ abstract class AppLocalizations {
   /// **'Review or remove saved merchant rules'**
   String get profileCategorizationRulesDetail;
 
+  /// No description provided for @commonDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get commonDelete;
+
+  /// No description provided for @assistantTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask FINVERSE'**
+  String get assistantTitle;
+
+  /// No description provided for @assistantHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'A clear view of your money'**
+  String get assistantHeading;
+
+  /// No description provided for @assistantDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask about spending, savings, merchants, or recurring charges. Answers use your selected-period aggregates and stay on FINVERSE.'**
+  String get assistantDescription;
+
+  /// No description provided for @assistantQuestionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Your question'**
+  String get assistantQuestionLabel;
+
+  /// No description provided for @assistantQuestionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Where did I spend the most?'**
+  String get assistantQuestionHint;
+
+  /// No description provided for @assistantAskTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask'**
+  String get assistantAskTooltip;
+
+  /// No description provided for @assistantPromptHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Try one of these'**
+  String get assistantPromptHeading;
+
+  /// No description provided for @assistantPromptSpending.
+  ///
+  /// In en, this message translates to:
+  /// **'Where did I spend the most?'**
+  String get assistantPromptSpending;
+
+  /// No description provided for @assistantPromptSavings.
+  ///
+  /// In en, this message translates to:
+  /// **'How much did I save?'**
+  String get assistantPromptSavings;
+
+  /// No description provided for @assistantPromptSubscriptions.
+  ///
+  /// In en, this message translates to:
+  /// **'Which subscriptions am I paying for?'**
+  String get assistantPromptSubscriptions;
+
+  /// No description provided for @assistantPromptHigherSpending.
+  ///
+  /// In en, this message translates to:
+  /// **'Is my spending higher than usual?'**
+  String get assistantPromptHigherSpending;
+
+  /// No description provided for @assistantQuestionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask a question about your spending or savings.'**
+  String get assistantQuestionRequired;
+
+  /// No description provided for @assistantCouldNotAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not answer that yet'**
+  String get assistantCouldNotAnswer;
+
+  /// No description provided for @assistantAnswerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your answer'**
+  String get assistantAnswerTitle;
+
+  /// No description provided for @notificationsMarkAllRead.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark all read'**
+  String get notificationsMarkAllRead;
+
+  /// No description provided for @notificationsPreferencesTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification preferences'**
+  String get notificationsPreferencesTooltip;
+
+  /// No description provided for @notificationsEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You are all caught up'**
+  String get notificationsEmptyTitle;
+
+  /// No description provided for @notificationsEmptyDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Budget, bill, subscription, unusual spending, balance, credit, and security alerts will appear here.'**
+  String get notificationsEmptyDetail;
+
+  /// No description provided for @notificationsMarkedRead.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 alert marked as read.} other{{count} alerts marked as read.}}'**
+  String notificationsMarkedRead(num count);
+
+  /// No description provided for @notificationPreferencesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Alert preferences'**
+  String get notificationPreferencesTitle;
+
+  /// No description provided for @notificationPermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications are disabled. Enable them in your device settings.'**
+  String get notificationPermissionDenied;
+
+  /// No description provided for @notificationBudgetProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Budget progress'**
+  String get notificationBudgetProgress;
+
+  /// No description provided for @notificationBills.
+  ///
+  /// In en, this message translates to:
+  /// **'Bills and due dates'**
+  String get notificationBills;
+
+  /// No description provided for @notificationCreditUtilization.
+  ///
+  /// In en, this message translates to:
+  /// **'Credit utilization'**
+  String get notificationCreditUtilization;
+
+  /// No description provided for @notificationSubscriptionChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription changes'**
+  String get notificationSubscriptionChanges;
+
+  /// No description provided for @notificationLowBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Low balance'**
+  String get notificationLowBalance;
+
+  /// No description provided for @notificationUnusualTransactions.
+  ///
+  /// In en, this message translates to:
+  /// **'Unusual transactions'**
+  String get notificationUnusualTransactions;
+
+  /// No description provided for @notificationBankSync.
+  ///
+  /// In en, this message translates to:
+  /// **'Bank synchronization'**
+  String get notificationBankSync;
+
+  /// No description provided for @notificationSecurityEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'Security events'**
+  String get notificationSecurityEvents;
+
+  /// No description provided for @notificationDeviceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Device alerts unavailable here'**
+  String get notificationDeviceUnavailable;
+
+  /// No description provided for @notificationDeviceUnavailableDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Native alerts are available in the Android and iPhone apps.'**
+  String get notificationDeviceUnavailableDetail;
+
+  /// No description provided for @notificationDeviceAlerts.
+  ///
+  /// In en, this message translates to:
+  /// **'Device alerts'**
+  String get notificationDeviceAlerts;
+
+  /// No description provided for @notificationDeviceAlertsEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Unread FINVERSE alerts can appear in your notification tray.'**
+  String get notificationDeviceAlertsEnabled;
+
+  /// No description provided for @notificationDeviceAlertsDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow local alerts for unread budgets, bills, banks, and security events.'**
+  String get notificationDeviceAlertsDisabled;
+
+  /// No description provided for @notificationTurnOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn off'**
+  String get notificationTurnOff;
+
+  /// No description provided for @notificationEnable.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable'**
+  String get notificationEnable;
+
+  /// No description provided for @categorizationRulesDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this rule?'**
+  String get categorizationRulesDeleteTitle;
+
+  /// No description provided for @categorizationRulesDeleteDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Future matching transactions will use the normal categorization pipeline again. Existing transaction choices stay unchanged.\n\n“{pattern}” → {category}'**
+  String categorizationRulesDeleteDescription(String pattern, String category);
+
+  /// No description provided for @categorizationRulesKeep.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep rule'**
+  String get categorizationRulesKeep;
+
+  /// No description provided for @categorizationRulesDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Rule deleted.'**
+  String get categorizationRulesDeleted;
+
+  /// No description provided for @categorizationRulesDeleteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not delete this rule. {detail}'**
+  String categorizationRulesDeleteFailed(String detail);
+
+  /// No description provided for @categorizationRulesEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No saved rules yet'**
+  String get categorizationRulesEmptyTitle;
+
+  /// No description provided for @categorizationRulesEmptyDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'When you correct a transaction category, FINVERSE can remember that choice for matching merchants.'**
+  String get categorizationRulesEmptyDetail;
+
+  /// No description provided for @categorizationRulesIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'These rules apply to your account on every device. Deleting a rule does not rewrite the original bank record or existing edits.'**
+  String get categorizationRulesIntro;
+
+  /// No description provided for @categorizationRulesDeleteTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete rule'**
+  String get categorizationRulesDeleteTooltip;
+
   /// No description provided for @errorConnection.
   ///
   /// In en, this message translates to:
@@ -507,8 +780,7 @@ abstract class AppLocalizations {
   String get receiptAttachAction;
 }
 
-class _AppLocalizationsDelegate
-    extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -517,25 +789,25 @@ class _AppLocalizationsDelegate
   }
 
   @override
-  bool isSupported(Locale locale) =>
-      <String>['en', 'fr'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>['en', 'fr'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
 }
 
 AppLocalizations lookupAppLocalizations(Locale locale) {
+
+
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
-    case 'en':
-      return AppLocalizationsEn();
-    case 'fr':
-      return AppLocalizationsFr();
+    case 'en': return AppLocalizationsEn();
+    case 'fr': return AppLocalizationsFr();
   }
 
   throw FlutterError(
-      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-      'an issue with the localizations generation tool. Please file an issue '
-      'on GitHub with a reproducible sample app and the gen-l10n configuration '
-      'that was used.');
+    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+    'an issue with the localizations generation tool. Please file an issue '
+    'on GitHub with a reproducible sample app and the gen-l10n configuration '
+    'that was used.'
+  );
 }

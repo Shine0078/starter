@@ -52,6 +52,68 @@
   "profileNotificationsDetail": "Consultez les alertes et vos préférences de notification",
   "profileCategorizationRulesTitle": "Règles de catégorisation",
   "profileCategorizationRulesDetail": "Examinez ou supprimez les règles enregistrées",
+  "commonDelete": "Supprimer",
+  "assistantTitle": "Demander à FINVERSE",
+  "assistantHeading": "Une vision claire de votre argent",
+  "assistantDescription": "Posez des questions sur vos dépenses, votre épargne, vos commerçants ou vos prélèvements récurrents. Les réponses utilisent les données agrégées de la période sélectionnée et restent dans FINVERSE.",
+  "assistantQuestionLabel": "Votre question",
+  "assistantQuestionHint": "Où ai-je le plus dépensé ?",
+  "assistantAskTooltip": "Demander",
+  "assistantPromptHeading": "Essayez une de ces questions",
+  "assistantPromptSpending": "Où ai-je le plus dépensé ?",
+  "assistantPromptSavings": "Combien ai-je épargné ?",
+  "assistantPromptSubscriptions": "Quels abonnements est-ce que je paie ?",
+  "assistantPromptHigherSpending": "Est-ce que mes dépenses sont plus élevées que d’habitude ?",
+  "assistantQuestionRequired": "Posez une question sur vos dépenses ou votre épargne.",
+  "assistantCouldNotAnswer": "Impossible de répondre pour le moment",
+  "assistantAnswerTitle": "Votre réponse",
+  "notificationsMarkAllRead": "Tout marquer comme lu",
+  "notificationsPreferencesTooltip": "Préférences des alertes",
+  "notificationsEmptyTitle": "Vous êtes à jour",
+  "notificationsEmptyDetail": "Les alertes de budget, facture, abonnement, dépense inhabituelle, solde, crédit et sécurité apparaîtront ici.",
+  "notificationsMarkedRead": "{count, plural, =1{1 alerte marquée comme lue.} other{{count} alertes marquées comme lues.}}",
+  "@notificationsMarkedRead": {
+    "placeholders": {
+      "count": {"type": "num"}
+    }
+  },
+  "notificationPreferencesTitle": "Préférences des alertes",
+  "notificationPermissionDenied": "Les notifications sont désactivées. Activez-les dans les réglages de votre appareil.",
+  "notificationBudgetProgress": "Progression du budget",
+  "notificationBills": "Factures et échéances",
+  "notificationCreditUtilization": "Utilisation du crédit",
+  "notificationSubscriptionChanges": "Modifications d’abonnements",
+  "notificationLowBalance": "Solde faible",
+  "notificationUnusualTransactions": "Transactions inhabituelles",
+  "notificationBankSync": "Synchronisation bancaire",
+  "notificationSecurityEvents": "Événements de sécurité",
+  "notificationDeviceUnavailable": "Alertes de l’appareil indisponibles ici",
+  "notificationDeviceUnavailableDetail": "Les alertes natives sont offertes dans les applications Android et iPhone.",
+  "notificationDeviceAlerts": "Alertes de l’appareil",
+  "notificationDeviceAlertsEnabled": "Les alertes FINVERSE non lues peuvent apparaître dans votre centre de notifications.",
+  "notificationDeviceAlertsDisabled": "Autorisez les alertes locales pour les budgets, factures, banques et événements de sécurité non lus.",
+  "notificationTurnOff": "Désactiver",
+  "notificationEnable": "Activer",
+  "categorizationRulesDeleteTitle": "Supprimer cette règle ?",
+  "categorizationRulesDeleteDescription": "Les futures transactions correspondantes utiliseront de nouveau le processus normal de catégorisation. Les choix existants restent inchangés.\n\n« {pattern} » → {category}",
+  "@categorizationRulesDeleteDescription": {
+    "placeholders": {
+      "pattern": {"type": "String"},
+      "category": {"type": "String"}
+    }
+  },
+  "categorizationRulesKeep": "Conserver la règle",
+  "categorizationRulesDeleted": "Règle supprimée.",
+  "categorizationRulesDeleteFailed": "Impossible de supprimer cette règle. {detail}",
+  "@categorizationRulesDeleteFailed": {
+    "placeholders": {
+      "detail": {"type": "String"}
+    }
+  },
+  "categorizationRulesEmptyTitle": "Aucune règle enregistrée",
+  "categorizationRulesEmptyDetail": "Lorsque vous corrigez la catégorie d’une transaction, FINVERSE peut mémoriser ce choix pour les commerçants correspondants.",
+  "categorizationRulesIntro": "Ces règles s’appliquent à votre compte sur tous vos appareils. Les supprimer ne modifie pas le relevé bancaire original ni les modifications existantes.",
+  "categorizationRulesDeleteTooltip": "Supprimer la règle",
   "errorConnection": "Impossible de joindre le serveur. Vérifiez votre connexion.",
   "errorServerUnavailable": "Le serveur est temporairement indisponible. Réessayez bientôt.",
   "errorSessionInvalid": "Votre session n'est plus valide. Connectez-vous à nouveau.",
