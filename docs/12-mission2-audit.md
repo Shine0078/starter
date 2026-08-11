@@ -131,6 +131,23 @@ file would be required to verify any requirements unique to that document.
   merchant, savings, subscription, and spending-change questions from the same
   aggregate analytics used by the dashboard. It returns evidence and caveats,
   never raw transactions, and does not require an external AI provider.
+- Receipt OCR is implemented behind a provider-neutral port with a deterministic
+  local parser (merchant, date, total, tax, currency, items), an authenticated
+  scan/attach/read API, one-receipt-per-transaction storage with RLS, and a
+  mobile "Attach a receipt" flow. Images are never uploaded — only extracted
+  fields and pasted text.
+- Passkeys (WebAuthn) are implemented server-side with a pure-Node FIDO2
+  verifier: challenge issuance, registration and login verification against a
+  stored ES256 public key, sign-counter regression rejection, credential
+  management, RLS, and end-to-end tests using a generated P-256 key pair. Gated
+  by `WEBAUTHN_ENABLED` plus a registered RP id/origin — the owner domain action.
+- Remote push registration is implemented (`POST/DELETE /api/push/device`,
+  per-user RLS-isolated `push_tokens` erased with the account) with a failing
+  closed `PushProvider` port until delivery credentials are supplied; the mobile
+  client has `registerPushToken`/`unregisterPushToken`.
+- Localization plumbing is complete with a second shipped language: `gen_l10n`
+  with English and French ARB files, wired through the shell navigation, the
+  offline banner, and the login surface; adding a language is a single ARB file.
 - Bounded Prometheus-compatible HTTP metrics are now collected from route
   templates only (never raw URLs) and exposed at protected `/api/metrics` with
   an optional development path and a production `METRICS_TOKEN` requirement.
@@ -157,9 +174,9 @@ file would be required to verify any requirements unique to that document.
 
 ## Evidence
 
-- API in-memory suite: 428 passing, 5 database-only skips.
-- PostgreSQL contract/RLS suite: 530 passing in embedded PostgreSQL.
-- Flutter: 76 widget/design tests passing, `flutter analyze` clean.
+- API in-memory suite: 455 passing, 5 database-only skips.
+- PostgreSQL contract/RLS suite: 564 passing in embedded PostgreSQL.
+- Flutter: 79 widget/design tests passing, `flutter analyze` clean.
 - Android release APK and web release build both compile. The Android emulator
   booted but its package/activity services were unavailable during an install
   attempt; that is an emulator image issue, not a compile failure.
@@ -195,7 +212,7 @@ file would be required to verify any requirements unique to that document.
   user-scoped storage, latest-value collapse, optimistic retry semantics, and
   successful replay.
 - Data-quality domain checks and authenticated route protection are covered by
-  focused API tests; Flutter analyzer and the 76-test mobile suite remain clean.
+  focused API tests; Flutter analyzer and the 79-test mobile suite remain clean.
 - A provider-neutral public deployment path now runs the tagged API and optional
   Flutter web bundle behind Caddy with automatic HTTPS. Port 3000 remains
   private to the Docker network, and native phones or the `/app/` PWA can use
@@ -203,10 +220,14 @@ file would be required to verify any requirements unique to that document.
 
 ## Still incomplete locally
 
-- OS-level background mobile sync, push delivery, receipts/OCR, localisation,
-  and passkeys/WebAuthn. Native iOS LinkKit is wired in source and the Xcode
-  project, but still needs a Mac/Xcode build, a registered Universal Link, and
-  an iPhone OAuth smoke test.
+- OS-level background mobile sync and remote push delivery need provider
+  credentials and a background scheduler; the registration API, failing-closed
+  provider port, and client hooks are implemented.
+- Native iOS LinkKit is wired in source and the Xcode project, but still needs a
+  Mac/Xcode build, a registered Universal Link, and an iPhone OAuth smoke test.
+- The mobile platform passkey ceremony (iOS ASAuthorization / Android
+  Credential Manager) needs a registered domain and device testing; the server
+  verifier and client protocol methods are implemented and tested.
 - Remaining screens still have inline styling and `setState`; the design system
   foundation is complete but adoption is partial.
 

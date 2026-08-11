@@ -138,6 +138,14 @@ last 15 minutes; exchange the refresh token at `/api/auth/refresh` for a new pai
 | `GET` | `/credit-cards` | Utilization, pay-down target, and an early payment window |
 | `PATCH` | `/notifications/:id/read` | Mark one alert read |
 | `PATCH` | `/notifications/read-all` | Mark all alerts read |
+| `POST` | `/receipts/scan` | Recognise pasted receipt text without storing it |
+| `PUT` | `/receipts/:transactionId` | Attach a parsed receipt to one of your transactions |
+| `GET` | `/receipts/:transactionId` | The stored receipt for a transaction |
+| `POST`/`DELETE` | `/push/device` | Register / unregister this device for remote push |
+| `GET` | `/webauthn/status` | **Public.** Whether passkeys are configured |
+| `POST` | `/webauthn/register/options` · `/verify` | Passkey registration ceremony |
+| `POST` | `/webauthn/login/options` · `/verify` | Passkey login ceremony |
+| `GET`/`DELETE` | `/webauthn/credentials[/:id]` | Manage the user's passkeys |
 | `GET` | `/billing/subscription` | Current plan, entitlements, and renewal state |
 | `POST` | `/billing/checkout-session` | Start hosted checkout for a plan. Returns a URL; no card data reaches this API |
 | `POST` | `/billing/portal-session` | Link to the provider's page for cancellation, card changes, and invoices |
@@ -269,13 +277,13 @@ stopped running.
 
 ## Notes on what is and isn't verified
 
-- **The API and its domain logic run and are tested.** 428 tests run with no
-  database; the full suite is **530 passing** against real PostgreSQL, including
+- **The API and its domain logic run and are tested.** 455 tests run with no
+  database; the full suite is **564 passing** against real PostgreSQL, including
   the store contract — which runs as the restricted role, so it executes with the
   row-level security policies in force — and a suite that issues deliberately
   unfiltered SQL to prove the database withholds other users' rows on its own.
   The slice is also exercised end to end over HTTP.
-- **The Flutter app is verified by static analysis, 76 tests, and real
+- **The Flutter app is verified by static analysis, 79 tests, and real
   Android release APK and web builds.** Android and iOS platform projects can be generated
   locally. See the
   [cheap launch path](docs/06-cheap-launch-path.md).
