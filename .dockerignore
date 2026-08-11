@@ -6,8 +6,7 @@ node_modules
 **/dist
 **/build
 **/.dart_tool
-apps/mobile
-docs
+ docs
 scratchpad
 *.log
 .env*

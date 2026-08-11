@@ -1,0 +1,82 @@
+services:
+  - type: web
+    name: finverse
+    runtime: docker
+    dockerfilePath: ./Dockerfile.public
+    dockerContext: .
+    plan: starter
+    healthCheckPath: /healthz
+    preDeployCommand: node dist/infra/postgres/migrate.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: STORE
+        value: postgres
+      - key: MIGRATE_ON_BOOT
+        value: "false"
+      - key: PORT
+        value: "3000"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: finverse-db
+          property: connectionString
+      # Set this after the database is created. Use the same host/database as
+      # DATABASE_URL, but username finverse_app and a new strong password. The
+      # migration pre-deploy creates that restricted role from DATABASE_URL.
+      - key: DATABASE_APP_URL
+        sync: false
+      # Set to the final Render URL, e.g. https://finverse.onrender.com.
+      - key: CORS_ORIGINS
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: MFA_ENCRYPTION_KEY
+        sync: false
+      - key: BANK_TOKEN_ENCRYPTION_KEY
+        sync: false
+      - key: METRICS_TOKEN
+        generateValue: true
+      - key: LEGAL_TERMS_VERSION
+        sync: false
+      - key: LEGAL_TERMS_URL
+        sync: false
+      - key: LEGAL_PRIVACY_VERSION
+        sync: false
+      - key: LEGAL_PRIVACY_URL
+        sync: false
+      # Optional until Plaid production approval. Sandbox values may be used
+      # only in a non-production deployment.
+      - key: PLAID_CLIENT_ID
+        sync: false
+      - key: PLAID_SECRET
+        sync: false
+      - key: PLAID_ENVIRONMENT
+        value: production
+      - key: PLAID_COUNTRIES
+        value: CA,US
+      - key: PLAID_WEBHOOK_URL
+        sync: false
+      - key: PLAID_WEB_REDIRECT_URI
+        sync: false
+      - key: PLAID_IOS_REDIRECT_URI
+        sync: false
+      - key: IOS_TEAM_ID
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_SECURE
+        value: "false"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+
+databases:
+  - name: finverse-db
+    plan: basic-256mb
+    databaseName: finverse
+    user: finverse

@@ -88,8 +88,11 @@ BANK_TOKEN_ENCRYPTION_KEY=<base64 for 32 random bytes>
 ```
 
 Restart the API, sign in, open **Accounts → Connect bank**, and complete Link
-with Plaid's Sandbox test institution credentials. Sandbox data is synthetic;
-real institutions require Plaid production approval and a commercial account.
+with Plaid's Sandbox test institution credentials. For the standard Sandbox
+user, use `user_good` as the username and `pass_good` as the password; do not
+enter a real CIBC card number or real banking password. Sandbox data is
+synthetic; real institutions require Plaid production approval and a commercial
+account.
 
 ## What is platform-specific
 

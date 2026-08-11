@@ -86,7 +86,9 @@ async function bootstrap(): Promise<void> {
   //
   // Optional by design: the directory only exists after `flutter build web`,
   // and the API must still boot without it. See docs/11-run-on-your-phone.md.
-  const webAppDir = join(__dirname, '..', '..', 'mobile', 'build', 'web');
+  const webAppDir =
+    process.env.WEB_APP_DIR?.trim() ||
+    join(__dirname, '..', '..', 'mobile', 'build', 'web');
   const webAppBuilt = existsSync(join(webAppDir, 'index.html'));
 
   if (webAppBuilt) {
