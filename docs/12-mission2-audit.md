@@ -139,9 +139,10 @@ file would be required to verify any requirements unique to that document.
 - Receipt parsing is implemented behind a provider-neutral port with a
   deterministic local parser (merchant, date, total, tax, currency, items), an
   authenticated scan/attach/read API, one-receipt-per-transaction storage with
-  RLS, and a mobile "Attach a receipt" flow. Images are never uploaded; the
-  user supplies pasted on-device OCR text. Direct photo-to-text recognition
-  inside FINVERSE is not yet implemented and is tracked as remaining work.
+  RLS, and a mobile "Attach a receipt" flow. Android uses a bundled on-device
+  ML Kit text model and iPhone source uses Apple Vision. A person chooses a
+  photo, reviews/edit its resulting transcript, then attaches text; images are
+  never uploaded to FINVERSE.
 - Passkeys (WebAuthn) are implemented server-side with a pure-Node FIDO2
   verifier: challenge issuance, registration and login verification against a
   stored ES256 public key, sign-counter regression rejection, credential
@@ -189,8 +190,10 @@ file would be required to verify any requirements unique to that document.
 
 - API in-memory suite: 475 passing, 5 database-only skips.
 - PostgreSQL contract/RLS suite: 564 passing in embedded PostgreSQL.
-- Flutter: 82 tests passing, `flutter analyze` clean.
-- Android debug APK and web release build both compile. The Android emulator
+- Flutter: 84 tests passing, `flutter analyze` clean.
+- Android release-mode APK and web release build both compile. The local
+  release APK uses the deliberately configured debug-signing fallback; a real
+  store artifact still needs the owner's upload-key secret. The Android emulator
   booted but its package/activity services were unavailable during an install
   attempt; that is an emulator image issue, not a compile failure.
 - Windows Flutter cannot compile iOS; Xcode/macOS remains required for the
@@ -244,10 +247,10 @@ file would be required to verify any requirements unique to that document.
   verifier and client protocol methods are implemented and tested.
 - Remaining screens still have inline styling and `setState`; the design system
   foundation is complete but adoption is partial.
-- Direct on-device photo-to-text receipt OCR is still absent. The app preserves
-  receipt-image privacy by accepting only pasted on-device OCR text today; a
-  native image-recognition adapter needs implementation and physical Android/
-  iPhone validation before this row can be considered complete.
+- Direct on-device photo-to-text receipt OCR is implemented. Android’s bundled
+  ML Kit integration compiles in the release-mode APK; it still needs a physical photo
+  scan. Apple Vision source needs its macOS/Xcode compile and iPhone photo-scan
+  verification before its native validation gate is closed.
 
 ## External launch gates
 

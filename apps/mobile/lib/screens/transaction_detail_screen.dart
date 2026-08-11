@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../api/client.dart';
+import '../api/receipt_photo_recognizer.dart';
 import '../l10n/app_localizations.dart';
 import '../models/models.dart';
+
+enum _ReceiptInputMethod { photo, paste }
 
 class TransactionDetailScreen extends StatefulWidget {
   const TransactionDetailScreen({
@@ -30,6 +34,8 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
   late bool _duplicateReported;
   ReceiptRecord? _receipt;
   var _saving = false;
+  final _receiptPhotoRecognizer = ReceiptPhotoRecognizer();
+  final _imagePicker = ImagePicker();
 
   @override
   void initState() {
@@ -277,22 +283,130 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
     }
   }
 
-  /// Paste receipt text (or an OCR transcript) and attach the parsed fields.
-  ///
-  /// Only extracted fields and the pasted text are uploaded — never an image.
+  /// Scan a local photo or paste receipt text, let the person review the
+  /// transcript, then attach only that text and its parsed fields. The image
+  /// itself never goes through the API.
   Future<void> _attachReceipt() async {
-    final controller = TextEditingController();
-    final pasted = await showDialog<String>(
+    final method = await showModalBottomSheet<_ReceiptInputMethod>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (ReceiptPhotoRecognizer.isSupported)
+              ListTile(
+                leading: const Icon(Icons.document_scanner_outlined),
+                title: const Text('Scan a receipt photo'),
+                subtitle: const Text(
+                    'Recognised on this phone — the image is never uploaded'),
+                onTap: () =>
+                    Navigator.pop(sheetContext, _ReceiptInputMethod.photo),
+              ),
+            ListTile(
+              leading: const Icon(Icons.paste_outlined),
+              title: const Text('Paste receipt text'),
+              subtitle: const Text(
+                  'Use text copied from a receipt or your phone’s OCR'),
+              onTap: () =>
+                  Navigator.pop(sheetContext, _ReceiptInputMethod.paste),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || method == null) return;
+
+    String? initialText;
+    if (method == _ReceiptInputMethod.photo) {
+      initialText = await _scanReceiptPhoto();
+      if (!mounted || initialText == null) return;
+    }
+    final text = await _editReceiptText(initialText: initialText);
+    if (!mounted || text == null || text.trim().isEmpty) return;
+
+    setState(() => _saving = true);
+    try {
+      final receipt = await widget.api.attachReceipt(
+        widget.transaction.id,
+        text,
+      );
+      if (!mounted) return;
+      setState(() => _receipt = receipt);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(receipt.merchant == null
+                ? 'Receipt attached.'
+                : 'Receipt attached — ${receipt.merchant}.')),
+      );
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(friendlyErrorMessage(error))));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<String?> _scanReceiptPhoto() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined),
+              title: const Text('Take a photo'),
+              onTap: () => Navigator.pop(sheetContext, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Choose from your photos'),
+              onTap: () => Navigator.pop(sheetContext, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || source == null) return null;
+
+    final image = await _imagePicker.pickImage(
+      source: source,
+      maxWidth: 2048,
+      imageQuality: 90,
+    );
+    if (!mounted || image == null) return null;
+
+    setState(() => _saving = true);
+    try {
+      return await _receiptPhotoRecognizer.recognizeFile(image.path);
+    } on ReceiptPhotoRecognitionException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.message)));
+      }
+      return null;
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<String?> _editReceiptText({String? initialText}) async {
+    final controller = TextEditingController(text: initialText ?? '');
+    final text = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Attach a receipt'),
+        title: Text(initialText == null
+            ? 'Attach a receipt'
+            : 'Review scanned receipt text'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'Paste the receipt text, or the text your phone\'s OCR produced '
-              'from a photo. FINVERSE extracts the merchant, date, total, and '
-              'tax. Images are never uploaded.',
+            Text(
+              initialText == null
+                  ? 'Paste receipt text. FINVERSE extracts the merchant, date, total, and tax. Images are never uploaded.'
+                  : 'Check the recognised text before attaching it. Only this text is sent to FINVERSE — never the photo.',
             ),
             const SizedBox(height: 12),
             TextField(
@@ -321,30 +435,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
       ),
     );
     controller.dispose();
-    if (!mounted || pasted == null || pasted.trim().isEmpty) return;
-
-    setState(() => _saving = true);
-    try {
-      final receipt = await widget.api.attachReceipt(
-        widget.transaction.id,
-        pasted,
-      );
-      if (!mounted) return;
-      setState(() => _receipt = receipt);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(receipt.merchant == null
-                ? 'Receipt attached.'
-                : 'Receipt attached — ${receipt.merchant}.')),
-      );
-    } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(friendlyErrorMessage(error))));
-      }
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
+    return text;
   }
 
   @override

@@ -102,9 +102,8 @@ ADR-0006 records the shape and what it costs.
 - [x] Conservative cash-flow forecasting (7/30/90 day; repeatable income and bills only)
 - [x] One-off purchase simulator against the conservative cash-flow forecast
 - [x] Financial calendar over forecast events and projected low-balance dates
-- [ ] Direct on-device receipt-image OCR (text parsing and an image-free receipt
-      attachment flow are implemented; image recognition still needs a native
-      device adapter)
+- [x] Direct on-device receipt-image OCR: bundled Android ML Kit plus Apple
+      Vision return text for user review; images are never uploaded
 - [ ] Fraud/anomaly detection
 
 **Exit:** categorization accuracy above 90% on held-out corrections, and the assistant

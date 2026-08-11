@@ -1,5 +1,6 @@
 import Flutter
 import UIKit
+import Vision
 
 #if canImport(workmanager_apple)
 import workmanager_apple
@@ -42,6 +43,13 @@ import LinkKit
     )
     channel.setMethodCallHandler { [weak self] call, result in
       self?.handlePlaidCall(call, result: result)
+    }
+    let receiptVisionChannel = FlutterMethodChannel(
+      name: "com.finverse.finance/receipt_vision",
+      binaryMessenger: engineBridge.applicationRegistrar.messenger()
+    )
+    receiptVisionChannel.setMethodCallHandler { [weak self] call, result in
+      self?.handleReceiptVisionCall(call, result: result)
     }
   }
 
@@ -141,6 +149,61 @@ import LinkKit
       callback(payload)
     } else {
       cachedPlaidResult = payload
+    }
+  }
+
+  /// Apple Vision performs text recognition locally. The file URL is used only
+  /// inside this process and only the transcript is returned to Flutter for
+  /// user review before the existing text-only receipt API is called.
+  private func handleReceiptVisionCall(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    guard call.method == "recognize" else {
+      result(FlutterMethodNotImplemented)
+      return
+    }
+    guard
+      let arguments = call.arguments as? [String: Any],
+      let path = arguments["path"] as? String,
+      !path.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+      FileManager.default.fileExists(atPath: path)
+    else {
+      result(FlutterError(code: "INVALID_IMAGE", message: "A receipt image is required.", details: nil))
+      return
+    }
+
+    let request = VNRecognizeTextRequest { request, error in
+      DispatchQueue.main.async {
+        guard error == nil else {
+          result(FlutterError(code: "OCR_FAILED", message: "Receipt text recognition failed.", details: nil))
+          return
+        }
+        let observations = request.results as? [VNRecognizedTextObservation] ?? []
+        let transcript = observations
+          .compactMap { $0.topCandidates(1).first?.string }
+          .joined(separator: "\n")
+          .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !transcript.isEmpty else {
+          result(FlutterError(code: "NO_TEXT", message: "No receipt text found.", details: nil))
+          return
+        }
+        guard transcript.count <= 8_000 else {
+          result(FlutterError(code: "TEXT_TOO_LONG", message: "Receipt text is too long.", details: nil))
+          return
+        }
+        result(transcript)
+      }
+    }
+    request.recognitionLevel = .accurate
+    request.usesLanguageCorrection = true
+    request.recognitionLanguages = ["en-US", "fr-CA"]
+    let imageURL = URL(fileURLWithPath: path)
+    DispatchQueue.global(qos: .userInitiated).async {
+      do {
+        try VNImageRequestHandler(url: imageURL, options: [:]).perform([request])
+      } catch {
+        DispatchQueue.main.async {
+          result(FlutterError(code: "OCR_FAILED", message: "Receipt text recognition failed.", details: nil))
+        }
+      }
     }
   }
 

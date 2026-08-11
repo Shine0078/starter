@@ -125,7 +125,7 @@ Target architecture (not an inventory of implemented adapters):
 |---|---|---|
 | Transaction descriptors, amounts, dates | **Yes** | Categorization, insights, and reports are the product. Encrypting these means shipping the ML to the device and abandoning cross-device reports. |
 | Aggregator tokens | No — encrypted, KMS-gated | Compromise here reaches the bank. Highest-value target. |
-| Receipt images | No — client-side encrypted | OCR runs on-device; only extracted fields are uploaded. |
+| Receipt images | No — selected and processed locally, never retained/uploaded by FINVERSE | Android ML Kit / Apple Vision run on-device; the user reviews the transcript before only text is uploaded. |
 | Notes, goal names, custom labels | No — client-side encrypted | Free text is where people write things they'd never want read. Zero product value in reading it. |
 
 So: **E2E for the things whose value is in secrecy, server-readable for the things

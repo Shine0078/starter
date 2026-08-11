@@ -1,6 +1,10 @@
 package com.finverse.finance
 
+import android.net.Uri
 import androidx.activity.result.ActivityResultLauncher
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import com.plaid.link.OpenPlaidLink
 import com.plaid.link.Plaid
 import com.plaid.link.PlaidSession
@@ -12,6 +16,7 @@ import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
+import java.io.File
 
 class MainActivity : FlutterFragmentActivity() {
     private var pendingCall: MethodChannel.Result? = null
@@ -24,8 +29,10 @@ class MainActivity : FlutterFragmentActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, PLAID_CHANNEL)
             .setMethodCallHandler(::handlePlaidCall)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, RECEIPT_VISION_CHANNEL)
+            .setMethodCallHandler(::handleReceiptVisionCall)
     }
 
     private fun handlePlaidCall(call: MethodCall, result: MethodChannel.Result) {
@@ -80,7 +87,52 @@ class MainActivity : FlutterFragmentActivity() {
         if (callback != null) callback.success(payload) else cachedResult = payload
     }
 
+    /**
+     * OCR runs in the Android ML Kit bundled model. Only the text result crosses
+     * into Flutter; no image, bitmap, or file path reaches the API layer.
+     */
+    private fun handleReceiptVisionCall(call: MethodCall, result: MethodChannel.Result) {
+        if (call.method != "recognize") {
+            result.notImplemented()
+            return
+        }
+        val path = call.argument<String>("path")
+        if (path.isNullOrBlank()) {
+            result.error("INVALID_IMAGE", "A receipt image is required.", null)
+            return
+        }
+        val file = File(path)
+        if (!file.isFile) {
+            result.error("INVALID_IMAGE", "The selected receipt image is unavailable.", null)
+            return
+        }
+
+        val image = try {
+            InputImage.fromFilePath(this, Uri.fromFile(file))
+        } catch (_: Exception) {
+            result.error("INVALID_IMAGE", "The selected receipt image could not be read.", null)
+            return
+        }
+        val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+        recognizer.process(image)
+            .addOnSuccessListener { recognized ->
+                recognizer.close()
+                val text = recognized.text.trim()
+                when {
+                    text.isEmpty() -> result.error("NO_TEXT", "No receipt text found.", null)
+                    text.length > MAX_RECEIPT_TEXT -> result.error("TEXT_TOO_LONG", "Receipt text is too long.", null)
+                    else -> result.success(text)
+                }
+            }
+            .addOnFailureListener {
+                recognizer.close()
+                result.error("OCR_FAILED", "Receipt text recognition failed.", null)
+            }
+    }
+
     companion object {
-        private const val CHANNEL = "com.finverse.finance/plaid_link"
+        private const val PLAID_CHANNEL = "com.finverse.finance/plaid_link"
+        private const val RECEIPT_VISION_CHANNEL = "com.finverse.finance/receipt_vision"
+        private const val MAX_RECEIPT_TEXT = 8000
     }
 }

@@ -2,6 +2,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Requested only after the person selects “Take a receipt photo”. Gallery
+         selection uses the system picker and needs no broad media permission. -->
+    <uses-permission android:name="android.permission.CAMERA" />
     <application
         android:allowBackup="false"
         android:label="FINVERSE"

@@ -28,7 +28,7 @@ data whose **value is in computation**. Then say so plainly to users.
 |---|---|---|
 | Amounts, dates, descriptors, categories | **Yes** | This *is* the product. Encrypting it means on-device-only ML and no cross-device reports. |
 | Aggregator link tokens | No — KMS envelope encryption | Compromise reaches the bank. Highest-value target in the system. |
-| Receipt images | No — client-encrypted | OCR runs on-device; only extracted fields are uploaded. |
+| Receipt images | No — selected and processed locally, never retained/uploaded by FINVERSE | OCR runs on-device; the user reviews the transcript before only text is uploaded. |
 | Notes, goal names, custom labels, attachments | No — client-encrypted | Free text is where people write things they'd never want read, and there is zero product value in reading it. |
 
 Additional constraints that follow:

@@ -86,7 +86,7 @@ tested; the platform ceremony wiring is the remaining owner/device step.
 
 ## Receipt text parsing and on-device OCR
 
-**Implemented: text parsing, not direct image recognition.** A provider-neutral port with a deterministic local parser
+**Implemented.** A provider-neutral port with a deterministic local parser
 (`apps/api/src/domain/receipts/parse.ts`) that extracts merchant, date, total,
 tax, currency, and line items from pasted text or an OCR transcript:
 
@@ -94,17 +94,22 @@ tax, currency, and line items from pasted text or an OCR transcript:
 - `PUT /api/receipts/:transactionId` — attach (one receipt per transaction).
 - `GET /api/receipts/:transactionId` — read back.
 - The Flutter transaction detail screen has an "Attach a receipt" action.
-- Images are never uploaded — only extracted fields and the text the user
-  explicitly pasted (MISSION1). A person can use their phone's on-device Live
-  Text/OCR and paste the result today.
+- Direct scanning is now native and private: Android includes the bundled Latin
+  ML Kit model and iOS uses Apple Vision. The app sends the selected local file
+  only to that device’s vision engine, opens the recognised transcript for the
+  person to review or edit, and calls the existing text-only receipt endpoint
+  only after they choose Attach. A photo never enters Flutter's API client or
+  the server.
+- iOS requests camera/photo-library permission only when the person initiates
+  scanning. Android requests camera permission only for the camera path; the
+  gallery uses the system picker without broad media access.
 
-**Remaining implementation work for direct in-app photo OCR.** It must run on
-the device, not in the API, so receipt images remain private. Add a native
-Android/iOS image-recognition adapter that returns text to the existing
-`attachReceipt()` flow, include the minimal camera/photo-library permission
-descriptions, and validate it on physical devices. The backend port and parser
-remain the tested image-free fallback; a cloud vision service would violate the
-current privacy promise unless the user explicitly approves a revised policy.
+**Remaining verification.** Android's compiled release-mode APK includes the ML Kit
+adapter (the local fallback uses debug signing, not a store key); a physical receipt
+scan still needs to be exercised. Apple Vision is
+source-complete but Windows cannot compile Xcode code, so a macOS/Xcode build
+and physical iPhone photo scan remain required before calling native iOS OCR
+verified.
 
 ## Everything here is gated off or fail-closed
 
