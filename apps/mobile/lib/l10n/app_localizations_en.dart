@@ -70,8 +70,10 @@ class AppLocalizationsEn extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count changes saved on this device and will sync automatically when you are online.',
-      one: '1 change saved on this device and will sync automatically when you are online.',
+      other:
+          '$count changes saved on this device and will sync automatically when you are online.',
+      one:
+          '1 change saved on this device and will sync automatically when you are online.',
     );
     return '$_temp0';
   }
@@ -130,7 +132,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileSettingsPrivacyTitle => 'Settings and privacy';
 
   @override
-  String get profileSettingsPrivacyDetail => 'Security, MFA, app lock, consent, export, and account controls';
+  String get profileSettingsPrivacyDetail =>
+      'Security, MFA, app lock, consent, export, and account controls';
 
   @override
   String get profilePlanningSection => 'Planning';
@@ -145,13 +148,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileCashFlowPlanningTitle => 'Cash-flow planning';
 
   @override
-  String get profileCashFlowPlanningDetail => 'Forecast balances and simulate purchases';
+  String get profileCashFlowPlanningDetail =>
+      'Forecast balances and simulate purchases';
 
   @override
   String get profileFinancialCalendarTitle => 'Financial calendar';
 
   @override
-  String get profileFinancialCalendarDetail => 'See bills, income, goal dates, and warnings';
+  String get profileFinancialCalendarDetail =>
+      'See bills, income, goal dates, and warnings';
 
   @override
   String get profileInsightsSection => 'Insights and alerts';
@@ -163,16 +168,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileSubscriptionsTitle => 'Subscriptions';
 
   @override
-  String get profileSubscriptionsDetail => 'Review recurring costs and price changes';
+  String get profileSubscriptionsDetail =>
+      'Review recurring costs and price changes';
 
   @override
-  String get profileNotificationsDetail => 'Review alerts and notification preferences';
+  String get profileNotificationsDetail =>
+      'Review alerts and notification preferences';
 
   @override
   String get profileCategorizationRulesTitle => 'Categorization rules';
 
   @override
-  String get profileCategorizationRulesDetail => 'Review or remove saved merchant rules';
+  String get profileCategorizationRulesDetail =>
+      'Review or remove saved merchant rules';
 
   @override
   String get commonDelete => 'Delete';
@@ -184,7 +192,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assistantHeading => 'A clear view of your money';
 
   @override
-  String get assistantDescription => 'Ask about spending, savings, merchants, or recurring charges. Answers use your selected-period aggregates and stay on FINVERSE.';
+  String get assistantDescription =>
+      'Ask about spending, savings, merchants, or recurring charges. Answers use your selected-period aggregates and stay on FINVERSE.';
 
   @override
   String get assistantQuestionLabel => 'Your question';
@@ -205,13 +214,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assistantPromptSavings => 'How much did I save?';
 
   @override
-  String get assistantPromptSubscriptions => 'Which subscriptions am I paying for?';
+  String get assistantPromptSubscriptions =>
+      'Which subscriptions am I paying for?';
 
   @override
-  String get assistantPromptHigherSpending => 'Is my spending higher than usual?';
+  String get assistantPromptHigherSpending =>
+      'Is my spending higher than usual?';
 
   @override
-  String get assistantQuestionRequired => 'Ask a question about your spending or savings.';
+  String get assistantQuestionRequired =>
+      'Ask a question about your spending or savings.';
 
   @override
   String get assistantCouldNotAnswer => 'Could not answer that yet';
@@ -229,7 +241,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationsEmptyTitle => 'You are all caught up';
 
   @override
-  String get notificationsEmptyDetail => 'Budget, bill, subscription, unusual spending, balance, credit, and security alerts will appear here.';
+  String get notificationsEmptyDetail =>
+      'Budget, bill, subscription, unusual spending, balance, credit, and security alerts will appear here.';
 
   @override
   String notificationsMarkedRead(num count) {
@@ -246,7 +259,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationPreferencesTitle => 'Alert preferences';
 
   @override
-  String get notificationPermissionDenied => 'Notifications are disabled. Enable them in your device settings.';
+  String get notificationPermissionDenied =>
+      'Notifications are disabled. Enable them in your device settings.';
 
   @override
   String get notificationBudgetProgress => 'Budget progress';
@@ -276,16 +290,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationDeviceUnavailable => 'Device alerts unavailable here';
 
   @override
-  String get notificationDeviceUnavailableDetail => 'Native alerts are available in the Android and iPhone apps.';
+  String get notificationDeviceUnavailableDetail =>
+      'Native alerts are available in the Android and iPhone apps.';
 
   @override
   String get notificationDeviceAlerts => 'Device alerts';
 
   @override
-  String get notificationDeviceAlertsEnabled => 'Unread FINVERSE alerts can appear in your notification tray.';
+  String get notificationDeviceAlertsEnabled =>
+      'Unread FINVERSE alerts can appear in your notification tray.';
 
   @override
-  String get notificationDeviceAlertsDisabled => 'Allow local alerts for unread budgets, bills, banks, and security events.';
+  String get notificationDeviceAlertsDisabled =>
+      'Allow local alerts for unread budgets, bills, banks, and security events.';
 
   @override
   String get notificationTurnOff => 'Turn off';
@@ -316,28 +333,215 @@ class AppLocalizationsEn extends AppLocalizations {
   String get categorizationRulesEmptyTitle => 'No saved rules yet';
 
   @override
-  String get categorizationRulesEmptyDetail => 'When you correct a transaction category, FINVERSE can remember that choice for matching merchants.';
+  String get categorizationRulesEmptyDetail =>
+      'When you correct a transaction category, FINVERSE can remember that choice for matching merchants.';
 
   @override
-  String get categorizationRulesIntro => 'These rules apply to your account on every device. Deleting a rule does not rewrite the original bank record or existing edits.';
+  String get categorizationRulesIntro =>
+      'These rules apply to your account on every device. Deleting a rule does not rewrite the original bank record or existing edits.';
 
   @override
   String get categorizationRulesDeleteTooltip => 'Delete rule';
 
   @override
-  String get errorConnection => 'Couldn\'t reach the server. Check your connection.';
+  String get subscriptionsRefreshTooltip => 'Refresh subscriptions';
 
   @override
-  String get errorServerUnavailable => 'The server is temporarily unavailable. Try again shortly.';
+  String get subscriptionsLoadError => 'Could not load subscriptions';
 
   @override
-  String get errorSessionInvalid => 'Your session is no longer valid. Sign in again.';
+  String subscriptionsRecurringCount(num count, String currency) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count recurring payments in $currency',
+      one: '1 recurring payment in $currency',
+    );
+    return '$_temp0';
+  }
 
   @override
-  String get errorServerSide => 'Something went wrong on our side. Try again shortly.';
+  String get subscriptionsEstimatedMonthly => 'Estimated monthly';
 
   @override
-  String get errorTimeout => 'The server did not respond. Check your connection and try again.';
+  String get subscriptionsEstimatedYearly => 'Estimated yearly';
+
+  @override
+  String get subscriptionsPriceChanges => 'PRICE CHANGES';
+
+  @override
+  String subscriptionsPriceIncrease(String merchant, num percent) {
+    return '$merchant increased $percent%';
+  }
+
+  @override
+  String subscriptionsAnnualImpact(String from, String to, String impact) {
+    return '$from to $to · $impact yearly impact';
+  }
+
+  @override
+  String get subscriptionsDetected => 'DETECTED';
+
+  @override
+  String get subscriptionsEmptyTitle => 'No recurring subscriptions detected.';
+
+  @override
+  String get subscriptionsEmptyDetail =>
+      'Connect and sync a bank with at least a few months of transactions.';
+
+  @override
+  String subscriptionsNextExpected(String date) {
+    return 'Next expected $date';
+  }
+
+  @override
+  String get subscriptionsPerYear => '/year';
+
+  @override
+  String get subscriptionsMayHaveEnded => 'MAY HAVE ENDED';
+
+  @override
+  String get subscriptionsDisclaimer =>
+      'Subscriptions are detected from transaction patterns. Confirm charges with the merchant before taking action.';
+
+  @override
+  String get subscriptionsCadenceWeekly => 'Weekly';
+
+  @override
+  String get subscriptionsCadenceBiweekly => 'Every two weeks';
+
+  @override
+  String get subscriptionsCadenceMonthly => 'Monthly';
+
+  @override
+  String get subscriptionsCadenceQuarterly => 'Quarterly';
+
+  @override
+  String get subscriptionsCadenceAnnual => 'Yearly';
+
+  @override
+  String get calendarRefreshTooltip => 'Refresh calendar';
+
+  @override
+  String get calendarDisclaimer =>
+      'This view uses repeatable income and recurring bills only. Actual balances can differ when everyday spending or a bank sync is missing.';
+
+  @override
+  String get calendarNextNinetyDays => 'Next 90 days';
+
+  @override
+  String calendarExpectedEventCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count expected events',
+      one: '1 expected event',
+      zero: 'No expected events',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String calendarLowBalanceDateCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count low-balance dates',
+      one: '1 low-balance date',
+      zero: 'no low-balance dates',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get calendarStartingBalance => 'Starting balance';
+
+  @override
+  String get calendarProjectedEnding => 'Projected ending';
+
+  @override
+  String get calendarPreviousMonth => 'Previous month';
+
+  @override
+  String get calendarNextMonth => 'Next month';
+
+  @override
+  String calendarOutsideForecast(String date) {
+    return '$date outside forecast';
+  }
+
+  @override
+  String calendarGoalTarget(String name) {
+    return 'Savings goal target, $name';
+  }
+
+  @override
+  String get calendarNoExpectedEvents => 'No expected events';
+
+  @override
+  String get calendarProjectedLowBalance => 'Projected low balance';
+
+  @override
+  String get calendarProjectedLowBalanceSemantics => 'projected low balance';
+
+  @override
+  String get calendarLowBalanceDetail =>
+      'Review bills or plan a buffer before this date.';
+
+  @override
+  String get calendarSelectDate => 'Select a forecast date';
+
+  @override
+  String get calendarSelectDateDetail =>
+      'Tap a highlighted day to see expected events.';
+
+  @override
+  String get calendarExpectedIncome => 'Expected income';
+
+  @override
+  String get calendarExpectedBill => 'Expected bill';
+
+  @override
+  String calendarPatternConfidence(num percent) {
+    return '$percent% pattern confidence';
+  }
+
+  @override
+  String calendarGoalProgress(String remaining) {
+    return 'Savings goal target · $remaining remaining';
+  }
+
+  @override
+  String calendarSuggestedMonthly(String amount) {
+    return '$amount suggested monthly';
+  }
+
+  @override
+  String get calendarUnavailable => 'Calendar is unavailable';
+
+  @override
+  String get calendarUnavailableDetail =>
+      'Check your connection and try again.';
+
+  @override
+  String get errorConnection =>
+      'Couldn\'t reach the server. Check your connection.';
+
+  @override
+  String get errorServerUnavailable =>
+      'The server is temporarily unavailable. Try again shortly.';
+
+  @override
+  String get errorSessionInvalid =>
+      'Your session is no longer valid. Sign in again.';
+
+  @override
+  String get errorServerSide =>
+      'Something went wrong on our side. Try again shortly.';
+
+  @override
+  String get errorTimeout =>
+      'The server did not respond. Check your connection and try again.';
 
   @override
   String categoryExplanationLearned(num percent) {
@@ -348,13 +552,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get receiptScanPhoto => 'Scan a receipt photo';
 
   @override
-  String get receiptScanPhotoDetail => 'Recognized on this phone — the image is never uploaded';
+  String get receiptScanPhotoDetail =>
+      'Recognized on this phone — the image is never uploaded';
 
   @override
   String get receiptPasteText => 'Paste receipt text';
 
   @override
-  String get receiptPasteTextDetail => 'Use text copied from a receipt or your phone’s OCR';
+  String get receiptPasteTextDetail =>
+      'Use text copied from a receipt or your phone’s OCR';
 
   @override
   String get receiptTakePhoto => 'Take a photo';
@@ -366,10 +572,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get receiptReviewScanned => 'Review scanned receipt text';
 
   @override
-  String get receiptPasteExplanation => 'Paste receipt text. FINVERSE extracts the merchant, date, total, and tax. Images are never uploaded.';
+  String get receiptPasteExplanation =>
+      'Paste receipt text. FINVERSE extracts the merchant, date, total, and tax. Images are never uploaded.';
 
   @override
-  String get receiptReviewExplanation => 'Check the recognized text before attaching it. Only this text is sent to FINVERSE — never the photo.';
+  String get receiptReviewExplanation =>
+      'Check the recognized text before attaching it. Only this text is sent to FINVERSE — never the photo.';
 
   @override
   String get receiptAttachAction => 'Attach';

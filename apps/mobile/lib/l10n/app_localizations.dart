@@ -62,7 +62,8 @@ import 'app_localizations_fr.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+  AppLocalizations(String locale)
+      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -70,7 +71,8 @@ abstract class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations)!;
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate =
+      _AppLocalizationsDelegate();
 
   /// A list of this localizations delegate along with the default localizations
   /// delegates.
@@ -82,7 +84,8 @@ abstract class AppLocalizations {
   /// Additional delegates can be added by appending to this list in
   /// MaterialApp. This list does not have to be used at all if a custom list
   /// of delegates is preferred or required.
-  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates = <LocalizationsDelegate<dynamic>>[
+  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
+      <LocalizationsDelegate<dynamic>>[
     delegate,
     GlobalMaterialLocalizations.delegate,
     GlobalCupertinoLocalizations.delegate,
@@ -683,6 +686,270 @@ abstract class AppLocalizations {
   /// **'Delete rule'**
   String get categorizationRulesDeleteTooltip;
 
+  /// No description provided for @subscriptionsRefreshTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh subscriptions'**
+  String get subscriptionsRefreshTooltip;
+
+  /// No description provided for @subscriptionsLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load subscriptions'**
+  String get subscriptionsLoadError;
+
+  /// No description provided for @subscriptionsRecurringCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 recurring payment in {currency}} other{{count} recurring payments in {currency}}}'**
+  String subscriptionsRecurringCount(num count, String currency);
+
+  /// No description provided for @subscriptionsEstimatedMonthly.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated monthly'**
+  String get subscriptionsEstimatedMonthly;
+
+  /// No description provided for @subscriptionsEstimatedYearly.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated yearly'**
+  String get subscriptionsEstimatedYearly;
+
+  /// No description provided for @subscriptionsPriceChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'PRICE CHANGES'**
+  String get subscriptionsPriceChanges;
+
+  /// No description provided for @subscriptionsPriceIncrease.
+  ///
+  /// In en, this message translates to:
+  /// **'{merchant} increased {percent}%'**
+  String subscriptionsPriceIncrease(String merchant, num percent);
+
+  /// No description provided for @subscriptionsAnnualImpact.
+  ///
+  /// In en, this message translates to:
+  /// **'{from} to {to} · {impact} yearly impact'**
+  String subscriptionsAnnualImpact(String from, String to, String impact);
+
+  /// No description provided for @subscriptionsDetected.
+  ///
+  /// In en, this message translates to:
+  /// **'DETECTED'**
+  String get subscriptionsDetected;
+
+  /// No description provided for @subscriptionsEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No recurring subscriptions detected.'**
+  String get subscriptionsEmptyTitle;
+
+  /// No description provided for @subscriptionsEmptyDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect and sync a bank with at least a few months of transactions.'**
+  String get subscriptionsEmptyDetail;
+
+  /// No description provided for @subscriptionsNextExpected.
+  ///
+  /// In en, this message translates to:
+  /// **'Next expected {date}'**
+  String subscriptionsNextExpected(String date);
+
+  /// No description provided for @subscriptionsPerYear.
+  ///
+  /// In en, this message translates to:
+  /// **'/year'**
+  String get subscriptionsPerYear;
+
+  /// No description provided for @subscriptionsMayHaveEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'MAY HAVE ENDED'**
+  String get subscriptionsMayHaveEnded;
+
+  /// No description provided for @subscriptionsDisclaimer.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscriptions are detected from transaction patterns. Confirm charges with the merchant before taking action.'**
+  String get subscriptionsDisclaimer;
+
+  /// No description provided for @subscriptionsCadenceWeekly.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly'**
+  String get subscriptionsCadenceWeekly;
+
+  /// No description provided for @subscriptionsCadenceBiweekly.
+  ///
+  /// In en, this message translates to:
+  /// **'Every two weeks'**
+  String get subscriptionsCadenceBiweekly;
+
+  /// No description provided for @subscriptionsCadenceMonthly.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly'**
+  String get subscriptionsCadenceMonthly;
+
+  /// No description provided for @subscriptionsCadenceQuarterly.
+  ///
+  /// In en, this message translates to:
+  /// **'Quarterly'**
+  String get subscriptionsCadenceQuarterly;
+
+  /// No description provided for @subscriptionsCadenceAnnual.
+  ///
+  /// In en, this message translates to:
+  /// **'Yearly'**
+  String get subscriptionsCadenceAnnual;
+
+  /// No description provided for @calendarRefreshTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh calendar'**
+  String get calendarRefreshTooltip;
+
+  /// No description provided for @calendarDisclaimer.
+  ///
+  /// In en, this message translates to:
+  /// **'This view uses repeatable income and recurring bills only. Actual balances can differ when everyday spending or a bank sync is missing.'**
+  String get calendarDisclaimer;
+
+  /// No description provided for @calendarNextNinetyDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Next 90 days'**
+  String get calendarNextNinetyDays;
+
+  /// No description provided for @calendarExpectedEventCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No expected events} =1{1 expected event} other{{count} expected events}}'**
+  String calendarExpectedEventCount(num count);
+
+  /// No description provided for @calendarLowBalanceDateCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{no low-balance dates} =1{1 low-balance date} other{{count} low-balance dates}}'**
+  String calendarLowBalanceDateCount(num count);
+
+  /// No description provided for @calendarStartingBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting balance'**
+  String get calendarStartingBalance;
+
+  /// No description provided for @calendarProjectedEnding.
+  ///
+  /// In en, this message translates to:
+  /// **'Projected ending'**
+  String get calendarProjectedEnding;
+
+  /// No description provided for @calendarPreviousMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous month'**
+  String get calendarPreviousMonth;
+
+  /// No description provided for @calendarNextMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Next month'**
+  String get calendarNextMonth;
+
+  /// No description provided for @calendarOutsideForecast.
+  ///
+  /// In en, this message translates to:
+  /// **'{date} outside forecast'**
+  String calendarOutsideForecast(String date);
+
+  /// No description provided for @calendarGoalTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Savings goal target, {name}'**
+  String calendarGoalTarget(String name);
+
+  /// No description provided for @calendarNoExpectedEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'No expected events'**
+  String get calendarNoExpectedEvents;
+
+  /// No description provided for @calendarProjectedLowBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Projected low balance'**
+  String get calendarProjectedLowBalance;
+
+  /// No description provided for @calendarProjectedLowBalanceSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'projected low balance'**
+  String get calendarProjectedLowBalanceSemantics;
+
+  /// No description provided for @calendarLowBalanceDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Review bills or plan a buffer before this date.'**
+  String get calendarLowBalanceDetail;
+
+  /// No description provided for @calendarSelectDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a forecast date'**
+  String get calendarSelectDate;
+
+  /// No description provided for @calendarSelectDateDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a highlighted day to see expected events.'**
+  String get calendarSelectDateDetail;
+
+  /// No description provided for @calendarExpectedIncome.
+  ///
+  /// In en, this message translates to:
+  /// **'Expected income'**
+  String get calendarExpectedIncome;
+
+  /// No description provided for @calendarExpectedBill.
+  ///
+  /// In en, this message translates to:
+  /// **'Expected bill'**
+  String get calendarExpectedBill;
+
+  /// No description provided for @calendarPatternConfidence.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}% pattern confidence'**
+  String calendarPatternConfidence(num percent);
+
+  /// No description provided for @calendarGoalProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Savings goal target · {remaining} remaining'**
+  String calendarGoalProgress(String remaining);
+
+  /// No description provided for @calendarSuggestedMonthly.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} suggested monthly'**
+  String calendarSuggestedMonthly(String amount);
+
+  /// No description provided for @calendarUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Calendar is unavailable'**
+  String get calendarUnavailable;
+
+  /// No description provided for @calendarUnavailableDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Check your connection and try again.'**
+  String get calendarUnavailableDetail;
+
   /// No description provided for @errorConnection.
   ///
   /// In en, this message translates to:
@@ -780,7 +1047,8 @@ abstract class AppLocalizations {
   String get receiptAttachAction;
 }
 
-class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate
+    extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -789,25 +1057,25 @@ class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> 
   }
 
   @override
-  bool isSupported(Locale locale) => <String>['en', 'fr'].contains(locale.languageCode);
+  bool isSupported(Locale locale) =>
+      <String>['en', 'fr'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
 }
 
 AppLocalizations lookupAppLocalizations(Locale locale) {
-
-
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
-    case 'en': return AppLocalizationsEn();
-    case 'fr': return AppLocalizationsFr();
+    case 'en':
+      return AppLocalizationsEn();
+    case 'fr':
+      return AppLocalizationsFr();
   }
 
   throw FlutterError(
-    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-    'an issue with the localizations generation tool. Please file an issue '
-    'on GitHub with a reproducible sample app and the gen-l10n configuration '
-    'that was used.'
-  );
+      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+      'an issue with the localizations generation tool. Please file an issue '
+      'on GitHub with a reproducible sample app and the gen-l10n configuration '
+      'that was used.');
 }

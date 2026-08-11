@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api/client.dart';
+import '../l10n/app_localizations.dart';
 import '../models/models.dart';
 
 class SubscriptionsScreen extends StatefulWidget {
@@ -55,21 +56,25 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(
-          title: const Text('Subscriptions'),
-          actions: [
-            IconButton(
-              tooltip: 'Refresh subscriptions',
-              onPressed: _loading ? null : _load,
-              icon: const Icon(Icons.refresh),
-            ),
-          ],
-        ),
-        body: _buildBody(),
-      );
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(l10n.profileSubscriptionsTitle),
+        actions: [
+          IconButton(
+            tooltip: l10n.subscriptionsRefreshTooltip,
+            onPressed: _loading ? null : _load,
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+      ),
+      body: _buildBody(),
+    );
+  }
 
   Widget _buildBody() {
+    final l10n = AppLocalizations.of(context);
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_error != null) {
       return Center(
@@ -80,11 +85,11 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
             children: [
               const Icon(Icons.cloud_off_outlined, size: 42),
               const SizedBox(height: 12),
-              const Text('Could not load subscriptions'),
+              Text(l10n.subscriptionsLoadError),
               const SizedBox(height: 6),
               Text(_error!, textAlign: TextAlign.center),
               const SizedBox(height: 16),
-              FilledButton(onPressed: _load, child: const Text('Try again')),
+              FilledButton(onPressed: _load, child: Text(l10n.commonRetry)),
             ],
           ),
         ),
@@ -104,47 +109,50 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${report.count} recurring payment${report.count == 1 ? '' : 's'} in ${report.currency}',
+                    l10n.subscriptionsRecurringCount(
+                        report.count, report.currency),
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 14),
-                  _totalRow('Estimated monthly', report.monthlyTotalFormatted),
-                  _totalRow('Estimated yearly', report.annualTotalFormatted),
+                  _totalRow(l10n.subscriptionsEstimatedMonthly,
+                      report.monthlyTotalFormatted),
+                  _totalRow(l10n.subscriptionsEstimatedYearly,
+                      report.annualTotalFormatted),
                 ],
               ),
             ),
           ),
           if (report.priceIncreases.isNotEmpty) ...[
             const SizedBox(height: 12),
-            Text('PRICE CHANGES',
+            Text(l10n.subscriptionsPriceChanges,
                 style: Theme.of(context).textTheme.labelSmall),
             ...report.priceIncreases.map(
               (change) => Card(
                 color: Theme.of(context).colorScheme.errorContainer,
                 child: ListTile(
                   leading: const Icon(Icons.trending_up),
-                  title:
-                      Text('${change.merchant} increased ${change.percent}%'),
-                  subtitle: Text(
-                    '${change.from} to ${change.to} • ${change.annualImpact} yearly impact',
-                  ),
+                  title: Text(l10n.subscriptionsPriceIncrease(
+                      change.merchant, change.percent)),
+                  subtitle: Text(l10n.subscriptionsAnnualImpact(
+                      change.from, change.to, change.annualImpact)),
                 ),
               ),
             ),
           ],
           const SizedBox(height: 16),
-          Text('DETECTED', style: Theme.of(context).textTheme.labelSmall),
+          Text(l10n.subscriptionsDetected,
+              style: Theme.of(context).textTheme.labelSmall),
           if (report.subscriptions.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 32),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32),
               child: Column(
                 children: [
-                  Icon(Icons.subscriptions_outlined, size: 42),
-                  SizedBox(height: 12),
-                  Text('No recurring subscriptions detected.'),
-                  SizedBox(height: 6),
+                  const Icon(Icons.subscriptions_outlined, size: 42),
+                  const SizedBox(height: 12),
+                  Text(l10n.subscriptionsEmptyTitle),
+                  const SizedBox(height: 6),
                   Text(
-                    'Connect and sync a bank with at least a few months of transactions.',
+                    l10n.subscriptionsEmptyDetail,
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -159,8 +167,8 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                   ),
                   title: Text(subscription.merchant),
                   subtitle: Text(
-                    '${subscription.typicalAmountFormatted} • ${_cadence(subscription.cadence)}\n'
-                    'Next expected ${subscription.nextExpected}',
+                    '${subscription.typicalAmountFormatted} · ${_cadence(subscription.cadence)}\n'
+                    '${l10n.subscriptionsNextExpected(subscription.nextExpected)}',
                   ),
                   isThreeLine: true,
                   trailing: Column(
@@ -168,7 +176,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(subscription.annualCostFormatted),
-                      const Text('/year'),
+                      Text(l10n.subscriptionsPerYear),
                       if (subscription.hasPriceIncrease)
                         const Icon(Icons.warning_amber, size: 18),
                     ],
@@ -178,7 +186,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
             ),
           if (report.possiblyCancelled.isNotEmpty) ...[
             const SizedBox(height: 16),
-            Text('MAY HAVE ENDED',
+            Text(l10n.subscriptionsMayHaveEnded,
                 style: Theme.of(context).textTheme.labelSmall),
             Card(
               child: Padding(
@@ -188,8 +196,8 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
             ),
           ],
           const SizedBox(height: 12),
-          const Text(
-            'Subscriptions are detected from transaction patterns. Confirm charges with the merchant before taking action.',
+          Text(
+            l10n.subscriptionsDisclaimer,
             textAlign: TextAlign.center,
           ),
         ],
@@ -205,12 +213,15 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
         ),
       );
 
-  String _cadence(String value) => switch (value) {
-        'weekly' => 'Weekly',
-        'biweekly' => 'Every two weeks',
-        'monthly' => 'Monthly',
-        'quarterly' => 'Quarterly',
-        'annual' => 'Yearly',
-        _ => value,
-      };
+  String _cadence(String value) {
+    final l10n = AppLocalizations.of(context);
+    return switch (value) {
+      'weekly' => l10n.subscriptionsCadenceWeekly,
+      'biweekly' => l10n.subscriptionsCadenceBiweekly,
+      'monthly' => l10n.subscriptionsCadenceMonthly,
+      'quarterly' => l10n.subscriptionsCadenceQuarterly,
+      'annual' => l10n.subscriptionsCadenceAnnual,
+      _ => value,
+    };
+  }
 }

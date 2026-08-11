@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../api/client.dart';
+import '../l10n/app_localizations.dart';
 import '../models/models.dart';
 
 /// A calendar view over the conservative cash-flow forecast.
@@ -118,6 +119,12 @@ class _FinancialCalendarScreenState extends State<FinancialCalendarScreen> {
     return DateTime(date.year, date.month);
   }
 
+  String get _locale => Localizations.localeOf(context).toLanguageTag();
+
+  String _monthLabel(DateTime date) => DateFormat.yMMMM(_locale).format(date);
+
+  String _dateLabel(DateTime date) => DateFormat.yMMMMd(_locale).format(date);
+
   void _moveMonth(int delta) {
     final current = _month ?? _firstMonth;
     final next = DateTime(current.year, current.month + delta);
@@ -142,21 +149,19 @@ class _FinancialCalendarScreenState extends State<FinancialCalendarScreen> {
     final day = _parseDate(date);
     final first = _parseDate(points.first.date);
     final last = _parseDate(points.last.date);
-    // The API normally returns one point per day, but the calendar uses the
-    // forecast's date range rather than requiring a point for every cell. That
-    // keeps a partially cached response from hiding a known recurring event.
     return !day.isBefore(first) && !day.isAfter(last);
   }
 
   @override
   Widget build(BuildContext context) {
     final month = _month ?? _firstMonth;
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Financial calendar'),
+        title: Text(l10n.profileFinancialCalendarTitle),
         actions: [
           IconButton(
-            tooltip: 'Refresh calendar',
+            tooltip: l10n.calendarRefreshTooltip,
             onPressed: _loading ? null : _load,
             icon: const Icon(Icons.refresh),
           ),
@@ -180,8 +185,7 @@ class _FinancialCalendarScreenState extends State<FinancialCalendarScreen> {
                       _selectedDay(context),
                       const SizedBox(height: 12),
                       Text(
-                        'This view uses repeatable income and recurring bills only. '
-                        'Actual balances can differ when everyday spending or a bank sync is missing.',
+                        l10n.calendarDisclaimer,
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],
@@ -192,19 +196,19 @@ class _FinancialCalendarScreenState extends State<FinancialCalendarScreen> {
 
   Widget _summary(BuildContext context) {
     final forecast = _forecast!;
-    final low = forecast.lowBalanceDates.length;
+    final l10n = AppLocalizations.of(context);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Next 90 days',
+            Text(l10n.calendarNextNinetyDays,
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 6),
             Text(
-              '${forecast.events.length} expected event${forecast.events.length == 1 ? '' : 's'} · '
-              '$low low-balance date${low == 1 ? '' : 's'}',
+              '${l10n.calendarExpectedEventCount(forecast.events.length)} · '
+              '${l10n.calendarLowBalanceDateCount(forecast.lowBalanceDates.length)}',
             ),
             const SizedBox(height: 12),
             Wrap(
@@ -212,10 +216,10 @@ class _FinancialCalendarScreenState extends State<FinancialCalendarScreen> {
               runSpacing: 8,
               children: [
                 _SummaryMetric(
-                    label: 'Starting balance',
+                    label: l10n.calendarStartingBalance,
                     value: forecast.startingBalanceFormatted),
                 _SummaryMetric(
-                    label: 'Projected ending',
+                    label: l10n.calendarProjectedEnding,
                     value: forecast.endingBalanceFormatted),
               ],
             ),
@@ -227,6 +231,7 @@ class _FinancialCalendarScreenState extends State<FinancialCalendarScreen> {
 
   Widget _controls(BuildContext context) {
     final month = _month ?? _firstMonth;
+    final l10n = AppLocalizations.of(context);
     final previousEnabled = month.isAfter(_firstMonth);
     final nextEnabled = month.isBefore(_lastMonth);
     return Row(
@@ -253,14 +258,14 @@ class _FinancialCalendarScreenState extends State<FinancialCalendarScreen> {
         ),
         const Spacer(),
         IconButton(
-          tooltip: 'Previous month',
+          tooltip: l10n.calendarPreviousMonth,
           onPressed: previousEnabled ? () => _moveMonth(-1) : null,
           icon: const Icon(Icons.chevron_left),
         ),
-        Text(DateFormat.yMMMM().format(month),
+        Text(_monthLabel(month),
             style: Theme.of(context).textTheme.titleMedium),
         IconButton(
-          tooltip: 'Next month',
+          tooltip: l10n.calendarNextMonth,
           onPressed: nextEnabled ? () => _moveMonth(1) : null,
           icon: const Icon(Icons.chevron_right),
         ),
@@ -274,17 +279,11 @@ class _FinancialCalendarScreenState extends State<FinancialCalendarScreen> {
     final leading = firstDay.weekday - 1;
     final days = DateTime(month.year, month.month + 1, 0).day;
     final children = <Widget>[];
-    for (final label in const [
-      'Mon',
-      'Tue',
-      'Wed',
-      'Thu',
-      'Fri',
-      'Sat',
-      'Sun'
-    ]) {
+    for (var day = 1; day <= 7; day += 1) {
+      final weekday = DateTime(2024, 1, day);
       children.add(Center(
-        child: Text(label, style: theme.textTheme.labelSmall),
+        child: Text(DateFormat.E(_locale).format(weekday),
+            style: theme.textTheme.labelSmall),
       ));
     }
     children.addAll(List<Widget>.filled(leading, const SizedBox.shrink()));
@@ -371,26 +370,26 @@ class _FinancialCalendarScreenState extends State<FinancialCalendarScreen> {
 
   String _dayLabel(DateTime date, List<ForecastEvent> events,
       List<GoalProgress> goals, bool low, bool inForecast) {
-    if (!inForecast) {
-      return '${DateFormat.yMMMMd().format(date)} outside forecast';
-    }
-    final details = <String>[];
-    details.addAll(events
-        .map((event) => '${event.merchant}, ${event.amountFormatted}')
-        .toList());
-    details.addAll(goals.map((goal) => 'goal target, ${goal.name}'));
-    if (details.isEmpty) details.add('no expected events');
-    return '${DateFormat.yMMMMd().format(date)}: ${details.join('; ')}${low ? '; projected low balance' : ''}';
+    final l10n = AppLocalizations.of(context);
+    if (!inForecast) return l10n.calendarOutsideForecast(_dateLabel(date));
+    final details = <String>[
+      ...events.map((event) => '${event.merchant}, ${event.amountFormatted}'),
+      ...goals.map((goal) => l10n.calendarGoalTarget(goal.name)),
+    ];
+    if (details.isEmpty) details.add(l10n.calendarNoExpectedEvents);
+    if (low) details.add(l10n.calendarProjectedLowBalanceSemantics);
+    return '${_dateLabel(date)}: ${details.join('; ')}';
   }
 
   Widget _selectedDay(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final date = _selectedDate;
     if (date == null) {
-      return const Card(
+      return Card(
         child: ListTile(
-          leading: Icon(Icons.touch_app_outlined),
-          title: Text('Select a forecast date'),
-          subtitle: Text('Tap a highlighted day to see expected events.'),
+          leading: const Icon(Icons.touch_app_outlined),
+          title: Text(l10n.calendarSelectDate),
+          subtitle: Text(l10n.calendarSelectDateDetail),
         ),
       );
     }
@@ -405,7 +404,7 @@ class _FinancialCalendarScreenState extends State<FinancialCalendarScreen> {
           children: [
             Padding(
               padding: const EdgeInsets.all(8),
-              child: Text(DateFormat.yMMMMd().format(_parseDate(date)),
+              child: Text(_dateLabel(_parseDate(date)),
                   style: Theme.of(context).textTheme.titleMedium),
             ),
             if (low)
@@ -413,15 +412,14 @@ class _FinancialCalendarScreenState extends State<FinancialCalendarScreen> {
                 dense: true,
                 leading: Icon(Icons.warning_amber_rounded,
                     color: Theme.of(context).colorScheme.error),
-                title: const Text('Projected low balance'),
-                subtitle: const Text(
-                    'Review bills or plan a buffer before this date.'),
+                title: Text(l10n.calendarProjectedLowBalance),
+                subtitle: Text(l10n.calendarLowBalanceDetail),
               ),
             if (events.isEmpty && !low)
-              const ListTile(
+              ListTile(
                 dense: true,
-                leading: Icon(Icons.event_available_outlined),
-                title: Text('No expected recurring events'),
+                leading: const Icon(Icons.event_available_outlined),
+                title: Text(l10n.calendarNoExpectedEvents),
               ),
             for (final event in events)
               ListTile(
@@ -431,7 +429,7 @@ class _FinancialCalendarScreenState extends State<FinancialCalendarScreen> {
                     : Icons.north_east),
                 title: Text(event.merchant),
                 subtitle: Text(
-                    '${event.kind == 'income' ? 'Expected income' : 'Expected bill'} · ${(event.confidence * 100).round()}% pattern confidence'),
+                    '${event.kind == 'income' ? l10n.calendarExpectedIncome : l10n.calendarExpectedBill} · ${l10n.calendarPatternConfidence((event.confidence * 100).round())}'),
                 trailing: Text(event.amountFormatted),
               ),
             for (final goal in goals)
@@ -439,14 +437,21 @@ class _FinancialCalendarScreenState extends State<FinancialCalendarScreen> {
                 dense: true,
                 leading: const Icon(Icons.flag_outlined),
                 title: Text(goal.name),
-                subtitle: Text(
-                    'Savings goal target · ${goal.remainingFormatted} remaining${goal.suggestedMonthlyFormatted == null ? '' : ' · ${goal.suggestedMonthlyFormatted} suggested monthly'}'),
+                subtitle: Text(_goalDetail(goal, l10n)),
                 trailing: Text(goal.targetFormatted),
               ),
           ],
         ),
       ),
     );
+  }
+
+  String _goalDetail(GoalProgress goal, AppLocalizations l10n) {
+    final detail = l10n.calendarGoalProgress(goal.remainingFormatted);
+    final suggested = goal.suggestedMonthlyFormatted;
+    return suggested == null
+        ? detail
+        : '$detail · ${l10n.calendarSuggestedMonthly(suggested)}';
   }
 }
 
@@ -473,31 +478,34 @@ class _ErrorState extends StatelessWidget {
   final VoidCallback onRetry;
 
   @override
-  Widget build(BuildContext context) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.cloud_off_outlined, size: 48),
-              const SizedBox(height: 12),
-              const Text('Calendar is unavailable',
-                  style: TextStyle(fontSize: 18)),
-              const SizedBox(height: 6),
-              const Text('Check your connection and try again.'),
-              const SizedBox(height: 12),
-              FilledButton.icon(
-                onPressed: onRetry,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Try again'),
-              ),
-              const SizedBox(height: 8),
-              Text(message,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall),
-            ],
-          ),
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.cloud_off_outlined, size: 48),
+            const SizedBox(height: 12),
+            Text(l10n.calendarUnavailable,
+                style: const TextStyle(fontSize: 18)),
+            const SizedBox(height: 6),
+            Text(l10n.calendarUnavailableDetail),
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: Text(l10n.commonRetry),
+            ),
+            const SizedBox(height: 8),
+            Text(message,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall),
+          ],
         ),
-      );
+      ),
+    );
+  }
 }

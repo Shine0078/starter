@@ -5,6 +5,7 @@ import 'package:http/testing.dart';
 
 import 'package:finverse/api/client.dart';
 import 'package:finverse/api/session_store.dart';
+import 'package:finverse/l10n/app_localizations.dart';
 import 'package:finverse/screens/financial_calendar_screen.dart';
 
 void main() {
@@ -57,6 +58,8 @@ void main() {
     );
 
     await tester.pumpWidget(MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: FinancialCalendarScreen(api: api),
     ));
     await tester.pumpAndSettle();

@@ -114,6 +114,109 @@
   "categorizationRulesEmptyDetail": "When you correct a transaction category, FINVERSE can remember that choice for matching merchants.",
   "categorizationRulesIntro": "These rules apply to your account on every device. Deleting a rule does not rewrite the original bank record or existing edits.",
   "categorizationRulesDeleteTooltip": "Delete rule",
+  "subscriptionsRefreshTooltip": "Refresh subscriptions",
+  "subscriptionsLoadError": "Could not load subscriptions",
+  "subscriptionsRecurringCount": "{count, plural, =1{1 recurring payment in {currency}} other{{count} recurring payments in {currency}}}",
+  "@subscriptionsRecurringCount": {
+    "placeholders": {
+      "count": {"type": "num"},
+      "currency": {"type": "String"}
+    }
+  },
+  "subscriptionsEstimatedMonthly": "Estimated monthly",
+  "subscriptionsEstimatedYearly": "Estimated yearly",
+  "subscriptionsPriceChanges": "PRICE CHANGES",
+  "subscriptionsPriceIncrease": "{merchant} increased {percent}%",
+  "@subscriptionsPriceIncrease": {
+    "placeholders": {
+      "merchant": {"type": "String"},
+      "percent": {"type": "num"}
+    }
+  },
+  "subscriptionsAnnualImpact": "{from} to {to} · {impact} yearly impact",
+  "@subscriptionsAnnualImpact": {
+    "placeholders": {
+      "from": {"type": "String"},
+      "to": {"type": "String"},
+      "impact": {"type": "String"}
+    }
+  },
+  "subscriptionsDetected": "DETECTED",
+  "subscriptionsEmptyTitle": "No recurring subscriptions detected.",
+  "subscriptionsEmptyDetail": "Connect and sync a bank with at least a few months of transactions.",
+  "subscriptionsNextExpected": "Next expected {date}",
+  "@subscriptionsNextExpected": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "subscriptionsPerYear": "/year",
+  "subscriptionsMayHaveEnded": "MAY HAVE ENDED",
+  "subscriptionsDisclaimer": "Subscriptions are detected from transaction patterns. Confirm charges with the merchant before taking action.",
+  "subscriptionsCadenceWeekly": "Weekly",
+  "subscriptionsCadenceBiweekly": "Every two weeks",
+  "subscriptionsCadenceMonthly": "Monthly",
+  "subscriptionsCadenceQuarterly": "Quarterly",
+  "subscriptionsCadenceAnnual": "Yearly",
+  "calendarRefreshTooltip": "Refresh calendar",
+  "calendarDisclaimer": "This view uses repeatable income and recurring bills only. Actual balances can differ when everyday spending or a bank sync is missing.",
+  "calendarNextNinetyDays": "Next 90 days",
+  "calendarExpectedEventCount": "{count, plural, =0{No expected events} =1{1 expected event} other{{count} expected events}}",
+  "@calendarExpectedEventCount": {
+    "placeholders": {
+      "count": {"type": "num"}
+    }
+  },
+  "calendarLowBalanceDateCount": "{count, plural, =0{no low-balance dates} =1{1 low-balance date} other{{count} low-balance dates}}",
+  "@calendarLowBalanceDateCount": {
+    "placeholders": {
+      "count": {"type": "num"}
+    }
+  },
+  "calendarStartingBalance": "Starting balance",
+  "calendarProjectedEnding": "Projected ending",
+  "calendarPreviousMonth": "Previous month",
+  "calendarNextMonth": "Next month",
+  "calendarOutsideForecast": "{date} outside forecast",
+  "@calendarOutsideForecast": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "calendarGoalTarget": "Savings goal target, {name}",
+  "@calendarGoalTarget": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "calendarNoExpectedEvents": "No expected events",
+  "calendarProjectedLowBalance": "Projected low balance",
+  "calendarProjectedLowBalanceSemantics": "projected low balance",
+  "calendarLowBalanceDetail": "Review bills or plan a buffer before this date.",
+  "calendarSelectDate": "Select a forecast date",
+  "calendarSelectDateDetail": "Tap a highlighted day to see expected events.",
+  "calendarExpectedIncome": "Expected income",
+  "calendarExpectedBill": "Expected bill",
+  "calendarPatternConfidence": "{percent}% pattern confidence",
+  "@calendarPatternConfidence": {
+    "placeholders": {
+      "percent": {"type": "num"}
+    }
+  },
+  "calendarGoalProgress": "Savings goal target · {remaining} remaining",
+  "@calendarGoalProgress": {
+    "placeholders": {
+      "remaining": {"type": "String"}
+    }
+  },
+  "calendarSuggestedMonthly": "{amount} suggested monthly",
+  "@calendarSuggestedMonthly": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "calendarUnavailable": "Calendar is unavailable",
+  "calendarUnavailableDetail": "Check your connection and try again.",
   "errorConnection": "Couldn't reach the server. Check your connection.",
   "errorServerUnavailable": "The server is temporarily unavailable. Try again shortly.",
   "errorSessionInvalid": "Your session is no longer valid. Sign in again.",

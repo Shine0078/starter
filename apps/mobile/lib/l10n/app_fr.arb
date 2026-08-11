@@ -114,6 +114,109 @@
   "categorizationRulesEmptyDetail": "Lorsque vous corrigez la catégorie d’une transaction, FINVERSE peut mémoriser ce choix pour les commerçants correspondants.",
   "categorizationRulesIntro": "Ces règles s’appliquent à votre compte sur tous vos appareils. Les supprimer ne modifie pas le relevé bancaire original ni les modifications existantes.",
   "categorizationRulesDeleteTooltip": "Supprimer la règle",
+  "subscriptionsRefreshTooltip": "Actualiser les abonnements",
+  "subscriptionsLoadError": "Impossible de charger les abonnements",
+  "subscriptionsRecurringCount": "{count, plural, =1{1 paiement récurrent en {currency}} other{{count} paiements récurrents en {currency}}}",
+  "@subscriptionsRecurringCount": {
+    "placeholders": {
+      "count": {"type": "num"},
+      "currency": {"type": "String"}
+    }
+  },
+  "subscriptionsEstimatedMonthly": "Estimation mensuelle",
+  "subscriptionsEstimatedYearly": "Estimation annuelle",
+  "subscriptionsPriceChanges": "CHANGEMENTS DE PRIX",
+  "subscriptionsPriceIncrease": "{merchant} a augmenté de {percent}%",
+  "@subscriptionsPriceIncrease": {
+    "placeholders": {
+      "merchant": {"type": "String"},
+      "percent": {"type": "num"}
+    }
+  },
+  "subscriptionsAnnualImpact": "de {from} à {to} · incidence annuelle de {impact}",
+  "@subscriptionsAnnualImpact": {
+    "placeholders": {
+      "from": {"type": "String"},
+      "to": {"type": "String"},
+      "impact": {"type": "String"}
+    }
+  },
+  "subscriptionsDetected": "DÉTECTÉS",
+  "subscriptionsEmptyTitle": "Aucun abonnement récurrent détecté.",
+  "subscriptionsEmptyDetail": "Connectez et synchronisez une banque ayant au moins quelques mois de transactions.",
+  "subscriptionsNextExpected": "Prochain prélèvement prévu le {date}",
+  "@subscriptionsNextExpected": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "subscriptionsPerYear": "/an",
+  "subscriptionsMayHaveEnded": "PEUT ÊTRE TERMINÉ",
+  "subscriptionsDisclaimer": "Les abonnements sont détectés à partir des habitudes de transaction. Confirmez les frais auprès du commerçant avant d’agir.",
+  "subscriptionsCadenceWeekly": "Chaque semaine",
+  "subscriptionsCadenceBiweekly": "Toutes les deux semaines",
+  "subscriptionsCadenceMonthly": "Chaque mois",
+  "subscriptionsCadenceQuarterly": "Chaque trimestre",
+  "subscriptionsCadenceAnnual": "Chaque année",
+  "calendarRefreshTooltip": "Actualiser le calendrier",
+  "calendarDisclaimer": "Cette vue utilise uniquement les revenus répétitifs et les factures récurrentes. Les soldes réels peuvent différer si des dépenses quotidiennes ou une synchronisation bancaire manquent.",
+  "calendarNextNinetyDays": "Les 90 prochains jours",
+  "calendarExpectedEventCount": "{count, plural, =0{Aucun événement prévu} =1{1 événement prévu} other{{count} événements prévus}}",
+  "@calendarExpectedEventCount": {
+    "placeholders": {
+      "count": {"type": "num"}
+    }
+  },
+  "calendarLowBalanceDateCount": "{count, plural, =0{aucune date de solde faible} =1{1 date de solde faible} other{{count} dates de solde faible}}",
+  "@calendarLowBalanceDateCount": {
+    "placeholders": {
+      "count": {"type": "num"}
+    }
+  },
+  "calendarStartingBalance": "Solde de départ",
+  "calendarProjectedEnding": "Solde prévu à la fin",
+  "calendarPreviousMonth": "Mois précédent",
+  "calendarNextMonth": "Mois suivant",
+  "calendarOutsideForecast": "{date} hors de la prévision",
+  "@calendarOutsideForecast": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "calendarGoalTarget": "Objectif d’épargne, {name}",
+  "@calendarGoalTarget": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "calendarNoExpectedEvents": "Aucun événement prévu",
+  "calendarProjectedLowBalance": "Solde faible prévu",
+  "calendarProjectedLowBalanceSemantics": "solde faible prévu",
+  "calendarLowBalanceDetail": "Examinez les factures ou prévoyez une marge avant cette date.",
+  "calendarSelectDate": "Sélectionnez une date de prévision",
+  "calendarSelectDateDetail": "Touchez une journée en surbrillance pour voir les événements prévus.",
+  "calendarExpectedIncome": "Revenu prévu",
+  "calendarExpectedBill": "Facture prévue",
+  "calendarPatternConfidence": "confiance de {percent}% dans le modèle",
+  "@calendarPatternConfidence": {
+    "placeholders": {
+      "percent": {"type": "num"}
+    }
+  },
+  "calendarGoalProgress": "Objectif d’épargne · {remaining} restant",
+  "@calendarGoalProgress": {
+    "placeholders": {
+      "remaining": {"type": "String"}
+    }
+  },
+  "calendarSuggestedMonthly": "{amount} suggéré par mois",
+  "@calendarSuggestedMonthly": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "calendarUnavailable": "Calendrier indisponible",
+  "calendarUnavailableDetail": "Vérifiez votre connexion et réessayez.",
   "errorConnection": "Impossible de joindre le serveur. Vérifiez votre connexion.",
   "errorServerUnavailable": "Le serveur est temporairement indisponible. Réessayez bientôt.",
   "errorSessionInvalid": "Votre session n'est plus valide. Connectez-vous à nouveau.",
