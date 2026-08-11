@@ -1760,6 +1760,8 @@ void main() {
     });
 
     await tester.pumpWidget(MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: TransactionDetailScreen(api: api, transaction: transaction),
     ));
     await tester.pumpAndSettle();
@@ -1784,6 +1786,16 @@ void main() {
     await tester.pumpAndSettle();
     expect(preferenceRequests.last.body, contains('"duplicateReported":true'));
     expect(find.textContaining('Kept as a review marker'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('Attach a receipt'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Attach a receipt'));
+    await tester.pumpAndSettle();
+    expect(find.bySemanticsLabel(RegExp('Scan a receipt photo')), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('Paste receipt text')), findsOneWidget);
   });
 
   testWidgets('keeps primary navigation simple and exposes secondary tools',
