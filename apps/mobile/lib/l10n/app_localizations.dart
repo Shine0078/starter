@@ -307,6 +307,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The server did not respond. Check your connection and try again.'**
   String get errorTimeout;
+
+  /// No description provided for @categoryExplanationLearned.
+  ///
+  /// In en, this message translates to:
+  /// **'Learned from a similar merchant you categorized before • {percent}% confidence.'**
+  String categoryExplanationLearned(num percent);
 }
 
 class _AppLocalizationsDelegate

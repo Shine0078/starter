@@ -129,4 +129,9 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get errorTimeout =>
       'Le serveur n\'a pas répondu. Vérifiez votre connexion et réessayez.';
+
+  @override
+  String categoryExplanationLearned(num percent) {
+    return 'Appris d’un marchand similaire que vous avez déjà catégorisé • confiance de $percent%.';
+  }
 }

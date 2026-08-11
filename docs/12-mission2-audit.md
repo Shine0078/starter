@@ -37,7 +37,12 @@ file would be required to verify any requirements unique to that document.
   multiple-institution support.
 - Internal-transfer detection prevents movements between a user's own accounts
   from inflating income or spending. Categorisation is deterministic and
-  explainable; user corrections create reusable rules.
+  explainable; user corrections can create reusable rules. For a one-off
+  correction, a bounded per-user nearest-neighbour learner now uses only that
+  user's durable `user_manual` labels to recognise an exact or exceptionally
+  similar later merchant. It never sends descriptors to a third party, ignores
+  conflicting labels, yields to rules and the curated lexicon, and declines
+  vague matches rather than guessing.
 - A Profile categorization-rules screen and authenticated API endpoints now let
   users inspect and delete those durable merchant rules. Deleting a rule is
   explicit and leaves the original bank evidence and existing transaction edits
@@ -131,11 +136,12 @@ file would be required to verify any requirements unique to that document.
   merchant, savings, subscription, and spending-change questions from the same
   aggregate analytics used by the dashboard. It returns evidence and caveats,
   never raw transactions, and does not require an external AI provider.
-- Receipt OCR is implemented behind a provider-neutral port with a deterministic
-  local parser (merchant, date, total, tax, currency, items), an authenticated
-  scan/attach/read API, one-receipt-per-transaction storage with RLS, and a
-  mobile "Attach a receipt" flow. Images are never uploaded — only extracted
-  fields and pasted text.
+- Receipt parsing is implemented behind a provider-neutral port with a
+  deterministic local parser (merchant, date, total, tax, currency, items), an
+  authenticated scan/attach/read API, one-receipt-per-transaction storage with
+  RLS, and a mobile "Attach a receipt" flow. Images are never uploaded; the
+  user supplies pasted on-device OCR text. Direct photo-to-text recognition
+  inside FINVERSE is not yet implemented and is tracked as remaining work.
 - Passkeys (WebAuthn) are implemented server-side with a pure-Node FIDO2
   verifier: challenge issuance, registration and login verification against a
   stored ES256 public key, sign-counter regression rejection, credential
@@ -181,10 +187,10 @@ file would be required to verify any requirements unique to that document.
 
 ## Evidence
 
-- API in-memory suite: 455 passing, 5 database-only skips.
+- API in-memory suite: 475 passing, 5 database-only skips.
 - PostgreSQL contract/RLS suite: 564 passing in embedded PostgreSQL.
-- Flutter: 79 widget/design tests passing, `flutter analyze` clean.
-- Android release APK and web release build both compile. The Android emulator
+- Flutter: 82 tests passing, `flutter analyze` clean.
+- Android debug APK and web release build both compile. The Android emulator
   booted but its package/activity services were unavailable during an install
   attempt; that is an emulator image issue, not a compile failure.
 - Windows Flutter cannot compile iOS; Xcode/macOS remains required for the
@@ -238,6 +244,10 @@ file would be required to verify any requirements unique to that document.
   verifier and client protocol methods are implemented and tested.
 - Remaining screens still have inline styling and `setState`; the design system
   foundation is complete but adoption is partial.
+- Direct on-device photo-to-text receipt OCR is still absent. The app preserves
+  receipt-image privacy by accepting only pasted on-device OCR text today; a
+  native image-recognition adapter needs implementation and physical Android/
+  iPhone validation before this row can be considered complete.
 
 ## External launch gates
 

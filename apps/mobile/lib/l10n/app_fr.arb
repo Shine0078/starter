@@ -34,5 +34,13 @@
   "errorServerUnavailable": "Le serveur est temporairement indisponible. Réessayez bientôt.",
   "errorSessionInvalid": "Votre session n'est plus valide. Connectez-vous à nouveau.",
   "errorServerSide": "Une erreur est survenue de notre côté. Réessayez bientôt.",
-  "errorTimeout": "Le serveur n'a pas répondu. Vérifiez votre connexion et réessayez."
+  "errorTimeout": "Le serveur n'a pas répondu. Vérifiez votre connexion et réessayez.",
+  "categoryExplanationLearned": "Appris d’un marchand similaire que vous avez déjà catégorisé • confiance de {percent}%.",
+  "@categoryExplanationLearned": {
+    "placeholders": {
+      "percent": {
+        "type": "num"
+      }
+    }
+  }
 }

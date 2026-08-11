@@ -3,7 +3,7 @@
  *
  *   1. user rules     deterministic, confidence 1.0, always wins
  *   2. merchant lexicon
- *   3. ML classifier  (Phase 2, not built)
+ *   3. local learner  (explicit user corrections only)
  *   -> fallback       unknown, confidence 0
  *
  * Never guesses. A category we cannot justify is worse than no category,
@@ -29,8 +29,15 @@ export interface CategorizationResult {
 /** Below this, a model result is discarded in favour of `unknown`. */
 export const MODEL_CONFIDENCE_FLOOR = 0.6;
 
+export interface ModelPrediction {
+  categorySlug: string;
+  confidence: number;
+  /** The learner's evidence, shown as part of the "why?" explanation. */
+  reason?: string;
+}
+
 export interface ModelClassifier {
-  classify(normalizedDescriptor: string): { categorySlug: string; confidence: number } | null;
+  classify(normalizedDescriptor: string): ModelPrediction | null;
 }
 
 export interface CategorizeOptions {
@@ -99,9 +106,9 @@ export function categorizeDescriptor(
         categorySlug: prediction.categorySlug,
         source: 'model',
         confidence: prediction.confidence,
-        reason: `Predicted from similar transactions (${Math.round(
-          prediction.confidence * 100,
-        )}% confident).`,
+        reason:
+          prediction.reason ??
+          `Predicted from similar transactions (${Math.round(prediction.confidence * 100)}% confident).`,
       };
     }
   }

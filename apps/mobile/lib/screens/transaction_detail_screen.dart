@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api/client.dart';
+import '../l10n/app_localizations.dart';
 import '../models/models.dart';
 
 class TransactionDetailScreen extends StatefulWidget {
@@ -588,6 +589,9 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
     final percent = (transaction.categoryConfidence * 100).round();
     if (transaction.categorySource == 'lexicon') {
       return 'Recognised from the merchant name • $percent% confidence.';
+    }
+    if (transaction.categorySource == 'model') {
+      return AppLocalizations.of(context).categoryExplanationLearned(percent);
     }
     return 'Suggested by ${transaction.categorySource.replaceAll('_', ' ')} • $percent% confidence.';
   }

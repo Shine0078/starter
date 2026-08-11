@@ -324,6 +324,63 @@ describe('banking integration', () => {
     expect(await transactions.list('user-1', { recurring: true })).toHaveLength(3);
   });
 
+  it('uses that user’s manual correction as a conservative local learning signal on a later sync', async () => {
+    const provider = new FakeProvider();
+    provider.pages.push({
+      accounts: [account],
+      added: [
+        {
+          ...transaction,
+          providerTxnId: 'orchard-market-new',
+          descriptor: 'ORCHARD TABLE MARKET 99',
+          pending: false,
+        },
+      ],
+      modified: [],
+      removedProviderTxnIds: [],
+      nextCursor: 'learning-cursor',
+      hasMore: false,
+    });
+    const transactions = new InMemoryTransactionStore();
+    await transactions.upsertMany('user-learning', [
+      {
+        id: 'txn_orchard-correction',
+        accountId: account.id,
+        providerTxnId: 'orchard-market-old',
+        postedAt: '2026-08-01',
+        amount: -2_500,
+        currency: 'USD',
+        rawDescriptor: 'ORCHARD TABLE MARKET 12',
+        normalizedDescriptor: 'orchard table market',
+        categorySlug: 'groceries',
+        categorySource: 'user_manual',
+        categoryConfidence: 1,
+        isRecurring: false,
+        pending: false,
+      },
+    ]);
+    const service = new BankingService(
+      new InMemoryBankLinkStore(),
+      provider,
+      new AesGcmBankTokenCipher(randomBytes(32)),
+      new InMemoryBankWebhookStore(),
+      new InMemoryAccountStore(),
+      transactions,
+      new InMemoryRuleStore(),
+      new InMemoryNotificationStore(),
+      new FixedClock('2026-08-08'),
+      billingHarness().billing,
+    );
+
+    await service.exchange('user-learning', 'public-sandbox', 'First Platypus Bank', null);
+
+    await expect(transactions.get('user-learning', `txn_${account.id}_orchard-market-new`)).resolves.toMatchObject({
+      categorySlug: 'groceries',
+      categorySource: 'model',
+      categoryConfidence: 0.98,
+    });
+  });
+
   it('detects ciphertext tampering', () => {
     const cipher = new AesGcmBankTokenCipher(randomBytes(32));
     const encrypted = cipher.encrypt('access-token');

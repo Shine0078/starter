@@ -11,6 +11,10 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
+  # Flutter Web validates the Cupertino icon font whenever the app includes
+  # the Cupertino localization delegate. Declaring it explicitly prevents a
+  # missing-font warning (and a blank icon if a Cupertino control is added).
+  cupertino_icons: ^1.0.8
   http: ^1.2.2
   intl: ^0.20.2
   # Browser bindings for the web build's Plaid Link implementation.

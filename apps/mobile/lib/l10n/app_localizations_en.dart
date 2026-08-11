@@ -129,4 +129,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errorTimeout =>
       'The server did not respond. Check your connection and try again.';
+
+  @override
+  String categoryExplanationLearned(num percent) {
+    return 'Learned from a similar merchant you categorized before • $percent% confidence.';
+  }
 }

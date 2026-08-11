@@ -5,8 +5,32 @@ import {
   coverageRate,
   ruleFromCorrection,
 } from '../src/domain/categorization/categorize';
+import { UserCorrectionClassifier } from '../src/domain/categorization/user-correction-classifier';
 import { normalizeDescriptor } from '../src/domain/categorization/normalize';
-import type { CategorizationRule } from '../src/domain/types';
+import type { CategorizationRule, Transaction } from '../src/domain/types';
+
+function manualCorrection(
+  rawDescriptor: string,
+  categorySlug: string,
+  overrides: Partial<Transaction> = {},
+): Transaction {
+  return {
+    id: `txn_${rawDescriptor}`,
+    accountId: 'account-1',
+    providerTxnId: rawDescriptor,
+    postedAt: '2026-08-01',
+    amount: -1_000,
+    currency: 'CAD',
+    rawDescriptor,
+    normalizedDescriptor: normalizeDescriptor(rawDescriptor),
+    categorySlug,
+    categorySource: 'user_manual',
+    categoryConfidence: 1,
+    isRecurring: false,
+    pending: false,
+    ...overrides,
+  };
+}
 
 describe('normalizeDescriptor', () => {
   it.each([
@@ -118,6 +142,63 @@ describe('categorizeDescriptor', () => {
     for (const descriptor of ['NETFLIX.COM 8887638', 'HARBOUR LANE BOOKSHOP']) {
       expect(categorizeDescriptor(descriptor).reason.length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe('UserCorrectionClassifier', () => {
+  it('learns a later occurrence of an explicitly corrected merchant without creating a rule', () => {
+    const model = UserCorrectionClassifier.fromTransactions([
+      manualCorrection('KOZY KORNER DINER 88', 'restaurants'),
+    ]);
+
+    const result = categorizeDescriptor('KOZY KORNER DINER 91', { model });
+    expect(result).toMatchObject({
+      categorySlug: 'restaurants',
+      source: 'model',
+      confidence: 0.98,
+      reason: 'Matches your earlier correction for this merchant.',
+    });
+  });
+
+  it('does not train from automatic labels or conflicting manual corrections', () => {
+    const automatic = manualCorrection('PRIVATE COFFEE ROASTERS', 'coffee', {
+      categorySource: 'lexicon',
+    });
+    const conflictingOne = manualCorrection('MYSTERY MARKET', 'groceries');
+    const conflictingTwo = manualCorrection('MYSTERY MARKET', 'restaurants', { id: 'txn_conflict' });
+    const model = UserCorrectionClassifier.fromTransactions([automatic, conflictingOne, conflictingTwo]);
+
+    expect(model.classify(normalizeDescriptor('PRIVATE COFFEE ROASTERS'))).toBeNull();
+    expect(model.classify(normalizeDescriptor('MYSTERY MARKET'))).toBeNull();
+  });
+
+  it('allows only a highly similar multi-token merchant variation', () => {
+    const model = UserCorrectionClassifier.fromTransactions([
+      manualCorrection('HARBOR ROASTERS ONTARIO', 'coffee'),
+    ]);
+
+    const learned = categorizeDescriptor('HARBOR ROASTERS ONTARIO WEST', { model });
+    expect(learned).toMatchObject({ categorySlug: 'coffee', source: 'model' });
+    expect(learned.confidence).toBeGreaterThanOrEqual(0.85);
+  });
+
+  it('rejects vague overlap and preserves deterministic tiers above it', () => {
+    const model = UserCorrectionClassifier.fromTransactions([
+      manualCorrection('CITY CAFE', 'coffee'),
+      manualCorrection('CITY MARKET', 'groceries'),
+      manualCorrection('HARBOUR LANE BOOKSHOP OTTAWA', 'books'),
+    ]);
+
+    expect(categorizeDescriptor('CITY BAKERY', { model }).source).toBe('unknown');
+    expect(categorizeDescriptor('STARBUCKS 1234', { model }).source).toBe('lexicon');
+    expect(
+      categorizeDescriptor('HARBOUR LANE BOOKSHOP TORONTO', {
+        rules: [
+          { id: 'rule', matchType: 'contains', pattern: 'harbour lane bookshop', categorySlug: 'shopping', priority: 0 },
+        ],
+        model,
+      }).source,
+    ).toBe('user_rule');
   });
 });
 

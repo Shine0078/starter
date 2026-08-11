@@ -2,6 +2,7 @@ import { BadRequestException, Inject, Injectable, NotFoundException } from '@nes
 import { randomUUID } from 'node:crypto';
 
 import { categorizeDescriptor, coverageRate, ruleFromCorrection } from '../../domain/categorization/categorize';
+import { UserCorrectionClassifier } from '../../domain/categorization/user-correction-classifier';
 import { normalizeDescriptor } from '../../domain/categorization/normalize';
 import { isKnownCategory } from '../../domain/categories';
 import { detectSubscriptions } from '../../domain/insights/subscriptions';
@@ -55,11 +56,15 @@ export class LedgerService {
     await this.accounts.upsertMany(userId, remoteAccounts);
 
     const { transactions: raw } = await this.aggregator.fetchTransactions(linkId);
-    const rules = await this.rules.list(userId);
+    const [rules, historicalTransactions] = await Promise.all([
+      this.rules.list(userId),
+      this.transactions.list(userId),
+    ]);
+    const model = UserCorrectionClassifier.fromTransactions(historicalTransactions);
 
     const results = raw.map((rawTxn) => ({
       rawTxn,
-      categorization: categorizeDescriptor(rawTxn.descriptor, { rules }),
+      categorization: categorizeDescriptor(rawTxn.descriptor, { rules, model }),
     }));
 
     const mapped: Transaction[] = results.map(({ rawTxn, categorization }) =>

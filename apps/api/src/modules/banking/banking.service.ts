@@ -12,7 +12,8 @@ import {
   type OnModuleInit,
 } from '@nestjs/common';
 
-import { categorizeDescriptor } from '../../domain/categorization/categorize';
+import { categorizeDescriptor, type ModelClassifier } from '../../domain/categorization/categorize';
+import { UserCorrectionClassifier } from '../../domain/categorization/user-correction-classifier';
 import { normalizeDescriptor } from '../../domain/categorization/normalize';
 import { detectSubscriptions } from '../../domain/insights/subscriptions';
 import { FinanceEventBus } from '../../infra/events/finance-event-bus';
@@ -237,7 +238,15 @@ export class BankingService implements OnModuleInit, OnModuleDestroy {
           this.logger.warn('Complete bank account listing unavailable; continuing transaction sync.');
         }
       }
-      const rules = await this.rules.list(userId);
+      const [rules, historicalTransactions] = await Promise.all([
+        this.rules.list(userId),
+        this.transactions.list(userId),
+      ]);
+      // This learner is rebuilt per sync from durable explicit corrections.
+      // It has no global model and never sends transaction text to a third
+      // party. Rebuilding also means deletion automatically removes training
+      // data without a second retention path to purge.
+      const model = UserCorrectionClassifier.fromTransactions(historicalTransactions);
       const startingCursor = cursor;
       let mutationRetries = 0;
       for (let pageNumber = 0; pageNumber < 100; pageNumber += 1) {
@@ -265,7 +274,7 @@ export class BankingService implements OnModuleInit, OnModuleDestroy {
         }
         await this.accounts.upsertMany(userId, page.accounts);
         const raw = [...page.added, ...page.modified];
-        const mapped = raw.map((row) => this.mapTransaction(row, rules));
+        const mapped = raw.map((row) => this.mapTransaction(row, rules, model));
         categorized += mapped.filter((row) => row.categorySlug !== 'unknown').length;
         const result = await this.transactions.upsertMany(userId, mapped);
         inserted += result.inserted;
@@ -452,8 +461,12 @@ export class BankingService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private mapTransaction(raw: RawTransaction, rules: Awaited<ReturnType<RuleStore['list']>>): Transaction {
-    const category = categorizeDescriptor(raw.descriptor, { rules });
+  private mapTransaction(
+    raw: RawTransaction,
+    rules: Awaited<ReturnType<RuleStore['list']>>,
+    model: ModelClassifier,
+  ): Transaction {
+    const category = categorizeDescriptor(raw.descriptor, { rules, model });
     return {
       id: `txn_${raw.accountId}_${raw.providerTxnId}`,
       accountId: raw.accountId,

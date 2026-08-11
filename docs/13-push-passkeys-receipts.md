@@ -1,7 +1,7 @@
 # Passkeys, push, receipts, and background sync — what is wired and what the owner must do
 
-Passkeys (WebAuthn), remote-push delivery/background refresh, and receipt OCR
-are code-completed here. Every integration is fail-closed until the operator
+Passkeys (WebAuthn), remote-push delivery/background refresh, and receipt text
+parsing are code-completed here. Every integration is fail-closed until the operator
 supplies its required domain, credentials, or Apple configuration. This
 document records the exact owner action for each.
 
@@ -84,9 +84,9 @@ tested; the platform ceremony wiring is the remaining owner/device step.
    (and may defer it); background sync is freshness best effort, never a
    guarantee or a replacement for server-side Plaid webhooks.
 
-## Receipt OCR
+## Receipt text parsing and on-device OCR
 
-**Implemented.** A provider-neutral port with a deterministic local parser
+**Implemented: text parsing, not direct image recognition.** A provider-neutral port with a deterministic local parser
 (`apps/api/src/domain/receipts/parse.ts`) that extracts merchant, date, total,
 tax, currency, and line items from pasted text or an OCR transcript:
 
@@ -95,11 +95,16 @@ tax, currency, and line items from pasted text or an OCR transcript:
 - `GET /api/receipts/:transactionId` — read back.
 - The Flutter transaction detail screen has an "Attach a receipt" action.
 - Images are never uploaded — only extracted fields and the text the user
-  explicitly pasted (MISSION1).
+  explicitly pasted (MISSION1). A person can use their phone's on-device Live
+  Text/OCR and paste the result today.
 
-**Owner action for richer OCR.** Plug a vision engine (Google Vision, Tesseract,
-or an on-device model) behind `apps/api/src/ports/receipts.ts`; the local parser
-remains the tested fallback.
+**Remaining implementation work for direct in-app photo OCR.** It must run on
+the device, not in the API, so receipt images remain private. Add a native
+Android/iOS image-recognition adapter that returns text to the existing
+`attachReceipt()` flow, include the minimal camera/photo-library permission
+descriptions, and validate it on physical devices. The backend port and parser
+remain the tested image-free fallback; a cloud vision service would violate the
+current privacy promise unless the user explicitly approves a revised policy.
 
 ## Everything here is gated off or fail-closed
 
