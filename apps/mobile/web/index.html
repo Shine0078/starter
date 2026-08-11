@@ -102,24 +102,75 @@
   </div>
 
   <script>
-    // A slow network is not a failure, but after a while it is worth saying so
-    // rather than animating forever at someone.
-    var bootHint = document.getElementById('boot-hint');
-    var slow = setTimeout(function () {
-      if (bootHint) bootHint.textContent = 'Still loading. FINVERSE is starting its private renderer.';
-    }, 6000);
-    var stalled = setTimeout(function () {
-      if (bootHint) bootHint.textContent = 'FINVERSE could not finish starting. Reload once; if this repeats, update iOS and contact support.';
-    }, 25000);
+    // Dismissing this overlay.
+    //
+    // It used to rely solely on the `flutter-first-frame` event. That event does
+    // not fire in every Flutter/bootstrap combination — it does not fire in this
+    // one — and the result was the failure this whole file exists to prevent:
+    // a fully rendered, working app sitting invisible underneath a splash that
+    // could never be removed. Reported as "stuck on loading forever", and blamed
+    // in turn on Safari's version, service workers, CanvasKit, and the API.
+    //
+    // The rule now: **this overlay must never be able to outlive the app it
+    // covers.** Three independent ways out, because a cover with a single
+    // release mechanism is a cover that eventually jams.
+    (function () {
+      var bootHint = document.getElementById('boot-hint');
+      var dismissed = false;
 
-    window.addEventListener('flutter-first-frame', function () {
-      clearTimeout(slow);
-      clearTimeout(stalled);
-      var boot = document.getElementById('boot');
-      if (!boot) return;
-      boot.classList.add('done');
-      setTimeout(function () { boot.remove(); }, 260);
-    });
+      function dismiss() {
+        if (dismissed) return;
+        dismissed = true;
+        clearTimeout(slow);
+        clearTimeout(safety);
+        if (observer) observer.disconnect();
+        var boot = document.getElementById('boot');
+        if (!boot) return;
+        boot.classList.add('done');
+        setTimeout(function () { if (boot.parentNode) boot.remove(); }, 260);
+      }
+
+      // Ground truth: Flutter has put its view in the document. This is what
+      // actually matters, and unlike an event it cannot be missed by attaching
+      // a listener a moment too late.
+      function painted() {
+        return !!document.querySelector('flutter-view, flt-glass-pane, flt-scene-host');
+      }
+
+      // 1. The fast path, when the engine does emit it.
+      window.addEventListener('flutter-first-frame', dismiss);
+
+      // 2. Watch the DOM. Covers every bootstrap that never emits the event.
+      var observer = null;
+      if (window.MutationObserver) {
+        observer = new MutationObserver(function () { if (painted()) dismiss(); });
+        observer.observe(document.body, { childList: true, subtree: true });
+      }
+      // The view may already exist by the time this runs.
+      if (painted()) dismiss();
+
+      // A slow network is not a failure, but after a while it is worth saying so
+      // rather than animating silently at someone.
+      var slow = setTimeout(function () {
+        if (!dismissed && bootHint) {
+          bootHint.textContent = 'Still loading. The first open downloads the app; later ones are quicker.';
+        }
+      }, 6000);
+
+      // 3. The backstop. If the app has painted, get out of its way no matter
+      // what the other two did. If it genuinely has not, say something true and
+      // offer the one action that helps — rather than the previous message,
+      // which told people to update iOS for a problem that was never theirs.
+      var safety = setTimeout(function () {
+        if (dismissed) return;
+        if (painted()) { dismiss(); return; }
+        if (bootHint) {
+          bootHint.innerHTML =
+            'FINVERSE is taking longer than expected to start.<br>' +
+            '<a href="" style="color:#7FA9FF">Reload</a>';
+        }
+      }, 12000);
+    })();
   </script>
 
   <script src="flutter_bootstrap.js" async></script>
