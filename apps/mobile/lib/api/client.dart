@@ -1311,6 +1311,91 @@ class ApiClient {
     await _send('PATCH', '/notifications/read-all');
   }
 
+  /// Registers this device with the push provider for remote delivery. The
+  /// server stores only the opaque provider token; no message or bank data is
+  /// sent to it.
+  Future<void> registerPushToken(
+    String token,
+    String platform,
+  ) async {
+    await _send('POST', '/push/device', {'token': token, 'platform': platform});
+  }
+
+  Future<void> unregisterPushToken(String token) async {
+    await _send('DELETE', '/push/device', {'token': token});
+  }
+
+  // -------------------------------------------------------------- passkeys
+
+  /// True when the server is configured to accept passkeys. The native
+  /// platform ceremony (platform authenticator) is invoked by the UI; these
+  /// methods carry the challenge and the verified credential.
+  Future<bool> passkeysAvailable() async {
+    final json = await _get('/webauthn/status') as Map<String, dynamic>;
+    return json['available'] == true;
+  }
+
+  Future<Map<String, dynamic>> passkeyRegisterOptions() async {
+    return await _send(
+      'POST',
+      '/webauthn/register/options',
+    ) as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> passkeyRegisterVerify(
+    String id,
+    String clientDataJson,
+    String attestationObject,
+  ) async {
+    return await _send('POST', '/webauthn/register/verify', {
+      'id': id,
+      'response': {
+        'clientDataJSON': clientDataJson,
+        'attestationObject': attestationObject,
+      },
+    }) as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> passkeyLoginOptions({String? email}) async {
+    return await _send(
+      'POST',
+      '/webauthn/login/options',
+      {if (email != null && email.isNotEmpty) 'email': email},
+    ) as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> passkeyLoginVerify(
+    String id, {
+    String? email,
+    required String clientDataJson,
+    required String authenticatorData,
+    required String signature,
+  }) async {
+    return await _send('POST', '/webauthn/login/verify', {
+      'id': id,
+      if (email != null && email.isNotEmpty) 'email': email,
+      'response': {
+        'clientDataJSON': clientDataJson,
+        'authenticatorData': authenticatorData,
+        'signature': signature,
+      },
+    }) as Map<String, dynamic>;
+  }
+
+  Future<List<Map<String, dynamic>>> passkeyCredentials() async {
+    final json = await _get('/webauthn/credentials') as Map<String, dynamic>;
+    return (json['credentials'] as List<dynamic>)
+        .map((row) => row as Map<String, dynamic>)
+        .toList();
+  }
+
+  Future<void> passkeyRemove(String credentialId) async {
+    await _send(
+      'DELETE',
+      '/webauthn/credentials/${Uri.encodeComponent(credentialId)}',
+    );
+  }
+
   Future<NotificationPreferences> notificationPreferences() async {
     final json =
         await _get('/notifications/preferences') as Map<String, dynamic>;

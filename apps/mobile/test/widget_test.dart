@@ -1544,6 +1544,46 @@ void main() {
     );
   });
 
+  test('carries passkey and push registration protocol', () async {
+    var sawRegisterOptions = false;
+    final api = clientWith(MockClient((request) async {
+      if (request.url.path.endsWith('/webauthn/status')) {
+        return http.Response('{"available":true}', 200);
+      }
+      if (request.url.path.endsWith('/webauthn/register/options')) {
+        sawRegisterOptions = true;
+        return http.Response(
+          '{"challenge":"abc","rp":{"id":"api.test","name":"FINVERSE"}}',
+          201,
+        );
+      }
+      if (request.url.path.endsWith('/push/device')) {
+        return request.method == 'DELETE'
+            ? http.Response('', 204)
+            : http.Response('', 201);
+      }
+      if (request.url.path.endsWith('/webauthn/credentials')) {
+        return http.Response(
+          '{"credentials":[{"credentialId":"cred-1","createdAt":"2026-08-10T00:00:00.000Z","lastUsedAt":null}]}',
+          200,
+        );
+      }
+      return http.Response('{}', 200);
+    }));
+
+    expect(await api.passkeysAvailable(), isTrue);
+    final options = await api.passkeyRegisterOptions();
+    expect(options['challenge'], 'abc');
+    expect(sawRegisterOptions, isTrue);
+
+    await api.registerPushToken('fcm-token-00000000000000000000', 'android');
+    await api.unregisterPushToken('fcm-token-00000000000000000000');
+
+    final credentials = await api.passkeyCredentials();
+    expect(credentials, hasLength(1));
+    expect(credentials.first['credentialId'], 'cred-1');
+  });
+
   test('parses scanned and stored receipts', () async {
     var sawPut = false;
     final api = clientWith(MockClient((request) async {
