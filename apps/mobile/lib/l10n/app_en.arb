@@ -287,6 +287,47 @@
   },
   "goalCompleted": "Completed",
   "goalAddSavings": "Add savings",
+  "planningPositiveAmount": "Enter a positive amount with at most two decimals.",
+  "planningOpenCalendar": "Open financial calendar",
+  "planningConservativeForecast": "Conservative forecast",
+  "planningForecastDetail": "Repeatable income and bills only. Everyday spending is not predicted.",
+  "planningToday": "Today",
+  "planningEnd": "End",
+  "planningForecastSemantics": "Cash flow forecast from {start} to {end}. {detail}",
+  "@planningForecastSemantics": {
+    "placeholders": {
+      "start": {"type": "String"},
+      "end": {"type": "String"},
+      "detail": {"type": "String"}
+    }
+  },
+  "planningNoNegativeBalance": "No modeled negative balance dates.",
+  "planningNegativeBalanceCount": "{count, plural, =1{1 modeled negative balance date.} other{{count} modeled negative balance dates.}}",
+  "@planningNegativeBalanceCount": {
+    "placeholders": {
+      "count": {"type": "num"}
+    }
+  },
+  "planningProjectedLowBalanceCount": "{count, plural, =1{1 projected low-balance day} other{{count} projected low-balance days}}",
+  "@planningProjectedLowBalanceCount": {
+    "placeholders": {
+      "count": {"type": "num"}
+    }
+  },
+  "planningAffordPurchase": "Can I afford a purchase?",
+  "planningPurchaseAmount": "Purchase amount ({currency})",
+  "@planningPurchaseAmount": {
+    "placeholders": {
+      "currency": {"type": "String"}
+    }
+  },
+  "planningPurchaseDate": "Purchase date",
+  "planningChecking": "Checking…",
+  "planningCheckScenario": "Check scenario",
+  "planningAfterPurchase": "After purchase",
+  "planningEndForecast": "End of forecast",
+  "planningExpectedEvents": "Expected recurring events",
+  "planningNoPattern": "No strong recurring pattern was found.",
   "errorConnection": "Couldn't reach the server. Check your connection.",
   "errorServerUnavailable": "The server is temporarily unavailable. Try again shortly.",
   "errorSessionInvalid": "Your session is no longer valid. Sign in again.",

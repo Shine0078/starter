@@ -287,6 +287,47 @@
   },
   "goalCompleted": "Terminé",
   "goalAddSavings": "Ajouter une épargne",
+  "planningPositiveAmount": "Entrez un montant positif avec au plus deux décimales.",
+  "planningOpenCalendar": "Ouvrir le calendrier financier",
+  "planningConservativeForecast": "Prévision prudente",
+  "planningForecastDetail": "Uniquement les revenus et factures répétitifs. Les dépenses quotidiennes ne sont pas prédites.",
+  "planningToday": "Aujourd’hui",
+  "planningEnd": "Fin",
+  "planningForecastSemantics": "Prévision de trésorerie de {start} à {end}. {detail}",
+  "@planningForecastSemantics": {
+    "placeholders": {
+      "start": {"type": "String"},
+      "end": {"type": "String"},
+      "detail": {"type": "String"}
+    }
+  },
+  "planningNoNegativeBalance": "Aucune date de solde négatif modélisée.",
+  "planningNegativeBalanceCount": "{count, plural, =1{1 date de solde négatif modélisée.} other{{count} dates de solde négatif modélisées.}}",
+  "@planningNegativeBalanceCount": {
+    "placeholders": {
+      "count": {"type": "num"}
+    }
+  },
+  "planningProjectedLowBalanceCount": "{count, plural, =1{1 journée de solde faible prévue} other{{count} journées de solde faible prévues}}",
+  "@planningProjectedLowBalanceCount": {
+    "placeholders": {
+      "count": {"type": "num"}
+    }
+  },
+  "planningAffordPurchase": "Puis-je me permettre un achat ?",
+  "planningPurchaseAmount": "Montant de l’achat ({currency})",
+  "@planningPurchaseAmount": {
+    "placeholders": {
+      "currency": {"type": "String"}
+    }
+  },
+  "planningPurchaseDate": "Date d’achat",
+  "planningChecking": "Vérification…",
+  "planningCheckScenario": "Vérifier le scénario",
+  "planningAfterPurchase": "Après l’achat",
+  "planningEndForecast": "Fin de la prévision",
+  "planningExpectedEvents": "Événements récurrents prévus",
+  "planningNoPattern": "Aucune habitude récurrente solide n’a été trouvée.",
   "errorConnection": "Impossible de joindre le serveur. Vérifiez votre connexion.",
   "errorServerUnavailable": "Le serveur est temporairement indisponible. Réessayez bientôt.",
   "errorSessionInvalid": "Votre session n'est plus valide. Connectez-vous à nouveau.",

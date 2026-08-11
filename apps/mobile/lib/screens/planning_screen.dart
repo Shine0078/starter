@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../api/client.dart';
+import '../l10n/app_localizations.dart';
 import '../models/models.dart';
 import 'financial_calendar_screen.dart';
 
@@ -108,7 +109,7 @@ class _PlanningScreenState extends State<PlanningScreen> {
     final amount = _minorUnits(_amount.text);
     if (amount == null) {
       setState(
-          () => _error = 'Enter a positive amount with at most two decimals.');
+          () => _error = AppLocalizations.of(context).planningPositiveAmount);
       return;
     }
     setState(() {
@@ -131,86 +132,89 @@ class _PlanningScreenState extends State<PlanningScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Cash-flow planning')),
-        body: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-          children: [
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                DropdownButton<String>(
-                  value: _currency,
-                  items: _currencies
-                      .map((value) => DropdownMenuItem(
-                            value: value,
-                            child: Text(value),
-                          ))
-                      .toList(),
-                  onChanged: _loading
-                      ? null
-                      : (value) {
-                          if (value == null) return;
-                          _currency = value;
-                          _loadForecast();
-                        },
-                ),
-                SegmentedButton<int>(
-                  segments: const [
-                    ButtonSegment(value: 7, label: Text('7d')),
-                    ButtonSegment(value: 30, label: Text('30d')),
-                    ButtonSegment(value: 90, label: Text('90d')),
-                  ],
-                  selected: {_days},
-                  onSelectionChanged: _loading
-                      ? null
-                      : (values) {
-                          _days = values.first;
-                          _purchaseDate =
-                              DateTime.now().add(const Duration(days: 1));
-                          _loadForecast();
-                        },
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            if (_loading) const LinearProgressIndicator(),
-            if (_error != null)
-              Card(
-                color: Theme.of(context).colorScheme.errorContainer,
-                child: ListTile(
-                  leading: const Icon(Icons.error_outline),
-                  title: Text(_error!),
-                ),
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.profileCashFlowPlanningTitle)),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+        children: [
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              DropdownButton<String>(
+                value: _currency,
+                items: _currencies
+                    .map((value) => DropdownMenuItem(
+                          value: value,
+                          child: Text(value),
+                        ))
+                    .toList(),
+                onChanged: _loading
+                    ? null
+                    : (value) {
+                        if (value == null) return;
+                        _currency = value;
+                        _loadForecast();
+                      },
               ),
-            if (_forecast case final forecast?) ...[
-              _ForecastCard(forecast: forecast),
-              const SizedBox(height: 12),
-              _PurchaseCard(
-                amount: _amount,
-                currency: _currency,
-                date: _purchaseDate,
-                working: _simulating,
-                onPickDate: _pickDate,
-                onSimulate: _simulate,
-                scenario: _scenario,
-              ),
-              const SizedBox(height: 12),
-              _UpcomingEvents(events: forecast.events),
-              const SizedBox(height: 12),
-              FilledButton.tonalIcon(
-                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => FinancialCalendarScreen(api: widget.api),
-                )),
-                icon: const Icon(Icons.calendar_month_outlined),
-                label: const Text('Open financial calendar'),
+              SegmentedButton<int>(
+                segments: const [
+                  ButtonSegment(value: 7, label: Text('7d')),
+                  ButtonSegment(value: 30, label: Text('30d')),
+                  ButtonSegment(value: 90, label: Text('90d')),
+                ],
+                selected: {_days},
+                onSelectionChanged: _loading
+                    ? null
+                    : (values) {
+                        _days = values.first;
+                        _purchaseDate =
+                            DateTime.now().add(const Duration(days: 1));
+                        _loadForecast();
+                      },
               ),
             ],
+          ),
+          const SizedBox(height: 12),
+          if (_loading) const LinearProgressIndicator(),
+          if (_error != null)
+            Card(
+              color: Theme.of(context).colorScheme.errorContainer,
+              child: ListTile(
+                leading: const Icon(Icons.error_outline),
+                title: Text(_error!),
+              ),
+            ),
+          if (_forecast case final forecast?) ...[
+            _ForecastCard(forecast: forecast),
+            const SizedBox(height: 12),
+            _PurchaseCard(
+              amount: _amount,
+              currency: _currency,
+              date: _purchaseDate,
+              working: _simulating,
+              onPickDate: _pickDate,
+              onSimulate: _simulate,
+              scenario: _scenario,
+            ),
+            const SizedBox(height: 12),
+            _UpcomingEvents(events: forecast.events),
+            const SizedBox(height: 12),
+            FilledButton.tonalIcon(
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => FinancialCalendarScreen(api: widget.api),
+              )),
+              icon: const Icon(Icons.calendar_month_outlined),
+              label: Text(l10n.planningOpenCalendar),
+            ),
           ],
-        ),
-      );
+        ],
+      ),
+    );
+  }
 }
 
 class _ForecastCard extends StatelessWidget {
@@ -228,10 +232,11 @@ class _ForecastCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Conservative forecast', style: theme.textTheme.titleMedium),
+            Text(AppLocalizations.of(context).planningConservativeForecast,
+                style: theme.textTheme.titleMedium),
             const SizedBox(height: 4),
             Text(
-              'Repeatable income and bills only. Everyday spending is not predicted.',
+              AppLocalizations.of(context).planningForecastDetail,
               style: theme.textTheme.bodySmall,
             ),
             const SizedBox(height: 14),
@@ -240,14 +245,23 @@ class _ForecastCard extends StatelessWidget {
               runSpacing: 8,
               children: [
                 _Metric(
-                    label: 'Today', value: forecast.startingBalanceFormatted),
-                _Metric(label: 'End', value: forecast.endingBalanceFormatted),
+                    label: AppLocalizations.of(context).planningToday,
+                    value: forecast.startingBalanceFormatted),
+                _Metric(
+                    label: AppLocalizations.of(context).planningEnd,
+                    value: forecast.endingBalanceFormatted),
               ],
             ),
             const SizedBox(height: 16),
             Semantics(
-              label:
-                  'Cash flow forecast from ${forecast.startingBalanceFormatted} to ${forecast.endingBalanceFormatted}. ${low == 0 ? 'No modeled negative balance dates.' : '$low modeled negative balance dates.'}',
+              label: AppLocalizations.of(context).planningForecastSemantics(
+                forecast.startingBalanceFormatted,
+                forecast.endingBalanceFormatted,
+                low == 0
+                    ? AppLocalizations.of(context).planningNoNegativeBalance
+                    : AppLocalizations.of(context)
+                        .planningNegativeBalanceCount(low),
+              ),
               child: ExcludeSemantics(
                 child: SizedBox(
                   key: const Key('cash-flow-chart'),
@@ -267,7 +281,8 @@ class _ForecastCard extends StatelessWidget {
             if (low > 0) ...[
               const SizedBox(height: 10),
               Text(
-                '$low projected low-balance day${low == 1 ? '' : 's'}',
+                AppLocalizations.of(context)
+                    .planningProjectedLowBalanceCount(low),
                 style: TextStyle(color: theme.colorScheme.error),
               ),
             ],
@@ -319,7 +334,7 @@ class _PurchaseCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Can I afford a purchase?',
+              Text(AppLocalizations.of(context).planningAffordPurchase,
                   style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 12),
               TextField(
@@ -327,15 +342,18 @@ class _PurchaseCard extends StatelessWidget {
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 decoration: InputDecoration(
-                  labelText: 'Purchase amount ($currency)',
+                  labelText: AppLocalizations.of(context)
+                      .planningPurchaseAmount(currency),
                   border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 8),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Purchase date'),
-                subtitle: Text(DateFormat.yMMMd().format(date)),
+                title: Text(AppLocalizations.of(context).planningPurchaseDate),
+                subtitle: Text(DateFormat.yMMMd(
+                        Localizations.localeOf(context).toLanguageTag())
+                    .format(date)),
                 trailing: const Icon(Icons.calendar_month_outlined),
                 onTap: onPickDate,
               ),
@@ -347,12 +365,12 @@ class _PurchaseCard extends StatelessWidget {
               if (scenario case final result?) ...[
                 const Divider(height: 28),
                 _Metric(
-                  label: 'After purchase',
+                  label: AppLocalizations.of(context).planningAfterPurchase,
                   value: result.balanceAfterPurchaseFormatted,
                 ),
                 const SizedBox(height: 6),
                 _Metric(
-                  label: 'End of forecast',
+                  label: AppLocalizations.of(context).planningEndForecast,
                   value: result.endingBalanceFormatted,
                 ),
                 const SizedBox(height: 10),
@@ -381,13 +399,13 @@ class _UpcomingEvents extends StatelessWidget {
             children: [
               Padding(
                 padding: const EdgeInsets.all(8),
-                child: Text('Expected recurring events',
+                child: Text(AppLocalizations.of(context).planningExpectedEvents,
                     style: Theme.of(context).textTheme.titleMedium),
               ),
               if (events.isEmpty)
-                const Padding(
+                Padding(
                   padding: EdgeInsets.all(8),
-                  child: Text('No strong recurring pattern was found.'),
+                  child: Text(AppLocalizations.of(context).planningNoPattern),
                 ),
               for (final event in events.take(8))
                 ListTile(

@@ -634,6 +634,87 @@ class AppLocalizationsFr extends AppLocalizations {
   String get goalAddSavings => 'Ajouter une épargne';
 
   @override
+  String get planningPositiveAmount =>
+      'Entrez un montant positif avec au plus deux décimales.';
+
+  @override
+  String get planningOpenCalendar => 'Ouvrir le calendrier financier';
+
+  @override
+  String get planningConservativeForecast => 'Prévision prudente';
+
+  @override
+  String get planningForecastDetail =>
+      'Uniquement les revenus et factures répétitifs. Les dépenses quotidiennes ne sont pas prédites.';
+
+  @override
+  String get planningToday => 'Aujourd’hui';
+
+  @override
+  String get planningEnd => 'Fin';
+
+  @override
+  String planningForecastSemantics(String start, String end, String detail) {
+    return 'Prévision de trésorerie de $start à $end. $detail';
+  }
+
+  @override
+  String get planningNoNegativeBalance =>
+      'Aucune date de solde négatif modélisée.';
+
+  @override
+  String planningNegativeBalanceCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count dates de solde négatif modélisées.',
+      one: '1 date de solde négatif modélisée.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String planningProjectedLowBalanceCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count journées de solde faible prévues',
+      one: '1 journée de solde faible prévue',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get planningAffordPurchase => 'Puis-je me permettre un achat ?';
+
+  @override
+  String planningPurchaseAmount(String currency) {
+    return 'Montant de l’achat ($currency)';
+  }
+
+  @override
+  String get planningPurchaseDate => 'Date d’achat';
+
+  @override
+  String get planningChecking => 'Vérification…';
+
+  @override
+  String get planningCheckScenario => 'Vérifier le scénario';
+
+  @override
+  String get planningAfterPurchase => 'Après l’achat';
+
+  @override
+  String get planningEndForecast => 'Fin de la prévision';
+
+  @override
+  String get planningExpectedEvents => 'Événements récurrents prévus';
+
+  @override
+  String get planningNoPattern =>
+      'Aucune habitude récurrente solide n’a été trouvée.';
+
+  @override
   String get errorConnection =>
       'Impossible de joindre le serveur. Vérifiez votre connexion.';
 

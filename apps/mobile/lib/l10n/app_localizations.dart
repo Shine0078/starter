@@ -1124,6 +1124,120 @@ abstract class AppLocalizations {
   /// **'Add savings'**
   String get goalAddSavings;
 
+  /// No description provided for @planningPositiveAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a positive amount with at most two decimals.'**
+  String get planningPositiveAmount;
+
+  /// No description provided for @planningOpenCalendar.
+  ///
+  /// In en, this message translates to:
+  /// **'Open financial calendar'**
+  String get planningOpenCalendar;
+
+  /// No description provided for @planningConservativeForecast.
+  ///
+  /// In en, this message translates to:
+  /// **'Conservative forecast'**
+  String get planningConservativeForecast;
+
+  /// No description provided for @planningForecastDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeatable income and bills only. Everyday spending is not predicted.'**
+  String get planningForecastDetail;
+
+  /// No description provided for @planningToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get planningToday;
+
+  /// No description provided for @planningEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'End'**
+  String get planningEnd;
+
+  /// No description provided for @planningForecastSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash flow forecast from {start} to {end}. {detail}'**
+  String planningForecastSemantics(String start, String end, String detail);
+
+  /// No description provided for @planningNoNegativeBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'No modeled negative balance dates.'**
+  String get planningNoNegativeBalance;
+
+  /// No description provided for @planningNegativeBalanceCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 modeled negative balance date.} other{{count} modeled negative balance dates.}}'**
+  String planningNegativeBalanceCount(num count);
+
+  /// No description provided for @planningProjectedLowBalanceCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 projected low-balance day} other{{count} projected low-balance days}}'**
+  String planningProjectedLowBalanceCount(num count);
+
+  /// No description provided for @planningAffordPurchase.
+  ///
+  /// In en, this message translates to:
+  /// **'Can I afford a purchase?'**
+  String get planningAffordPurchase;
+
+  /// No description provided for @planningPurchaseAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase amount ({currency})'**
+  String planningPurchaseAmount(String currency);
+
+  /// No description provided for @planningPurchaseDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase date'**
+  String get planningPurchaseDate;
+
+  /// No description provided for @planningChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking…'**
+  String get planningChecking;
+
+  /// No description provided for @planningCheckScenario.
+  ///
+  /// In en, this message translates to:
+  /// **'Check scenario'**
+  String get planningCheckScenario;
+
+  /// No description provided for @planningAfterPurchase.
+  ///
+  /// In en, this message translates to:
+  /// **'After purchase'**
+  String get planningAfterPurchase;
+
+  /// No description provided for @planningEndForecast.
+  ///
+  /// In en, this message translates to:
+  /// **'End of forecast'**
+  String get planningEndForecast;
+
+  /// No description provided for @planningExpectedEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'Expected recurring events'**
+  String get planningExpectedEvents;
+
+  /// No description provided for @planningNoPattern.
+  ///
+  /// In en, this message translates to:
+  /// **'No strong recurring pattern was found.'**
+  String get planningNoPattern;
+
   /// No description provided for @errorConnection.
   ///
   /// In en, this message translates to:

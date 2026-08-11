@@ -627,6 +627,85 @@ class AppLocalizationsEn extends AppLocalizations {
   String get goalAddSavings => 'Add savings';
 
   @override
+  String get planningPositiveAmount =>
+      'Enter a positive amount with at most two decimals.';
+
+  @override
+  String get planningOpenCalendar => 'Open financial calendar';
+
+  @override
+  String get planningConservativeForecast => 'Conservative forecast';
+
+  @override
+  String get planningForecastDetail =>
+      'Repeatable income and bills only. Everyday spending is not predicted.';
+
+  @override
+  String get planningToday => 'Today';
+
+  @override
+  String get planningEnd => 'End';
+
+  @override
+  String planningForecastSemantics(String start, String end, String detail) {
+    return 'Cash flow forecast from $start to $end. $detail';
+  }
+
+  @override
+  String get planningNoNegativeBalance => 'No modeled negative balance dates.';
+
+  @override
+  String planningNegativeBalanceCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count modeled negative balance dates.',
+      one: '1 modeled negative balance date.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String planningProjectedLowBalanceCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count projected low-balance days',
+      one: '1 projected low-balance day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get planningAffordPurchase => 'Can I afford a purchase?';
+
+  @override
+  String planningPurchaseAmount(String currency) {
+    return 'Purchase amount ($currency)';
+  }
+
+  @override
+  String get planningPurchaseDate => 'Purchase date';
+
+  @override
+  String get planningChecking => 'Checking…';
+
+  @override
+  String get planningCheckScenario => 'Check scenario';
+
+  @override
+  String get planningAfterPurchase => 'After purchase';
+
+  @override
+  String get planningEndForecast => 'End of forecast';
+
+  @override
+  String get planningExpectedEvents => 'Expected recurring events';
+
+  @override
+  String get planningNoPattern => 'No strong recurring pattern was found.';
+
+  @override
   String get errorConnection =>
       'Couldn\'t reach the server. Check your connection.';
 
