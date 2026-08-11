@@ -84,7 +84,7 @@ jobs:
         run: flutter pub get
       - name: Build same-origin web bundle
         working-directory: apps/mobile
-        run: flutter build web --release --base-href=/app/
+        run: flutter build web --release --no-web-resources-cdn --base-href=/app/
       - uses: actions/upload-artifact@v7
         with:
           name: finverse-web-${{ github.ref_name }}

@@ -5,7 +5,7 @@ Before starting the public stack, place the contents of `apps/mobile/build/web`
 here after building with:
 
 ```powershell
-flutter build web --release `
+flutter build web --release --no-web-resources-cdn `
   --base-href=/app/ `
   --dart-define=API_BASE_URL=https://api.your-domain.example
 ```

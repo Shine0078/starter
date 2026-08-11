@@ -106,10 +106,10 @@
     // rather than animating forever at someone.
     var bootHint = document.getElementById('boot-hint');
     var slow = setTimeout(function () {
-      if (bootHint) bootHint.textContent = 'Still loading. The first open downloads the app; later ones are cached.';
+      if (bootHint) bootHint.textContent = 'Still loading. FINVERSE is starting its private renderer.';
     }, 6000);
     var stalled = setTimeout(function () {
-      if (bootHint) bootHint.textContent = 'This is taking longer than expected. Check that the FINVERSE server is running and reachable, then reload.';
+      if (bootHint) bootHint.textContent = 'FINVERSE could not finish starting. Reload once; if this repeats, update iOS and contact support.';
     }, 25000);
 
     window.addEventListener('flutter-first-frame', function () {

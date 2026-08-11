@@ -170,7 +170,7 @@ into `infra/web/` before `docker compose up`. The public stack serves it at
 `/app/` and routes API calls to the same HTTPS origin:
 
 ```powershell
-flutter build web --release `
+flutter build web --release --no-web-resources-cdn `
   --base-href=/app/ `
   --dart-define=API_BASE_URL=https://api.your-domain.example
 Copy-Item -Recurse -Force apps/mobile/build/web/* infra/web/

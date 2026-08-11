@@ -99,8 +99,11 @@ jobs:
         run: flutter build apk --release --dart-define=API_BASE_URL=https://api.example.invalid
       - name: Compile PWA at the public /app/ mount
         run: |
-          flutter build web --release --base-href=/app/
+          flutter build web --release --no-web-resources-cdn --base-href=/app/
           grep -F '<base href="/app/">' build/web/index.html
+          grep -F '"useLocalCanvasKit":true' build/web/flutter_bootstrap.js
+          grep -F "canvasKitBaseUrl: 'canvaskit/'" build/web/flutter_bootstrap.js
+          ! grep -F 'serviceWorkerSettings: {' build/web/flutter_bootstrap.js
 
   ios:
     name: Compile native iOS target

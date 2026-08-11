@@ -50,7 +50,7 @@ The PWA is the free Windows-to-iPhone route:
 
 ```powershell
 cd C:\Users\samue\OneDrive\Desktop\starter\apps\mobile
-flutter build web --release --base-href=/app/ `
+flutter build web --release --no-web-resources-cdn --base-href=/app/ `
   --dart-define=API_BASE_URL=https://api.example.com
 ```
 
