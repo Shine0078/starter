@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
+import '../app_locale.dart';
 import '../api/client.dart';
 import '../api/app_lock.dart';
 import '../api/platform/file_share.dart';
+import '../l10n/app_localizations.dart';
 import '../models/models.dart';
 import 'bank_connections_screen.dart';
 import 'help_support_screen.dart';
@@ -540,6 +542,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
 
     final user = _user!;
+    final l10n = AppLocalizations.of(context);
+    final localeController = LocaleControllerScope.maybeOf(context);
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       children: [
@@ -560,6 +564,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         child: const Text('Verify'),
                       ),
               ),
+              if (localeController != null)
+                ListTile(
+                  leading: const Icon(Icons.language_outlined),
+                  title: Text(l10n.languageTitle),
+                  subtitle: Text(
+                    '${localeController.locale == null ? l10n.languageSystemDefault : localeController.locale!.languageCode == 'fr' ? l10n.languageFrench : l10n.languageEnglish}\n${l10n.languageBetaDetail}',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  isThreeLine: true,
+                  trailing: DropdownButton<Locale?>(
+                    value: localeController.locale,
+                    onChanged: (locale) =>
+                        unawaited(localeController.select(locale)),
+                    items: [
+                      DropdownMenuItem<Locale?>(
+                        value: null,
+                        child: Text(l10n.languageSystemDefault),
+                      ),
+                      DropdownMenuItem<Locale?>(
+                        value: const Locale('en'),
+                        child: Text(l10n.languageEnglish),
+                      ),
+                      DropdownMenuItem<Locale?>(
+                        value: const Locale('fr'),
+                        child: Text(l10n.languageFrench),
+                      ),
+                    ],
+                  ),
+                ),
               ListTile(
                 leading: const Icon(Icons.notifications_outlined),
                 title: const Text('Notification preferences'),

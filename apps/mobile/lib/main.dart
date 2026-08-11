@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'app_locale.dart';
 import 'api/client.dart';
 import 'api/app_lock.dart';
 import 'api/onboarding_store.dart';
@@ -21,14 +24,20 @@ import 'screens/onboarding_screen.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await configureBackgroundSync();
+  final localeController = LocaleController();
   runApp(FinverseApp(
     api: ApiClient(offlineCache: createOfflineCache()),
+    localeController: localeController,
     onboardingStore: SecureOnboardingStore(),
     appLockController: AppLockController(
       store: SecureAppLockStore(),
       authenticator: createDeviceAuthenticator(),
     ),
   ));
+  // Locale restoration is a convenience preference, not startup-critical
+  // state. Showing the system language first protects the first Flutter frame
+  // from a temporarily unavailable platform preference store.
+  unawaited(localeController.restore());
 }
 
 class FinverseApp extends StatelessWidget {
@@ -36,8 +45,10 @@ class FinverseApp extends StatelessWidget {
     required this.api,
     OnboardingStore? onboardingStore,
     AppLockController? appLockController,
+    LocaleController? localeController,
     super.key,
   })  : onboardingStore = onboardingStore ?? CompletedOnboardingStore(),
+        localeController = localeController ?? LocaleController.inMemory(),
         appLockController = appLockController ??
             AppLockController(
               store: InMemoryAppLockStore(),
@@ -47,28 +58,38 @@ class FinverseApp extends StatelessWidget {
   final ApiClient api;
   final OnboardingStore onboardingStore;
   final AppLockController appLockController;
+  final LocaleController localeController;
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'FINVERSE',
-      debugShowCheckedModeBanner: false,
-      theme: FinTheme.light(),
-      darkTheme: FinTheme.dark(),
-      // Follow the OS. A finance app opened at night should not flashbang you.
-      themeMode: ThemeMode.system,
-      // Localisation plumbing for the date pickers, tooltips, and text-selection
-      // menus. English is the single shipped locale today; adding a locale file
-      // under l10n/ is all a translation needs from here.
-      localizationsDelegates: [
-        ...GlobalMaterialLocalizations.delegates,
-        AppLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: OnboardingGate(
-        api: api,
-        store: onboardingStore,
-        appLockController: appLockController,
+    return ListenableBuilder(
+      listenable: localeController,
+      builder: (context, _) => MaterialApp(
+        title: 'FINVERSE',
+        debugShowCheckedModeBanner: false,
+        theme: FinTheme.light(),
+        darkTheme: FinTheme.dark(),
+        // Follow the OS. A finance app opened at night should not flashbang you.
+        themeMode: ThemeMode.system,
+        locale: localeController.locale,
+        // Localisation plumbing for the date pickers, tooltips, and text-selection
+        // menus. English and French ship today; adding a locale file under l10n/
+        // and extending [LocaleController.supportedLanguageCodes] is all a
+        // future translation needs from here.
+        localizationsDelegates: [
+          ...GlobalMaterialLocalizations.delegates,
+          AppLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        builder: (context, child) => LocaleControllerScope(
+          controller: localeController,
+          child: child ?? const SizedBox.shrink(),
+        ),
+        home: OnboardingGate(
+          api: api,
+          store: onboardingStore,
+          appLockController: appLockController,
+        ),
       ),
     );
   }

@@ -111,6 +111,22 @@ class AppLocalizationsFr extends AppLocalizations {
   String get helpTitle => 'Aide et soutien';
 
   @override
+  String get languageTitle => 'Langue';
+
+  @override
+  String get languageSystemDefault => 'Utiliser la langue de l’appareil';
+
+  @override
+  String get languageEnglish => 'Anglais';
+
+  @override
+  String get languageFrench => 'Français';
+
+  @override
+  String get languageBetaDetail =>
+      'Certaines pages sont encore en cours de traduction.';
+
+  @override
   String get errorConnection =>
       'Impossible de joindre le serveur. Vérifiez votre connexion.';
 

@@ -278,6 +278,36 @@ abstract class AppLocalizations {
   /// **'Help & support'**
   String get helpTitle;
 
+  /// No description provided for @languageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get languageTitle;
+
+  /// No description provided for @languageSystemDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Use device language'**
+  String get languageSystemDefault;
+
+  /// No description provided for @languageEnglish.
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get languageEnglish;
+
+  /// No description provided for @languageFrench.
+  ///
+  /// In en, this message translates to:
+  /// **'French'**
+  String get languageFrench;
+
+  /// No description provided for @languageBetaDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Some screens are still being translated.'**
+  String get languageBetaDetail;
+
   /// No description provided for @errorConnection.
   ///
   /// In en, this message translates to:
