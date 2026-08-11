@@ -1914,6 +1914,22 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Compared with last period'), findsOneWidget);
 
+    // Every primary destination carries a spoken label — navigation must not
+    // rely on an unlabeled icon (MISSION2 §41 accessibility).
+    for (final label in [
+      'Home',
+      'Transactions',
+      'Analytics',
+      'Accounts',
+      'Profile'
+    ]) {
+      expect(
+        tester.getSemantics(find.text(label)).label,
+        contains(label),
+        reason: 'missing nav semantics: $label',
+      );
+    }
+
     await tester.tap(find.byTooltip('Cash-flow planning'));
     await tester.pumpAndSettle();
     expect(find.text('Conservative forecast'), findsOneWidget);
