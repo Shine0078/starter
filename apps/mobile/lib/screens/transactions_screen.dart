@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart' as intl;
 
 import '../api/client.dart';
 import '../l10n/app_localizations.dart';
@@ -486,7 +485,7 @@ class _TransactionFilterSheetState extends State<_TransactionFilterSheet> {
     final l10n = AppLocalizations.of(context);
     return date == null
         ? l10n.transactionsChooseDate
-        : intl.DateFormat.yMMMd(l10n.localeName).format(date);
+        : MaterialLocalizations.of(context).formatMediumDate(date);
   }
 
   @override

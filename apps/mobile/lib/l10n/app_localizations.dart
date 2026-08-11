@@ -269,7 +269,7 @@ abstract class AppLocalizations {
   /// No description provided for @planTitle.
   ///
   /// In en, this message translates to:
-  /// **'Plan'**
+  /// **'Your plan'**
   String get planTitle;
 
   /// No description provided for @helpTitle.
@@ -2684,6 +2684,228 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Check connection'**
   String get helpCheckConnection;
+
+  /// No description provided for @planEntitlementMultipleInstitutions.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect multiple institutions'**
+  String get planEntitlementMultipleInstitutions;
+
+  /// No description provided for @planEntitlementMonthlyPdf.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly PDF report'**
+  String get planEntitlementMonthlyPdf;
+
+  /// No description provided for @planEntitlementCashFlow.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash-flow forecast and purchase planning'**
+  String get planEntitlementCashFlow;
+
+  /// No description provided for @planEntitlementDataExport.
+  ///
+  /// In en, this message translates to:
+  /// **'Full data export'**
+  String get planEntitlementDataExport;
+
+  /// No description provided for @planCheckoutPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish in your browser. Your plan updates here once the payment is confirmed.'**
+  String get planCheckoutPending;
+
+  /// No description provided for @planCouldNotOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open {destination}.'**
+  String planCouldNotOpen(String destination);
+
+  /// No description provided for @planCheckout.
+  ///
+  /// In en, this message translates to:
+  /// **'checkout'**
+  String get planCheckout;
+
+  /// No description provided for @planBillingPortal.
+  ///
+  /// In en, this message translates to:
+  /// **'the billing portal'**
+  String get planBillingPortal;
+
+  /// No description provided for @planBillingNotConfigured.
+  ///
+  /// In en, this message translates to:
+  /// **'Billing is not configured on this server yet.'**
+  String get planBillingNotConfigured;
+
+  /// No description provided for @planRefreshAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get planRefreshAction;
+
+  /// No description provided for @planLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load your plan'**
+  String get planLoadFailed;
+
+  /// No description provided for @planTryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get planTryAgain;
+
+  /// No description provided for @planEverythingAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Everything is available'**
+  String get planEverythingAvailable;
+
+  /// No description provided for @planNoLimits.
+  ///
+  /// In en, this message translates to:
+  /// **'This server does not limit features by plan. You can connect up to {limit} institutions and use every feature.'**
+  String planNoLimits(num limit);
+
+  /// No description provided for @planIncludesSection.
+  ///
+  /// In en, this message translates to:
+  /// **'WHAT EACH PLAN INCLUDES'**
+  String get planIncludesSection;
+
+  /// No description provided for @planPaidUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid plans are not available on this server.'**
+  String get planPaidUnavailable;
+
+  /// No description provided for @planYearly.
+  ///
+  /// In en, this message translates to:
+  /// **'Yearly'**
+  String get planYearly;
+
+  /// No description provided for @planMonthly.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly'**
+  String get planMonthly;
+
+  /// No description provided for @planCurrentSection.
+  ///
+  /// In en, this message translates to:
+  /// **'CURRENT PLAN'**
+  String get planCurrentSection;
+
+  /// No description provided for @planManageSubscription.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage subscription'**
+  String get planManageSubscription;
+
+  /// No description provided for @planPaymentProblem.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment problem'**
+  String get planPaymentProblem;
+
+  /// No description provided for @planPaymentProblemDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not take your last payment. Your plan is still active while we retry — update your card to keep it.'**
+  String get planPaymentProblemDetail;
+
+  /// No description provided for @planFreeLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect up to {limit} {institutions}.'**
+  String planFreeLimit(num limit, String institutions);
+
+  /// No description provided for @planEnds.
+  ///
+  /// In en, this message translates to:
+  /// **'Ends {date}. You keep everything until then.'**
+  String planEnds(String date);
+
+  /// No description provided for @planTrialEnds.
+  ///
+  /// In en, this message translates to:
+  /// **'Trial ends {date}.'**
+  String planTrialEnds(String date);
+
+  /// No description provided for @planRenews.
+  ///
+  /// In en, this message translates to:
+  /// **'Renews {date}.'**
+  String planRenews(String date);
+
+  /// No description provided for @planActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active.'**
+  String get planActive;
+
+  /// No description provided for @planCurrentChip.
+  ///
+  /// In en, this message translates to:
+  /// **'Current'**
+  String get planCurrentChip;
+
+  /// No description provided for @planConnectedInstitutions.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} connected {institutions}'**
+  String planConnectedInstitutions(num count, String institutions);
+
+  /// No description provided for @planStartTrial.
+  ///
+  /// In en, this message translates to:
+  /// **'Start {days}-day free trial'**
+  String planStartTrial(num days);
+
+  /// No description provided for @planUpgradeTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Upgrade to {plan}'**
+  String planUpgradeTo(String plan);
+
+  /// No description provided for @planTrialTerms.
+  ///
+  /// In en, this message translates to:
+  /// **'Then billed {interval}. Cancel any time before it ends.'**
+  String planTrialTerms(String interval);
+
+  /// No description provided for @planPaidFeature.
+  ///
+  /// In en, this message translates to:
+  /// **'Included in a paid plan'**
+  String get planPaidFeature;
+
+  /// No description provided for @planNotNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get planNotNow;
+
+  /// No description provided for @planSeePlans.
+  ///
+  /// In en, this message translates to:
+  /// **'See plans'**
+  String get planSeePlans;
+
+  /// No description provided for @planWebPurchaseUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscriptions are managed on the web. Sign in at your FINVERSE account page to upgrade.'**
+  String get planWebPurchaseUnavailable;
+
+  /// No description provided for @planNativePurchaseUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'In-app purchasing is not available in this build yet.'**
+  String get planNativePurchaseUnavailable;
 }
 
 class _AppLocalizationsDelegate

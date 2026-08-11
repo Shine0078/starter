@@ -57,14 +57,3 @@ const BillingPurchaseMode kBillingPurchaseMode = _rawPurchaseMode == 'linkOut'
 /// True when this build may actually start a purchase.
 bool canPurchaseWith(BillingPurchaseMode mode) =>
     mode == BillingPurchaseMode.linkOut;
-
-/// Shown wherever an upgrade would otherwise be offered, so a free user is
-/// never left staring at a locked feature with no explanation of how to get it.
-String purchaseUnavailableReason(BillingPurchaseMode mode) => switch (mode) {
-      BillingPurchaseMode.informational =>
-        'Subscriptions are managed on the web. Sign in at your FINVERSE account '
-            'page to upgrade.',
-      BillingPurchaseMode.nativeStore =>
-        'In-app purchasing is not available in this build yet.',
-      BillingPurchaseMode.linkOut => '',
-    };

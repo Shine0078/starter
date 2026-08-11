@@ -105,7 +105,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get goalsTitle => 'Objectifs';
 
   @override
-  String get planTitle => 'Forfait';
+  String get planTitle => 'Votre forfait';
 
   @override
   String get helpTitle => 'Aide et assistance';
@@ -1569,4 +1569,143 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get helpCheckConnection => 'Vérifier la connexion';
+
+  @override
+  String get planEntitlementMultipleInstitutions =>
+      'Connecter plusieurs institutions';
+
+  @override
+  String get planEntitlementMonthlyPdf => 'Rapport PDF mensuel';
+
+  @override
+  String get planEntitlementCashFlow =>
+      'Prévision de trésorerie et planification d’achats';
+
+  @override
+  String get planEntitlementDataExport => 'Exportation complète des données';
+
+  @override
+  String get planCheckoutPending =>
+      'Terminez dans votre navigateur. Votre forfait sera mis à jour ici lorsque le paiement sera confirmé.';
+
+  @override
+  String planCouldNotOpen(String destination) {
+    return 'Impossible d’ouvrir $destination.';
+  }
+
+  @override
+  String get planCheckout => 'le paiement';
+
+  @override
+  String get planBillingPortal => 'le portail de facturation';
+
+  @override
+  String get planBillingNotConfigured =>
+      'La facturation n’est pas encore configurée sur ce serveur.';
+
+  @override
+  String get planRefreshAction => 'Actualiser';
+
+  @override
+  String get planLoadFailed => 'Impossible de charger votre forfait';
+
+  @override
+  String get planTryAgain => 'Réessayer';
+
+  @override
+  String get planEverythingAvailable => 'Tout est disponible';
+
+  @override
+  String planNoLimits(num limit) {
+    return 'Ce serveur ne limite pas les fonctions par forfait. Vous pouvez connecter jusqu’à $limit institutions et utiliser toutes les fonctions.';
+  }
+
+  @override
+  String get planIncludesSection => 'CE QUE COMPREND CHAQUE FORFAIT';
+
+  @override
+  String get planPaidUnavailable =>
+      'Les forfaits payants ne sont pas disponibles sur ce serveur.';
+
+  @override
+  String get planYearly => 'Annuel';
+
+  @override
+  String get planMonthly => 'Mensuel';
+
+  @override
+  String get planCurrentSection => 'FORFAIT ACTUEL';
+
+  @override
+  String get planManageSubscription => 'Gérer l’abonnement';
+
+  @override
+  String get planPaymentProblem => 'Problème de paiement';
+
+  @override
+  String get planPaymentProblemDetail =>
+      'Nous n’avons pas pu prélever votre dernier paiement. Votre forfait demeure actif pendant nos nouvelles tentatives — mettez votre carte à jour pour le conserver.';
+
+  @override
+  String planFreeLimit(num limit, String institutions) {
+    return 'Connectez jusqu’à $limit $institutions.';
+  }
+
+  @override
+  String planEnds(String date) {
+    return 'Se termine le $date. Vous conservez tout jusque-là.';
+  }
+
+  @override
+  String planTrialEnds(String date) {
+    return 'L’essai se termine le $date.';
+  }
+
+  @override
+  String planRenews(String date) {
+    return 'Se renouvelle le $date.';
+  }
+
+  @override
+  String get planActive => 'Actif.';
+
+  @override
+  String get planCurrentChip => 'Actuel';
+
+  @override
+  String planConnectedInstitutions(num count, String institutions) {
+    return '$count institutions connectées';
+  }
+
+  @override
+  String planStartTrial(num days) {
+    return 'Commencer l’essai gratuit de $days jours';
+  }
+
+  @override
+  String planUpgradeTo(String plan) {
+    return 'Passer à $plan';
+  }
+
+  @override
+  String planTrialTerms(String interval) {
+    return 'Puis facturé $interval. Annulez en tout temps avant la fin.';
+  }
+
+  @override
+  String get planPaidFeature => 'Inclus dans un forfait payant';
+
+  @override
+  String get planNotNow => 'Pas maintenant';
+
+  @override
+  String get planSeePlans => 'Voir les forfaits';
+
+  @override
+  String get planWebPurchaseUnavailable =>
+      'Les abonnements sont gérés sur le web. Connectez-vous à votre page de compte FINVERSE pour passer au niveau supérieur.';
+
+  @override
+  String get planNativePurchaseUnavailable =>
+      'Les achats intégrés ne sont pas encore disponibles dans cette version.';
 }

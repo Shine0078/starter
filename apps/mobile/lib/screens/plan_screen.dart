@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../api/billing_policy.dart';
 import '../api/client.dart';
+import '../l10n/app_localizations.dart';
+import '../l10n/localization_fallback.dart';
 import '../models/models.dart';
 
 /// Human labels for the server's entitlement slugs.
@@ -11,21 +12,18 @@ import '../models/models.dart';
 /// Anything unrecognised falls back to a readable version of the slug rather
 /// than being hidden: a client that silently drops a capability it has not been
 /// taught about would under-sell a plan the user is already paying for.
-const _entitlementLabels = <String, String>{
-  'unlimited_bank_links': 'Connect multiple institutions',
-  'monthly_pdf_report': 'Monthly PDF report',
-  'cash_flow_planning': 'Cash-flow forecast and purchase planning',
-  'data_export': 'Full data export',
-};
-
-String entitlementLabel(String slug) =>
-    _entitlementLabels[slug] ??
-    slug
-        .split('_')
-        .map((word) => word.isEmpty
-            ? word
-            : '${word[0].toUpperCase()}${word.substring(1)}')
-        .join(' ');
+String entitlementLabel(AppLocalizations l10n, String slug) => switch (slug) {
+      'unlimited_bank_links' => l10n.planEntitlementMultipleInstitutions,
+      'monthly_pdf_report' => l10n.planEntitlementMonthlyPdf,
+      'cash_flow_planning' => l10n.planEntitlementCashFlow,
+      'data_export' => l10n.planEntitlementDataExport,
+      _ => slug
+          .split('_')
+          .map((word) => word.isEmpty
+              ? word
+              : '${word[0].toUpperCase()}${word.substring(1)}')
+          .join(' '),
+    };
 
 /// Plan state, what each tier includes, and the way to change it.
 class PlanScreen extends StatefulWidget {
@@ -54,6 +52,8 @@ class _PlanScreenState extends State<PlanScreen> {
   /// customer and materially better for the business, and a default nobody
   /// changes is the most-taken path.
   String _interval = 'year';
+
+  AppLocalizations get _l10n => localizedOrEnglish(context);
 
   @override
   void initState() {
@@ -100,14 +100,13 @@ class _PlanScreenState extends State<PlanScreen> {
     try {
       final session = await widget.api.startCheckout(plan, interval: _interval);
       if (!mounted) return;
-      await _open(session.url, 'checkout');
+      await _open(session.url, _l10n.planCheckout);
       // The webhook that records the purchase arrives independently of the
       // browser coming back, so this reload may still show the old plan. Say so
       // rather than leaving someone who has just paid staring at "Free".
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Finish in your browser. Your plan updates here once '
-              'the payment is confirmed.'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(_l10n.planCheckoutPending),
         ));
       }
       await _load();
@@ -124,7 +123,7 @@ class _PlanScreenState extends State<PlanScreen> {
     try {
       final url = await widget.api.billingPortalUrl();
       if (!mounted) return;
-      await _open(url, 'the billing portal');
+      await _open(url, _l10n.planBillingPortal);
     } catch (error) {
       _report(error);
     } finally {
@@ -138,17 +137,16 @@ class _PlanScreenState extends State<PlanScreen> {
     // launcher that will follow any scheme is a way to turn a compromised
     // response into an intent on the device.
     if (uri == null || uri.scheme != 'https') {
-      _showMessage('Could not open $what.');
+      _showMessage(_l10n.planCouldNotOpen(what));
       return;
     }
     final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!launched) _showMessage('Could not open $what.');
+    if (!launched) _showMessage(_l10n.planCouldNotOpen(what));
   }
 
   void _report(Object error) {
     _showMessage(switch (error) {
-      ApiException(statusCode: 503) =>
-        'Billing is not configured on this server yet.',
+      ApiException(statusCode: 503) => _l10n.planBillingNotConfigured,
       _ => friendlyErrorMessage(error),
     });
   }
@@ -162,12 +160,12 @@ class _PlanScreenState extends State<PlanScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(
-          title: const Text('Your plan'),
+          title: Text(_l10n.planTitle),
           actions: [
             IconButton(
               onPressed: _loading ? null : _load,
               icon: const Icon(Icons.refresh),
-              tooltip: 'Refresh',
+              tooltip: _l10n.planRefreshAction,
             ),
           ],
         ),
@@ -183,11 +181,11 @@ class _PlanScreenState extends State<PlanScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Could not load your plan'),
+              Text(_l10n.planLoadFailed),
               const SizedBox(height: 8),
               Text(_error!, textAlign: TextAlign.center),
               const SizedBox(height: 16),
-              FilledButton(onPressed: _load, child: const Text('Try again')),
+              FilledButton(onPressed: _load, child: Text(_l10n.planTryAgain)),
             ],
           ),
         ),
@@ -205,12 +203,8 @@ class _PlanScreenState extends State<PlanScreen> {
           Card(
             child: ListTile(
               leading: const Icon(Icons.all_inclusive),
-              title: const Text('Everything is available'),
-              subtitle: Text(
-                'This server does not limit features by plan. You can connect '
-                'up to ${summary.bankLinkLimit} institutions and use every '
-                'feature.',
-              ),
+              title: Text(_l10n.planEverythingAvailable),
+              subtitle: Text(_l10n.planNoLimits(summary.bankLinkLimit)),
             ),
           ),
         ],
@@ -223,7 +217,7 @@ class _PlanScreenState extends State<PlanScreen> {
         _currentPlanCard(summary),
         if (summary.needsPaymentAttention) _paymentWarning(summary),
         const SizedBox(height: 20),
-        _heading('WHAT EACH PLAN INCLUDES'),
+        _heading(_l10n.planIncludesSection),
         if (_showsIntervalChoice(summary)) _intervalToggle(summary),
         ..._plans.map((plan) => _planCard(plan, summary)),
         const SizedBox(height: 12),
@@ -231,7 +225,7 @@ class _PlanScreenState extends State<PlanScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Text(
-              purchaseUnavailableReason(widget.purchaseMode),
+              _purchaseUnavailableReason(),
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
@@ -239,7 +233,7 @@ class _PlanScreenState extends State<PlanScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Text(
-              'Paid plans are not available on this server.',
+              _l10n.planPaidUnavailable,
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
@@ -254,6 +248,12 @@ class _PlanScreenState extends State<PlanScreen> {
       canPurchaseWith(widget.purchaseMode) &&
       summary.isFree;
 
+  String _purchaseUnavailableReason() => switch (widget.purchaseMode) {
+        BillingPurchaseMode.informational => _l10n.planWebPurchaseUnavailable,
+        BillingPurchaseMode.nativeStore => _l10n.planNativePurchaseUnavailable,
+        BillingPurchaseMode.linkOut => '',
+      };
+
   Widget _intervalToggle(PlanSummary summary) => Padding(
         padding: const EdgeInsets.only(bottom: 12),
         child: SegmentedButton<String>(
@@ -261,7 +261,8 @@ class _PlanScreenState extends State<PlanScreen> {
             for (final interval in summary.intervals)
               ButtonSegment(
                 value: interval,
-                label: Text(interval == 'year' ? 'Yearly' : 'Monthly'),
+                label: Text(
+                    interval == 'year' ? _l10n.planYearly : _l10n.planMonthly),
               ),
           ],
           selected: {_interval},
@@ -280,7 +281,7 @@ class _PlanScreenState extends State<PlanScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('CURRENT PLAN',
+            Text(_l10n.planCurrentSection,
                 style:
                     theme.textTheme.labelSmall?.copyWith(letterSpacing: 1.2)),
             const SizedBox(height: 6),
@@ -292,7 +293,7 @@ class _PlanScreenState extends State<PlanScreen> {
               OutlinedButton.icon(
                 onPressed: _working ? null : _manage,
                 icon: const Icon(Icons.open_in_new),
-                label: const Text('Manage subscription'),
+                label: Text(_l10n.planManageSubscription),
               ),
             ],
           ],
@@ -308,11 +309,12 @@ class _PlanScreenState extends State<PlanScreen> {
         color: Theme.of(context).colorScheme.errorContainer,
         child: ListTile(
           leading: const Icon(Icons.credit_card_off_outlined),
-          title: const Text('Payment problem'),
-          subtitle: const Text(
+          title: Text(_l10n.planPaymentProblem),
+          subtitle: Text(_l10n.planPaymentProblemDetail),
+          /*
             'We could not take your last payment. Your plan is still active '
             'while we retry — update your card to keep it.',
-          ),
+          ), */
           trailing: const Icon(Icons.chevron_right),
           onTap: _working ? null : _manage,
         ),
@@ -320,18 +322,22 @@ class _PlanScreenState extends State<PlanScreen> {
 
   String _stateLine(PlanSummary summary) {
     if (summary.isFree) {
-      return 'Connect up to ${summary.bankLinkLimit} '
-          '${summary.bankLinkLimit == 1 ? 'institution' : 'institutions'}.';
+      return _l10n.planFreeLimit(
+        summary.bankLinkLimit,
+        summary.bankLinkLimit == 1
+            ? _l10n.bankInstitution
+            : _l10n.bankInstitutions,
+      );
     }
     final renews = summary.currentPeriodEnd;
     if (summary.cancelAtPeriodEnd && renews != null) {
-      return 'Ends ${_date(renews)}. You keep everything until then.';
+      return _l10n.planEnds(_date(renews));
     }
     if (summary.isTrialing && summary.trialEnd != null) {
-      return 'Trial ends ${_date(summary.trialEnd!)}.';
+      return _l10n.planTrialEnds(_date(summary.trialEnd!));
     }
-    if (renews != null) return 'Renews ${_date(renews)}.';
-    return 'Active.';
+    if (renews != null) return _l10n.planRenews(_date(renews));
+    return _l10n.planActive;
   }
 
   Widget _planCard(BillingPlan plan, PlanSummary summary) {
@@ -355,15 +361,19 @@ class _PlanScreenState extends State<PlanScreen> {
                 ),
                 if (isCurrent)
                   Chip(
-                    label: const Text('Current'),
+                    label: Text(_l10n.planCurrentChip),
                     visualDensity: VisualDensity.compact,
                   ),
               ],
             ),
             const SizedBox(height: 4),
             Text(
-              '${plan.bankLinkLimit} connected '
-              '${plan.bankLinkLimit == 1 ? 'institution' : 'institutions'}',
+              _l10n.planConnectedInstitutions(
+                plan.bankLinkLimit,
+                plan.bankLinkLimit == 1
+                    ? _l10n.bankInstitution
+                    : _l10n.bankInstitutions,
+              ),
               style: theme.textTheme.bodySmall,
             ),
             const SizedBox(height: 10),
@@ -375,7 +385,7 @@ class _PlanScreenState extends State<PlanScreen> {
                   children: [
                     const Icon(Icons.check, size: 18),
                     const SizedBox(width: 8),
-                    Expanded(child: Text(entitlementLabel(slug))),
+                    Expanded(child: Text(entitlementLabel(_l10n, slug))),
                   ],
                 ),
               ),
@@ -385,8 +395,8 @@ class _PlanScreenState extends State<PlanScreen> {
               FilledButton(
                 onPressed: _working ? null : () => _upgrade(plan.id),
                 child: Text(summary.trialDays > 0
-                    ? 'Start ${summary.trialDays}-day free trial'
-                    : 'Upgrade to ${plan.name}'),
+                    ? _l10n.planStartTrial(summary.trialDays)
+                    : _l10n.planUpgradeTo(plan.name)),
               ),
               if (summary.trialDays > 0)
                 Padding(
@@ -396,8 +406,11 @@ class _PlanScreenState extends State<PlanScreen> {
                     // charge is the single most common complaint about
                     // subscription apps, and burying it costs more in refunds
                     // and chargebacks than it ever gains in signups.
-                    'Then billed ${_interval == 'year' ? 'yearly' : 'monthly'}. '
-                    'Cancel any time before it ends.',
+                    _l10n.planTrialTerms(
+                      _interval == 'year'
+                          ? _l10n.planYearly.toLowerCase()
+                          : _l10n.planMonthly.toLowerCase(),
+                    ),
                     style: theme.textTheme.bodySmall,
                   ),
                 ),
@@ -419,7 +432,8 @@ class _PlanScreenState extends State<PlanScreen> {
         ),
       );
 
-  String _date(DateTime value) => DateFormat.yMMMd().format(value.toLocal());
+  String _date(DateTime value) =>
+      MaterialLocalizations.of(context).formatMediumDate(value.toLocal());
 }
 
 /// Explains a refused feature and offers the way out.
@@ -435,53 +449,56 @@ Future<void> showUpgradeSheet(
   await showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
-    builder: (sheetContext) => Padding(
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.lock_outline),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  reason.entitlement == null
-                      ? 'Included in a paid plan'
-                      : entitlementLabel(reason.entitlement!),
-                  style: Theme.of(sheetContext).textTheme.titleMedium,
+    builder: (sheetContext) {
+      final l10n = localizedOrEnglish(sheetContext);
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.lock_outline),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    reason.entitlement == null
+                        ? l10n.planPaidFeature
+                        : entitlementLabel(l10n, reason.entitlement!),
+                    style: Theme.of(sheetContext).textTheme.titleMedium,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(reason.message),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.of(sheetContext).pop(),
-                  child: const Text('Not now'),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(reason.message),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(sheetContext).pop(),
+                    child: Text(l10n.planNotNow),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: FilledButton(
-                  onPressed: () {
-                    Navigator.of(sheetContext).pop();
-                    Navigator.of(context).push(MaterialPageRoute(
-                      builder: (_) => PlanScreen(api: api),
-                    ));
-                  },
-                  child: const Text('See plans'),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: () {
+                      Navigator.of(sheetContext).pop();
+                      Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => PlanScreen(api: api),
+                      ));
+                    },
+                    child: Text(l10n.planSeePlans),
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    ),
+              ],
+            ),
+          ],
+        ),
+      );
+    },
   );
 }

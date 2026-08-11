@@ -105,7 +105,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get goalsTitle => 'Goals';
 
   @override
-  String get planTitle => 'Plan';
+  String get planTitle => 'Your plan';
 
   @override
   String get helpTitle => 'Help & support';
@@ -1545,4 +1545,143 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get helpCheckConnection => 'Check connection';
+
+  @override
+  String get planEntitlementMultipleInstitutions =>
+      'Connect multiple institutions';
+
+  @override
+  String get planEntitlementMonthlyPdf => 'Monthly PDF report';
+
+  @override
+  String get planEntitlementCashFlow =>
+      'Cash-flow forecast and purchase planning';
+
+  @override
+  String get planEntitlementDataExport => 'Full data export';
+
+  @override
+  String get planCheckoutPending =>
+      'Finish in your browser. Your plan updates here once the payment is confirmed.';
+
+  @override
+  String planCouldNotOpen(String destination) {
+    return 'Could not open $destination.';
+  }
+
+  @override
+  String get planCheckout => 'checkout';
+
+  @override
+  String get planBillingPortal => 'the billing portal';
+
+  @override
+  String get planBillingNotConfigured =>
+      'Billing is not configured on this server yet.';
+
+  @override
+  String get planRefreshAction => 'Refresh';
+
+  @override
+  String get planLoadFailed => 'Could not load your plan';
+
+  @override
+  String get planTryAgain => 'Try again';
+
+  @override
+  String get planEverythingAvailable => 'Everything is available';
+
+  @override
+  String planNoLimits(num limit) {
+    return 'This server does not limit features by plan. You can connect up to $limit institutions and use every feature.';
+  }
+
+  @override
+  String get planIncludesSection => 'WHAT EACH PLAN INCLUDES';
+
+  @override
+  String get planPaidUnavailable =>
+      'Paid plans are not available on this server.';
+
+  @override
+  String get planYearly => 'Yearly';
+
+  @override
+  String get planMonthly => 'Monthly';
+
+  @override
+  String get planCurrentSection => 'CURRENT PLAN';
+
+  @override
+  String get planManageSubscription => 'Manage subscription';
+
+  @override
+  String get planPaymentProblem => 'Payment problem';
+
+  @override
+  String get planPaymentProblemDetail =>
+      'We could not take your last payment. Your plan is still active while we retry — update your card to keep it.';
+
+  @override
+  String planFreeLimit(num limit, String institutions) {
+    return 'Connect up to $limit $institutions.';
+  }
+
+  @override
+  String planEnds(String date) {
+    return 'Ends $date. You keep everything until then.';
+  }
+
+  @override
+  String planTrialEnds(String date) {
+    return 'Trial ends $date.';
+  }
+
+  @override
+  String planRenews(String date) {
+    return 'Renews $date.';
+  }
+
+  @override
+  String get planActive => 'Active.';
+
+  @override
+  String get planCurrentChip => 'Current';
+
+  @override
+  String planConnectedInstitutions(num count, String institutions) {
+    return '$count connected $institutions';
+  }
+
+  @override
+  String planStartTrial(num days) {
+    return 'Start $days-day free trial';
+  }
+
+  @override
+  String planUpgradeTo(String plan) {
+    return 'Upgrade to $plan';
+  }
+
+  @override
+  String planTrialTerms(String interval) {
+    return 'Then billed $interval. Cancel any time before it ends.';
+  }
+
+  @override
+  String get planPaidFeature => 'Included in a paid plan';
+
+  @override
+  String get planNotNow => 'Not now';
+
+  @override
+  String get planSeePlans => 'See plans';
+
+  @override
+  String get planWebPurchaseUnavailable =>
+      'Subscriptions are managed on the web. Sign in at your FINVERSE account page to upgrade.';
+
+  @override
+  String get planNativePurchaseUnavailable =>
+      'In-app purchasing is not available in this build yet.';
 }
