@@ -20,6 +20,18 @@ hosting, legal review, store approval, and billing remain external launch gates
 npm install
 ```
 
+## Public Hosting
+
+The repository includes a Render Blueprint that deploys the API and Flutter PWA
+as one public HTTPS service backed by managed PostgreSQL. It does not require
+VPN, Tailscale, or this computer to remain online:
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Shine0078/starter)
+
+Before accepting real users, fill the required production secrets, reviewed
+legal URLs, SMTP credentials, and Plaid production credentials in Render. See
+[`docs/14-public-hosting-render.md`](docs/14-public-hosting-render.md).
+
 Run the whole pipeline in-process and watch it work — no server, no database:
 
 ```bash
