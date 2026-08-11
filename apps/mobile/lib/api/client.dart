@@ -1109,6 +1109,42 @@ class ApiClient {
         .toList();
   }
 
+  /// Recognise pasted receipt text without storing it (draft confirmation).
+  Future<ReceiptScan> scanReceipt(String text) async {
+    final json = await _send(
+      'POST',
+      '/receipts/scan',
+      {'text': text},
+    ) as Map<String, dynamic>;
+    return ReceiptScan.fromJson(json['scan'] as Map<String, dynamic>);
+  }
+
+  /// Attach a parsed receipt to one of the user's transactions.
+  Future<ReceiptRecord> attachReceipt(
+    String transactionId,
+    String text,
+  ) async {
+    final json = await _send(
+      'PUT',
+      '/receipts/${Uri.encodeComponent(transactionId)}',
+      {'text': text},
+    ) as Map<String, dynamic>;
+    return ReceiptRecord.fromJson(json['receipt'] as Map<String, dynamic>);
+  }
+
+  /// Returns null when this transaction has no stored receipt.
+  Future<ReceiptRecord?> receiptForTransaction(String transactionId) async {
+    try {
+      final json = await _get(
+        '/receipts/${Uri.encodeComponent(transactionId)}',
+      ) as Map<String, dynamic>;
+      return ReceiptRecord.fromJson(json['receipt'] as Map<String, dynamic>);
+    } on ApiException catch (error) {
+      if (error.statusCode == 404) return null;
+      rethrow;
+    }
+  }
+
   Future<void> deleteCategorizationRule(String ruleId) async {
     await _send(
       'DELETE',

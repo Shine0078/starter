@@ -155,6 +155,7 @@ if (ownerUrl) {
         'mfa_recovery_codes',
         'mfa_login_challenges',
         'subscriptions',
+        'receipts',
       ]) {
         const column = table === 'users' ? 'id' : 'user_id';
         const result = await harness.owner.query(

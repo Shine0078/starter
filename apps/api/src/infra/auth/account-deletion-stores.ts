@@ -13,6 +13,7 @@ import { withTransaction } from '../postgres/pool';
 import { InMemoryBankLinkStore, InMemoryBankWebhookStore } from '../banking/bank-link-stores';
 import { InMemorySubscriptionStore } from '../billing/subscription-stores';
 import { InMemoryConsentStore } from '../privacy/consent-stores';
+import { InMemoryReceiptStore } from '../receipts/receipt-stores';
 import { InMemoryAuthEventStore, InMemorySessionStore, InMemoryUserStore } from './in-memory-auth-stores';
 import { InMemoryMfaStore } from './mfa-stores';
 
@@ -39,6 +40,7 @@ export class InMemoryAccountDeletionStore implements AccountDeletionStore {
     private readonly consents: InMemoryConsentStore,
     private readonly mfa: InMemoryMfaStore,
     private readonly subscriptions: InMemorySubscriptionStore,
+    private readonly receipts: InMemoryReceiptStore,
   ) {}
 
   async request(userId: string, email: string, _requestedAt: Date, purgeAfter: Date): Promise<void> {
@@ -75,6 +77,7 @@ export class InMemoryAccountDeletionStore implements AccountDeletionStore {
       // in-memory one has to be told, and a missed store here is how an
       // "erased" account keeps a row nobody looks at again.
       this.subscriptions.purgeUser(userId);
+      this.receipts.purgeUser(userId);
       this.sessions.purgeUser(userId);
       this.events.purgeUser(userId, deletion.email);
       this.users.purgeUser(userId);

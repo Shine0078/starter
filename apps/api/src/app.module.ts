@@ -26,6 +26,7 @@ import { GoalsModule } from './modules/goals/goals.module';
 import { LedgerModule } from './modules/ledger/ledger.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PrivacyModule } from './modules/privacy/privacy.module';
+import { ReceiptsModule } from './modules/receipts/receipts.module';
 import { httpMetrics, metricsTokenMatches } from './infra/http/metrics';
 import { appleAppSiteAssociation as buildAppleAppSiteAssociation } from './infra/http/apple-app-site-association';
 
@@ -158,6 +159,7 @@ class MetaController {
     NotificationsModule,
     InsightsModule,
     PrivacyModule,
+    ReceiptsModule,
   ],
   controllers: [MetaController],
   providers: [

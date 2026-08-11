@@ -54,6 +54,11 @@ import {
 import { PlaidBankProvider } from '../infra/banking/plaid-provider';
 import { AccountBankRevoker } from '../infra/banking/account-revoker';
 import { AesGcmBankTokenCipher } from '../infra/banking/token-cipher';
+import { RuleBasedReceiptOcr } from '../infra/receipts/receipt-ocr-providers';
+import {
+  InMemoryReceiptStore,
+  PostgresReceiptStore,
+} from '../infra/receipts/receipt-stores';
 import { StripeBillingProvider } from '../infra/billing/stripe-provider';
 import {
   InMemoryBillingEventStore,
@@ -99,6 +104,7 @@ import {
   USER_STORE,
 } from '../ports/auth';
 import { CONSENT_STORE } from '../ports/privacy';
+import { RECEIPT_OCR_PROVIDER, RECEIPT_STORE } from '../ports/receipts';
 
 /**
  * Composition root. The only file that decides which adapter satisfies which
@@ -129,6 +135,7 @@ function storeProviders(): Provider[] {
     const registrations = new InMemoryRegistrationStore(users, consents);
     const mfa = new InMemoryMfaStore();
     const subscriptions = new InMemorySubscriptionStore();
+    const receipts = new InMemoryReceiptStore();
     const deletions = new InMemoryAccountDeletionStore(
       users,
       sessions,
@@ -144,6 +151,7 @@ function storeProviders(): Provider[] {
       consents,
       mfa,
       subscriptions,
+      receipts,
     );
     return [
       { provide: ACCOUNT_STORE, useValue: accounts },
@@ -164,6 +172,7 @@ function storeProviders(): Provider[] {
       { provide: MFA_STORE, useValue: mfa },
       { provide: SUBSCRIPTION_STORE, useValue: subscriptions },
       { provide: BILLING_EVENT_STORE, useValue: new InMemoryBillingEventStore() },
+      { provide: RECEIPT_STORE, useValue: receipts },
     ];
   }
 
@@ -200,6 +209,7 @@ function storeProviders(): Provider[] {
     { provide: MFA_STORE, useFactory: () => new PostgresMfaStore(pool) },
     { provide: SUBSCRIPTION_STORE, useFactory: () => new PostgresSubscriptionStore(pool) },
     { provide: BILLING_EVENT_STORE, useFactory: () => new PostgresBillingEventStore(pool) },
+    { provide: RECEIPT_STORE, useFactory: () => new PostgresReceiptStore(pool) },
   ];
 }
 
@@ -301,6 +311,7 @@ function storeProviders(): Provider[] {
       provide: TOKEN_ISSUER,
       useFactory: () => new JwtTokenIssuer(loadConfig().jwtSecret),
     },
+    { provide: RECEIPT_OCR_PROVIDER, useClass: RuleBasedReceiptOcr },
     ...storeProviders(),
   ],
   exports: [
@@ -333,6 +344,8 @@ function storeProviders(): Provider[] {
     BILLING_PROVIDER,
     SUBSCRIPTION_STORE,
     BILLING_EVENT_STORE,
+    RECEIPT_STORE,
+    RECEIPT_OCR_PROVIDER,
   ],
 })
 export class CoreModule {}

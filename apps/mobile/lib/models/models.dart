@@ -1567,3 +1567,69 @@ class CheckoutSession {
   final String url;
   final DateTime? expiresAt;
 }
+
+/// Extracted fields from a receipt, from `POST /receipts/scan`.
+class ReceiptScan {
+  const ReceiptScan({
+    this.merchant,
+    this.date,
+    this.totalMinor,
+    this.taxMinor,
+    this.currency,
+    this.items = const [],
+    this.confidence = 0,
+  });
+
+  factory ReceiptScan.fromJson(Map<String, dynamic> json) => ReceiptScan(
+        merchant: json['merchant'] as String?,
+        date: json['date'] as String?,
+        totalMinor: (json['totalMinor'] as num?)?.toInt(),
+        taxMinor: (json['taxMinor'] as num?)?.toInt(),
+        currency: json['currency'] as String?,
+        items: (json['items'] as List<dynamic>? ?? const [])
+            .whereType<String>()
+            .toList(),
+        confidence: (json['confidence'] as num?)?.toDouble() ?? 0,
+      );
+
+  final String? merchant;
+  final String? date;
+  final int? totalMinor;
+  final int? taxMinor;
+  final String? currency;
+  final List<String> items;
+  final double confidence;
+}
+
+/// A stored receipt attached to one transaction, from `PUT /receipts/:id`.
+class ReceiptRecord {
+  const ReceiptRecord({
+    required this.transactionId,
+    this.merchant,
+    this.receiptDate,
+    this.totalMinor,
+    this.taxMinor,
+    this.currency,
+    this.items = const [],
+  });
+
+  factory ReceiptRecord.fromJson(Map<String, dynamic> json) => ReceiptRecord(
+        transactionId: json['transactionId'] as String? ?? '',
+        merchant: json['merchant'] as String?,
+        receiptDate: json['receiptDate'] as String?,
+        totalMinor: (json['totalMinor'] as num?)?.toInt(),
+        taxMinor: (json['taxMinor'] as num?)?.toInt(),
+        currency: json['currency'] as String?,
+        items: (json['items'] as List<dynamic>? ?? const [])
+            .whereType<String>()
+            .toList(),
+      );
+
+  final String transactionId;
+  final String? merchant;
+  final String? receiptDate;
+  final int? totalMinor;
+  final int? taxMinor;
+  final String? currency;
+  final List<String> items;
+}

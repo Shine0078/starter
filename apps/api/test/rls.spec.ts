@@ -36,6 +36,7 @@ const PROTECTED_TABLES = [
   'bank_webhook_jobs',
   'consent_events',
   'subscriptions',
+  'receipts',
 ];
 
 /** Seeds one account and one transaction for a user, as the owner. */
@@ -104,6 +105,12 @@ async function seed(owner: Pool, userId: string, amount: number): Promise<void> 
        (id,user_id,kind,granted,policy_version,source,created_at)
      VALUES ($1,$2,'analytics',false,'preference-v1','user_settings',now())`,
     [`consent_${userId}`, userId],
+  );
+  await owner.query(
+    `INSERT INTO receipts
+       (id,user_id,merchant,text,created_at)
+     VALUES ($1,$2,'Blue Bottle','receipt text',now())`,
+    [`receipt_${userId}`, userId],
   );
 }
 

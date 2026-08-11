@@ -1544,6 +1544,45 @@ void main() {
     );
   });
 
+  test('parses scanned and stored receipts', () async {
+    var sawPut = false;
+    final api = clientWith(MockClient((request) async {
+      if (request.url.path.endsWith('/receipts/scan')) {
+        return http.Response(
+          '{"scan":{"merchant":"Blue Bottle Coffee","date":"2026-08-10",'
+          '"totalMinor":1142,"taxMinor":92,"currency":"USD",'
+          '"items":["Cappuccino 4.50"],"confidence":0.9}}',
+          201,
+        );
+      }
+      if (request.url.path.contains('/receipts/txn-1') &&
+          request.method == 'PUT') {
+        sawPut = true;
+        return http.Response(
+          '{"receipt":{"transactionId":"txn-1","merchant":"Blue Bottle Coffee",'
+          '"totalMinor":1142,"taxMinor":92,"currency":"USD",'
+          '"items":["Cappuccino 4.50"]}}',
+          200,
+        );
+      }
+      if (request.url.path.contains('/receipts/txn-2') &&
+          request.method == 'GET') {
+        return http.Response('{"message":"No receipt"}', 404);
+      }
+      return http.Response('{}', 200);
+    }));
+
+    final scan = await api.scanReceipt('Blue Bottle Coffee\nTotal Due 11.42');
+    expect(scan.merchant, 'Blue Bottle Coffee');
+    expect(scan.totalMinor, 1142);
+
+    final receipt = await api.attachReceipt('txn-1', 'Blue Bottle Coffee');
+    expect(sawPut, isTrue);
+    expect(receipt.merchant, 'Blue Bottle Coffee');
+
+    expect(await api.receiptForTransaction('txn-2'), isNull);
+  });
+
   test(
       'account deletion is confirmed server-side before credentials are cleared',
       () async {

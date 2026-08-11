@@ -27,6 +27,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
   late bool _isRecurring;
   late bool? _recurringOverride;
   late bool _duplicateReported;
+  ReceiptRecord? _receipt;
   var _saving = false;
 
   @override
@@ -40,6 +41,17 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
     _recurringOverride = widget.transaction.recurringOverride;
     _duplicateReported = widget.transaction.duplicateReported;
     _loadCategories();
+    _loadReceipt();
+  }
+
+  Future<void> _loadReceipt() async {
+    try {
+      final receipt =
+          await widget.api.receiptForTransaction(widget.transaction.id);
+      if (mounted) setState(() => _receipt = receipt);
+    } catch (_) {
+      // Receipts are additive context; an outage must not hide the details.
+    }
   }
 
   Future<void> _loadCategories() async {
@@ -264,6 +276,76 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
     }
   }
 
+  /// Paste receipt text (or an OCR transcript) and attach the parsed fields.
+  ///
+  /// Only extracted fields and the pasted text are uploaded — never an image.
+  Future<void> _attachReceipt() async {
+    final controller = TextEditingController();
+    final pasted = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Attach a receipt'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Paste the receipt text, or the text your phone\'s OCR produced '
+              'from a photo. FINVERSE extracts the merchant, date, total, and '
+              'tax. Images are never uploaded.',
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              maxLines: 6,
+              maxLength: 8000,
+              decoration: const InputDecoration(
+                hintText:
+                    'Blue Bottle Coffee\nCappuccino 4.50\nTotal Due 11.42',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text),
+            child: const Text('Attach'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (!mounted || pasted == null || pasted.trim().isEmpty) return;
+
+    setState(() => _saving = true);
+    try {
+      final receipt = await widget.api.attachReceipt(
+        widget.transaction.id,
+        pasted,
+      );
+      if (!mounted) return;
+      setState(() => _receipt = receipt);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(receipt.merchant == null
+                ? 'Receipt attached.'
+                : 'Receipt attached — ${receipt.merchant}.')),
+      );
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(friendlyErrorMessage(error))));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final transaction = widget.transaction;
@@ -422,6 +504,35 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
             ),
           ),
           const SizedBox(height: 12),
+          Card(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.receipt_long_outlined),
+                  title: Text(_receipt == null
+                      ? 'Attach a receipt'
+                      : 'Receipt · ${_receipt!.merchant ?? 'attached'}'),
+                  subtitle: Text(_receipt == null
+                      ? 'Keep the store copy and parse the total'
+                      : _receiptSummary()),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: _saving ? null : _attachReceipt,
+                ),
+                if (_receipt != null &&
+                    (_receipt!.totalMinor != null ||
+                        _receipt!.items.isNotEmpty))
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    child: Text(
+                      _receiptLines(),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
           const Text(
             'Changing the category also teaches FINVERSE how to classify matching transactions from this merchant.',
             textAlign: TextAlign.center,
@@ -429,6 +540,32 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
         ],
       ),
     );
+  }
+
+  String _receiptSummary() {
+    final receipt = _receipt!;
+    final totalMinor = receipt.totalMinor;
+    final total =
+        totalMinor == null ? null : (totalMinor / 100).toStringAsFixed(2);
+    final parts = <String>[
+      if (receipt.receiptDate != null) receipt.receiptDate!,
+      if (total != null)
+        'Total ${receipt.currency == null ? '' : '${receipt.currency} '}$total',
+    ];
+    return parts.isEmpty ? 'Receipt attached' : parts.join(' · ');
+  }
+
+  String _receiptLines() {
+    final receipt = _receipt!;
+    final lines = <String>[...receipt.items];
+    final totalMinor = receipt.totalMinor;
+    final total =
+        totalMinor == null ? null : (totalMinor / 100).toStringAsFixed(2);
+    if (total != null) {
+      lines.add(
+          'Total ${receipt.currency == null ? '' : '${receipt.currency} '}$total');
+    }
+    return lines.take(14).join('\n');
   }
 
   Widget _detail(String label, String value) => ListTile(
