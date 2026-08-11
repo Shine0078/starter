@@ -1472,6 +1472,60 @@ abstract class AppLocalizations {
   /// **'Info'**
   String get analyticsPriorityInfo;
 
+  /// No description provided for @onboardingSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get onboardingSkip;
+
+  /// No description provided for @onboardingMoneyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'See your money clearly'**
+  String get onboardingMoneyTitle;
+
+  /// No description provided for @onboardingMoneyDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Bring accounts and transactions into one private view, then understand where every dollar is going.'**
+  String get onboardingMoneyDetail;
+
+  /// No description provided for @onboardingProgressTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn plans into progress'**
+  String get onboardingProgressTitle;
+
+  /// No description provided for @onboardingProgressDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Set budgets and savings goals, monitor subscriptions, and get useful alerts before small problems grow.'**
+  String get onboardingProgressDetail;
+
+  /// No description provided for @onboardingPrivacyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect without sharing credentials'**
+  String get onboardingPrivacyTitle;
+
+  /// No description provided for @onboardingPrivacyDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Plaid handles bank sign-in. FINVERSE never receives your bank password and encrypts provider access tokens.'**
+  String get onboardingPrivacyDetail;
+
+  /// No description provided for @onboardingGetStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Get started'**
+  String get onboardingGetStarted;
+
+  /// No description provided for @onboardingContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get onboardingContinue;
+
   /// No description provided for @errorConnection.
   ///
   /// In en, this message translates to:

@@ -862,6 +862,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analyticsPriorityInfo => 'Info';
 
   @override
+  String get onboardingSkip => 'Skip';
+
+  @override
+  String get onboardingMoneyTitle => 'See your money clearly';
+
+  @override
+  String get onboardingMoneyDetail =>
+      'Bring accounts and transactions into one private view, then understand where every dollar is going.';
+
+  @override
+  String get onboardingProgressTitle => 'Turn plans into progress';
+
+  @override
+  String get onboardingProgressDetail =>
+      'Set budgets and savings goals, monitor subscriptions, and get useful alerts before small problems grow.';
+
+  @override
+  String get onboardingPrivacyTitle => 'Connect without sharing credentials';
+
+  @override
+  String get onboardingPrivacyDetail =>
+      'Plaid handles bank sign-in. FINVERSE never receives your bank password and encrypts provider access tokens.';
+
+  @override
+  String get onboardingGetStarted => 'Get started';
+
+  @override
+  String get onboardingContinue => 'Continue';
+
+  @override
   String get errorConnection =>
       'Couldn\'t reach the server. Check your connection.';
 
