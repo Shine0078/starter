@@ -1,0 +1,278 @@
+# FINVERSE — CURRENT HANDOVER (for the next agent)
+
+> ## 2026-08-11 continuation — this supersedes stale statements below
+>
+> - Commit `9c713f3` localizes transaction-row status badges and the category
+>   correction menu, including the common quick categories in English and
+>   French. Flutter analysis is clean and all **92** tests pass.
+> - Commit `c107e6a` localizes plan state, tier comparison, entitlements,
+>   checkout/manage flows, payment warnings, and upgrade sheets. It also fixes
+>   a real isolated-host crash caused by uninitialized explicit intl date data:
+>   date labels now use Flutter's locale-aware `MaterialLocalizations` API.
+>   All **92** Flutter tests pass and analysis is clean. A fresh
+>   `flutter build web --release --no-web-resources-cdn --base-href=/app/`
+>   and Android debug APK build pass after the full localization set. Android
+>   still warns that `workmanager_android` must adopt Flutter's future built-in
+>   Kotlin model; this is a third-party upgrade watch item, not a current build
+>   failure.
+> - Commit `0a1898f` localizes the support and recovery centre, including
+>   privacy-safe diagnostics and all troubleshooting content. It adds the
+>   shared fallback used by recovery screens when an isolated host omits app
+>   localization delegates, plus a French regression. All **92** Flutter tests
+>   pass and analysis is clean.
+> - Commit `6074da0` localizes the transaction explorer and its complete
+>   filter sheet: search, empty/error states, status and recurrence filters,
+>   range validation, and locale-aware date labels. Flutter analysis is clean
+>   and all **91** mobile tests pass.
+> - Commit `9497e6c` localizes the complete bank-account management path:
+>   Plaid step-up, link/reconnect/disconnect, manual accounts, provider error
+>   recovery, plan-limit messaging, status labels, and account card actions.
+>   It adds a French regression test. Flutter analysis is clean, all **91**
+>   mobile tests pass, and a fresh local-CanvasKit release-web build succeeds.
+> - Commit `048f48d` localizes sign-in, account creation, MFA, password
+>   recovery, legal-consent, and secure-session messaging in English and
+>   French. The login screen safely falls back to English when embedded without
+>   localization delegates, which preserves the isolated authentication test
+>   harnesses. Flutter analysis is clean and all **90** mobile tests pass.
+> - Working tree status at handover: all product changes are committed; this
+>   handover file is deliberately untracked and local-only.
+>
+> - PWA recheck after the later mobile work: a freshly built current API on an
+>   isolated port served `/app/`, a deep link, local CanvasKit JS/Wasm, and the
+>   source-owned migration worker as 200/no-cache. Its final bootstrap loader
+>   call supplies only `canvasKitBaseUrl: 'canvaskit/'`; Flutter's bundled
+>   loader source legitimately contains the string `serviceWorkerSettings`, so
+>   do **not** use a broad text search as evidence of registration. The
+>   existing public quick tunnel has the corrected bootstrap but still runs the
+>   old in-memory API process and therefore serves its earlier migration worker
+>   without `event.waitUntil`. It was intentionally not restarted, preserving
+>   its live in-memory data. Physical iPhone proof remains outstanding.
+> - Commit `02bec35` localizes all first-run onboarding pages and actions.
+>   Flutter analysis and all **90** mobile tests pass.
+> - Commit `9f05508` localizes the Analytics screen's time-range controls,
+>   loading/error/empty states, metrics, spending-pace explanations,
+>   insight evidence, subscription summary and priority chips. Flutter
+>   analysis and all **90** mobile tests pass; fresh release-web and Android
+>   debug builds also pass.
+> - Commit `54df54a` localizes the shared cash-flow planner’s forecast,
+>   purchase scenario controls, forecast chart semantics, and recurring-event
+>   panel. It also applies the active locale to the date shown by the purchase
+>   picker. Flutter analysis and all **90** mobile tests pass.
+> - Commit `95bca4a` localizes monthly-budget creation/removal and savings-goal
+>   creation/contributions in English and French. Flutter analysis and all
+>   **90** mobile tests pass after this batch.
+> - Commit `5bea2a6` localizes subscription insights and the full cash-flow
+>   calendar, including locale-aware dates and spoken calendar labels. The
+>   existing calendar widget test now hosts real localization delegates. Full
+>   Flutter test (**90 passing**), release web, and Android debug builds pass.
+>   Android warns that the third-party `workmanager_android` plugin must adopt
+>   Flutter's future built-in Kotlin model; current builds remain successful.
+> - Commit `f20a392` moves the private finance guide, notifications and device
+>   alert preferences, and saved merchant-rule management onto generated
+>   English/French strings. It adds a French UI regression test for the guide.
+>   The complete Flutter suite now has **90 passing tests**; analysis and a
+>   fresh release web bundle pass.
+> - Commit `1e54af3` localizes the Profile hub's visible headings, navigation
+>   destinations, sign-out control, and verification confirmation in English
+>   and French. Flutter analysis is clean and the complete Flutter test suite
+>   has **89 passing tests**.
+> - Commit `46ee91a` adds a persisted, user-selectable display language:
+>   device default, English, or French. The preference restores *after*
+>   `runApp`, uses the guarded web shared-preferences registration, and cannot
+>   delay the first frame. Settings shows the selector and explicitly discloses
+>   that some screens are still being translated; this is **not** a claim that
+>   full AppLocalizations adoption is complete. Five new controller/scope
+>   regression tests pass; the full Flutter suite now has **89 passing tests**.
+> - **PWA startup follow-up (commit `39e435f`):**
+>   the generated Flutter 3.44 release bootstrap still chose
+>   `https://www.gstatic.com/flutter-canvaskit/<engine-revision>/` by default.
+>   The previous local-asset checks therefore did not prove that the renderer
+>   needed for the first frame was reachable on an iPhone. A custom
+>   `web/flutter_bootstrap.js` now forces `canvaskit/` relative to `/app/`, and
+>   the release/CI commands use `--no-web-resources-cdn` as a second guard.
+> - Fresh FINVERSE bundles now **do not register a service worker**. A small
+>   source-owned `web/flutter_service_worker.js` remains only to migrate older
+>   Flutter cache-first clients: it clears every cache, unregisters itself, and
+>   uses `event.waitUntil` so Safari cannot terminate cleanup early. Both the
+>   API static host and public Nginx host serve that same file; no host-specific
+>   interception remains.
+> - This code path was verified against a fresh release bundle and an isolated
+>   compiled API on port 3011: `/app/`, a deep route, the bootstrap, migration
+>   worker, CanvasKit JS/Wasm all returned 200 with `Cache-Control: no-cache`;
+>   bootstrap selected local CanvasKit and its final loader call had no service
+>   worker registration. Flutter analysis, all 84 Flutter tests, all 475
+>   in-memory API tests, API typecheck/build, and a new Android debug APK pass.
+> - **Still not physical-iPhone proof.** After deploying this commit, test the
+>   current HTTPS URL in Safari and Chrome-on-iOS. For an origin that previously
+>   cached the broken build, remove its Safari Website Data or reload once to
+>   let the migration worker run, then reload again. Do not call the loading
+>   issue resolved until FINVERSE onboarding visibly renders on the phone.
+> - The permanent iPhone PWA splash was reproduced as a **pre-first-frame
+>   Flutter exception**, not a service-worker or API failure: Flutter 3.44 did
+>   not register `shared_preferences_web`, while `ApiClient` constructed
+>   `SharedPreferencesAsync` during startup. Commit `8e29c8a` adds an
+>   idempotent web registration before session construction. A fresh public
+>   Chromium load now reaches FINVERSE onboarding with an empty console.
+> - This is **not physical-iPhone proof**. The owner must reload the current
+>   tunnel on Safari and Chrome-on-iOS and report whether onboarding appears;
+>   do not claim that gate closed until then. The original live-link details
+>   below may no longer be current after a restart.
+> - Commit `54c06c3` adds required-production HIBP k-anonymity password
+>   screening. It is implemented and targeted API tests/build pass.
+> - Commit `cf603bb` adds `FcmHttpV1PushProvider`: built-in Node
+>   service-account OAuth, FCM delivery for Android/web and APNs-routed iOS,
+>   privacy-safe lock-screen payloads, confirmed-stale-token cleanup, and
+>   fail-closed configuration. `FCM_CREDENTIALS_JSON` remains an owner secret.
+> - The same commit adds `workmanager` network-constrained
+>   background bank refresh, iOS BGTask/UIScene plugin registration, and three
+>   policy tests. `flutter analyze` and the targeted scheduler tests pass; a
+>   fresh Android debug APK was built. The FCM delivery adapter (4 tests) and
+>   push API (4 tests) also pass.
+> - Commit `140b55a` adds a bounded, explainable learner trained
+>   solely from the current user's explicit manual category corrections. Rules
+>   and the merchant lexicon still win; conflicting or weak examples predict
+>   nothing. The API suite now has 475 passing tests (5 intentional database
+>   skips); Flutter has 84 passing tests, analysis is clean, and fresh web
+>   release / Android release-mode builds both succeed (the local release uses
+>   the project's intentional debug-signing fallback, not a sellable store key).
+> - Commit `f2188b0` adds direct private receipt-photo OCR:
+>   Android's bundled ML Kit and iOS Apple Vision return a transcript for user
+>   review, then only that text is uploaded. Android compiles; Windows cannot
+>   compile or physical-test the iOS Vision path.
+> - Commit `fd104ac` localizes every new receipt scan/review action in the
+>   shipped English and French ARB catalogs. The 84-test Flutter suite and
+>   analysis remain clean after this change.
+> - Commit `a8dce16` adds an interaction-level accessibility regression that
+>   verifies the receipt scan and paste choices expose spoken labels.
+> - Commit `f9f8877` aligns the architecture, ADR, roadmap, and selling audit
+>   with the correction learner and local receipt-image OCR; previous Phase-2
+>   placeholder wording is no longer current.
+
+Workspace: `C:\Users\samue\OneDrive\Desktop\starter` · Branch `main` · Latest commit `9c713f3`.
+
+The only intentional uncommitted file is this handover note itself.
+
+Read this whole file before touching anything. It is the current, verified state as of the last session —
+not a promise, and the loading issue at the end is **unresolved and the top priority**.
+
+---
+
+## 1. Live test link (iPhone, right now)
+
+**`https://drums-lasting-marine-toolbox.trycloudflare.com`**
+
+How it is served right now (all of this dies if the PC sleeps/reboots, and the URL regenerates on tunnel restart):
+
+| Piece | Process | Notes |
+|---|---|---|
+| Cloudflare quick tunnel (no account) | `cloudflared.exe` in `%TEMP%\opencode` | public HTTPS → localhost:3000 |
+| FINVERSE API (`npm run dev`, ts-node) | `node.exe` on port 3000 | `STORE=memory` — **data resets on restart** |
+| Flutter web PWA | built at `apps/mobile/build/web`, served at `/app/` | same-origin API calls, no `API_BASE_URL` define |
+
+Verified live through the tunnel: `/healthz` 200, `/app/` 200, `/api/legal` 200, `/api/categories` 200, `main.dart.js` 200 and contains **no** placeholder host.
+
+The PC-side firewall allows TCP 3000 (`FINVERSE dev 3000` rule, added with elevation).
+
+**How to reach the same app away from this PC (owner gate, not code):** deploy `infra/docker-compose.public.yml` (Caddy auto-HTTPS) on any VPS with a domain. The repo is fully ready; a domain + hosting account are the only missing pieces.
+
+---
+
+## 2. THE OPEN ISSUE — iPhone web app stuck on the loading splash (top priority)
+
+**Original symptom:** On the iPhone (Safari), opening the link showed forever:
+
+> **FINVERSE — Still loading. The first open downloads the app; later ones are cached.**
+
+That text is Flutter web's default boot splash. It only disappears after `main()` runs and the first frame renders. Server-side is verified healthy (see §1) — every asset returns 200 and the bundle is the fresh same-origin build.
+
+**What is now fixed in source (commits `8e29c8a` and `39e435f`):**
+- `SharedPreferencesAsync` is registered before startup on web, eliminating the
+  original pre-first-frame Dart exception.
+- The release bootstrap explicitly loads CanvasKit from `/app/canvaskit/`, not
+  `gstatic.com`; CI and release builds use `--no-web-resources-cdn` as a second
+  guard. The public tunnel was rechecked after the build and its bootstrap has
+  the local config, `useLocalCanvasKit`, and **no** fresh worker registration.
+- New bundles ship a source-owned, migration-only worker which removes stale
+  Flutter caches with `event.waitUntil`, then unregisters. Fresh loads use no
+  service worker. App static files revalidate with `Cache-Control: no-cache`.
+
+**Live-tunnel caveat:** the API already running on port 3000 was intentionally
+not restarted because it holds in-memory test data. It serves the new static
+bootstrap (so an uncached iPhone takes the corrected startup path), but its
+old in-process worker handler still returns the earlier 240-byte cleanup script
+and `no-store` response headers. Restart it only when nobody is testing, to
+make the live tunnel match the compiled `39e435f` API exactly.
+
+**One-time recovery step for a previously broken phone:** remove Website Data
+for the tunnel/domain (or reload twice). The first navigation lets an old
+bootstrap fetch the migration worker; the second navigation runs the new
+self-contained bootstrap.
+
+**Remaining hypotheses if it still fails after a clean double-reload (next agent must check in this order):**
+
+1. **iOS Safari version vs modern JS output.** Flutter 3.44 compiles to ES2022+; an older iOS (<16.4-ish) Safari can fail to parse `main.dart.js`, which manifests exactly as an eternal boot splash. **Action:** ask the user's iOS version; have them open the same URL in **Chrome (iOS)** — if Chrome loads fine, it is Safari-version incompatibility.
+2. **iPhone Website Data still holds a cached copy.** Settings → Safari → Advanced → Website Data → delete the `trycloudflare` entry. Equivalent to clearing site data.
+3. **A startup exception in `main()` on web.** Suspects: `flutter_secure_storage` on web (needs a secure context — we have HTTPS, so unlikely), or `SecureOnboardingStore`/`SecureAppLockStore` reads. Note: these run *after* the first frame, so a stuck splash is more likely (1) or (2) than (3).
+4. **Definitive diagnosis:** serve a debug/profile web build (`flutter run -d web-server --web-port 8080` then tunnel it) and read the browser console; or attach Safari Web Inspector from a Mac.
+
+**Do not claim this issue fixed until the user confirms the app renders on their phone.**
+
+---
+
+## 3. What the product is
+
+FINVERSE — AI-assisted personal finance (Plaid-backed bank sync, budgets, goals, insights, health score, cash-flow forecast, subscriptions, alerts, PDF/CSV exports, privacy/consent, billing). NestJS API + PostgreSQL + Flutter (Android/iOS/web PWA). Pure-domain rule (ADR-0002); ports/adapters everywhere; row-level security in Postgres (ADR-0006).
+
+## 4. State of the four original user complaints
+
+1. **iPhone needs no VPN/Tailscale** — release builds reject loopback origins; physical phones use public HTTPS; same-Wi-Fi dev via `apps/mobile/run-ios-lan.ps1`. Code done; the real iPhone gate is a deployed domain.
+2. **Auth/session persistence** — atomic refresh-token rotation (server + store contract), offline-cached reads during refresh outages, keystore-tolerant rotation, tombstone logout. Tests green.
+3. **Bank connections / transaction sync** — Plaid Sandbox verified end-to-end; stale in-memory sync-lock recovery; dashboard survives a failed bank sync; reconnect/revoke/webhook/pending→posted flows complete.
+4. **Stability/UX** — friendly error messages across all screens, skeletons/empty/error states, offline cache + mutation queue, localization (en+fr), accessibility semantics checks.
+
+## 5. Features completed in the last sessions (all tested, committed)
+
+- `59e66da` config-test isolation from local Plaid Sandbox env bleed
+- `c7a1f83` **atomic refresh-token rotation** + concurrent-refresh regression test
+- `765edcb` recover stale in-memory bank-sync locks
+- `c59533b` iPhone connectivity made explicit (loopback rejection, diagnostics, `run-ios-lan.ps1`, docs)
+- `0cce4f1` serve encrypted cached reads when refresh is offline
+- `7b2cf04`/`c9ad46c`/`8178266`/`6a67e02` docs + counts synced to reality
+- `b301ffc` dashboard stays usable when a bank sync fails
+- `3451ec7` `friendlyErrorMessage()` applied across all screens
+- `1ad8582` merchant lexicon expanded ~3× (US/CA merchants, streaming, gaming, insurers, telecoms, airlines)
+- `107cd6a`/`91bbfc5` localization: `gen_l10n`, English + French ARB, wired through shell/login/offline banner
+- `08c656f` **receipt OCR**: pure parser + provider port + `POST/PUT/GET /api/receipts/*` + RLS + mobile attach flow (images never uploaded)
+- `ff90f53` + `1212638` **passkeys (WebAuthn)**: pure-Node FIDO2 verifier (challenge, registration/login verify, ES256, sign-counter regression), CBOR/COSE parsing, credential store with RLS, domain-gated config; **push registration**: `POST/DELETE /api/push/device` + failing-closed provider port
+- `6e579fb` mobile passkey + push client protocol
+- `2e630c9` automated spoken-label accessibility assertion on nav
+- `23c9eac` **no-op service worker + no-store for the PWA bundle** (the loading-splash fix)
+
+## 6. Test / build state (last verified)
+
+- API in-memory: **475 passed** (5 Postgres-only skips) · `npm test`
+- API + PostgreSQL: **564 passed** · `npm run test:db` (migrations 001–019, RLS, deletion-purge all covered)
+- Flutter: **90 passed**, `flutter analyze` clean
+- API `npm run build` + `npm run typecheck`: pass
+- `flutter build apk --debug`, `flutter build web --release --no-web-resources-cdn --base-href=/app/`: pass
+- Load smoke: 0 failures, p95 well under 750 ms
+
+## 7. Local environment facts
+
+- Flutter: `C:\Users\samue\development\flutter` (3.44.9 stable)
+- Android SDK: `C:\Users\samue\AppData\Local\Android\Sdk`; Java JDK 21 at `C:\Program Files\Android\openjdk\jdk-21.0.8`
+- Local Postgres: `npm run db:start` → `localhost:55432` (`finverse` / `finverse_app` roles), data in `apps/api/.postgres-data`
+- `.env` has Plaid **Sandbox** keys (ignored by git). `THROTTLE_DISABLED=true` in dev.
+- iOS native builds require macOS/Xcode (CI compiles iOS without signing on macOS).
+
+## 8. External blockers (owner actions — code cannot complete these)
+
+1. Domain + VPS/hosting → deploy `infra/docker-compose.public.yml` → removes the "PC must be on" dependency and gives a permanent HTTPS URL (this is the only real fix for "use it away from this device").
+2. Plaid production approval (+ Google identity verification to allowlist `com.finverse.finance` on Android).
+3. Apple Developer + Mac/Xcode: signing, Universal Link (`PLAID_IOS_REDIRECT_URI` + `IOS_TEAM_ID` + AASA), physical iOS test, native passkey ceremony.
+4. Push delivery: FCM/APNs credentials behind `ports/push.ts`.
+5. Legal review (Terms/Privacy versions), Stripe live keys, app-store accounts, penetration test.
+
+## 9. Recommended next milestone for the next agent
+
+**Resolve the iPhone loading splash definitively** (order: iOS version + Chrome test → clear site data → console via debug web build). Then, with owner credentials, deploy the public stack — that single step fulfils the user's "works away from this device" requirement. Do not restart the running API casually: it wipes the in-memory test data and, if `cloudflared` is also restarted, the live URL changes (the next agent should restart both only when the owner is not mid-test, and should document the new URL).
