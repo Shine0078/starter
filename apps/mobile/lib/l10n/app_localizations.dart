@@ -2306,6 +2306,222 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Last synced {date}'**
   String bankLastSynced(String date);
+
+  /// No description provided for @transactionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Transactions'**
+  String get transactionsTitle;
+
+  /// No description provided for @transactionsSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search merchant or description'**
+  String get transactionsSearchHint;
+
+  /// No description provided for @transactionsFilterAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter transactions'**
+  String get transactionsFilterAction;
+
+  /// No description provided for @transactionsFiltersActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Filters ({count} active)'**
+  String transactionsFiltersActive(num count);
+
+  /// No description provided for @transactionsSearchAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get transactionsSearchAction;
+
+  /// No description provided for @transactionsRetryAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get transactionsRetryAction;
+
+  /// No description provided for @transactionsNoMatches.
+  ///
+  /// In en, this message translates to:
+  /// **'No matching transactions.'**
+  String get transactionsNoMatches;
+
+  /// No description provided for @transactionsLoadOlderFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load older transactions: {detail}'**
+  String transactionsLoadOlderFailed(String detail);
+
+  /// No description provided for @transactionsFilterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter transactions'**
+  String get transactionsFilterTitle;
+
+  /// No description provided for @transactionsMoneyTypeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Money type'**
+  String get transactionsMoneyTypeLabel;
+
+  /// No description provided for @transactionsAllTypes.
+  ///
+  /// In en, this message translates to:
+  /// **'All types'**
+  String get transactionsAllTypes;
+
+  /// No description provided for @transactionsSpending.
+  ///
+  /// In en, this message translates to:
+  /// **'Spending'**
+  String get transactionsSpending;
+
+  /// No description provided for @transactionsIncome.
+  ///
+  /// In en, this message translates to:
+  /// **'Income'**
+  String get transactionsIncome;
+
+  /// No description provided for @transactionsTransfers.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfers'**
+  String get transactionsTransfers;
+
+  /// No description provided for @transactionsCategoryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Category'**
+  String get transactionsCategoryLabel;
+
+  /// No description provided for @transactionsAllCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'All categories'**
+  String get transactionsAllCategories;
+
+  /// No description provided for @transactionsAccountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get transactionsAccountLabel;
+
+  /// No description provided for @transactionsAllAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'All accounts'**
+  String get transactionsAllAccounts;
+
+  /// No description provided for @transactionsStatusLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get transactionsStatusLabel;
+
+  /// No description provided for @transactionsAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get transactionsAll;
+
+  /// No description provided for @transactionsPosted.
+  ///
+  /// In en, this message translates to:
+  /// **'Posted'**
+  String get transactionsPosted;
+
+  /// No description provided for @transactionsPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get transactionsPending;
+
+  /// No description provided for @transactionsFrequencyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Frequency'**
+  String get transactionsFrequencyLabel;
+
+  /// No description provided for @transactionsRecurring.
+  ///
+  /// In en, this message translates to:
+  /// **'Recurring'**
+  String get transactionsRecurring;
+
+  /// No description provided for @transactionsOneOff.
+  ///
+  /// In en, this message translates to:
+  /// **'One-off'**
+  String get transactionsOneOff;
+
+  /// No description provided for @transactionsMinAmountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Min amount'**
+  String get transactionsMinAmountLabel;
+
+  /// No description provided for @transactionsMaxAmountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Max amount'**
+  String get transactionsMaxAmountLabel;
+
+  /// No description provided for @transactionsMinorUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'Minor units'**
+  String get transactionsMinorUnits;
+
+  /// No description provided for @transactionsFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From: {date}'**
+  String transactionsFrom(String date);
+
+  /// No description provided for @transactionsTo.
+  ///
+  /// In en, this message translates to:
+  /// **'To: {date}'**
+  String transactionsTo(String date);
+
+  /// No description provided for @transactionsChooseDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose date'**
+  String get transactionsChooseDate;
+
+  /// No description provided for @transactionsInvalidAmounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Amounts must be whole minor-unit values.'**
+  String get transactionsInvalidAmounts;
+
+  /// No description provided for @transactionsAmountRangeInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimum amount cannot exceed maximum.'**
+  String get transactionsAmountRangeInvalid;
+
+  /// No description provided for @transactionsDateRangeInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'The start date must be before the end date.'**
+  String get transactionsDateRangeInvalid;
+
+  /// No description provided for @transactionsClearFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear all'**
+  String get transactionsClearFilters;
+
+  /// No description provided for @transactionsApplyFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply filters'**
+  String get transactionsApplyFilters;
 }
 
 class _AppLocalizationsDelegate

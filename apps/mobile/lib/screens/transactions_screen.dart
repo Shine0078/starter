@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart' as intl;
 
 import '../api/client.dart';
+import '../l10n/app_localizations.dart';
 import '../models/models.dart';
 import '../widgets/transaction_tile.dart';
 import 'transaction_feed_groups.dart';
@@ -158,8 +160,8 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(
-              'Could not load older transactions: ${friendlyErrorMessage(error)}'),
+          content: Text(AppLocalizations.of(context)
+              .transactionsLoadOlderFailed(friendlyErrorMessage(error))),
         ));
       }
     } finally {
@@ -221,49 +223,56 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Transactions')),
-        body: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: SearchBar(
-                controller: _search,
-                hintText: 'Search merchant or description',
-                leading: const Icon(Icons.search),
-                trailing: [
-                  IconButton(
-                    tooltip: _activeFilterCount == 0
-                        ? 'Filter transactions'
-                        : 'Filters ($_activeFilterCount active)',
-                    onPressed: _openFilters,
-                    icon: Icon(_activeFilterCount == 0
-                        ? Icons.filter_alt_outlined
-                        : Icons.filter_alt),
-                  ),
-                  IconButton(
-                    tooltip: 'Search',
-                    onPressed: _load,
-                    icon: const Icon(Icons.arrow_forward),
-                  ),
-                ],
-                onChanged: _onSearchChanged,
-                onSubmitted: (_) => _load(),
-              ),
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.transactionsTitle)),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: SearchBar(
+              controller: _search,
+              hintText: l10n.transactionsSearchHint,
+              leading: const Icon(Icons.search),
+              trailing: [
+                IconButton(
+                  tooltip: _activeFilterCount == 0
+                      ? l10n.transactionsFilterAction
+                      : l10n.transactionsFiltersActive(_activeFilterCount),
+                  onPressed: _openFilters,
+                  icon: Icon(_activeFilterCount == 0
+                      ? Icons.filter_alt_outlined
+                      : Icons.filter_alt),
+                ),
+                IconButton(
+                  tooltip: l10n.transactionsSearchAction,
+                  onPressed: _load,
+                  icon: const Icon(Icons.arrow_forward),
+                ),
+              ],
+              onChanged: _onSearchChanged,
+              onSubmitted: (_) => _load(),
             ),
-            Expanded(child: _body()),
-          ],
-        ),
-      );
+          ),
+          Expanded(child: _body()),
+        ],
+      ),
+    );
+  }
 
   Widget _body() {
     if (_loading) return const Center(child: CircularProgressIndicator());
     if (_error != null) {
       return Center(
-          child: FilledButton(onPressed: _load, child: const Text('Retry')));
+          child: FilledButton(
+              onPressed: _load,
+              child:
+                  Text(AppLocalizations.of(context).transactionsRetryAction)));
     }
     if (_rows.isEmpty) {
-      return const Center(child: Text('No matching transactions.'));
+      return Center(
+          child: Text(AppLocalizations.of(context).transactionsNoMatches));
     }
     final groups = groupTransactionsByDate(_rows);
     final items = <Object>[];
@@ -438,16 +447,18 @@ class _TransactionFilterSheetState extends State<_TransactionFilterSheet> {
     final max = _parseAmount(_maxAmount.text);
     if ((_minAmount.text.trim().isNotEmpty && min == null) ||
         (_maxAmount.text.trim().isNotEmpty && max == null)) {
-      setState(() => _validation = 'Amounts must be whole minor-unit values.');
+      setState(() => _validation =
+          AppLocalizations.of(context).transactionsInvalidAmounts);
       return;
     }
     if (min != null && max != null && min > max) {
-      setState(() => _validation = 'Minimum amount cannot exceed maximum.');
+      setState(() => _validation =
+          AppLocalizations.of(context).transactionsAmountRangeInvalid);
       return;
     }
     if (_from != null && _to != null && _from!.isAfter(_to!)) {
-      setState(
-          () => _validation = 'The start date must be before the end date.');
+      setState(() => _validation =
+          AppLocalizations.of(context).transactionsDateRangeInvalid);
       return;
     }
     Navigator.of(context).pop(_TransactionFilterValues(
@@ -471,15 +482,17 @@ class _TransactionFilterSheetState extends State<_TransactionFilterSheet> {
     return parsed;
   }
 
-  String _dateLabel(DateTime? date) => date == null
-      ? 'Choose date'
-      : '${date.year.toString().padLeft(4, '0')}-'
-          '${date.month.toString().padLeft(2, '0')}-'
-          '${date.day.toString().padLeft(2, '0')}';
+  String _dateLabel(DateTime? date) {
+    final l10n = AppLocalizations.of(context);
+    return date == null
+        ? l10n.transactionsChooseDate
+        : intl.DateFormat.yMMMd(l10n.localeName).format(date);
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(
@@ -492,16 +505,23 @@ class _TransactionFilterSheetState extends State<_TransactionFilterSheet> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Filter transactions', style: theme.textTheme.titleLarge),
+              Text(l10n.transactionsFilterTitle,
+                  style: theme.textTheme.titleLarge),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 initialValue: _categoryKind,
-                decoration: const InputDecoration(labelText: 'Money type'),
-                items: const [
-                  DropdownMenuItem(value: '', child: Text('All types')),
-                  DropdownMenuItem(value: 'expense', child: Text('Spending')),
-                  DropdownMenuItem(value: 'income', child: Text('Income')),
-                  DropdownMenuItem(value: 'transfer', child: Text('Transfers')),
+                decoration:
+                    InputDecoration(labelText: l10n.transactionsMoneyTypeLabel),
+                items: [
+                  DropdownMenuItem(
+                      value: '', child: Text(l10n.transactionsAllTypes)),
+                  DropdownMenuItem(
+                      value: 'expense', child: Text(l10n.transactionsSpending)),
+                  DropdownMenuItem(
+                      value: 'income', child: Text(l10n.transactionsIncome)),
+                  DropdownMenuItem(
+                      value: 'transfer',
+                      child: Text(l10n.transactionsTransfers)),
                 ],
                 onChanged: (value) =>
                     setState(() => _categoryKind = value ?? ''),
@@ -509,10 +529,11 @@ class _TransactionFilterSheetState extends State<_TransactionFilterSheet> {
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: _categorySlug,
-                decoration: const InputDecoration(labelText: 'Category'),
+                decoration:
+                    InputDecoration(labelText: l10n.transactionsCategoryLabel),
                 items: [
-                  const DropdownMenuItem(
-                      value: '', child: Text('All categories')),
+                  DropdownMenuItem(
+                      value: '', child: Text(l10n.transactionsAllCategories)),
                   ...widget.categories.map((category) => DropdownMenuItem(
                         value: category.slug,
                         child: Text(category.name),
@@ -524,10 +545,11 @@ class _TransactionFilterSheetState extends State<_TransactionFilterSheet> {
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: _accountId,
-                decoration: const InputDecoration(labelText: 'Account'),
+                decoration:
+                    InputDecoration(labelText: l10n.transactionsAccountLabel),
                 items: [
-                  const DropdownMenuItem(
-                      value: '', child: Text('All accounts')),
+                  DropdownMenuItem(
+                      value: '', child: Text(l10n.transactionsAllAccounts)),
                   ...widget.accounts.map((account) => DropdownMenuItem(
                         value: account.id,
                         child: Text('${account.name} ••${account.mask}'),
@@ -541,13 +563,17 @@ class _TransactionFilterSheetState extends State<_TransactionFilterSheet> {
                   Expanded(
                     child: DropdownButtonFormField<String>(
                       initialValue: _status,
-                      decoration: const InputDecoration(labelText: 'Status'),
-                      items: const [
-                        DropdownMenuItem(value: '', child: Text('All')),
+                      decoration: InputDecoration(
+                          labelText: l10n.transactionsStatusLabel),
+                      items: [
                         DropdownMenuItem(
-                            value: 'posted', child: Text('Posted')),
+                            value: '', child: Text(l10n.transactionsAll)),
                         DropdownMenuItem(
-                            value: 'pending', child: Text('Pending')),
+                            value: 'posted',
+                            child: Text(l10n.transactionsPosted)),
+                        DropdownMenuItem(
+                            value: 'pending',
+                            child: Text(l10n.transactionsPending)),
                       ],
                       onChanged: (value) =>
                           setState(() => _status = value ?? ''),
@@ -557,13 +583,17 @@ class _TransactionFilterSheetState extends State<_TransactionFilterSheet> {
                   Expanded(
                     child: DropdownButtonFormField<String>(
                       initialValue: _recurrence,
-                      decoration: const InputDecoration(labelText: 'Frequency'),
-                      items: const [
-                        DropdownMenuItem(value: '', child: Text('All')),
+                      decoration: InputDecoration(
+                          labelText: l10n.transactionsFrequencyLabel),
+                      items: [
                         DropdownMenuItem(
-                            value: 'recurring', child: Text('Recurring')),
+                            value: '', child: Text(l10n.transactionsAll)),
                         DropdownMenuItem(
-                            value: 'one-off', child: Text('One-off')),
+                            value: 'recurring',
+                            child: Text(l10n.transactionsRecurring)),
+                        DropdownMenuItem(
+                            value: 'one-off',
+                            child: Text(l10n.transactionsOneOff)),
                       ],
                       onChanged: (value) =>
                           setState(() => _recurrence = value ?? ''),
@@ -579,9 +609,9 @@ class _TransactionFilterSheetState extends State<_TransactionFilterSheet> {
                       controller: _minAmount,
                       keyboardType: TextInputType.number,
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      decoration: const InputDecoration(
-                        labelText: 'Min amount',
-                        helperText: 'Minor units',
+                      decoration: InputDecoration(
+                        labelText: l10n.transactionsMinAmountLabel,
+                        helperText: l10n.transactionsMinorUnits,
                       ),
                     ),
                   ),
@@ -591,9 +621,9 @@ class _TransactionFilterSheetState extends State<_TransactionFilterSheet> {
                       controller: _maxAmount,
                       keyboardType: TextInputType.number,
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      decoration: const InputDecoration(
-                        labelText: 'Max amount',
-                        helperText: 'Minor units',
+                      decoration: InputDecoration(
+                        labelText: l10n.transactionsMaxAmountLabel,
+                        helperText: l10n.transactionsMinorUnits,
                       ),
                     ),
                   ),
@@ -606,7 +636,7 @@ class _TransactionFilterSheetState extends State<_TransactionFilterSheet> {
                     child: OutlinedButton.icon(
                       onPressed: () => _pickDate(start: true),
                       icon: const Icon(Icons.calendar_today_outlined),
-                      label: Text('From: ${_dateLabel(_from)}'),
+                      label: Text(l10n.transactionsFrom(_dateLabel(_from))),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -614,7 +644,7 @@ class _TransactionFilterSheetState extends State<_TransactionFilterSheet> {
                     child: OutlinedButton.icon(
                       onPressed: () => _pickDate(start: false),
                       icon: const Icon(Icons.calendar_today_outlined),
-                      label: Text('To: ${_dateLabel(_to)}'),
+                      label: Text(l10n.transactionsTo(_dateLabel(_to))),
                     ),
                   ),
                 ],
@@ -630,12 +660,12 @@ class _TransactionFilterSheetState extends State<_TransactionFilterSheet> {
                   TextButton(
                     onPressed: () => Navigator.of(context)
                         .pop(const _TransactionFilterValues()),
-                    child: const Text('Clear all'),
+                    child: Text(l10n.transactionsClearFilters),
                   ),
                   const Spacer(),
                   FilledButton(
                     onPressed: _apply,
-                    child: const Text('Apply filters'),
+                    child: Text(l10n.transactionsApplyFilters),
                   ),
                 ],
               ),

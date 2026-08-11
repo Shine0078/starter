@@ -1350,4 +1350,124 @@ class AppLocalizationsFr extends AppLocalizations {
   String bankLastSynced(String date) {
     return 'Dernière synchronisation : $date';
   }
+
+  @override
+  String get transactionsTitle => 'Transactions';
+
+  @override
+  String get transactionsSearchHint =>
+      'Rechercher un marchand ou une description';
+
+  @override
+  String get transactionsFilterAction => 'Filtrer les transactions';
+
+  @override
+  String transactionsFiltersActive(num count) {
+    return 'Filtres ($count actifs)';
+  }
+
+  @override
+  String get transactionsSearchAction => 'Rechercher';
+
+  @override
+  String get transactionsRetryAction => 'Réessayer';
+
+  @override
+  String get transactionsNoMatches => 'Aucune transaction correspondante.';
+
+  @override
+  String transactionsLoadOlderFailed(String detail) {
+    return 'Impossible de charger les transactions plus anciennes : $detail';
+  }
+
+  @override
+  String get transactionsFilterTitle => 'Filtrer les transactions';
+
+  @override
+  String get transactionsMoneyTypeLabel => 'Type de mouvement';
+
+  @override
+  String get transactionsAllTypes => 'Tous les types';
+
+  @override
+  String get transactionsSpending => 'Dépenses';
+
+  @override
+  String get transactionsIncome => 'Revenus';
+
+  @override
+  String get transactionsTransfers => 'Virements';
+
+  @override
+  String get transactionsCategoryLabel => 'Catégorie';
+
+  @override
+  String get transactionsAllCategories => 'Toutes les catégories';
+
+  @override
+  String get transactionsAccountLabel => 'Compte';
+
+  @override
+  String get transactionsAllAccounts => 'Tous les comptes';
+
+  @override
+  String get transactionsStatusLabel => 'État';
+
+  @override
+  String get transactionsAll => 'Tous';
+
+  @override
+  String get transactionsPosted => 'Comptabilisée';
+
+  @override
+  String get transactionsPending => 'En attente';
+
+  @override
+  String get transactionsFrequencyLabel => 'Fréquence';
+
+  @override
+  String get transactionsRecurring => 'Récurrente';
+
+  @override
+  String get transactionsOneOff => 'Ponctuelle';
+
+  @override
+  String get transactionsMinAmountLabel => 'Montant min.';
+
+  @override
+  String get transactionsMaxAmountLabel => 'Montant max.';
+
+  @override
+  String get transactionsMinorUnits => 'Unités mineures';
+
+  @override
+  String transactionsFrom(String date) {
+    return 'Du : $date';
+  }
+
+  @override
+  String transactionsTo(String date) {
+    return 'Au : $date';
+  }
+
+  @override
+  String get transactionsChooseDate => 'Choisir une date';
+
+  @override
+  String get transactionsInvalidAmounts =>
+      'Les montants doivent être des unités mineures entières.';
+
+  @override
+  String get transactionsAmountRangeInvalid =>
+      'Le montant minimal ne peut pas dépasser le montant maximal.';
+
+  @override
+  String get transactionsDateRangeInvalid =>
+      'La date de début doit précéder la date de fin.';
+
+  @override
+  String get transactionsClearFilters => 'Tout effacer';
+
+  @override
+  String get transactionsApplyFilters => 'Appliquer les filtres';
 }
