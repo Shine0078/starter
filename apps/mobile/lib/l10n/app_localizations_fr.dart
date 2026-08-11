@@ -529,6 +529,111 @@ class AppLocalizationsFr extends AppLocalizations {
       'Vérifiez votre connexion et réessayez.';
 
   @override
+  String get commonCreate => 'Créer';
+
+  @override
+  String get commonAdd => 'Ajouter';
+
+  @override
+  String get commonRemove => 'Supprimer';
+
+  @override
+  String get budgetCreateTitle => 'Créer un budget mensuel';
+
+  @override
+  String get budgetCategory => 'Catégorie';
+
+  @override
+  String get budgetMonthlyLimit => 'Limite mensuelle (dollars)';
+
+  @override
+  String get budgetPositiveAmount => 'Entrez un montant positif en dollars.';
+
+  @override
+  String budgetSaveFailed(String detail) {
+    return 'Impossible d’enregistrer le budget. $detail';
+  }
+
+  @override
+  String get budgetNew => 'Nouveau budget';
+
+  @override
+  String get budgetEmpty =>
+      'Créez un budget pour commencer à suivre votre progression.';
+
+  @override
+  String get budgetRemoveTitle => 'Supprimer ce budget ?';
+
+  @override
+  String budgetStopTracking(String category) {
+    return 'Arrêter de suivre $category ?';
+  }
+
+  @override
+  String budgetRemoveFailed(String detail) {
+    return 'Impossible de supprimer le budget. $detail';
+  }
+
+  @override
+  String get goalCreateTitle => 'Créer un objectif d’épargne';
+
+  @override
+  String get goalName => 'Nom de l’objectif';
+
+  @override
+  String get goalTargetAmount => 'Montant cible';
+
+  @override
+  String get goalAlreadySaved => 'Déjà épargné';
+
+  @override
+  String get goalTargetDate => 'Date cible (AAAA-MM-JJ, facultative)';
+
+  @override
+  String get goalEnterValid => 'Entrez un nom et une cible positive valide.';
+
+  @override
+  String goalCreateFailed(String detail) {
+    return 'Impossible de créer l’objectif. $detail';
+  }
+
+  @override
+  String goalAddTo(String name) {
+    return 'Ajouter à $name';
+  }
+
+  @override
+  String get goalContributionAmount => 'Montant de la contribution';
+
+  @override
+  String get goalNew => 'Nouvel objectif';
+
+  @override
+  String get goalEmpty =>
+      'Créez un objectif pour transformer votre épargne en plan.';
+
+  @override
+  String goalSavedOf(String saved, String target) {
+    return '$saved épargné sur $target';
+  }
+
+  @override
+  String goalRemaining(String amount) {
+    return 'Il reste $amount';
+  }
+
+  @override
+  String goalMonthlyTarget(String amount) {
+    return '$amount/mois pour atteindre la date cible.';
+  }
+
+  @override
+  String get goalCompleted => 'Terminé';
+
+  @override
+  String get goalAddSavings => 'Ajouter une épargne';
+
+  @override
   String get errorConnection =>
       'Impossible de joindre le serveur. Vérifiez votre connexion.';
 

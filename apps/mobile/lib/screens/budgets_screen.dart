@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api/client.dart';
+import '../l10n/app_localizations.dart';
 import '../models/models.dart';
 import '../widgets/budget_tile.dart';
 
@@ -67,19 +68,20 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
   }
 
   Future<void> _create() async {
+    final l10n = AppLocalizations.of(context);
     var category = _categories.first;
     final amount = TextEditingController();
     final result = await showDialog<(String, String)>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Create monthly budget'),
+          title: Text(l10n.budgetCreateTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               DropdownButtonFormField<String>(
                 initialValue: category,
-                decoration: const InputDecoration(labelText: 'Category'),
+                decoration: InputDecoration(labelText: l10n.budgetCategory),
                 items: _categories
                     .map((slug) => DropdownMenuItem(
                           value: slug,
@@ -93,20 +95,19 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
                 controller: amount,
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
-                decoration:
-                    const InputDecoration(labelText: 'Monthly limit (dollars)'),
+                decoration: InputDecoration(labelText: l10n.budgetMonthlyLimit),
               ),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cancel'),
+              child: Text(l10n.commonCancel),
             ),
             FilledButton(
               onPressed: () => Navigator.of(dialogContext)
                   .pop((category, amount.text.trim())),
-              child: const Text('Create'),
+              child: Text(l10n.commonCreate),
             ),
           ],
         ),
@@ -118,7 +119,7 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
     final parsed = _minorUnits(result.$2);
     if (parsed == null || parsed <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a positive dollar amount.')),
+        SnackBar(content: Text(l10n.budgetPositiveAmount)),
       );
       return;
     }
@@ -128,7 +129,8 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not save budget: $error')),
+        SnackBar(
+            content: Text(l10n.budgetSaveFailed(friendlyErrorMessage(error)))),
       );
     }
   }
@@ -144,88 +146,87 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Budgets')),
-        floatingActionButton: FloatingActionButton.extended(
-          heroTag: 'add-budget',
-          onPressed: _create,
-          icon: const Icon(Icons.add),
-          label: const Text('New budget'),
-        ),
-        body: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : _error != null
-                ? Center(
-                    child: FilledButton(
-                      onPressed: _load,
-                      child: const Text('Retry'),
-                    ),
-                  )
-                : _rows.isEmpty
-                    ? const Center(
-                        child:
-                            Text('Create a budget to start tracking progress.'))
-                    : RefreshIndicator(
-                        onRefresh: _load,
-                        child: ListView(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-                          children: _rows.map((row) {
-                            return Dismissible(
-                              key: ValueKey(row.budgetId),
-                              direction: DismissDirection.endToStart,
-                              background: Container(
-                                alignment: Alignment.centerRight,
-                                padding: const EdgeInsets.only(right: 24),
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .errorContainer,
-                                child: const Icon(Icons.delete_outline),
-                              ),
-                              confirmDismiss: (_) async {
-                                final confirmed = await showDialog<bool>(
-                                      context: context,
-                                      builder: (dialogContext) => AlertDialog(
-                                        title:
-                                            const Text('Remove this budget?'),
-                                        content: Text(
-                                            'Stop tracking ${row.categoryName}?'),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () =>
-                                                Navigator.of(dialogContext)
-                                                    .pop(false),
-                                            child: const Text('Cancel'),
-                                          ),
-                                          FilledButton(
-                                            onPressed: () =>
-                                                Navigator.of(dialogContext)
-                                                    .pop(true),
-                                            child: const Text('Remove'),
-                                          ),
-                                        ],
-                                      ),
-                                    ) ??
-                                    false;
-                                if (!confirmed) return false;
-                                try {
-                                  await widget.api.deleteBudget(row.budgetId);
-                                  return true;
-                                } catch (error) {
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                            'Could not remove budget: $error'),
-                                      ),
-                                    );
-                                  }
-                                  return false;
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.budgetsTitle)),
+      floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'add-budget',
+        onPressed: _create,
+        icon: const Icon(Icons.add),
+        label: Text(l10n.budgetNew),
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? Center(
+                  child: FilledButton(
+                    onPressed: _load,
+                    child: Text(l10n.commonRetry),
+                  ),
+                )
+              : _rows.isEmpty
+                  ? Center(child: Text(l10n.budgetEmpty))
+                  : RefreshIndicator(
+                      onRefresh: _load,
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                        children: _rows.map((row) {
+                          return Dismissible(
+                            key: ValueKey(row.budgetId),
+                            direction: DismissDirection.endToStart,
+                            background: Container(
+                              alignment: Alignment.centerRight,
+                              padding: const EdgeInsets.only(right: 24),
+                              color:
+                                  Theme.of(context).colorScheme.errorContainer,
+                              child: const Icon(Icons.delete_outline),
+                            ),
+                            confirmDismiss: (_) async {
+                              final confirmed = await showDialog<bool>(
+                                    context: context,
+                                    builder: (dialogContext) => AlertDialog(
+                                      title: Text(l10n.budgetRemoveTitle),
+                                      content: Text(l10n.budgetStopTracking(
+                                          row.categoryName)),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.of(dialogContext)
+                                                  .pop(false),
+                                          child: Text(l10n.commonCancel),
+                                        ),
+                                        FilledButton(
+                                          onPressed: () =>
+                                              Navigator.of(dialogContext)
+                                                  .pop(true),
+                                          child: Text(l10n.commonRemove),
+                                        ),
+                                      ],
+                                    ),
+                                  ) ??
+                                  false;
+                              if (!confirmed) return false;
+                              try {
+                                await widget.api.deleteBudget(row.budgetId);
+                                return true;
+                              } catch (error) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(l10n.budgetRemoveFailed(
+                                          friendlyErrorMessage(error))),
+                                    ),
+                                  );
                                 }
-                              },
-                              child: BudgetTile(progress: row),
-                            );
-                          }).toList(),
-                        ),
+                                return false;
+                              }
+                            },
+                            child: BudgetTile(progress: row),
+                          );
+                        }).toList(),
                       ),
-      );
+                    ),
+    );
+  }
 }

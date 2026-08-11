@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api/client.dart';
+import '../l10n/app_localizations.dart';
 import '../models/models.dart';
 
 class GoalsScreen extends StatefulWidget {
@@ -58,6 +59,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
   }
 
   Future<void> _create() async {
+    final l10n = AppLocalizations.of(context);
     final name = TextEditingController();
     final target = TextEditingController();
     final saved = TextEditingController(text: '0');
@@ -65,31 +67,30 @@ class _GoalsScreenState extends State<GoalsScreen> {
     final submitted = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Create savings goal'),
+        title: Text(l10n.goalCreateTitle),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                   controller: name,
-                  decoration: const InputDecoration(labelText: 'Goal name')),
+                  decoration: InputDecoration(labelText: l10n.goalName)),
               TextField(
                 controller: target,
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'Target amount'),
+                decoration: InputDecoration(labelText: l10n.goalTargetAmount),
               ),
               TextField(
                 controller: saved,
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'Already saved'),
+                decoration: InputDecoration(labelText: l10n.goalAlreadySaved),
               ),
               TextField(
                 controller: date,
                 keyboardType: TextInputType.datetime,
-                decoration: const InputDecoration(
-                    labelText: 'Target date (YYYY-MM-DD, optional)'),
+                decoration: InputDecoration(labelText: l10n.goalTargetDate),
               ),
             ],
           ),
@@ -97,10 +98,10 @@ class _GoalsScreenState extends State<GoalsScreen> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('Cancel')),
+              child: Text(l10n.commonCancel)),
           FilledButton(
               onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('Create')),
+              child: Text(l10n.commonCreate)),
         ],
       ),
     );
@@ -115,8 +116,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
     if (submitted != true || !mounted) return;
     if (goalName.isEmpty || targetAmount == null || initialAmount == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Enter a name and valid positive target.')),
+        SnackBar(content: Text(l10n.goalEnterValid)),
       );
       return;
     }
@@ -130,31 +130,32 @@ class _GoalsScreenState extends State<GoalsScreen> {
       await _load();
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Could not create goal: $error')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(l10n.goalCreateFailed(friendlyErrorMessage(error)))));
       }
     }
   }
 
   Future<void> _contribute(GoalProgress goal) async {
+    final l10n = AppLocalizations.of(context);
     final amount = TextEditingController();
     final submitted = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text('Add to ${goal.name}'),
+        title: Text(l10n.goalAddTo(goal.name)),
         content: TextField(
           controller: amount,
           autofocus: true,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(labelText: 'Contribution amount'),
+          decoration: InputDecoration(labelText: l10n.goalContributionAmount),
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('Cancel')),
+              child: Text(l10n.commonCancel)),
           FilledButton(
               onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('Add')),
+              child: Text(l10n.commonAdd)),
         ],
       ),
     );
@@ -166,36 +167,37 @@ class _GoalsScreenState extends State<GoalsScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Goals')),
-        floatingActionButton: FloatingActionButton.extended(
-          heroTag: 'add-goal',
-          onPressed: _create,
-          icon: const Icon(Icons.add),
-          label: const Text('New goal'),
-        ),
-        body: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : _error != null
-                ? Center(
-                    child: FilledButton(
-                        onPressed: _load, child: const Text('Retry')))
-                : _goals.isEmpty
-                    ? const Center(
-                        child:
-                            Text('Create a goal and turn saving into a plan.'))
-                    : RefreshIndicator(
-                        onRefresh: _load,
-                        child: ListView(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-                          children: _goals
-                              .map((goal) => _GoalCard(
-                                  goal: goal,
-                                  onContribute: () => _contribute(goal)))
-                              .toList(),
-                        ),
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.goalsTitle)),
+      floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'add-goal',
+        onPressed: _create,
+        icon: const Icon(Icons.add),
+        label: Text(l10n.goalNew),
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? Center(
+                  child: FilledButton(
+                      onPressed: _load, child: Text(l10n.commonRetry)))
+              : _goals.isEmpty
+                  ? Center(child: Text(l10n.goalEmpty))
+                  : RefreshIndicator(
+                      onRefresh: _load,
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                        children: _goals
+                            .map((goal) => _GoalCard(
+                                goal: goal,
+                                onContribute: () => _contribute(goal)))
+                            .toList(),
                       ),
-      );
+                    ),
+    );
+  }
 }
 
 class _GoalCard extends StatelessWidget {
@@ -205,41 +207,44 @@ class _GoalCard extends StatelessWidget {
   final VoidCallback onContribute;
 
   @override
-  Widget build(BuildContext context) => Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                      child: Text(goal.name,
-                          style: Theme.of(context).textTheme.titleMedium)),
-                  Text('${goal.percentComplete.toStringAsFixed(0)}%'),
-                ],
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                    child: Text(goal.name,
+                        style: Theme.of(context).textTheme.titleMedium)),
+                Text('${goal.percentComplete.toStringAsFixed(0)}%'),
+              ],
+            ),
+            const SizedBox(height: 10),
+            LinearProgressIndicator(
+                value: (goal.percentComplete / 100).clamp(0, 1), minHeight: 8),
+            const SizedBox(height: 10),
+            Text(l10n.goalSavedOf(goal.savedFormatted, goal.targetFormatted)),
+            if (!goal.complete)
+              Text(l10n.goalRemaining(goal.remainingFormatted)),
+            if (goal.suggestedMonthlyFormatted != null)
+              Text(l10n.goalMonthlyTarget(goal.suggestedMonthlyFormatted!)),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton.tonalIcon(
+                onPressed: goal.complete ? null : onContribute,
+                icon: const Icon(Icons.savings_outlined),
+                label: Text(
+                    goal.complete ? l10n.goalCompleted : l10n.goalAddSavings),
               ),
-              const SizedBox(height: 10),
-              LinearProgressIndicator(
-                  value: (goal.percentComplete / 100).clamp(0, 1),
-                  minHeight: 8),
-              const SizedBox(height: 10),
-              Text('${goal.savedFormatted} saved of ${goal.targetFormatted}'),
-              if (!goal.complete) Text('${goal.remainingFormatted} remaining'),
-              if (goal.suggestedMonthlyFormatted != null)
-                Text(
-                    '${goal.suggestedMonthlyFormatted}/month reaches the target date.'),
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerRight,
-                child: FilledButton.tonalIcon(
-                  onPressed: goal.complete ? null : onContribute,
-                  icon: const Icon(Icons.savings_outlined),
-                  label: Text(goal.complete ? 'Completed' : 'Add savings'),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
-      );
+      ),
+    );
+  }
 }

@@ -217,6 +217,76 @@
   },
   "calendarUnavailable": "Calendar is unavailable",
   "calendarUnavailableDetail": "Check your connection and try again.",
+  "commonCreate": "Create",
+  "commonAdd": "Add",
+  "commonRemove": "Remove",
+  "budgetCreateTitle": "Create monthly budget",
+  "budgetCategory": "Category",
+  "budgetMonthlyLimit": "Monthly limit (dollars)",
+  "budgetPositiveAmount": "Enter a positive dollar amount.",
+  "budgetSaveFailed": "Could not save budget. {detail}",
+  "@budgetSaveFailed": {
+    "placeholders": {
+      "detail": {"type": "String"}
+    }
+  },
+  "budgetNew": "New budget",
+  "budgetEmpty": "Create a budget to start tracking progress.",
+  "budgetRemoveTitle": "Remove this budget?",
+  "budgetStopTracking": "Stop tracking {category}?",
+  "@budgetStopTracking": {
+    "placeholders": {
+      "category": {"type": "String"}
+    }
+  },
+  "budgetRemoveFailed": "Could not remove budget. {detail}",
+  "@budgetRemoveFailed": {
+    "placeholders": {
+      "detail": {"type": "String"}
+    }
+  },
+  "goalCreateTitle": "Create savings goal",
+  "goalName": "Goal name",
+  "goalTargetAmount": "Target amount",
+  "goalAlreadySaved": "Already saved",
+  "goalTargetDate": "Target date (YYYY-MM-DD, optional)",
+  "goalEnterValid": "Enter a name and valid positive target.",
+  "goalCreateFailed": "Could not create goal. {detail}",
+  "@goalCreateFailed": {
+    "placeholders": {
+      "detail": {"type": "String"}
+    }
+  },
+  "goalAddTo": "Add to {name}",
+  "@goalAddTo": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "goalContributionAmount": "Contribution amount",
+  "goalNew": "New goal",
+  "goalEmpty": "Create a goal and turn saving into a plan.",
+  "goalSavedOf": "{saved} saved of {target}",
+  "@goalSavedOf": {
+    "placeholders": {
+      "saved": {"type": "String"},
+      "target": {"type": "String"}
+    }
+  },
+  "goalRemaining": "{amount} remaining",
+  "@goalRemaining": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "goalMonthlyTarget": "{amount}/month reaches the target date.",
+  "@goalMonthlyTarget": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "goalCompleted": "Completed",
+  "goalAddSavings": "Add savings",
   "errorConnection": "Couldn't reach the server. Check your connection.",
   "errorServerUnavailable": "The server is temporarily unavailable. Try again shortly.",
   "errorSessionInvalid": "Your session is no longer valid. Sign in again.",

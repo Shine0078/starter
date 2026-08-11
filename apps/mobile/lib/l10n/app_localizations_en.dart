@@ -524,6 +524,109 @@ class AppLocalizationsEn extends AppLocalizations {
       'Check your connection and try again.';
 
   @override
+  String get commonCreate => 'Create';
+
+  @override
+  String get commonAdd => 'Add';
+
+  @override
+  String get commonRemove => 'Remove';
+
+  @override
+  String get budgetCreateTitle => 'Create monthly budget';
+
+  @override
+  String get budgetCategory => 'Category';
+
+  @override
+  String get budgetMonthlyLimit => 'Monthly limit (dollars)';
+
+  @override
+  String get budgetPositiveAmount => 'Enter a positive dollar amount.';
+
+  @override
+  String budgetSaveFailed(String detail) {
+    return 'Could not save budget. $detail';
+  }
+
+  @override
+  String get budgetNew => 'New budget';
+
+  @override
+  String get budgetEmpty => 'Create a budget to start tracking progress.';
+
+  @override
+  String get budgetRemoveTitle => 'Remove this budget?';
+
+  @override
+  String budgetStopTracking(String category) {
+    return 'Stop tracking $category?';
+  }
+
+  @override
+  String budgetRemoveFailed(String detail) {
+    return 'Could not remove budget. $detail';
+  }
+
+  @override
+  String get goalCreateTitle => 'Create savings goal';
+
+  @override
+  String get goalName => 'Goal name';
+
+  @override
+  String get goalTargetAmount => 'Target amount';
+
+  @override
+  String get goalAlreadySaved => 'Already saved';
+
+  @override
+  String get goalTargetDate => 'Target date (YYYY-MM-DD, optional)';
+
+  @override
+  String get goalEnterValid => 'Enter a name and valid positive target.';
+
+  @override
+  String goalCreateFailed(String detail) {
+    return 'Could not create goal. $detail';
+  }
+
+  @override
+  String goalAddTo(String name) {
+    return 'Add to $name';
+  }
+
+  @override
+  String get goalContributionAmount => 'Contribution amount';
+
+  @override
+  String get goalNew => 'New goal';
+
+  @override
+  String get goalEmpty => 'Create a goal and turn saving into a plan.';
+
+  @override
+  String goalSavedOf(String saved, String target) {
+    return '$saved saved of $target';
+  }
+
+  @override
+  String goalRemaining(String amount) {
+    return '$amount remaining';
+  }
+
+  @override
+  String goalMonthlyTarget(String amount) {
+    return '$amount/month reaches the target date.';
+  }
+
+  @override
+  String get goalCompleted => 'Completed';
+
+  @override
+  String get goalAddSavings => 'Add savings';
+
+  @override
   String get errorConnection =>
       'Couldn\'t reach the server. Check your connection.';
 

@@ -217,6 +217,76 @@
   },
   "calendarUnavailable": "Calendrier indisponible",
   "calendarUnavailableDetail": "Vérifiez votre connexion et réessayez.",
+  "commonCreate": "Créer",
+  "commonAdd": "Ajouter",
+  "commonRemove": "Supprimer",
+  "budgetCreateTitle": "Créer un budget mensuel",
+  "budgetCategory": "Catégorie",
+  "budgetMonthlyLimit": "Limite mensuelle (dollars)",
+  "budgetPositiveAmount": "Entrez un montant positif en dollars.",
+  "budgetSaveFailed": "Impossible d’enregistrer le budget. {detail}",
+  "@budgetSaveFailed": {
+    "placeholders": {
+      "detail": {"type": "String"}
+    }
+  },
+  "budgetNew": "Nouveau budget",
+  "budgetEmpty": "Créez un budget pour commencer à suivre votre progression.",
+  "budgetRemoveTitle": "Supprimer ce budget ?",
+  "budgetStopTracking": "Arrêter de suivre {category} ?",
+  "@budgetStopTracking": {
+    "placeholders": {
+      "category": {"type": "String"}
+    }
+  },
+  "budgetRemoveFailed": "Impossible de supprimer le budget. {detail}",
+  "@budgetRemoveFailed": {
+    "placeholders": {
+      "detail": {"type": "String"}
+    }
+  },
+  "goalCreateTitle": "Créer un objectif d’épargne",
+  "goalName": "Nom de l’objectif",
+  "goalTargetAmount": "Montant cible",
+  "goalAlreadySaved": "Déjà épargné",
+  "goalTargetDate": "Date cible (AAAA-MM-JJ, facultative)",
+  "goalEnterValid": "Entrez un nom et une cible positive valide.",
+  "goalCreateFailed": "Impossible de créer l’objectif. {detail}",
+  "@goalCreateFailed": {
+    "placeholders": {
+      "detail": {"type": "String"}
+    }
+  },
+  "goalAddTo": "Ajouter à {name}",
+  "@goalAddTo": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "goalContributionAmount": "Montant de la contribution",
+  "goalNew": "Nouvel objectif",
+  "goalEmpty": "Créez un objectif pour transformer votre épargne en plan.",
+  "goalSavedOf": "{saved} épargné sur {target}",
+  "@goalSavedOf": {
+    "placeholders": {
+      "saved": {"type": "String"},
+      "target": {"type": "String"}
+    }
+  },
+  "goalRemaining": "Il reste {amount}",
+  "@goalRemaining": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "goalMonthlyTarget": "{amount}/mois pour atteindre la date cible.",
+  "@goalMonthlyTarget": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "goalCompleted": "Terminé",
+  "goalAddSavings": "Ajouter une épargne",
   "errorConnection": "Impossible de joindre le serveur. Vérifiez votre connexion.",
   "errorServerUnavailable": "Le serveur est temporairement indisponible. Réessayez bientôt.",
   "errorSessionInvalid": "Votre session n'est plus valide. Connectez-vous à nouveau.",

@@ -950,6 +950,180 @@ abstract class AppLocalizations {
   /// **'Check your connection and try again.'**
   String get calendarUnavailableDetail;
 
+  /// No description provided for @commonCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'Create'**
+  String get commonCreate;
+
+  /// No description provided for @commonAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get commonAdd;
+
+  /// No description provided for @commonRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get commonRemove;
+
+  /// No description provided for @budgetCreateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create monthly budget'**
+  String get budgetCreateTitle;
+
+  /// No description provided for @budgetCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Category'**
+  String get budgetCategory;
+
+  /// No description provided for @budgetMonthlyLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly limit (dollars)'**
+  String get budgetMonthlyLimit;
+
+  /// No description provided for @budgetPositiveAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a positive dollar amount.'**
+  String get budgetPositiveAmount;
+
+  /// No description provided for @budgetSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save budget. {detail}'**
+  String budgetSaveFailed(String detail);
+
+  /// No description provided for @budgetNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New budget'**
+  String get budgetNew;
+
+  /// No description provided for @budgetEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a budget to start tracking progress.'**
+  String get budgetEmpty;
+
+  /// No description provided for @budgetRemoveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove this budget?'**
+  String get budgetRemoveTitle;
+
+  /// No description provided for @budgetStopTracking.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop tracking {category}?'**
+  String budgetStopTracking(String category);
+
+  /// No description provided for @budgetRemoveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not remove budget. {detail}'**
+  String budgetRemoveFailed(String detail);
+
+  /// No description provided for @goalCreateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create savings goal'**
+  String get goalCreateTitle;
+
+  /// No description provided for @goalName.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal name'**
+  String get goalName;
+
+  /// No description provided for @goalTargetAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Target amount'**
+  String get goalTargetAmount;
+
+  /// No description provided for @goalAlreadySaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Already saved'**
+  String get goalAlreadySaved;
+
+  /// No description provided for @goalTargetDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Target date (YYYY-MM-DD, optional)'**
+  String get goalTargetDate;
+
+  /// No description provided for @goalEnterValid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a name and valid positive target.'**
+  String get goalEnterValid;
+
+  /// No description provided for @goalCreateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not create goal. {detail}'**
+  String goalCreateFailed(String detail);
+
+  /// No description provided for @goalAddTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to {name}'**
+  String goalAddTo(String name);
+
+  /// No description provided for @goalContributionAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Contribution amount'**
+  String get goalContributionAmount;
+
+  /// No description provided for @goalNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New goal'**
+  String get goalNew;
+
+  /// No description provided for @goalEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a goal and turn saving into a plan.'**
+  String get goalEmpty;
+
+  /// No description provided for @goalSavedOf.
+  ///
+  /// In en, this message translates to:
+  /// **'{saved} saved of {target}'**
+  String goalSavedOf(String saved, String target);
+
+  /// No description provided for @goalRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} remaining'**
+  String goalRemaining(String amount);
+
+  /// No description provided for @goalMonthlyTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount}/month reaches the target date.'**
+  String goalMonthlyTarget(String amount);
+
+  /// No description provided for @goalCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get goalCompleted;
+
+  /// No description provided for @goalAddSavings.
+  ///
+  /// In en, this message translates to:
+  /// **'Add savings'**
+  String get goalAddSavings;
+
   /// No description provided for @errorConnection.
   ///
   /// In en, this message translates to:
