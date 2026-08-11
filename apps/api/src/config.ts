@@ -65,6 +65,14 @@ export interface AppConfig {
   metricsToken: string | undefined;
   /** Optional iOS Universal Link registration for Plaid OAuth. */
   iosUniversalLink: IosUniversalLinkConfig | undefined;
+  /** Optional passkey (WebAuthn) relying-party configuration. */
+  webauthn: WebAuthnConfig | undefined;
+}
+
+export interface WebAuthnConfig {
+  rpId: string;
+  origin: string;
+  rpName: string;
 }
 
 /**
@@ -309,6 +317,47 @@ function resolveIosUniversalLink(): IosUniversalLinkConfig | undefined {
 }
 
 /**
+ * Passkeys (WebAuthn). Gated off entirely unless WEBAUTHN_ENABLED=true — a
+ * half-configured relying party would mint challenges that can never verify.
+ * Passkeys also require a registered domain, which is why this stays an
+ * explicit, documented owner gate rather than a default.
+ */
+function resolveWebAuthnConfig(isProduction: boolean): WebAuthnConfig | undefined {
+  if (process.env.WEBAUTHN_ENABLED !== 'true') return undefined;
+
+  const rpId = process.env.WEBAUTHN_RP_ID?.trim();
+  const origin = process.env.WEBAUTHN_ORIGIN?.trim();
+  if (!rpId || !origin) {
+    throw new Error(
+      'WEBAUTHN_ENABLED=true requires WEBAUTHN_RP_ID and WEBAUTHN_ORIGIN (e.g. WEBAUTHN_RP_ID=api.finverse.example, WEBAUTHN_ORIGIN=https://api.finverse.example).',
+    );
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(origin);
+  } catch {
+    throw new Error('WEBAUTHN_ORIGIN must be a valid absolute URL.');
+  }
+  if (isProduction && parsed.protocol !== 'https:') {
+    throw new Error('WEBAUTHN_ORIGIN must use HTTPS in production.');
+  }
+  if (parsed.username || parsed.password || parsed.search || parsed.hash) {
+    throw new Error('WEBAUTHN_ORIGIN must not include credentials, a query string, or a fragment.');
+  }
+  const originHost = parsed.host.toLowerCase();
+  if (rpId.toLowerCase() !== originHost) {
+    throw new Error('WEBAUTHN_RP_ID must equal the host of WEBAUTHN_ORIGIN.');
+  }
+
+  return {
+    rpId,
+    origin,
+    rpName: process.env.WEBAUTHN_RP_NAME?.trim() || 'FINVERSE',
+  };
+}
+
+/**
  * Memoised, and it has to be.
  *
  * loadConfig() is called from the composition root, the health endpoint, and
@@ -413,5 +462,6 @@ function buildConfig(): AppConfig {
     billing: resolveBillingConfig(isProduction, port, Boolean(stripeKey)),
     metricsToken: resolveMetricsToken(),
     iosUniversalLink: resolveIosUniversalLink(),
+    webauthn: resolveWebAuthnConfig(isProduction),
   };
 }

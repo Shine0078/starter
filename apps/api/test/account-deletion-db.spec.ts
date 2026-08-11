@@ -156,6 +156,8 @@ if (ownerUrl) {
         'mfa_login_challenges',
         'subscriptions',
         'receipts',
+        'push_tokens',
+        'webauthn_credentials',
       ]) {
         const column = table === 'users' ? 'id' : 'user_id';
         const result = await harness.owner.query(

@@ -37,6 +37,8 @@ const PROTECTED_TABLES = [
   'consent_events',
   'subscriptions',
   'receipts',
+  'push_tokens',
+  'webauthn_credentials',
 ];
 
 /** Seeds one account and one transaction for a user, as the owner. */
@@ -111,6 +113,16 @@ async function seed(owner: Pool, userId: string, amount: number): Promise<void> 
        (id,user_id,merchant,text,created_at)
      VALUES ($1,$2,'Blue Bottle','receipt text',now())`,
     [`receipt_${userId}`, userId],
+  );
+  await owner.query(
+    `INSERT INTO push_tokens (user_id, token, platform, created_at, last_seen_at)
+     VALUES ($1, $2, 'android', now(), now())`,
+    [userId, `push_${userId}`.padEnd(20, 'x')],
+  );
+  await owner.query(
+    `INSERT INTO webauthn_credentials (user_id, credential_id, public_key_pem, created_at)
+     VALUES ($1, $2, '-----BEGIN PUBLIC KEY-----', now())`,
+    [userId, `wa_${userId}`],
   );
 }
 

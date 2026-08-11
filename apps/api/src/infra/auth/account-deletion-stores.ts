@@ -14,6 +14,8 @@ import { InMemoryBankLinkStore, InMemoryBankWebhookStore } from '../banking/bank
 import { InMemorySubscriptionStore } from '../billing/subscription-stores';
 import { InMemoryConsentStore } from '../privacy/consent-stores';
 import { InMemoryReceiptStore } from '../receipts/receipt-stores';
+import { InMemoryPushTokenStore } from '../push/push-token-stores';
+import { InMemoryWebAuthnCredentialStore } from '../webauthn/webauthn-credential-stores';
 import { InMemoryAuthEventStore, InMemorySessionStore, InMemoryUserStore } from './in-memory-auth-stores';
 import { InMemoryMfaStore } from './mfa-stores';
 
@@ -41,6 +43,8 @@ export class InMemoryAccountDeletionStore implements AccountDeletionStore {
     private readonly mfa: InMemoryMfaStore,
     private readonly subscriptions: InMemorySubscriptionStore,
     private readonly receipts: InMemoryReceiptStore,
+    private readonly pushTokens: InMemoryPushTokenStore,
+    private readonly webauthnCredentials: InMemoryWebAuthnCredentialStore,
   ) {}
 
   async request(userId: string, email: string, _requestedAt: Date, purgeAfter: Date): Promise<void> {
@@ -78,6 +82,8 @@ export class InMemoryAccountDeletionStore implements AccountDeletionStore {
       // "erased" account keeps a row nobody looks at again.
       this.subscriptions.purgeUser(userId);
       this.receipts.purgeUser(userId);
+      this.pushTokens.purgeUser(userId);
+      this.webauthnCredentials.purgeUser(userId);
       this.sessions.purgeUser(userId);
       this.events.purgeUser(userId, deletion.email);
       this.users.purgeUser(userId);

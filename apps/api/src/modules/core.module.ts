@@ -59,6 +59,16 @@ import {
   InMemoryReceiptStore,
   PostgresReceiptStore,
 } from '../infra/receipts/receipt-stores';
+import { UnconfiguredPushProvider } from '../infra/push/push-providers';
+import {
+  InMemoryPushTokenStore,
+  PostgresPushTokenStore,
+} from '../infra/push/push-token-stores';
+import { Fido2Verifier } from '../infra/webauthn/fido2-verifier';
+import {
+  InMemoryWebAuthnCredentialStore,
+  PostgresWebAuthnCredentialStore,
+} from '../infra/webauthn/webauthn-credential-stores';
 import { StripeBillingProvider } from '../infra/billing/stripe-provider';
 import {
   InMemoryBillingEventStore,
@@ -105,6 +115,11 @@ import {
 } from '../ports/auth';
 import { CONSENT_STORE } from '../ports/privacy';
 import { RECEIPT_OCR_PROVIDER, RECEIPT_STORE } from '../ports/receipts';
+import { PUSH_PROVIDER, PUSH_TOKEN_STORE } from '../ports/push';
+import {
+  WEBAUTHN_CREDENTIAL_STORE,
+  WEBAUTHN_VERIFIER,
+} from '../ports/webauthn';
 
 /**
  * Composition root. The only file that decides which adapter satisfies which
@@ -136,6 +151,8 @@ function storeProviders(): Provider[] {
     const mfa = new InMemoryMfaStore();
     const subscriptions = new InMemorySubscriptionStore();
     const receipts = new InMemoryReceiptStore();
+    const pushTokens = new InMemoryPushTokenStore();
+    const webauthnCredentials = new InMemoryWebAuthnCredentialStore();
     const deletions = new InMemoryAccountDeletionStore(
       users,
       sessions,
@@ -152,6 +169,8 @@ function storeProviders(): Provider[] {
       mfa,
       subscriptions,
       receipts,
+      pushTokens,
+      webauthnCredentials,
     );
     return [
       { provide: ACCOUNT_STORE, useValue: accounts },
@@ -173,6 +192,8 @@ function storeProviders(): Provider[] {
       { provide: SUBSCRIPTION_STORE, useValue: subscriptions },
       { provide: BILLING_EVENT_STORE, useValue: new InMemoryBillingEventStore() },
       { provide: RECEIPT_STORE, useValue: receipts },
+      { provide: PUSH_TOKEN_STORE, useValue: pushTokens },
+      { provide: WEBAUTHN_CREDENTIAL_STORE, useValue: webauthnCredentials },
     ];
   }
 
@@ -210,6 +231,11 @@ function storeProviders(): Provider[] {
     { provide: SUBSCRIPTION_STORE, useFactory: () => new PostgresSubscriptionStore(pool) },
     { provide: BILLING_EVENT_STORE, useFactory: () => new PostgresBillingEventStore(pool) },
     { provide: RECEIPT_STORE, useFactory: () => new PostgresReceiptStore(pool) },
+    { provide: PUSH_TOKEN_STORE, useFactory: () => new PostgresPushTokenStore(pool) },
+    {
+      provide: WEBAUTHN_CREDENTIAL_STORE,
+      useFactory: () => new PostgresWebAuthnCredentialStore(pool),
+    },
   ];
 }
 
@@ -312,6 +338,11 @@ function storeProviders(): Provider[] {
       useFactory: () => new JwtTokenIssuer(loadConfig().jwtSecret),
     },
     { provide: RECEIPT_OCR_PROVIDER, useClass: RuleBasedReceiptOcr },
+    { provide: PUSH_PROVIDER, useClass: UnconfiguredPushProvider },
+    {
+      provide: WEBAUTHN_VERIFIER,
+      useFactory: () => new Fido2Verifier(loadConfig().webauthn ?? null),
+    },
     ...storeProviders(),
   ],
   exports: [
@@ -346,6 +377,10 @@ function storeProviders(): Provider[] {
     BILLING_EVENT_STORE,
     RECEIPT_STORE,
     RECEIPT_OCR_PROVIDER,
+    PUSH_TOKEN_STORE,
+    PUSH_PROVIDER,
+    WEBAUTHN_CREDENTIAL_STORE,
+    WEBAUTHN_VERIFIER,
   ],
 })
 export class CoreModule {}

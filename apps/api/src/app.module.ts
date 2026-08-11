@@ -27,6 +27,8 @@ import { LedgerModule } from './modules/ledger/ledger.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PrivacyModule } from './modules/privacy/privacy.module';
 import { ReceiptsModule } from './modules/receipts/receipts.module';
+import { PushModule } from './modules/push/push.module';
+import { WebAuthnModule } from './modules/webauthn/webauthn.module';
 import { httpMetrics, metricsTokenMatches } from './infra/http/metrics';
 import { appleAppSiteAssociation as buildAppleAppSiteAssociation } from './infra/http/apple-app-site-association';
 
@@ -160,6 +162,8 @@ class MetaController {
     InsightsModule,
     PrivacyModule,
     ReceiptsModule,
+    PushModule,
+    WebAuthnModule,
   ],
   controllers: [MetaController],
   providers: [

@@ -28,6 +28,10 @@ const KEYS = [
   'PLAID_ENVIRONMENT',
   'PLAID_IOS_REDIRECT_URI',
   'IOS_TEAM_ID',
+  'WEBAUTHN_ENABLED',
+  'WEBAUTHN_RP_ID',
+  'WEBAUTHN_ORIGIN',
+  'WEBAUTHN_RP_NAME',
 ] as const;
 const original = Object.fromEntries(KEYS.map((key) => [key, process.env[key]]));
 
@@ -54,6 +58,10 @@ function productionBase(): void {
   delete process.env.PLAID_ENVIRONMENT;
   delete process.env.PLAID_IOS_REDIRECT_URI;
   delete process.env.IOS_TEAM_ID;
+  delete process.env.WEBAUTHN_ENABLED;
+  delete process.env.WEBAUTHN_RP_ID;
+  delete process.env.WEBAUTHN_ORIGIN;
+  delete process.env.WEBAUTHN_RP_NAME;
 }
 
 afterEach(() => {
@@ -179,5 +187,44 @@ describe.sequential('production configuration', () => {
     productionBase();
     process.env.PLAID_IOS_REDIRECT_URI = 'https://api.finverse.example/plaid/';
     expect(() => loadConfig()).toThrow(/must be configured together/);
+  });
+
+  it('leaves passkeys off until explicitly enabled', () => {
+    productionBase();
+    expect(loadConfig().webauthn).toBeUndefined();
+  });
+
+  it('requires a complete relying-party configuration to enable passkeys', () => {
+    productionBase();
+    process.env.WEBAUTHN_ENABLED = 'true';
+    process.env.WEBAUTHN_RP_ID = 'api.finverse.example';
+    expect(() => loadConfig()).toThrow(/WEBAUTHN_RP_ID and WEBAUTHN_ORIGIN/);
+  });
+
+  it('requires HTTPS and a matching origin for passkeys in production', () => {
+    productionBase();
+    process.env.WEBAUTHN_ENABLED = 'true';
+    process.env.WEBAUTHN_RP_ID = 'api.finverse.example';
+    process.env.WEBAUTHN_ORIGIN = 'http://api.finverse.example';
+    expect(() => loadConfig()).toThrow(/must use HTTPS/);
+
+    productionBase();
+    process.env.WEBAUTHN_ENABLED = 'true';
+    process.env.WEBAUTHN_RP_ID = 'api.finverse.example';
+    process.env.WEBAUTHN_ORIGIN = 'https://app.finverse.example';
+    expect(() => loadConfig()).toThrow(/WEBAUTHN_RP_ID must equal/);
+  });
+
+  it('builds a valid passkey configuration when fully supplied', () => {
+    productionBase();
+    process.env.WEBAUTHN_ENABLED = 'true';
+    process.env.WEBAUTHN_RP_ID = 'api.finverse.example';
+    process.env.WEBAUTHN_ORIGIN = 'https://api.finverse.example';
+    process.env.WEBAUTHN_RP_NAME = 'FINVERSE';
+    expect(loadConfig().webauthn).toEqual({
+      rpId: 'api.finverse.example',
+      origin: 'https://api.finverse.example',
+      rpName: 'FINVERSE',
+    });
   });
 });
