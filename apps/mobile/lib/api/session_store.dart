@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import 'platform/shared_preferences_registration.dart';
+
 /// The tokens for the signed-in session.
 class SessionTokens {
   const SessionTokens({
@@ -89,10 +91,15 @@ abstract class SessionSignOutMarker {
 
 class _PreferencesSignOutMarker implements SessionSignOutMarker {
   _PreferencesSignOutMarker({SharedPreferencesAsync? preferences})
-      : _preferences = preferences ?? SharedPreferencesAsync();
+      : _preferences = preferences ?? _createPreferences();
 
   static const _key = 'finverse.session.signed_out';
   final SharedPreferencesAsync _preferences;
+
+  static SharedPreferencesAsync _createPreferences() {
+    ensureSharedPreferencesAsyncPlatform();
+    return SharedPreferencesAsync();
+  }
 
   @override
   Future<bool> read() async => await _preferences.getBool(_key) ?? false;
