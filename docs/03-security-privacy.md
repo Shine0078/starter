@@ -70,10 +70,13 @@ those padded ranges for 24 hours, and fails closed if the safety service is
 unavailable. SHA-1 is used only for HIBP's lookup protocol; FINVERSE password
 storage remains Argon2id. Development and tests stay explicitly offline.
 
-**Not yet implemented**, and named here so the gap is not mistaken for coverage:
+**Still externally gated**, and named here so the gap is not mistaken for coverage:
 
-- Passkeys (WebAuthn) and OAuth 2.0 + PKCE. Passkeys need a registered domain
-  for the relying-party id.
+- The server-side WebAuthn verifier, credential store, and protocol endpoints
+  are implemented. Native iOS/Android platform-authenticator ceremonies still
+  need a registered relying-party domain, Apple/Google device setup, and
+  physical-device validation.
+- OAuth 2.0 + PKCE for FINVERSE account sign-in is not implemented.
 
 TOTP secrets are encrypted with a distinct AES-256-GCM key. Login challenges
 are opaque, expire after five minutes, allow at most five attempts, and are stored only as SHA-256 hashes.

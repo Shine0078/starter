@@ -13,12 +13,20 @@ export const PUSH_PROVIDER = 'PUSH_PROVIDER';
 
 export type PushPlatform = 'android' | 'ios' | 'web';
 
+/** A device target the server is allowed to contact for one user. */
+export interface RegisteredPushToken {
+  token: string;
+  platform: PushPlatform;
+}
+
 export function isPushPlatform(value: unknown): value is PushPlatform {
   return value === 'android' || value === 'ios' || value === 'web';
 }
 
 export interface PushTokenStore {
   register(userId: string, token: string, platform: PushPlatform, at: string): Promise<void>;
+  /** Returns only the caller's targets, scoped with the same RLS boundary. */
+  list(userId: string): Promise<readonly RegisteredPushToken[]>;
   unregister(userId: string, token: string): Promise<boolean>;
   purgeUser(userId: string): Promise<void>;
 }
@@ -34,4 +42,15 @@ export interface PushProvider {
   /** False until push credentials are configured; delivery then fails closed. */
   readonly configured: boolean;
   send(token: string, message: PushMessage): Promise<void>;
+}
+
+/**
+ * A provider has authoritatively told us a device target was unregistered.
+ * Generic provider failures must not delete a user's alert registration.
+ */
+export class PushTokenNoLongerValidError extends Error {
+  constructor() {
+    super('The push target is no longer registered.');
+    this.name = 'PushTokenNoLongerValidError';
+  }
 }

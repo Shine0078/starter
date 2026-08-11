@@ -1,6 +1,10 @@
 import type { Pool } from 'pg';
 
-import type { PushPlatform, PushTokenStore } from '../../ports/push';
+import type {
+  PushPlatform,
+  PushTokenStore,
+  RegisteredPushToken,
+} from '../../ports/push';
 import { withUserScope } from '../postgres/pool';
 
 export class InMemoryPushTokenStore implements PushTokenStore {
@@ -16,6 +20,10 @@ export class InMemoryPushTokenStore implements PushTokenStore {
 
   async register(userId: string, token: string, platform: PushPlatform): Promise<void> {
     this.bucket(userId).set(token, platform);
+  }
+
+  async list(userId: string): Promise<readonly RegisteredPushToken[]> {
+    return [...this.bucket(userId)].map(([token, platform]) => ({ token, platform }));
   }
 
   async unregister(userId: string, token: string): Promise<boolean> {
@@ -40,6 +48,18 @@ export class PostgresPushTokenStore implements PushTokenStore {
            last_seen_at = EXCLUDED.last_seen_at`,
         [userId, token, platform, at],
       );
+    });
+  }
+
+  async list(userId: string): Promise<readonly RegisteredPushToken[]> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const { rows } = await client.query<{ token: string; platform: PushPlatform }>(
+        `SELECT token, platform FROM push_tokens
+         WHERE user_id = $1
+         ORDER BY last_seen_at DESC, token ASC`,
+        [userId],
+      );
+      return rows;
     });
   }
 

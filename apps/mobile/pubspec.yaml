@@ -34,6 +34,10 @@ dependencies:
   # omitted this endorsed implementation from the generated registrant here,
   # leaving SharedPreferencesAsync unset before the first frame.
   shared_preferences_web: ^2.4.3
+  # Android WorkManager + iOS BGTaskScheduler. The task performs only a
+  # credentialed, cursor-based bank refresh and is always best-effort: each OS
+  # decides exactly when it has battery/network budget to run it.
+  workmanager: ^0.10.0
 
 dev_dependencies:
   flutter_test:

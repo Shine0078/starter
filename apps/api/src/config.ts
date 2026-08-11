@@ -69,6 +69,8 @@ export interface AppConfig {
   webauthn: WebAuthnConfig | undefined;
   /** Privacy-preserving compromised-password screening configuration. */
   passwordBreachCheck: PasswordBreachCheckConfig;
+  /** Remote-notification delivery stays disabled until credentials are supplied. */
+  push: PushConfig;
 }
 
 export interface WebAuthnConfig {
@@ -81,6 +83,11 @@ export type PasswordBreachCheckMode = 'disabled' | 'best_effort' | 'required';
 
 export interface PasswordBreachCheckConfig {
   mode: PasswordBreachCheckMode;
+}
+
+export interface PushConfig {
+  /** JSON service-account document stored only in a deployment secret manager. */
+  fcmCredentialsJson: string | undefined;
 }
 
 /**
@@ -383,6 +390,25 @@ function resolvePasswordBreachCheck(isProduction: boolean): PasswordBreachCheckC
   return { mode: mode as PasswordBreachCheckMode };
 }
 
+function resolvePushConfig(): PushConfig {
+  const credentials = process.env.FCM_CREDENTIALS_JSON?.trim();
+  if (!credentials) return { fcmCredentialsJson: undefined };
+  // A service-account JSON document is normally only a few KiB. This bound
+  // catches accidental file pastes without ever printing its secret contents.
+  if (credentials.length > 65_536) {
+    throw new Error('FCM_CREDENTIALS_JSON is unexpectedly large.');
+  }
+  try {
+    const parsed: unknown = JSON.parse(credentials);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      throw new Error('not an object');
+    }
+  } catch {
+    throw new Error('FCM_CREDENTIALS_JSON must be a JSON object.');
+  }
+  return { fcmCredentialsJson: credentials };
+}
+
 /**
  * Memoised, and it has to be.
  *
@@ -490,5 +516,6 @@ function buildConfig(): AppConfig {
     iosUniversalLink: resolveIosUniversalLink(),
     webauthn: resolveWebAuthnConfig(isProduction),
     passwordBreachCheck: resolvePasswordBreachCheck(isProduction),
+    push: resolvePushConfig(),
   };
 }

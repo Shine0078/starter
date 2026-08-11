@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 
 import '../models/models.dart';
+import 'background_sync_policy.dart';
 import 'local_notifications.dart';
 import 'offline_cache.dart';
 import 'session_store.dart';
@@ -147,7 +148,7 @@ class OfflineMutationQueuedException implements Exception {
 /// server says it has expired, exchanging the refresh token exactly once before
 /// retrying. Access tokens are short-lived, so without that every screen would
 /// have to handle a 401 itself.
-class ApiClient {
+class ApiClient implements BackgroundSyncClient {
   ApiClient(
       {http.Client? httpClient,
       String? baseUrl,
@@ -218,6 +219,7 @@ class ApiClient {
   Uri _uri(String path) => Uri.parse('$baseUrl/api$path');
 
   /// True when a stored session was found. Call once at startup.
+  @override
   Future<bool> restoreSession() async {
     _tokens = await sessionStore.read();
     final stored = _tokens;
@@ -1281,6 +1283,7 @@ class ApiClient {
     await _send('DELETE', '/bank-links/$linkId');
   }
 
+  @override
   Future<void> refreshConnectedBanks() async {
     final links = await bankLinks();
     Object? firstError;

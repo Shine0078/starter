@@ -21,7 +21,7 @@ import {
   internalTransferIds,
   isUserCategorised,
 } from '../../domain/transactions/internal-transfers';
-import type { RawTransaction, Transaction } from '../../domain/types';
+import type { RawTransaction, Transaction, UserNotification } from '../../domain/types';
 import {
   ACCOUNT_STORE,
   CLOCK,
@@ -47,6 +47,7 @@ import {
   type LinkPlatform,
 } from '../../ports/banking';
 import { BillingService } from '../billing/billing.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class BankingService implements OnModuleInit, OnModuleDestroy {
@@ -65,6 +66,7 @@ export class BankingService implements OnModuleInit, OnModuleDestroy {
     @Inject(NOTIFICATION_STORE) private readonly notifications: NotificationStore,
     @Inject(CLOCK) private readonly clock: ClockPort,
     private readonly billing: BillingService,
+    private readonly notificationAlerts?: NotificationsService,
     private readonly events?: FinanceEventBus,
   ) {}
 
@@ -471,11 +473,13 @@ export class BankingService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async notifySyncFailure(userId: string, link: BankLink, code: string): Promise<void> {
-    const preferences = await this.notifications.getPreferences(userId);
+    const preferences = this.notificationAlerts
+      ? await this.notificationAlerts.preferences(userId)
+      : await this.notifications.getPreferences(userId);
     if (!preferences.bankSync) return;
     const reauth = code === 'ITEM_LOGIN_REQUIRED';
     const today = this.clock.today();
-    await this.notifications.upsert(userId, {
+    const notification: UserNotification = {
       id: randomUUID(),
       kind: 'bank_sync',
       title: reauth ? 'Reconnect your bank' : 'Bank sync needs attention',
@@ -486,7 +490,12 @@ export class BankingService implements OnModuleInit, OnModuleDestroy {
       dedupeKey: `bank-sync:${link.id}:${today}:${code}`,
       readAt: null,
       createdAt: this.clock.now().toISOString(),
-    });
+    };
+    if (this.notificationAlerts) {
+      await this.notificationAlerts.create(userId, notification);
+    } else {
+      await this.notifications.upsert(userId, notification);
+    }
   }
 
   private requireConfigured(): void {

@@ -141,10 +141,17 @@ file would be required to verify any requirements unique to that document.
   stored ES256 public key, sign-counter regression rejection, credential
   management, RLS, and end-to-end tests using a generated P-256 key pair. Gated
   by `WEBAUTHN_ENABLED` plus a registered RP id/origin — the owner domain action.
-- Remote push registration is implemented (`POST/DELETE /api/push/device`,
-  per-user RLS-isolated `push_tokens` erased with the account) with a failing
-  closed `PushProvider` port until delivery credentials are supplied; the mobile
-  client has `registerPushToken`/`unregisterPushToken`.
+- Remote push delivery is implemented behind the per-user RLS-isolated
+  `push_tokens` port: a direct FCM HTTP v1 adapter performs service-account
+  OAuth with built-in Node crypto, routes iOS messages through FCM/APNs once
+  Firebase is configured, removes only confirmed `UNREGISTERED` targets, and
+  keeps financial details out of lock-screen payloads. It remains fail-closed
+  without `FCM_CREDENTIALS_JSON`; the mobile client has
+  `registerPushToken`/`unregisterPushToken` for Firebase registration targets.
+- Native background sync is implemented with `workmanager`: Android has a
+  network-constrained periodic job, iOS has the matching BGTask identifier and
+  UIScene plugin registrant, and a separate isolate restores a session before
+  cursor-based bank refresh. OS timing remains best-effort by platform design.
 - Localization plumbing is complete with a second shipped language: `gen_l10n`
   with English and French ARB files, wired through the shell navigation, the
   offline banner, and the login surface; adding a language is a single ARB file.
@@ -220,9 +227,10 @@ file would be required to verify any requirements unique to that document.
 
 ## Still incomplete locally
 
-- OS-level background mobile sync and remote push delivery need provider
-  credentials and a background scheduler; the registration API, failing-closed
-  provider port, and client hooks are implemented.
+- Remote delivery needs the owner to configure Firebase Cloud Messaging, its
+  iOS APNs key, and a Firebase client registration token. Background scheduling
+  is wired, but iOS timing is OS-controlled and still needs a physical-device
+  smoke test with a signed app.
 - Native iOS LinkKit is wired in source and the Xcode project, but still needs a
   Mac/Xcode build, a registered Universal Link, and an iPhone OAuth smoke test.
 - The mobile platform passkey ceremony (iOS ASAuthorization / Android

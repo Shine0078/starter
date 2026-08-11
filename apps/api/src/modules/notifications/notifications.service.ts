@@ -16,6 +16,7 @@ import {
 } from '../../ports';
 import { BudgetsService } from '../budgets/budgets.service';
 import { LedgerService } from '../ledger/ledger.service';
+import { PushService } from '../push/push.service';
 
 @Injectable()
 export class NotificationsService {
@@ -24,6 +25,7 @@ export class NotificationsService {
     @Inject(CLOCK) private readonly clock: ClockPort,
     private readonly budgets: BudgetsService,
     private readonly ledger: LedgerService,
+    private readonly push: PushService,
   ) {}
 
   async list(userId: string): Promise<UserNotification[]> {
@@ -66,6 +68,23 @@ export class NotificationsService {
     );
   }
 
+  /**
+   * Persists an alert before attempting any network delivery. Remote pushes
+   * intentionally contain no financial details because their lock-screen
+   * visibility is controlled by the device, not FINVERSE. The app loads the
+   * complete, authenticated alert from the notification centre after opening.
+   */
+  async create(userId: string, notification: UserNotification): Promise<boolean> {
+    const inserted = await this.notifications.upsert(userId, notification);
+    if (!inserted) return false;
+    void this.push.deliver(userId, {
+      title: 'FINVERSE alert',
+      body: 'Open FINVERSE to view an important account alert.',
+      data: { notificationId: notification.id },
+    }).catch(() => undefined);
+    return true;
+  }
+
   private async refreshDerived(userId: string): Promise<void> {
     const preferences = await this.notifications.getPreferences(userId);
     const today = this.clock.today();
@@ -83,7 +102,7 @@ export class NotificationsService {
       ];
       for (const alert of derived) {
         if (!alertEnabled(alert, preferences)) continue;
-        await this.notifications.upsert(userId, {
+        await this.create(userId, {
           ...alert,
           id: randomUUID(),
           readAt: null,
@@ -95,7 +114,7 @@ export class NotificationsService {
     if (preferences.budget) {
       for (const progress of await this.budgets.progress(userId, today)) {
         for (const alert of progress.alerts) {
-          await this.notifications.upsert(userId, {
+          await this.create(userId, {
             id: randomUUID(),
             kind: 'budget',
             title: `${progress.categorySlug.replaceAll('_', ' ')} budget`,
@@ -115,7 +134,7 @@ export class NotificationsService {
         if (account.type !== 'credit_card' || !account.creditLimit) continue;
         const utilization = Math.max(0, -account.balanceCurrent) / account.creditLimit;
         if (utilization < 0.3) continue;
-        await this.notifications.upsert(userId, {
+        await this.create(userId, {
           id: randomUUID(),
           kind: 'credit_utilization',
           title: 'Credit utilization alert',
@@ -133,7 +152,7 @@ export class NotificationsService {
         if (!['checking', 'savings'].includes(account.type) || account.balanceCurrent >= 20_000) {
           continue;
         }
-        await this.notifications.upsert(userId, {
+        await this.create(userId, {
           id: randomUUID(),
           kind: 'low_balance',
           title: 'Low balance',

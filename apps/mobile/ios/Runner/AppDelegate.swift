@@ -1,6 +1,10 @@
 import Flutter
 import UIKit
 
+#if canImport(workmanager_apple)
+import workmanager_apple
+#endif
+
 #if canImport(LinkKit)
 import LinkKit
 #endif
@@ -17,6 +21,15 @@ import LinkKit
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
+#if canImport(workmanager_apple)
+    // UIScene apps must register background launch handlers before application
+    // launch finishes; the worker uses Keychain/session plugins in its own
+    // engine, so register those plugins there as well.
+    WorkmanagerPlugin.registerLaunchHandlers()
+    WorkmanagerPlugin.setPluginRegistrantCallback { registry in
+      GeneratedPluginRegistrant.register(with: registry)
+    }
+#endif
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 

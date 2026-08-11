@@ -1,9 +1,9 @@
 # Passkeys, push, receipts, and background sync — what is wired and what the owner must do
 
-Three MISSION2 gaps were code-completed in this repository: passkeys (WebAuthn),
-remote push registration, and receipt OCR. All three are **fully implemented,
-tested, and fail closed** until the operator supplies credentials or a domain.
-This document is the exact owner action for each.
+Passkeys (WebAuthn), remote-push delivery/background refresh, and receipt OCR
+are code-completed here. Every integration is fail-closed until the operator
+supplies its required domain, credentials, or Apple configuration. This
+document records the exact owner action for each.
 
 ## Passkeys (WebAuthn)
 
@@ -39,27 +39,50 @@ and hands the challenge to the platform authenticator (iOS `ASAuthorization` /
 Android Credential Manager). The mobile client methods are implemented and
 tested; the platform ceremony wiring is the remaining owner/device step.
 
-## Remote push
+## Remote push and background sync
 
-**Implemented (registration).**
+**Implemented (server delivery and scheduler preparation).**
 
-- `POST /api/push/device` stores an opaque provider token per user
-  (`push_tokens`, RLS-isolated, erased with the account).
-- `DELETE /api/push/device` unregisters.
-- The mobile client (`registerPushToken`, `unregisterPushToken`) and a
-  `PushProvider` port with an `UnconfiguredPushProvider` that fails closed.
+- `POST /api/push/device` stores an opaque provider target per user
+  (`push_tokens`, RLS-isolated, erased with the account); `DELETE` removes it.
+- `FcmHttpV1PushProvider` is selected automatically when
+  `FCM_CREDENTIALS_JSON` exists. It signs a service-account OAuth assertion
+  with Node's built-in crypto, caches the short-lived bearer token, and sends
+  Android, web, and APNs-routed iOS notifications through FCM HTTP v1.
+- An alert is persisted before delivery. The lock-screen push deliberately says
+  only “FINVERSE alert — Open FINVERSE to view an important account alert”; it
+  never contains a merchant, balance, amount, or bank name. The authenticated
+  app fetches the complete alert after opening.
+- A confirmed FCM `UNREGISTERED` target is removed. Timeouts, credential
+  faults, and other transient failures do **not** delete a user's token.
+- Native Flutter builds initialise `workmanager` and register
+  `com.finverse.finance.background-sync` with network constraints. Its isolated
+  callback restores the Keychain/Keystore session and calls the idempotent,
+  cursor-based `refreshConnectedBanks()`. A missing session succeeds quietly;
+  a transient network/API failure asks the OS to retry. Web and desktop are
+  explicit no-ops.
+- iOS already declares the matching BGTask identifier and Background Fetch in
+  `Runner/Info.plist`, and its UIScene AppDelegate registers plugins for the
+  background engine. Android needs no manual scheduler manifest entries.
 
-**Owner action for delivery.** Configure a provider adapter (FCM and/or APNs):
+**Owner action before first real delivery.**
 
-- Create a Firebase project / Apple push certificate, place the credentials in
-  the deployment secret manager (`FCM_CREDENTIALS_JSON` or an APNs key).
-- Implement a `PushProvider` adapter behind `apps/api/src/ports/push.ts`
-  (mirroring the Plaid adapter pattern), then call `pushService` when a
-  notification is created.
-- On the device, obtain the platform token and call `registerPushToken`.
-  OS-level background sync would additionally use a background scheduler
-  (`workmanager`) that calls `refreshConnectedBanks()` periodically; the API
-  side needs no change because sync is idempotent and cursor-based.
+1. In Firebase, enable the Cloud Messaging API and create a least-privileged
+   service account allowed to send to this Firebase project. Save the complete
+   JSON document as the production secret `FCM_CREDENTIALS_JSON`; never commit
+   it or put it in a mobile build.
+2. For iOS, upload an Apple APNs authentication key in Firebase Cloud Messaging
+   and enable the Push Notifications and Background Modes capabilities for the
+   signed Apple app identifier. This is what lets FCM route the iOS target to
+   APNs; the API does not store an APNs private key.
+3. Add the Firebase client configuration for the Android/iOS app and obtain an
+   FCM registration token after the user grants notification permission, then
+   call the existing `registerPushToken(token, 'android'|'ios')`. The API keeps
+   no token across accounts after sign-out/account deletion; call
+   `unregisterPushToken` when the app revokes its registration.
+4. Test on a physical iPhone. iOS controls exactly when background work runs
+   (and may defer it); background sync is freshness best effort, never a
+   guarantee or a replacement for server-side Plaid webhooks.
 
 ## Receipt OCR
 

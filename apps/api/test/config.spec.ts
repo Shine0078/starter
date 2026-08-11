@@ -33,6 +33,7 @@ const KEYS = [
   'WEBAUTHN_ORIGIN',
   'WEBAUTHN_RP_NAME',
   'HIBP_PASSWORD_CHECK',
+  'FCM_CREDENTIALS_JSON',
 ] as const;
 const original = Object.fromEntries(KEYS.map((key) => [key, process.env[key]]));
 
@@ -64,6 +65,7 @@ function productionBase(): void {
   delete process.env.WEBAUTHN_ORIGIN;
   delete process.env.WEBAUTHN_RP_NAME;
   delete process.env.HIBP_PASSWORD_CHECK;
+  delete process.env.FCM_CREDENTIALS_JSON;
 }
 
 afterEach(() => {
@@ -242,5 +244,15 @@ describe.sequential('production configuration', () => {
     process.env.STORE = 'memory';
     process.env.HIBP_PASSWORD_CHECK = 'not-a-mode';
     expect(() => loadConfig()).toThrow(/HIBP_PASSWORD_CHECK must be/);
+  });
+
+  it('accepts only a bounded JSON FCM service-account secret', () => {
+    productionBase();
+    process.env.FCM_CREDENTIALS_JSON = JSON.stringify({ type: 'service_account' });
+    expect(loadConfig().push.fcmCredentialsJson).toContain('service_account');
+
+    resetConfigForTests();
+    process.env.FCM_CREDENTIALS_JSON = 'not-json';
+    expect(() => loadConfig()).toThrow(/FCM_CREDENTIALS_JSON must be a JSON object/);
   });
 });

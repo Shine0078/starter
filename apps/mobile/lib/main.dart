@@ -6,6 +6,7 @@ import 'api/app_lock.dart';
 import 'api/onboarding_store.dart';
 import 'api/session_store.dart';
 import 'api/platform/device_auth.dart';
+import 'api/platform/background_sync.dart';
 import 'api/platform/offline_cache_factory.dart';
 import 'design/design.dart';
 import 'l10n/app_localizations.dart';
@@ -17,14 +18,18 @@ import 'screens/onboarding_screen.dart';
 // biometric prompt on Android and iOS, no-op equivalents in a browser. Neither
 // native package compiles for the web, so the choice has to happen at import
 // time rather than behind a runtime `if (kIsWeb)`.
-void main() => runApp(FinverseApp(
-      api: ApiClient(offlineCache: createOfflineCache()),
-      onboardingStore: SecureOnboardingStore(),
-      appLockController: AppLockController(
-        store: SecureAppLockStore(),
-        authenticator: createDeviceAuthenticator(),
-      ),
-    ));
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await configureBackgroundSync();
+  runApp(FinverseApp(
+    api: ApiClient(offlineCache: createOfflineCache()),
+    onboardingStore: SecureOnboardingStore(),
+    appLockController: AppLockController(
+      store: SecureAppLockStore(),
+      authenticator: createDeviceAuthenticator(),
+    ),
+  ));
+}
 
 class FinverseApp extends StatelessWidget {
   FinverseApp({

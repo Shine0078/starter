@@ -63,7 +63,10 @@ import {
   InMemoryReceiptStore,
   PostgresReceiptStore,
 } from '../infra/receipts/receipt-stores';
-import { UnconfiguredPushProvider } from '../infra/push/push-providers';
+import {
+  FcmHttpV1PushProvider,
+  UnconfiguredPushProvider,
+} from '../infra/push/push-providers';
 import {
   InMemoryPushTokenStore,
   PostgresPushTokenStore,
@@ -352,7 +355,15 @@ function storeProviders(): Provider[] {
       useFactory: () => new JwtTokenIssuer(loadConfig().jwtSecret),
     },
     { provide: RECEIPT_OCR_PROVIDER, useClass: RuleBasedReceiptOcr },
-    { provide: PUSH_PROVIDER, useClass: UnconfiguredPushProvider },
+    {
+      provide: PUSH_PROVIDER,
+      useFactory: () => {
+        const credentials = loadConfig().push.fcmCredentialsJson;
+        return credentials
+          ? FcmHttpV1PushProvider.fromServiceAccountJson(credentials)
+          : new UnconfiguredPushProvider();
+      },
+    },
     {
       provide: WEBAUTHN_VERIFIER,
       useFactory: () => new Fido2Verifier(loadConfig().webauthn ?? null),
