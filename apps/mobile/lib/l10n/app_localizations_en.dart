@@ -134,4 +134,38 @@ class AppLocalizationsEn extends AppLocalizations {
   String categoryExplanationLearned(num percent) {
     return 'Learned from a similar merchant you categorized before • $percent% confidence.';
   }
+
+  @override
+  String get receiptScanPhoto => 'Scan a receipt photo';
+
+  @override
+  String get receiptScanPhotoDetail =>
+      'Recognized on this phone — the image is never uploaded';
+
+  @override
+  String get receiptPasteText => 'Paste receipt text';
+
+  @override
+  String get receiptPasteTextDetail =>
+      'Use text copied from a receipt or your phone’s OCR';
+
+  @override
+  String get receiptTakePhoto => 'Take a photo';
+
+  @override
+  String get receiptChoosePhoto => 'Choose from your photos';
+
+  @override
+  String get receiptReviewScanned => 'Review scanned receipt text';
+
+  @override
+  String get receiptPasteExplanation =>
+      'Paste receipt text. FINVERSE extracts the merchant, date, total, and tax. Images are never uploaded.';
+
+  @override
+  String get receiptReviewExplanation =>
+      'Check the recognized text before attaching it. Only this text is sent to FINVERSE — never the photo.';
+
+  @override
+  String get receiptAttachAction => 'Attach';
 }

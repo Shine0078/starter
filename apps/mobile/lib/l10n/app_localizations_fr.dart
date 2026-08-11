@@ -134,4 +134,38 @@ class AppLocalizationsFr extends AppLocalizations {
   String categoryExplanationLearned(num percent) {
     return 'Appris d’un marchand similaire que vous avez déjà catégorisé • confiance de $percent%.';
   }
+
+  @override
+  String get receiptScanPhoto => 'Numériser une photo du reçu';
+
+  @override
+  String get receiptScanPhotoDetail =>
+      'Texte reconnu sur ce téléphone — l’image n’est jamais téléchargée';
+
+  @override
+  String get receiptPasteText => 'Coller le texte du reçu';
+
+  @override
+  String get receiptPasteTextDetail =>
+      'Utilisez le texte copié d’un reçu ou de l’OCR de votre téléphone';
+
+  @override
+  String get receiptTakePhoto => 'Prendre une photo';
+
+  @override
+  String get receiptChoosePhoto => 'Choisir dans vos photos';
+
+  @override
+  String get receiptReviewScanned => 'Vérifier le texte numérisé du reçu';
+
+  @override
+  String get receiptPasteExplanation =>
+      'Collez le texte du reçu. FINVERSE extrait le marchand, la date, le total et les taxes. Les images ne sont jamais téléchargées.';
+
+  @override
+  String get receiptReviewExplanation =>
+      'Vérifiez le texte reconnu avant de le joindre. Seul ce texte est envoyé à FINVERSE — jamais la photo.';
+
+  @override
+  String get receiptAttachAction => 'Joindre';
 }

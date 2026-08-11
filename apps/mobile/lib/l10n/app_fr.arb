@@ -42,5 +42,15 @@
         "type": "num"
       }
     }
-  }
+  },
+  "receiptScanPhoto": "Numériser une photo du reçu",
+  "receiptScanPhotoDetail": "Texte reconnu sur ce téléphone — l’image n’est jamais téléchargée",
+  "receiptPasteText": "Coller le texte du reçu",
+  "receiptPasteTextDetail": "Utilisez le texte copié d’un reçu ou de l’OCR de votre téléphone",
+  "receiptTakePhoto": "Prendre une photo",
+  "receiptChoosePhoto": "Choisir dans vos photos",
+  "receiptReviewScanned": "Vérifier le texte numérisé du reçu",
+  "receiptPasteExplanation": "Collez le texte du reçu. FINVERSE extrait le marchand, la date, le total et les taxes. Les images ne sont jamais téléchargées.",
+  "receiptReviewExplanation": "Vérifiez le texte reconnu avant de le joindre. Seul ce texte est envoyé à FINVERSE — jamais la photo.",
+  "receiptAttachAction": "Joindre"
 }

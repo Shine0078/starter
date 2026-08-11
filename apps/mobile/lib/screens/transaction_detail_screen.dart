@@ -287,6 +287,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
   /// transcript, then attach only that text and its parsed fields. The image
   /// itself never goes through the API.
   Future<void> _attachReceipt() async {
+    final l10n = AppLocalizations.of(context);
     final method = await showModalBottomSheet<_ReceiptInputMethod>(
       context: context,
       builder: (sheetContext) => SafeArea(
@@ -296,17 +297,15 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
             if (ReceiptPhotoRecognizer.isSupported)
               ListTile(
                 leading: const Icon(Icons.document_scanner_outlined),
-                title: const Text('Scan a receipt photo'),
-                subtitle: const Text(
-                    'Recognised on this phone — the image is never uploaded'),
+                title: Text(l10n.receiptScanPhoto),
+                subtitle: Text(l10n.receiptScanPhotoDetail),
                 onTap: () =>
                     Navigator.pop(sheetContext, _ReceiptInputMethod.photo),
               ),
             ListTile(
               leading: const Icon(Icons.paste_outlined),
-              title: const Text('Paste receipt text'),
-              subtitle: const Text(
-                  'Use text copied from a receipt or your phone’s OCR'),
+              title: Text(l10n.receiptPasteText),
+              subtitle: Text(l10n.receiptPasteTextDetail),
               onTap: () =>
                   Navigator.pop(sheetContext, _ReceiptInputMethod.paste),
             ),
@@ -349,6 +348,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
   }
 
   Future<String?> _scanReceiptPhoto() async {
+    final l10n = AppLocalizations.of(context);
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
       builder: (sheetContext) => SafeArea(
@@ -357,12 +357,12 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
           children: [
             ListTile(
               leading: const Icon(Icons.camera_alt_outlined),
-              title: const Text('Take a photo'),
+              title: Text(l10n.receiptTakePhoto),
               onTap: () => Navigator.pop(sheetContext, ImageSource.camera),
             ),
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Choose from your photos'),
+              title: Text(l10n.receiptChoosePhoto),
               onTap: () => Navigator.pop(sheetContext, ImageSource.gallery),
             ),
           ],
@@ -393,20 +393,21 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
   }
 
   Future<String?> _editReceiptText({String? initialText}) async {
+    final l10n = AppLocalizations.of(context);
     final controller = TextEditingController(text: initialText ?? '');
     final text = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(initialText == null
-            ? 'Attach a receipt'
-            : 'Review scanned receipt text'),
+            ? l10n.receiptAttachAction
+            : l10n.receiptReviewScanned),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               initialText == null
-                  ? 'Paste receipt text. FINVERSE extracts the merchant, date, total, and tax. Images are never uploaded.'
-                  : 'Check the recognised text before attaching it. Only this text is sent to FINVERSE — never the photo.',
+                  ? l10n.receiptPasteExplanation
+                  : l10n.receiptReviewExplanation,
             ),
             const SizedBox(height: 12),
             TextField(
@@ -425,11 +426,11 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
+            child: Text(l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, controller.text),
-            child: const Text('Attach'),
+            child: Text(l10n.receiptAttachAction),
           ),
         ],
       ),

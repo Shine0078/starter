@@ -313,6 +313,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Learned from a similar merchant you categorized before • {percent}% confidence.'**
   String categoryExplanationLearned(num percent);
+
+  /// No description provided for @receiptScanPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan a receipt photo'**
+  String get receiptScanPhoto;
+
+  /// No description provided for @receiptScanPhotoDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Recognized on this phone — the image is never uploaded'**
+  String get receiptScanPhotoDetail;
+
+  /// No description provided for @receiptPasteText.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste receipt text'**
+  String get receiptPasteText;
+
+  /// No description provided for @receiptPasteTextDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Use text copied from a receipt or your phone’s OCR'**
+  String get receiptPasteTextDetail;
+
+  /// No description provided for @receiptTakePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Take a photo'**
+  String get receiptTakePhoto;
+
+  /// No description provided for @receiptChoosePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose from your photos'**
+  String get receiptChoosePhoto;
+
+  /// No description provided for @receiptReviewScanned.
+  ///
+  /// In en, this message translates to:
+  /// **'Review scanned receipt text'**
+  String get receiptReviewScanned;
+
+  /// No description provided for @receiptPasteExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste receipt text. FINVERSE extracts the merchant, date, total, and tax. Images are never uploaded.'**
+  String get receiptPasteExplanation;
+
+  /// No description provided for @receiptReviewExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'Check the recognized text before attaching it. Only this text is sent to FINVERSE — never the photo.'**
+  String get receiptReviewExplanation;
+
+  /// No description provided for @receiptAttachAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach'**
+  String get receiptAttachAction;
 }
 
 class _AppLocalizationsDelegate
