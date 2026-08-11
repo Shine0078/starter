@@ -32,6 +32,7 @@ const KEYS = [
   'WEBAUTHN_RP_ID',
   'WEBAUTHN_ORIGIN',
   'WEBAUTHN_RP_NAME',
+  'HIBP_PASSWORD_CHECK',
 ] as const;
 const original = Object.fromEntries(KEYS.map((key) => [key, process.env[key]]));
 
@@ -62,6 +63,7 @@ function productionBase(): void {
   delete process.env.WEBAUTHN_RP_ID;
   delete process.env.WEBAUTHN_ORIGIN;
   delete process.env.WEBAUTHN_RP_NAME;
+  delete process.env.HIBP_PASSWORD_CHECK;
 }
 
 afterEach(() => {
@@ -93,6 +95,7 @@ describe.sequential('production configuration', () => {
     expect(config.databaseUrl).toBeUndefined();
     expect(config.appDatabaseUrl).toContain('finverse_app');
     expect(config.trustedProxyHops).toBe(1);
+    expect(config.passwordBreachCheck).toEqual({ mode: 'required' });
   });
 
   it('refuses the data-losing in-memory store', () => {
@@ -226,5 +229,18 @@ describe.sequential('production configuration', () => {
       origin: 'https://api.finverse.example',
       rpName: 'FINVERSE',
     });
+  });
+
+  it('does not allow production to downgrade breached-password screening', () => {
+    productionBase();
+    process.env.HIBP_PASSWORD_CHECK = 'disabled';
+    expect(() => loadConfig()).toThrow(/HIBP_PASSWORD_CHECK=required/);
+  });
+
+  it('validates explicit breached-password screening modes', () => {
+    process.env.NODE_ENV = 'test';
+    process.env.STORE = 'memory';
+    process.env.HIBP_PASSWORD_CHECK = 'not-a-mode';
+    expect(() => loadConfig()).toThrow(/HIBP_PASSWORD_CHECK must be/);
   });
 });

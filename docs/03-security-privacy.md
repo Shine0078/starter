@@ -61,8 +61,14 @@ routes are authenticated by default:
 | Password step-up before new/reconnected bank Link sessions | Implemented, rate-limited, and audited |
 | TOTP authenticator MFA with encrypted secrets and one-time recovery codes | Implemented in API and mobile; physical-device enrollment validation remains |
 
-Password rules follow NIST SP 800-63B — length plus a blocklist, no composition
-requirements. Composition rules produce `Password1!` and get reused everywhere.
+Password rules follow NIST SP 800-63B — length plus compromised-password
+screening, no composition requirements. Composition rules produce `Password1!`
+and get reused everywhere. Production requires the free HIBP range check: the
+server SHA-1-hashes the candidate locally and sends only the first five hex
+characters to the range endpoint, compares returned suffixes locally, caches
+those padded ranges for 24 hours, and fails closed if the safety service is
+unavailable. SHA-1 is used only for HIBP's lookup protocol; FINVERSE password
+storage remains Argon2id. Development and tests stay explicitly offline.
 
 **Not yet implemented**, and named here so the gap is not mistaken for coverage:
 
@@ -80,8 +86,9 @@ Before the deletion window starts, every active provider Item is revoked and its
 webhook jobs are purged; a provider outage fails closed instead of leaving bank
 access alive behind a deleted local row.
 
-The blocklist is a small built-in set. Production should check a real corpus —
-the Have I Been Pwned k-anonymity range API never receives the password itself.
+The small built-in blocklist remains as an immediate offline guard; the HIBP
+k-anonymity corpus is the production control. It never receives a password or
+its complete hash.
 
 ## Access control
 

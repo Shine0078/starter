@@ -11,7 +11,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
-import { createHash, generateKeyPairSync, sign } from 'node:crypto';
+import { createHash, generateKeyPairSync, sign, type KeyObject } from 'node:crypto';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -117,7 +117,7 @@ function coseEc2Key(x: Buffer, y: Buffer): Buffer {
   return cborEncode(map);
 }
 
-function derSign(data: Buffer, privateKey: Buffer): Buffer {
+function derSign(data: Buffer, privateKey: KeyObject): Buffer {
   const signature = sign('sha256', data, privateKey);
   return signature;
 }
@@ -160,7 +160,7 @@ describe('webauthn verify core', () => {
       verifyAssertionSignature({
         authenticatorData: auth,
         clientDataJson: clientData,
-        publicKeyPem: publicKey.export({ type: 'spki', format: 'pem' }),
+        publicKeyPem: publicKey.export({ type: 'spki', format: 'pem' }).toString(),
         signature,
       }),
     ).toBe(true);
@@ -168,7 +168,7 @@ describe('webauthn verify core', () => {
       verifyAssertionSignature({
         authenticatorData: auth,
         clientDataJson: Buffer.from('{"type":"tampered"}'),
-        publicKeyPem: publicKey.export({ type: 'spki', format: 'pem' }),
+        publicKeyPem: publicKey.export({ type: 'spki', format: 'pem' }).toString(),
         signature,
       }),
     ).toBe(false);

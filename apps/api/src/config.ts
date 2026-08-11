@@ -67,12 +67,20 @@ export interface AppConfig {
   iosUniversalLink: IosUniversalLinkConfig | undefined;
   /** Optional passkey (WebAuthn) relying-party configuration. */
   webauthn: WebAuthnConfig | undefined;
+  /** Privacy-preserving compromised-password screening configuration. */
+  passwordBreachCheck: PasswordBreachCheckConfig;
 }
 
 export interface WebAuthnConfig {
   rpId: string;
   origin: string;
   rpName: string;
+}
+
+export type PasswordBreachCheckMode = 'disabled' | 'best_effort' | 'required';
+
+export interface PasswordBreachCheckConfig {
+  mode: PasswordBreachCheckMode;
 }
 
 /**
@@ -358,6 +366,24 @@ function resolveWebAuthnConfig(isProduction: boolean): WebAuthnConfig | undefine
 }
 
 /**
+ * HIBP's range API does not receive a password or its complete hash. New
+ * production credentials must be screened, while ordinary local/test runs
+ * stay offline and deterministic unless an engineer opts into best-effort
+ * checks. A production process may not silently downgrade this control.
+ */
+function resolvePasswordBreachCheck(isProduction: boolean): PasswordBreachCheckConfig {
+  const raw = process.env.HIBP_PASSWORD_CHECK?.trim().toLowerCase();
+  const mode = raw || (isProduction ? 'required' : 'disabled');
+  if (!['disabled', 'best_effort', 'required'].includes(mode)) {
+    throw new Error('HIBP_PASSWORD_CHECK must be disabled, best_effort, or required.');
+  }
+  if (isProduction && mode !== 'required') {
+    throw new Error('Production requires HIBP_PASSWORD_CHECK=required for compromised-password screening.');
+  }
+  return { mode: mode as PasswordBreachCheckMode };
+}
+
+/**
  * Memoised, and it has to be.
  *
  * loadConfig() is called from the composition root, the health endpoint, and
@@ -463,5 +489,6 @@ function buildConfig(): AppConfig {
     metricsToken: resolveMetricsToken(),
     iosUniversalLink: resolveIosUniversalLink(),
     webauthn: resolveWebAuthnConfig(isProduction),
+    passwordBreachCheck: resolvePasswordBreachCheck(isProduction),
   };
 }

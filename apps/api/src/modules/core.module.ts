@@ -24,6 +24,10 @@ import {
 } from '../infra/postgres/stores';
 import { Argon2PasswordHasher } from '../infra/auth/argon2-hasher';
 import {
+  DisabledPasswordBreachChecker,
+  HaveIBeenPwnedPasswordBreachChecker,
+} from '../infra/auth/password-breach-checker';
+import {
   InMemoryAccountDeletionStore,
   PostgresAccountDeletionStore,
 } from '../infra/auth/account-deletion-stores';
@@ -109,6 +113,7 @@ import {
   REGISTRATION_STORE,
   MFA_SECRET_CIPHER,
   MFA_STORE,
+  PASSWORD_BREACH_CHECKER,
   SESSION_STORE,
   TOKEN_ISSUER,
   USER_STORE,
@@ -250,6 +255,15 @@ function storeProviders(): Provider[] {
     },
     { provide: PASSWORD_HASHER, useClass: Argon2PasswordHasher },
     {
+      provide: PASSWORD_BREACH_CHECKER,
+      useFactory: () => {
+        const mode = loadConfig().passwordBreachCheck.mode;
+        return mode === 'disabled'
+          ? new DisabledPasswordBreachChecker()
+          : new HaveIBeenPwnedPasswordBreachChecker({ required: mode === 'required' });
+      },
+    },
+    {
       provide: MFA_SECRET_CIPHER,
       useFactory: () => process.env.MFA_ENCRYPTION_KEY
         ? AesGcmMfaSecretCipher.fromBase64(process.env.MFA_ENCRYPTION_KEY)
@@ -367,6 +381,7 @@ function storeProviders(): Provider[] {
     AUTH_ACTION_TOKEN_STORE,
     EMAIL_SENDER,
     PASSWORD_HASHER,
+    PASSWORD_BREACH_CHECKER,
     TOKEN_ISSUER,
     CONSENT_STORE,
     REGISTRATION_STORE,

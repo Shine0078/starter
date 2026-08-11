@@ -43,6 +43,7 @@ import {
   AUTH_EVENT_STORE,
   EMAIL_SENDER,
   DuplicateEmailError,
+  PASSWORD_BREACH_CHECKER,
   PASSWORD_HASHER,
   REGISTRATION_STORE,
   MFA_SECRET_CIPHER,
@@ -55,6 +56,7 @@ import {
   type AuthActionTokenStore,
   type AuthEventStore,
   type EmailSender,
+  type PasswordBreachChecker,
   type PasswordHasher,
   type RegistrationStore,
   type MfaSecretCipher,
@@ -102,6 +104,7 @@ export class AuthService {
     @Inject(AUTH_ACTION_TOKEN_STORE) private readonly actionTokens: AuthActionTokenStore,
     @Inject(EMAIL_SENDER) private readonly emailSender: EmailSender,
     @Inject(PASSWORD_HASHER) private readonly hasher: PasswordHasher,
+    @Inject(PASSWORD_BREACH_CHECKER) private readonly passwordBreachChecker: PasswordBreachChecker,
     @Inject(TOKEN_ISSUER) private readonly tokens: TokenIssuer,
     @Inject(CLOCK) private readonly clock: ClockPort,
     @Inject(MFA_STORE) private readonly mfa: MfaStore,
@@ -128,6 +131,7 @@ export class AuthService {
     if (!check.ok) {
       throw new BadRequestException({ message: 'Password rejected.', problems: check.problems });
     }
+    await this.assertPasswordNotCompromised(password);
 
     const legal = loadConfig().legal;
     if (
@@ -512,6 +516,7 @@ export class AuthService {
     if (!check.ok) {
       throw new BadRequestException({ message: 'Password rejected.', problems: check.problems });
     }
+    await this.assertPasswordNotCompromised(password);
 
     const now = this.clock.now();
     const userId = await this.actionTokens.consume(
@@ -733,6 +738,27 @@ export class AuthService {
       return step !== null && this.mfa.acceptTotpStep(userId, step);
     }
     return this.mfa.consumeRecoveryCode(userId, this.hashRecoveryCode(normalized), at);
+  }
+
+  private async assertPasswordNotCompromised(password: string): Promise<void> {
+    const result = await this.passwordBreachChecker.check(password);
+    if (result.kind === 'compromised') {
+      throw new BadRequestException({
+        message: 'Password rejected.',
+        problems: [
+          'This password appears in known data breaches. Choose a new, unique passphrase.',
+        ],
+      });
+    }
+    if (result.kind === 'unavailable' && this.passwordBreachChecker.required) {
+      throw new ServiceUnavailableException(
+        'Password safety screening is temporarily unavailable. Try again shortly.',
+      );
+    }
+    if (result.kind === 'unavailable') {
+      // Best-effort development mode never sends candidate values to the log.
+      this.logger.warn('Compromised-password screening was unavailable.');
+    }
   }
 
   private async requirePassword(userId: string, password: string): Promise<User> {

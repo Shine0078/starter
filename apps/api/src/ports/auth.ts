@@ -22,6 +22,7 @@ export const TOKEN_ISSUER = 'TOKEN_ISSUER';
 export const REGISTRATION_STORE = 'REGISTRATION_STORE';
 export const MFA_STORE = 'MFA_STORE';
 export const MFA_SECRET_CIPHER = 'MFA_SECRET_CIPHER';
+export const PASSWORD_BREACH_CHECKER = 'PASSWORD_BREACH_CHECKER';
 
 export interface CreateUserInput {
   id: string;
@@ -112,6 +113,23 @@ export interface PasswordHasher {
    */
   needsRehash(hash: string): boolean;
 }
+
+/**
+ * Checks a candidate password against a compromised-password corpus. The
+ * adapter receives the plaintext only inside this process; external adapters
+ * must use a privacy-preserving protocol such as HIBP's five-character hash
+ * range lookup and must never log candidate values.
+ */
+export interface PasswordBreachChecker {
+  /** An unavailable check rejects a new password when this is true. */
+  readonly required: boolean;
+  check(password: string): Promise<PasswordBreachResult>;
+}
+
+export type PasswordBreachResult =
+  | { kind: 'safe' }
+  | { kind: 'compromised'; occurrences: number }
+  | { kind: 'unavailable' };
 
 export interface TokenIssuer {
   signAccessToken(userId: string, sessionId: string): { token: string; expiresIn: number };
