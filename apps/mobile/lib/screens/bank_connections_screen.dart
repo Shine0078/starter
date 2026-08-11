@@ -6,8 +6,15 @@ import 'package:flutter/services.dart';
 
 import '../api/client.dart';
 import '../api/plaid_link.dart';
+import '../l10n/app_localizations.dart';
+import '../l10n/app_localizations_en.dart';
 import '../models/models.dart';
 import 'plan_screen.dart';
+
+AppLocalizations _bankLocalizations(BuildContext context) {
+  return Localizations.of<AppLocalizations>(context, AppLocalizations) ??
+      AppLocalizationsEn();
+}
 
 class BankConnectionsScreen extends StatefulWidget {
   BankConnectionsScreen({required this.api, PlaidLink? plaidLink, super.key})
@@ -27,6 +34,8 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
   bool _loading = true;
   bool _working = false;
   String? _error;
+
+  AppLocalizations get _l10n => _bankLocalizations(context);
 
   /// Connections that count against the plan limit, matching the server's rule
   /// in BankingService: a revoked link is not occupying a slot.
@@ -128,10 +137,13 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
         widget.api,
         PlanUpgradeRequiredException(
           path: '/bank-links/exchange',
-          message: 'Your ${plan.planName} plan connects up to '
-              '${plan.bankLinkLimit} '
-              '${plan.bankLinkLimit == 1 ? 'institution' : 'institutions'}. '
-              'Upgrade to connect more.',
+          message: _l10n.bankPlanConnectionLimit(
+            plan.planName,
+            plan.bankLinkLimit,
+            plan.bankLinkLimit == 1
+                ? _l10n.bankInstitution
+                : _l10n.bankInstitutions,
+          ),
           entitlement: 'unlimited_bank_links',
         ),
       );
@@ -139,7 +151,9 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
     }
 
     final password = await _confirmPassword(
-      existing == null ? 'connect a bank' : 'reconnect this bank',
+      existing == null
+          ? _l10n.bankConnectAction
+          : _l10n.bankReconnectThisAction,
     );
     if (password == null) return;
     setState(() {
@@ -155,7 +169,7 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
       final result = await widget.plaidLink.open(token);
       if (!result.succeeded) {
         if (result.errorCode != null) {
-          _show(result.errorMessage ?? 'Bank connection was not completed.');
+          _show(result.errorMessage ?? _l10n.bankConnectionNotCompleted);
         }
         return;
       }
@@ -177,13 +191,13 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
     final value = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Confirm it’s you'),
+        title: Text(_l10n.bankStepUpTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Enter your FINVERSE password to $action. Plaid handles your bank sign-in separately.',
+              _l10n.bankStepUpDetail(action),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -193,8 +207,8 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
               textInputAction: TextInputAction.done,
               onChanged: (value) => enteredPassword = value,
               onSubmitted: (value) => Navigator.pop(dialogContext, value),
-              decoration: const InputDecoration(
-                labelText: 'FINVERSE password',
+              decoration: InputDecoration(
+                labelText: _l10n.bankPasswordLabel,
                 border: OutlineInputBorder(),
               ),
             ),
@@ -203,11 +217,11 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
+            child: Text(_l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, enteredPassword),
-            child: const Text('Continue'),
+            child: Text(_l10n.bankContinueAction),
           ),
         ],
       ),
@@ -234,7 +248,7 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
     try {
       await widget.api.syncBankLink(link.id);
       await _load();
-      _show('Transactions are up to date.');
+      _show(_l10n.bankTransactionsCurrent);
     } catch (error) {
       if (mounted) setState(() => _error = _friendly(error));
     } finally {
@@ -246,18 +260,16 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text('Disconnect ${link.institutionName}?'),
-        content: const Text(
-          'Plaid access will be revoked immediately. Transactions already imported into FINVERSE are kept so your budgets and history remain useful.',
-        ),
+        title: Text(_l10n.bankDisconnectTitle(link.institutionName)),
+        content: Text(_l10n.bankDisconnectDetail),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
+            child: Text(_l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Disconnect'),
+            child: Text(_l10n.bankDisconnectAction),
           ),
         ],
       ),
@@ -267,7 +279,7 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
     try {
       await widget.api.disconnectBank(link.id);
       await _load();
-      _show('Bank access revoked.');
+      _show(_l10n.bankAccessRevoked);
     } catch (error) {
       if (mounted) setState(() => _error = _friendly(error));
     } finally {
@@ -296,8 +308,9 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: Text(
-              existing == null ? 'Add manual account' : 'Edit manual account'),
+          title: Text(existing == null
+              ? _l10n.bankAddManualTitle
+              : _l10n.bankEditManualTitle),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -306,29 +319,31 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
                   initialValue: enteredName,
                   onChanged: (value) => enteredName = value,
                   textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(
-                    labelText: 'Account name',
+                  decoration: InputDecoration(
+                    labelText: _l10n.bankAccountNameLabel,
                     border: OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   initialValue: type,
-                  decoration: const InputDecoration(
-                    labelText: 'Account type',
+                  decoration: InputDecoration(
+                    labelText: _l10n.bankAccountTypeLabel,
                     border: OutlineInputBorder(),
                   ),
-                  items: const [
+                  items: [
                     DropdownMenuItem(
-                        value: 'cash', child: Text('Cash or wallet')),
+                        value: 'cash', child: Text(_l10n.bankManualCash)),
                     DropdownMenuItem(
-                        value: 'checking', child: Text('Offline chequing')),
+                        value: 'checking',
+                        child: Text(_l10n.bankManualChecking)),
                     DropdownMenuItem(
-                        value: 'savings', child: Text('Offline savings')),
+                        value: 'savings', child: Text(_l10n.bankManualSavings)),
                     DropdownMenuItem(
-                        value: 'investment', child: Text('Investment value')),
+                        value: 'investment',
+                        child: Text(_l10n.bankManualInvestment)),
                     DropdownMenuItem(
-                        value: 'loan', child: Text('Loan or other debt')),
+                        value: 'loan', child: Text(_l10n.bankManualLoan)),
                   ],
                   onChanged: (value) {
                     if (value != null) setDialogState(() => type = value);
@@ -341,9 +356,10 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   decoration: InputDecoration(
-                    labelText: type == 'loan' ? 'Amount owed' : 'Current value',
-                    helperText:
-                        'Enter a positive amount; debts are stored as owed.',
+                    labelText: type == 'loan'
+                        ? _l10n.bankAmountOwedLabel
+                        : _l10n.bankCurrentValueLabel,
+                    helperText: _l10n.bankAmountHelper,
                     border: const OutlineInputBorder(),
                   ),
                 ),
@@ -353,8 +369,8 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
                   onChanged: (value) => enteredCurrency = value,
                   textCapitalization: TextCapitalization.characters,
                   maxLength: 3,
-                  decoration: const InputDecoration(
-                    labelText: 'Currency (for example CAD)',
+                  decoration: InputDecoration(
+                    labelText: _l10n.bankCurrencyLabel,
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -364,11 +380,13 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('Cancel'),
+              child: Text(_l10n.commonCancel),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(dialogContext, true),
-              child: Text(existing == null ? 'Add account' : 'Save changes'),
+              child: Text(existing == null
+                  ? _l10n.bankAddAccountAction
+                  : _l10n.bankSaveChangesAction),
             ),
           ],
         ),
@@ -382,7 +400,7 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
     if (enteredName.isEmpty ||
         !RegExp(r'^[A-Z]{3}$').hasMatch(enteredCurrency) ||
         enteredBalance == null) {
-      _show('Enter a name, a three-letter currency, and a valid amount.');
+      _show(_l10n.bankManualAccountInvalid);
       return;
     }
 
@@ -407,8 +425,8 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
       }
       await _load();
       _show(existing == null
-          ? 'Manual account added.'
-          : 'Manual account updated.');
+          ? _l10n.bankManualAccountAdded
+          : _l10n.bankManualAccountUpdated);
     } catch (error) {
       if (mounted) setState(() => _error = _friendly(error));
     } finally {
@@ -420,18 +438,16 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text('Remove ${account.name}?'),
-        content: const Text(
-          'This removes the manual balance from FINVERSE. It does not affect any bank or financial institution.',
-        ),
+        title: Text(_l10n.bankRemoveManualTitle(account.name)),
+        content: Text(_l10n.bankRemoveManualDetail),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
+            child: Text(_l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Remove'),
+            child: Text(_l10n.bankRemoveAction),
           ),
         ],
       ),
@@ -441,7 +457,7 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
     try {
       await widget.api.deleteManualAccount(account.id);
       await _load();
-      _show('Manual account removed.');
+      _show(_l10n.bankManualAccountRemoved);
     } catch (error) {
       if (mounted) setState(() => _error = _friendly(error));
     } finally {
@@ -465,8 +481,7 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
       return null;
     }
     if (error is PlaidLinkUnavailable || error is MissingPluginException) {
-      return 'Bank connection is not available in this build. Add accounts '
-          'manually here instead.';
+      return _l10n.bankUnavailableInBuild;
     }
 
     if (error is ApiException) {
@@ -477,8 +492,7 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
           final message = decoded['message'];
           if (code == 'PLAID_CONFIGURATION') {
             if (message is String && message.isNotEmpty) return message;
-            return 'Bank connection setup is incomplete on this server. '
-                'Finish the Plaid app configuration and try again.';
+            return _l10n.bankSetupIncomplete;
           }
           if (error.statusCode == 503 &&
               message is String &&
@@ -490,7 +504,7 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
         // Fall through to a generic, actionable message for non-JSON errors.
       }
       if (error.statusCode == 503) {
-        return 'The bank provider is temporarily unavailable. Try again shortly.';
+        return _l10n.bankProviderUnavailable;
       }
     }
 
@@ -498,8 +512,7 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
     if (value.contains('503')) {
       // The old wording stopped at "not configured", which reads as a dead end.
       // Sandbox credentials are free and take a few minutes, so say that.
-      return 'This server has no Plaid credentials yet. Plaid Sandbox keys are '
-          'free — see docs/11-run-on-your-phone.md.';
+      return _l10n.bankCredentialsMissing;
     }
     return value;
   }
@@ -512,125 +525,118 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(
-          title: const Text('Accounts'),
-          actions: [
-            IconButton(
-                onPressed: _working ? null : _load,
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Refresh'),
-          ],
-        ),
-        floatingActionButton: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
+  Widget build(BuildContext context) {
+    final l10n = _bankLocalizations(context);
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(l10n.bankAccountsTitle),
+        actions: [
+          IconButton(
+              onPressed: _working ? null : _load,
+              icon: const Icon(Icons.refresh),
+              tooltip: l10n.bankRefreshAction),
+        ],
+      ),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          FloatingActionButton.extended(
+            heroTag: 'add-manual-account',
+            onPressed: _working ? null : () => _editManual(),
+            icon: const Icon(Icons.add_card),
+            label: Text(l10n.bankAddManualAction),
+          ),
+          // Each platform implementation advertises whether its Plaid Link
+          // surface is available (Web uses Plaid Link for Web; Android uses
+          // the native SDK).
+          if (widget.plaidLink.isSupported) ...[
+            const SizedBox(height: 10),
             FloatingActionButton.extended(
-              heroTag: 'add-manual-account',
-              onPressed: _working ? null : () => _editManual(),
-              icon: const Icon(Icons.add_card),
-              label: const Text('Add manual'),
+              heroTag: 'connect-bank',
+              onPressed: _working ? null : () => _connect(),
+              icon: const Icon(Icons.add_link),
+              label: Text(l10n.bankConnectAction),
             ),
-            // Each platform implementation advertises whether its Plaid Link
-            // surface is available (Web uses Plaid Link for Web; Android uses
-            // the native SDK).
-            if (widget.plaidLink.isSupported) ...[
-              const SizedBox(height: 10),
-              FloatingActionButton.extended(
-                heroTag: 'connect-bank',
-                onPressed: _working ? null : () => _connect(),
-                icon: const Icon(Icons.add_link),
-                label: const Text('Connect bank'),
-              ),
-            ],
           ],
-        ),
-        body: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : RefreshIndicator(
-                onRefresh: _load,
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 168),
-                  children: [
-                    const Card(
+        ],
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 168),
+                children: [
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.shield_outlined),
+                      title: Text(l10n.bankSecureTitle),
+                      subtitle: Text(l10n.bankSecureDetail),
+                    ),
+                  ),
+                  if (_error != null)
+                    Card(
+                      color: Theme.of(context).colorScheme.errorContainer,
                       child: ListTile(
-                        leading: Icon(Icons.shield_outlined),
-                        title: Text('Secure bank connection'),
-                        subtitle: Text(
-                            'FINVERSE never sees or stores your bank password. Plaid handles sign-in and consent.'),
+                        leading: const Icon(Icons.error_outline),
+                        title: Text(_error!),
+                        trailing: IconButton(
+                            onPressed: _load, icon: const Icon(Icons.refresh)),
                       ),
                     ),
-                    if (_error != null)
-                      Card(
-                        color: Theme.of(context).colorScheme.errorContainer,
-                        child: ListTile(
-                          leading: const Icon(Icons.error_outline),
-                          title: Text(_error!),
-                          trailing: IconButton(
-                              onPressed: _load,
-                              icon: const Icon(Icons.refresh)),
-                        ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(4, 16, 4, 6),
+                    child: Text(l10n.bankNetPositionSection),
+                  ),
+                  if (_accounts.isEmpty)
+                    Card(
+                      child: ListTile(
+                        leading:
+                            const Icon(Icons.account_balance_wallet_outlined),
+                        title: Text(l10n.bankNoBalancesTitle),
+                        subtitle: Text(l10n.bankNoBalancesDetail),
                       ),
-                    const Padding(
-                      padding: EdgeInsets.fromLTRB(4, 16, 4, 6),
-                      child: Text('ACCOUNTS IN YOUR NET POSITION'),
                     ),
-                    if (_accounts.isEmpty)
-                      const Card(
-                        child: ListTile(
-                          leading: Icon(Icons.account_balance_wallet_outlined),
-                          title: Text('No balances yet'),
-                          subtitle: Text(
-                            'Connect a bank or add cash, an offline investment, or a loan manually.',
-                          ),
-                        ),
-                      ),
-                    for (final account in _accounts) _accountCard(account),
-                    const Padding(
-                      padding: EdgeInsets.fromLTRB(4, 20, 4, 6),
-                      child: Text('BANK CONNECTIONS'),
+                  for (final account in _accounts) _accountCard(account),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(4, 20, 4, 6),
+                    child: Text(l10n.bankConnectionsSection),
+                  ),
+                  if (_links.isEmpty && widget.plaidLink.isSupported)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 48),
+                      child: Column(children: [
+                        const Icon(Icons.account_balance_outlined, size: 56),
+                        const SizedBox(height: 16),
+                        Text(l10n.bankNoConnectionsTitle,
+                            style: const TextStyle(
+                                fontSize: 20, fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 8),
+                        Text(l10n.bankNoConnectionsDetail,
+                            textAlign: TextAlign.center),
+                      ]),
                     ),
-                    if (_links.isEmpty && widget.plaidLink.isSupported)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 48),
-                        child: Column(children: [
-                          Icon(Icons.account_balance_outlined, size: 56),
-                          SizedBox(height: 16),
-                          Text('No bank connected yet',
-                              style: TextStyle(
-                                  fontSize: 20, fontWeight: FontWeight.w600)),
-                          SizedBox(height: 8),
-                          Text(
-                              'Connect a bank for automatic balances and transactions.',
-                              textAlign: TextAlign.center),
-                        ]),
+                  // Reached only by a platform without a Plaid Link bridge.
+                  // Say so plainly and point at what does work, rather than
+                  // leaving an empty section that looks like a load failure.
+                  if (!widget.plaidLink.isSupported)
+                    Card(
+                      color:
+                          Theme.of(context).colorScheme.surfaceContainerHighest,
+                      child: ListTile(
+                        leading: const Icon(Icons.phonelink_off_outlined),
+                        title: Text(l10n.bankPlatformUnavailableTitle),
+                        subtitle: Text(l10n.bankPlatformUnavailableDetail),
+                        isThreeLine: true,
                       ),
-                    // Reached only by a platform without a Plaid Link bridge.
-                    // Say so plainly and point at what does work, rather than
-                    // leaving an empty section that looks like a load failure.
-                    if (!widget.plaidLink.isSupported)
-                      Card(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .surfaceContainerHighest,
-                        child: const ListTile(
-                          leading: Icon(Icons.phonelink_off_outlined),
-                          title: Text('Not available in this build'),
-                          subtitle: Text(
-                            'Bank connection is not wired up for this platform yet. It '
-                            'works in the browser, Android, and iOS. You can still add your '
-                            'accounts and cards with "Add manual" and set budgets and '
-                            'goals against them.',
-                          ),
-                          isThreeLine: true,
-                        ),
-                      ),
-                    for (final link in _links) _connectionCard(link),
-                  ],
-                ),
+                    ),
+                  for (final link in _links) _connectionCard(link),
+                ],
               ),
-      );
+            ),
+    );
+  }
 
   Widget _accountCard(Account account) => Card(
         child: ListTile(
@@ -643,24 +649,28 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
           ),
           title: Text(account.name),
           subtitle: Text(account.isManual
-              ? '${_typeLabel(account.type)} · Manual · ${account.currency}'
-              : '${_typeLabel(account.type)} · •••• ${account.mask}'),
+              ? _l10n.bankManualAccountSubtitle(
+                  _typeLabel(account.type), account.currency)
+              : _l10n.bankLinkedAccountSubtitle(
+                  _typeLabel(account.type), account.mask)),
           trailing: account.isManual
               ? Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(account.balanceFormatted),
                     PopupMenuButton<String>(
-                      tooltip: 'Manual account actions',
+                      tooltip: _l10n.bankManualActionsTooltip,
                       onSelected: (value) {
                         if (value == 'edit') _editManual(account);
                         if (value == 'remove') _removeManual(account);
                       },
-                      itemBuilder: (_) => const [
+                      itemBuilder: (_) => [
                         PopupMenuItem(
-                            value: 'edit', child: Text('Edit balance')),
+                            value: 'edit',
+                            child: Text(_l10n.bankEditBalanceAction)),
                         PopupMenuItem(
-                            value: 'remove', child: Text('Remove account')),
+                            value: 'remove',
+                            child: Text(_l10n.bankRemoveAccountAction)),
                       ],
                     ),
                   ],
@@ -670,12 +680,12 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
       );
 
   String _typeLabel(String type) => switch (type) {
-        'credit_card' => 'Credit card',
-        'checking' => 'Chequing',
-        'savings' => 'Savings',
-        'investment' => 'Investment',
-        'loan' => 'Loan',
-        'cash' => 'Cash',
+        'credit_card' => _l10n.bankTypeCreditCard,
+        'checking' => _l10n.bankTypeChecking,
+        'savings' => _l10n.bankTypeSavings,
+        'investment' => _l10n.bankTypeInvestment,
+        'loan' => _l10n.bankTypeLoan,
+        'cash' => _l10n.bankTypeCash,
         _ => type,
       };
 
@@ -691,18 +701,18 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
                 trailing: link.needsReconnect
                     ? FilledButton(
                         onPressed: _working ? null : () => _connect(link),
-                        child: const Text('Reconnect'))
+                        child: Text(_l10n.bankReconnectAction))
                     : IconButton(
                         onPressed: _working ? null : () => _sync(link),
                         icon: const Icon(Icons.sync),
-                        tooltip: 'Sync now'),
+                        tooltip: _l10n.bankSyncNowTooltip),
               ),
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton.icon(
                   onPressed: _working ? null : () => _disconnect(link),
                   icon: const Icon(Icons.link_off, size: 18),
-                  label: const Text('Disconnect'),
+                  label: Text(_l10n.bankDisconnectAction),
                 ),
               ),
             ],
@@ -711,15 +721,17 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
       );
 
   String _statusText(BankLink link) {
-    if (link.status == 'revoked') return 'Access revoked - reconnect to resume';
-    if (link.needsReconnect) return 'Sign-in needs attention';
-    if (link.status == 'syncing') return 'Syncing…';
+    if (link.status == 'revoked') return _l10n.bankAccessRevokedStatus;
+    if (link.needsReconnect) return _l10n.bankSignInNeedsAttention;
+    if (link.status == 'syncing') return _l10n.bankSyncingStatus;
     if (link.status == 'error') {
-      return 'Sync error${link.errorCode == null ? '' : ' · ${link.errorCode}'}';
+      return link.errorCode == null
+          ? _l10n.bankSyncError
+          : _l10n.bankSyncErrorWithCode(link.errorCode!);
     }
     final synced = link.lastSyncedAt;
     return synced == null
-        ? 'Connected'
-        : 'Last synced ${synced.substring(0, 10)}';
+        ? _l10n.bankConnectedStatus
+        : _l10n.bankLastSynced(synced.substring(0, 10));
   }
 }

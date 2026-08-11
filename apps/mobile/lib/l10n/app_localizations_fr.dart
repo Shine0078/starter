@@ -1096,4 +1096,258 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get receiptAttachAction => 'Joindre';
+
+  @override
+  String bankPlanConnectionLimit(
+      String planName, num limit, String institutions) {
+    return 'Votre forfait $planName permet de connecter jusqu\'à $limit $institutions. Passez au forfait supérieur pour en connecter davantage.';
+  }
+
+  @override
+  String get bankInstitution => 'institution';
+
+  @override
+  String get bankInstitutions => 'institutions';
+
+  @override
+  String get bankConnectAction => 'Connecter une banque';
+
+  @override
+  String get bankReconnectThisAction => 'reconnecter cette banque';
+
+  @override
+  String get bankConnectionNotCompleted =>
+      'La connexion bancaire n\'a pas été terminée.';
+
+  @override
+  String get bankStepUpTitle => 'Confirmons votre identité';
+
+  @override
+  String bankStepUpDetail(String action) {
+    return 'Entrez votre mot de passe FINVERSE pour $action. Plaid gère séparément la connexion à votre banque.';
+  }
+
+  @override
+  String get bankPasswordLabel => 'Mot de passe FINVERSE';
+
+  @override
+  String get bankContinueAction => 'Continuer';
+
+  @override
+  String get bankTransactionsCurrent => 'Les transactions sont à jour.';
+
+  @override
+  String bankDisconnectTitle(String institution) {
+    return 'Déconnecter $institution ?';
+  }
+
+  @override
+  String get bankDisconnectDetail =>
+      'L\'accès de Plaid sera révoqué immédiatement. Les transactions déjà importées dans FINVERSE sont conservées afin que vos budgets et votre historique restent utiles.';
+
+  @override
+  String get bankDisconnectAction => 'Déconnecter';
+
+  @override
+  String get bankAccessRevoked => 'Accès bancaire révoqué.';
+
+  @override
+  String get bankAddManualTitle => 'Ajouter un compte manuel';
+
+  @override
+  String get bankEditManualTitle => 'Modifier le compte manuel';
+
+  @override
+  String get bankAccountNameLabel => 'Nom du compte';
+
+  @override
+  String get bankAccountTypeLabel => 'Type de compte';
+
+  @override
+  String get bankManualCash => 'Espèces ou portefeuille';
+
+  @override
+  String get bankManualChecking => 'Compte courant hors ligne';
+
+  @override
+  String get bankManualSavings => 'Épargne hors ligne';
+
+  @override
+  String get bankManualInvestment => 'Valeur des placements';
+
+  @override
+  String get bankManualLoan => 'Prêt ou autre dette';
+
+  @override
+  String get bankAmountOwedLabel => 'Montant dû';
+
+  @override
+  String get bankCurrentValueLabel => 'Valeur actuelle';
+
+  @override
+  String get bankAmountHelper =>
+      'Entrez un montant positif; les dettes sont enregistrées comme montants dus.';
+
+  @override
+  String get bankCurrencyLabel => 'Devise (par exemple CAD)';
+
+  @override
+  String get bankAddAccountAction => 'Ajouter le compte';
+
+  @override
+  String get bankSaveChangesAction => 'Enregistrer les modifications';
+
+  @override
+  String get bankManualAccountInvalid =>
+      'Entrez un nom, une devise à trois lettres et un montant valide.';
+
+  @override
+  String get bankManualAccountAdded => 'Compte manuel ajouté.';
+
+  @override
+  String get bankManualAccountUpdated => 'Compte manuel mis à jour.';
+
+  @override
+  String bankRemoveManualTitle(String account) {
+    return 'Supprimer $account ?';
+  }
+
+  @override
+  String get bankRemoveManualDetail =>
+      'Cette opération retire le solde manuel de FINVERSE. Elle n\'affecte aucune banque ni institution financière.';
+
+  @override
+  String get bankRemoveAction => 'Supprimer';
+
+  @override
+  String get bankManualAccountRemoved => 'Compte manuel supprimé.';
+
+  @override
+  String get bankUnavailableInBuild =>
+      'La connexion bancaire n\'est pas offerte dans cette version. Ajoutez plutôt vos comptes manuellement ici.';
+
+  @override
+  String get bankSetupIncomplete =>
+      'La configuration de la connexion bancaire est incomplète sur ce serveur. Terminez la configuration de l\'application Plaid et réessayez.';
+
+  @override
+  String get bankProviderUnavailable =>
+      'Le fournisseur bancaire est temporairement indisponible. Réessayez bientôt.';
+
+  @override
+  String get bankCredentialsMissing =>
+      'Ce serveur n\'a pas encore d\'identifiants Plaid. Les clés Sandbox de Plaid sont gratuites — consultez docs/11-run-on-your-phone.md.';
+
+  @override
+  String get bankAccountsTitle => 'Comptes';
+
+  @override
+  String get bankRefreshAction => 'Actualiser';
+
+  @override
+  String get bankAddManualAction => 'Ajouter manuellement';
+
+  @override
+  String get bankSecureTitle => 'Connexion bancaire sécurisée';
+
+  @override
+  String get bankSecureDetail =>
+      'FINVERSE ne voit ni ne stocke jamais votre mot de passe bancaire. Plaid gère la connexion et le consentement.';
+
+  @override
+  String get bankNetPositionSection => 'COMPTES DANS VOTRE POSITION NETTE';
+
+  @override
+  String get bankNoBalancesTitle => 'Aucun solde pour le moment';
+
+  @override
+  String get bankNoBalancesDetail =>
+      'Connectez une banque ou ajoutez manuellement des espèces, un placement hors ligne ou un prêt.';
+
+  @override
+  String get bankConnectionsSection => 'CONNEXIONS BANCAIRES';
+
+  @override
+  String get bankNoConnectionsTitle => 'Aucune banque connectée';
+
+  @override
+  String get bankNoConnectionsDetail =>
+      'Connectez une banque pour obtenir automatiquement vos soldes et transactions.';
+
+  @override
+  String get bankPlatformUnavailableTitle =>
+      'Non disponible dans cette version';
+
+  @override
+  String get bankPlatformUnavailableDetail =>
+      'La connexion bancaire n\'est pas encore reliée à cette plateforme. Elle fonctionne dans le navigateur, sur Android et sur iOS. Vous pouvez quand même ajouter vos comptes et cartes avec « Ajouter manuellement », puis créer des budgets et objectifs pour ceux-ci.';
+
+  @override
+  String bankManualAccountSubtitle(String type, String currency) {
+    return '$type · Manuel · $currency';
+  }
+
+  @override
+  String bankLinkedAccountSubtitle(String type, String mask) {
+    return '$type · •••• $mask';
+  }
+
+  @override
+  String get bankManualActionsTooltip => 'Actions du compte manuel';
+
+  @override
+  String get bankEditBalanceAction => 'Modifier le solde';
+
+  @override
+  String get bankRemoveAccountAction => 'Supprimer le compte';
+
+  @override
+  String get bankTypeCreditCard => 'Carte de crédit';
+
+  @override
+  String get bankTypeChecking => 'Compte courant';
+
+  @override
+  String get bankTypeSavings => 'Épargne';
+
+  @override
+  String get bankTypeInvestment => 'Placement';
+
+  @override
+  String get bankTypeLoan => 'Prêt';
+
+  @override
+  String get bankTypeCash => 'Espèces';
+
+  @override
+  String get bankReconnectAction => 'Reconnecter';
+
+  @override
+  String get bankSyncNowTooltip => 'Synchroniser maintenant';
+
+  @override
+  String get bankAccessRevokedStatus =>
+      'Accès révoqué - reconnectez-vous pour reprendre';
+
+  @override
+  String get bankSignInNeedsAttention => 'La connexion exige votre attention';
+
+  @override
+  String get bankSyncingStatus => 'Synchronisation…';
+
+  @override
+  String get bankSyncError => 'Erreur de synchronisation';
+
+  @override
+  String bankSyncErrorWithCode(String code) {
+    return 'Erreur de synchronisation · $code';
+  }
+
+  @override
+  String get bankConnectedStatus => 'Connecté';
+
+  @override
+  String bankLastSynced(String date) {
+    return 'Dernière synchronisation : $date';
+  }
 }

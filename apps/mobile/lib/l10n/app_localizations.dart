@@ -1861,6 +1861,451 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Attach'**
   String get receiptAttachAction;
+
+  /// No description provided for @bankPlanConnectionLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Your {planName} plan connects up to {limit} {institutions}. Upgrade to connect more.'**
+  String bankPlanConnectionLimit(
+      String planName, num limit, String institutions);
+
+  /// No description provided for @bankInstitution.
+  ///
+  /// In en, this message translates to:
+  /// **'institution'**
+  String get bankInstitution;
+
+  /// No description provided for @bankInstitutions.
+  ///
+  /// In en, this message translates to:
+  /// **'institutions'**
+  String get bankInstitutions;
+
+  /// No description provided for @bankConnectAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect bank'**
+  String get bankConnectAction;
+
+  /// No description provided for @bankReconnectThisAction.
+  ///
+  /// In en, this message translates to:
+  /// **'reconnect this bank'**
+  String get bankReconnectThisAction;
+
+  /// No description provided for @bankConnectionNotCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Bank connection was not completed.'**
+  String get bankConnectionNotCompleted;
+
+  /// No description provided for @bankStepUpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm it’s you'**
+  String get bankStepUpTitle;
+
+  /// No description provided for @bankStepUpDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your FINVERSE password to {action}. Plaid handles your bank sign-in separately.'**
+  String bankStepUpDetail(String action);
+
+  /// No description provided for @bankPasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'FINVERSE password'**
+  String get bankPasswordLabel;
+
+  /// No description provided for @bankContinueAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get bankContinueAction;
+
+  /// No description provided for @bankTransactionsCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'Transactions are up to date.'**
+  String get bankTransactionsCurrent;
+
+  /// No description provided for @bankDisconnectTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnect {institution}?'**
+  String bankDisconnectTitle(String institution);
+
+  /// No description provided for @bankDisconnectDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Plaid access will be revoked immediately. Transactions already imported into FINVERSE are kept so your budgets and history remain useful.'**
+  String get bankDisconnectDetail;
+
+  /// No description provided for @bankDisconnectAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnect'**
+  String get bankDisconnectAction;
+
+  /// No description provided for @bankAccessRevoked.
+  ///
+  /// In en, this message translates to:
+  /// **'Bank access revoked.'**
+  String get bankAccessRevoked;
+
+  /// No description provided for @bankAddManualTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add manual account'**
+  String get bankAddManualTitle;
+
+  /// No description provided for @bankEditManualTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit manual account'**
+  String get bankEditManualTitle;
+
+  /// No description provided for @bankAccountNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Account name'**
+  String get bankAccountNameLabel;
+
+  /// No description provided for @bankAccountTypeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Account type'**
+  String get bankAccountTypeLabel;
+
+  /// No description provided for @bankManualCash.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash or wallet'**
+  String get bankManualCash;
+
+  /// No description provided for @bankManualChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline chequing'**
+  String get bankManualChecking;
+
+  /// No description provided for @bankManualSavings.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline savings'**
+  String get bankManualSavings;
+
+  /// No description provided for @bankManualInvestment.
+  ///
+  /// In en, this message translates to:
+  /// **'Investment value'**
+  String get bankManualInvestment;
+
+  /// No description provided for @bankManualLoan.
+  ///
+  /// In en, this message translates to:
+  /// **'Loan or other debt'**
+  String get bankManualLoan;
+
+  /// No description provided for @bankAmountOwedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount owed'**
+  String get bankAmountOwedLabel;
+
+  /// No description provided for @bankCurrentValueLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Current value'**
+  String get bankCurrentValueLabel;
+
+  /// No description provided for @bankAmountHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a positive amount; debts are stored as owed.'**
+  String get bankAmountHelper;
+
+  /// No description provided for @bankCurrencyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Currency (for example CAD)'**
+  String get bankCurrencyLabel;
+
+  /// No description provided for @bankAddAccountAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Add account'**
+  String get bankAddAccountAction;
+
+  /// No description provided for @bankSaveChangesAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Save changes'**
+  String get bankSaveChangesAction;
+
+  /// No description provided for @bankManualAccountInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a name, a three-letter currency, and a valid amount.'**
+  String get bankManualAccountInvalid;
+
+  /// No description provided for @bankManualAccountAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual account added.'**
+  String get bankManualAccountAdded;
+
+  /// No description provided for @bankManualAccountUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual account updated.'**
+  String get bankManualAccountUpdated;
+
+  /// No description provided for @bankRemoveManualTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {account}?'**
+  String bankRemoveManualTitle(String account);
+
+  /// No description provided for @bankRemoveManualDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'This removes the manual balance from FINVERSE. It does not affect any bank or financial institution.'**
+  String get bankRemoveManualDetail;
+
+  /// No description provided for @bankRemoveAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get bankRemoveAction;
+
+  /// No description provided for @bankManualAccountRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual account removed.'**
+  String get bankManualAccountRemoved;
+
+  /// No description provided for @bankUnavailableInBuild.
+  ///
+  /// In en, this message translates to:
+  /// **'Bank connection is not available in this build. Add accounts manually here instead.'**
+  String get bankUnavailableInBuild;
+
+  /// No description provided for @bankSetupIncomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Bank connection setup is incomplete on this server. Finish the Plaid app configuration and try again.'**
+  String get bankSetupIncomplete;
+
+  /// No description provided for @bankProviderUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The bank provider is temporarily unavailable. Try again shortly.'**
+  String get bankProviderUnavailable;
+
+  /// No description provided for @bankCredentialsMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'This server has no Plaid credentials yet. Plaid Sandbox keys are free — see docs/11-run-on-your-phone.md.'**
+  String get bankCredentialsMissing;
+
+  /// No description provided for @bankAccountsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Accounts'**
+  String get bankAccountsTitle;
+
+  /// No description provided for @bankRefreshAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get bankRefreshAction;
+
+  /// No description provided for @bankAddManualAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Add manual'**
+  String get bankAddManualAction;
+
+  /// No description provided for @bankSecureTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Secure bank connection'**
+  String get bankSecureTitle;
+
+  /// No description provided for @bankSecureDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'FINVERSE never sees or stores your bank password. Plaid handles sign-in and consent.'**
+  String get bankSecureDetail;
+
+  /// No description provided for @bankNetPositionSection.
+  ///
+  /// In en, this message translates to:
+  /// **'ACCOUNTS IN YOUR NET POSITION'**
+  String get bankNetPositionSection;
+
+  /// No description provided for @bankNoBalancesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No balances yet'**
+  String get bankNoBalancesTitle;
+
+  /// No description provided for @bankNoBalancesDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect a bank or add cash, an offline investment, or a loan manually.'**
+  String get bankNoBalancesDetail;
+
+  /// No description provided for @bankConnectionsSection.
+  ///
+  /// In en, this message translates to:
+  /// **'BANK CONNECTIONS'**
+  String get bankConnectionsSection;
+
+  /// No description provided for @bankNoConnectionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No bank connected yet'**
+  String get bankNoConnectionsTitle;
+
+  /// No description provided for @bankNoConnectionsDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect a bank for automatic balances and transactions.'**
+  String get bankNoConnectionsDetail;
+
+  /// No description provided for @bankPlatformUnavailableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Not available in this build'**
+  String get bankPlatformUnavailableTitle;
+
+  /// No description provided for @bankPlatformUnavailableDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Bank connection is not wired up for this platform yet. It works in the browser, Android, and iOS. You can still add your accounts and cards with \"Add manual\" and set budgets and goals against them.'**
+  String get bankPlatformUnavailableDetail;
+
+  /// No description provided for @bankManualAccountSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{type} · Manual · {currency}'**
+  String bankManualAccountSubtitle(String type, String currency);
+
+  /// No description provided for @bankLinkedAccountSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{type} · •••• {mask}'**
+  String bankLinkedAccountSubtitle(String type, String mask);
+
+  /// No description provided for @bankManualActionsTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual account actions'**
+  String get bankManualActionsTooltip;
+
+  /// No description provided for @bankEditBalanceAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit balance'**
+  String get bankEditBalanceAction;
+
+  /// No description provided for @bankRemoveAccountAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove account'**
+  String get bankRemoveAccountAction;
+
+  /// No description provided for @bankTypeCreditCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Credit card'**
+  String get bankTypeCreditCard;
+
+  /// No description provided for @bankTypeChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Chequing'**
+  String get bankTypeChecking;
+
+  /// No description provided for @bankTypeSavings.
+  ///
+  /// In en, this message translates to:
+  /// **'Savings'**
+  String get bankTypeSavings;
+
+  /// No description provided for @bankTypeInvestment.
+  ///
+  /// In en, this message translates to:
+  /// **'Investment'**
+  String get bankTypeInvestment;
+
+  /// No description provided for @bankTypeLoan.
+  ///
+  /// In en, this message translates to:
+  /// **'Loan'**
+  String get bankTypeLoan;
+
+  /// No description provided for @bankTypeCash.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash'**
+  String get bankTypeCash;
+
+  /// No description provided for @bankReconnectAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Reconnect'**
+  String get bankReconnectAction;
+
+  /// No description provided for @bankSyncNowTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync now'**
+  String get bankSyncNowTooltip;
+
+  /// No description provided for @bankAccessRevokedStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Access revoked - reconnect to resume'**
+  String get bankAccessRevokedStatus;
+
+  /// No description provided for @bankSignInNeedsAttention.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in needs attention'**
+  String get bankSignInNeedsAttention;
+
+  /// No description provided for @bankSyncingStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Syncing…'**
+  String get bankSyncingStatus;
+
+  /// No description provided for @bankSyncError.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync error'**
+  String get bankSyncError;
+
+  /// No description provided for @bankSyncErrorWithCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync error · {code}'**
+  String bankSyncErrorWithCode(String code);
+
+  /// No description provided for @bankConnectedStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected'**
+  String get bankConnectedStatus;
+
+  /// No description provided for @bankLastSynced.
+  ///
+  /// In en, this message translates to:
+  /// **'Last synced {date}'**
+  String bankLastSynced(String date);
 }
 
 class _AppLocalizationsDelegate

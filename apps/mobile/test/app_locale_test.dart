@@ -6,6 +6,7 @@ import 'package:finverse/api/session_store.dart';
 import 'package:finverse/app_locale.dart';
 import 'package:finverse/l10n/app_localizations.dart';
 import 'package:finverse/screens/assistant_screen.dart';
+import 'package:finverse/screens/bank_connections_screen.dart';
 
 void main() {
   test('restores only a supported persisted display language', () async {
@@ -97,5 +98,25 @@ void main() {
     expect(find.text('Demander à FINVERSE'), findsOneWidget);
     expect(find.text('Une vision claire de votre argent'), findsOneWidget);
     expect(find.text('Essayez une de ces questions'), findsOneWidget);
+  });
+
+  testWidgets('localizes the bank account-management path', (tester) async {
+    final api = ApiClient(
+      baseUrl: 'http://example.com',
+      sessionStore: InMemorySessionStore(),
+    );
+    addTearDown(api.close);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('fr'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: BankConnectionsScreen(api: api),
+      ),
+    );
+
+    expect(find.text('Comptes'), findsOneWidget);
+    expect(find.text('Ajouter manuellement'), findsOneWidget);
   });
 }
