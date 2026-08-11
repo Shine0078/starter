@@ -1238,6 +1238,240 @@ abstract class AppLocalizations {
   /// **'No strong recurring pattern was found.'**
   String get planningNoPattern;
 
+  /// No description provided for @analyticsRefreshTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh analytics'**
+  String get analyticsRefreshTooltip;
+
+  /// No description provided for @analyticsUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Analytics are unavailable'**
+  String get analyticsUnavailable;
+
+  /// No description provided for @analyticsUnavailableDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Check your connection and try again. Nothing has been lost.'**
+  String get analyticsUnavailableDetail;
+
+  /// No description provided for @analyticsPeriodLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Analytics period'**
+  String get analyticsPeriodLabel;
+
+  /// No description provided for @analyticsThisWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'This week'**
+  String get analyticsThisWeek;
+
+  /// No description provided for @analyticsThisMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'This month'**
+  String get analyticsThisMonth;
+
+  /// No description provided for @analyticsLastThreeMonths.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 3 months'**
+  String get analyticsLastThreeMonths;
+
+  /// No description provided for @analyticsLastSixMonths.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 6 months'**
+  String get analyticsLastSixMonths;
+
+  /// No description provided for @analyticsLastYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Last year'**
+  String get analyticsLastYear;
+
+  /// No description provided for @analyticsAllHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'All history'**
+  String get analyticsAllHistory;
+
+  /// No description provided for @analyticsCustomRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom range'**
+  String get analyticsCustomRange;
+
+  /// No description provided for @analyticsChooseFirstDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the first day'**
+  String get analyticsChooseFirstDay;
+
+  /// No description provided for @analyticsChooseLastDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the last day'**
+  String get analyticsChooseLastDay;
+
+  /// No description provided for @analyticsHistoryEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Not enough transaction history yet'**
+  String get analyticsHistoryEmptyTitle;
+
+  /// No description provided for @analyticsHistoryEmptyDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect a bank or add transactions to see trends.'**
+  String get analyticsHistoryEmptyDetail;
+
+  /// No description provided for @analyticsExplainableInsights.
+  ///
+  /// In en, this message translates to:
+  /// **'Explainable insights'**
+  String get analyticsExplainableInsights;
+
+  /// No description provided for @analyticsEvidenceCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Based on {count, plural, =1{1 transaction} other{{count} transactions}}'**
+  String analyticsEvidenceCount(num count);
+
+  /// No description provided for @analyticsTimeline.
+  ///
+  /// In en, this message translates to:
+  /// **'Financial timeline'**
+  String get analyticsTimeline;
+
+  /// No description provided for @analyticsPlanAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan a purchase or view your forecast'**
+  String get analyticsPlanAction;
+
+  /// No description provided for @analyticsIncome.
+  ///
+  /// In en, this message translates to:
+  /// **'Income'**
+  String get analyticsIncome;
+
+  /// No description provided for @analyticsNetExpenses.
+  ///
+  /// In en, this message translates to:
+  /// **'Net expenses'**
+  String get analyticsNetExpenses;
+
+  /// No description provided for @analyticsSavings.
+  ///
+  /// In en, this message translates to:
+  /// **'Savings'**
+  String get analyticsSavings;
+
+  /// No description provided for @analyticsSavingsRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Savings rate'**
+  String get analyticsSavingsRate;
+
+  /// No description provided for @analyticsPaceNoHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep using FINVERSE to build a useful historical baseline.'**
+  String get analyticsPaceNoHistory;
+
+  /// No description provided for @analyticsPaceNoComparison.
+  ///
+  /// In en, this message translates to:
+  /// **'There is not enough comparable history for a pace comparison.'**
+  String get analyticsPaceNoComparison;
+
+  /// No description provided for @analyticsPaceProjected.
+  ///
+  /// In en, this message translates to:
+  /// **'Projected spending is {percent}% {direction} your historical pace.'**
+  String analyticsPaceProjected(String percent, String direction);
+
+  /// No description provided for @analyticsPaceAbove.
+  ///
+  /// In en, this message translates to:
+  /// **'above'**
+  String get analyticsPaceAbove;
+
+  /// No description provided for @analyticsPaceBelow.
+  ///
+  /// In en, this message translates to:
+  /// **'below'**
+  String get analyticsPaceBelow;
+
+  /// No description provided for @analyticsPaceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Spending pace: {amount}'**
+  String analyticsPaceTitle(String amount);
+
+  /// No description provided for @analyticsPaceCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'Current: {amount}'**
+  String analyticsPaceCurrent(String amount);
+
+  /// No description provided for @analyticsRefundsMatched.
+  ///
+  /// In en, this message translates to:
+  /// **'Refunds matched'**
+  String get analyticsRefundsMatched;
+
+  /// No description provided for @analyticsRefundsDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'These refunds were linked to earlier purchases using merchant and amount evidence.'**
+  String get analyticsRefundsDetail;
+
+  /// No description provided for @analyticsRefundRow.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} refunded · {days} days after purchase'**
+  String analyticsRefundRow(String amount, num days);
+
+  /// No description provided for @analyticsRecurringCharges.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 recurring charge} other{{count} recurring charges}}'**
+  String analyticsRecurringCharges(num count);
+
+  /// No description provided for @analyticsSubscriptionTotals.
+  ///
+  /// In en, this message translates to:
+  /// **'{monthly}/month · {yearly}/year'**
+  String analyticsSubscriptionTotals(String monthly, String yearly);
+
+  /// No description provided for @analyticsPriceRiseCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 price rise} other{{count} price rises}}'**
+  String analyticsPriceRiseCount(num count);
+
+  /// No description provided for @analyticsPriorityCritical.
+  ///
+  /// In en, this message translates to:
+  /// **'Critical'**
+  String get analyticsPriorityCritical;
+
+  /// No description provided for @analyticsPriorityImportant.
+  ///
+  /// In en, this message translates to:
+  /// **'Important'**
+  String get analyticsPriorityImportant;
+
+  /// No description provided for @analyticsPriorityInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Info'**
+  String get analyticsPriorityInfo;
+
   /// No description provided for @errorConnection.
   ///
   /// In en, this message translates to:

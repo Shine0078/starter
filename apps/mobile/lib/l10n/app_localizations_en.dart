@@ -706,6 +706,162 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planningNoPattern => 'No strong recurring pattern was found.';
 
   @override
+  String get analyticsRefreshTooltip => 'Refresh analytics';
+
+  @override
+  String get analyticsUnavailable => 'Analytics are unavailable';
+
+  @override
+  String get analyticsUnavailableDetail =>
+      'Check your connection and try again. Nothing has been lost.';
+
+  @override
+  String get analyticsPeriodLabel => 'Analytics period';
+
+  @override
+  String get analyticsThisWeek => 'This week';
+
+  @override
+  String get analyticsThisMonth => 'This month';
+
+  @override
+  String get analyticsLastThreeMonths => 'Last 3 months';
+
+  @override
+  String get analyticsLastSixMonths => 'Last 6 months';
+
+  @override
+  String get analyticsLastYear => 'Last year';
+
+  @override
+  String get analyticsAllHistory => 'All history';
+
+  @override
+  String get analyticsCustomRange => 'Custom range';
+
+  @override
+  String get analyticsChooseFirstDay => 'Choose the first day';
+
+  @override
+  String get analyticsChooseLastDay => 'Choose the last day';
+
+  @override
+  String get analyticsHistoryEmptyTitle => 'Not enough transaction history yet';
+
+  @override
+  String get analyticsHistoryEmptyDetail =>
+      'Connect a bank or add transactions to see trends.';
+
+  @override
+  String get analyticsExplainableInsights => 'Explainable insights';
+
+  @override
+  String analyticsEvidenceCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count transactions',
+      one: '1 transaction',
+    );
+    return 'Based on $_temp0';
+  }
+
+  @override
+  String get analyticsTimeline => 'Financial timeline';
+
+  @override
+  String get analyticsPlanAction => 'Plan a purchase or view your forecast';
+
+  @override
+  String get analyticsIncome => 'Income';
+
+  @override
+  String get analyticsNetExpenses => 'Net expenses';
+
+  @override
+  String get analyticsSavings => 'Savings';
+
+  @override
+  String get analyticsSavingsRate => 'Savings rate';
+
+  @override
+  String get analyticsPaceNoHistory =>
+      'Keep using FINVERSE to build a useful historical baseline.';
+
+  @override
+  String get analyticsPaceNoComparison =>
+      'There is not enough comparable history for a pace comparison.';
+
+  @override
+  String analyticsPaceProjected(String percent, String direction) {
+    return 'Projected spending is $percent% $direction your historical pace.';
+  }
+
+  @override
+  String get analyticsPaceAbove => 'above';
+
+  @override
+  String get analyticsPaceBelow => 'below';
+
+  @override
+  String analyticsPaceTitle(String amount) {
+    return 'Spending pace: $amount';
+  }
+
+  @override
+  String analyticsPaceCurrent(String amount) {
+    return 'Current: $amount';
+  }
+
+  @override
+  String get analyticsRefundsMatched => 'Refunds matched';
+
+  @override
+  String get analyticsRefundsDetail =>
+      'These refunds were linked to earlier purchases using merchant and amount evidence.';
+
+  @override
+  String analyticsRefundRow(String amount, num days) {
+    return '$amount refunded · $days days after purchase';
+  }
+
+  @override
+  String analyticsRecurringCharges(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count recurring charges',
+      one: '1 recurring charge',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String analyticsSubscriptionTotals(String monthly, String yearly) {
+    return '$monthly/month · $yearly/year';
+  }
+
+  @override
+  String analyticsPriceRiseCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count price rises',
+      one: '1 price rise',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get analyticsPriorityCritical => 'Critical';
+
+  @override
+  String get analyticsPriorityImportant => 'Important';
+
+  @override
+  String get analyticsPriorityInfo => 'Info';
+
+  @override
   String get errorConnection =>
       'Couldn\'t reach the server. Check your connection.';
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../api/client.dart';
 import '../design/design.dart';
+import '../l10n/app_localizations.dart';
 import '../models/models.dart';
 import '../widgets/health_score_card.dart';
 import '../widgets/spending_chart.dart';
@@ -104,7 +105,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         firstDate: DateTime(2000),
         lastDate: now,
         initialDate: _customFrom ?? DateTime(now.year, now.month, 1),
-        helpText: 'Choose the first day',
+        helpText: AppLocalizations.of(context).analyticsChooseFirstDay,
       );
       if (!mounted || start == null) return;
       final end = await showDatePicker(
@@ -112,7 +113,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         firstDate: start,
         lastDate: now,
         initialDate: _customTo ?? now,
-        helpText: 'Choose the last day',
+        helpText: AppLocalizations.of(context).analyticsChooseLastDay,
       );
       if (!mounted || end == null) return;
       setState(() {
@@ -128,12 +129,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Analytics'),
+        title: Text(l10n.navAnalytics),
         actions: [
           IconButton(
-            tooltip: 'Refresh analytics',
+            tooltip: l10n.analyticsRefreshTooltip,
             onPressed: _loading ? null : _load,
             icon: const Icon(Icons.refresh),
           ),
@@ -148,9 +150,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     if (_error != null) {
       return SingleChildScrollView(
         child: FinErrorState(
-          title: 'Analytics are unavailable',
-          message:
-              'Check your connection and try again. Nothing has been lost.',
+          title: AppLocalizations.of(context).analyticsUnavailable,
+          message: AppLocalizations.of(context).analyticsUnavailableDetail,
           onRetry: _load,
           technicalDetail: _error,
         ),
@@ -178,15 +179,34 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
             initialValue: _period,
-            decoration: const InputDecoration(labelText: 'Analytics period'),
-            items: const [
-              DropdownMenuItem(value: 'week', child: Text('This week')),
-              DropdownMenuItem(value: 'month', child: Text('This month')),
-              DropdownMenuItem(value: '3m', child: Text('Last 3 months')),
-              DropdownMenuItem(value: '6m', child: Text('Last 6 months')),
-              DropdownMenuItem(value: 'year', child: Text('Last year')),
-              DropdownMenuItem(value: 'lifetime', child: Text('All history')),
-              DropdownMenuItem(value: 'custom', child: Text('Custom range')),
+            decoration: InputDecoration(
+                labelText: AppLocalizations.of(context).analyticsPeriodLabel),
+            items: [
+              DropdownMenuItem(
+                  value: 'week',
+                  child: Text(AppLocalizations.of(context).analyticsThisWeek)),
+              DropdownMenuItem(
+                  value: 'month',
+                  child: Text(AppLocalizations.of(context).analyticsThisMonth)),
+              DropdownMenuItem(
+                  value: '3m',
+                  child: Text(
+                      AppLocalizations.of(context).analyticsLastThreeMonths)),
+              DropdownMenuItem(
+                  value: '6m',
+                  child: Text(
+                      AppLocalizations.of(context).analyticsLastSixMonths)),
+              DropdownMenuItem(
+                  value: 'year',
+                  child: Text(AppLocalizations.of(context).analyticsLastYear)),
+              DropdownMenuItem(
+                  value: 'lifetime',
+                  child:
+                      Text(AppLocalizations.of(context).analyticsAllHistory)),
+              DropdownMenuItem(
+                  value: 'custom',
+                  child:
+                      Text(AppLocalizations.of(context).analyticsCustomRange)),
             ],
             onChanged: (value) => _changePeriod(value),
           ),
@@ -206,10 +226,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             SpendingChart(categories: categories),
             const SizedBox(height: 20),
           ] else
-            const FinEmptyState(
+            FinEmptyState(
               icon: Icons.insights_outlined,
-              title: 'Not enough transaction history yet',
-              message: 'Connect a bank or add transactions to see trends.',
+              title: AppLocalizations.of(context).analyticsHistoryEmptyTitle,
+              message: AppLocalizations.of(context).analyticsHistoryEmptyDetail,
             ),
           _velocityCard(context, analytics.velocity),
           if (analytics.refundMatches.isNotEmpty) ...[
@@ -224,7 +244,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           if (_subscriptions != null) _subscriptionCard(context),
           if (insights.insights.isNotEmpty) ...[
             const SizedBox(height: 8),
-            Text('Explainable insights',
+            Text(AppLocalizations.of(context).analyticsExplainableInsights,
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             ...insights.insights.map((insight) => Card(
@@ -241,7 +261,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                     trailing:
                         _priorityChip(Theme.of(context), insight.priority),
                     subtitle: Text(
-                      '${insight.detail}\nBased on ${insight.evidenceCount} transaction(s)',
+                      '${insight.detail}\n${AppLocalizations.of(context).analyticsEvidenceCount(insight.evidenceCount)}',
                     ),
                     isThreeLine: true,
                   ),
@@ -249,7 +269,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           ],
           if (analytics.timeline.isNotEmpty) ...[
             const SizedBox(height: 8),
-            Text('Financial timeline',
+            Text(AppLocalizations.of(context).analyticsTimeline,
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             Card(
@@ -273,7 +293,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               builder: (_) => PlanningScreen(api: widget.api),
             )),
             icon: const Icon(Icons.show_chart),
-            label: const Text('Plan a purchase or view your forecast'),
+            label: Text(AppLocalizations.of(context).analyticsPlanAction),
           ),
         ],
       ),
@@ -281,11 +301,15 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   }
 
   Widget _metricGrid(BuildContext context, AnalyticsReport analytics) {
+    final l10n = AppLocalizations.of(context);
     final values = [
-      ('Income', analytics.totalIncomeFormatted),
-      ('Net expenses', analytics.netExpensesFormatted),
-      ('Savings', analytics.savingsFormatted),
-      ('Savings rate', '${analytics.savingsRate.toStringAsFixed(1)}%'),
+      (l10n.analyticsIncome, analytics.totalIncomeFormatted),
+      (l10n.analyticsNetExpenses, analytics.netExpensesFormatted),
+      (l10n.analyticsSavings, analytics.savingsFormatted),
+      (
+        l10n.analyticsSavingsRate,
+        '${analytics.savingsRate.toStringAsFixed(1)}%'
+      ),
     ];
     return GridView.count(
       crossAxisCount: 2,
@@ -316,18 +340,24 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   }
 
   Widget _velocityCard(BuildContext context, AnalyticsVelocity velocity) {
+    final l10n = AppLocalizations.of(context);
     final detail = !velocity.enoughHistory
-        ? 'Keep using FINVERSE to build a useful historical baseline.'
+        ? l10n.analyticsPaceNoHistory
         : velocity.percentDelta == null
-            ? 'There is not enough comparable history for a pace comparison.'
-            : 'Projected spending is ${velocity.percentDelta!.abs().toStringAsFixed(1)}% '
-                '${velocity.percentDelta! >= 0 ? 'above' : 'below'} your historical pace.';
+            ? l10n.analyticsPaceNoComparison
+            : l10n.analyticsPaceProjected(
+                velocity.percentDelta!.abs().toStringAsFixed(1),
+                velocity.percentDelta! >= 0
+                    ? l10n.analyticsPaceAbove
+                    : l10n.analyticsPaceBelow,
+              );
     return Card(
       child: ListTile(
         leading: const Icon(Icons.speed),
-        title: Text('Spending pace: ${velocity.projectedPeriodSpendFormatted}'),
-        subtitle:
-            Text('$detail\nCurrent: ${velocity.currentPeriodSpendFormatted}'),
+        title: Text(
+            l10n.analyticsPaceTitle(velocity.projectedPeriodSpendFormatted)),
+        subtitle: Text(
+            '$detail\n${l10n.analyticsPaceCurrent(velocity.currentPeriodSpendFormatted)}'),
         isThreeLine: true,
       ),
     );
@@ -341,10 +371,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Refunds matched', style: theme.textTheme.titleMedium),
+            Text(AppLocalizations.of(context).analyticsRefundsMatched,
+                style: theme.textTheme.titleMedium),
             const SizedBox(height: 4),
             Text(
-              'These refunds were linked to earlier purchases using merchant and amount evidence.',
+              AppLocalizations.of(context).analyticsRefundsDetail,
               style: theme.textTheme.bodySmall,
             ),
             const SizedBox(height: 8),
@@ -366,21 +397,22 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   }
 
   String _periodLabel(String period) {
+    final l10n = AppLocalizations.of(context);
     switch (period) {
       case 'week':
-        return 'This week';
+        return l10n.analyticsThisWeek;
       case '3m':
-        return 'Last 3 months';
+        return l10n.analyticsLastThreeMonths;
       case '6m':
-        return 'Last 6 months';
+        return l10n.analyticsLastSixMonths;
       case 'year':
-        return 'Last year';
+        return l10n.analyticsLastYear;
       case 'lifetime':
-        return 'All history';
+        return l10n.analyticsAllHistory;
       case 'custom':
-        return 'Custom range';
+        return l10n.analyticsCustomRange;
       default:
-        return 'This month';
+        return l10n.analyticsThisMonth;
     }
   }
 
@@ -405,26 +437,32 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
   Widget _subscriptionCard(BuildContext context) {
     final report = _subscriptions!;
+    final l10n = AppLocalizations.of(context);
     return Card(
       child: ListTile(
         leading: const Icon(Icons.autorenew),
-        title: Text(
-            '${report.count} recurring charge${report.count == 1 ? '' : 's'}'),
+        title: Text(l10n.analyticsRecurringCharges(report.count)),
         subtitle: Text(
           '${report.monthlyTotalFormatted}/month · ${report.annualTotalFormatted}/year',
         ),
         trailing: report.priceIncreases.isEmpty
             ? null
-            : Chip(label: Text('${report.priceIncreases.length} price rise')),
+            : Chip(
+                label: Text(l10n
+                    .analyticsPriceRiseCount(report.priceIncreases.length))),
       ),
     );
   }
 
   Widget _priorityChip(ThemeData theme, String priority) {
+    final l10n = AppLocalizations.of(context);
     final (label, color) = switch (priority) {
-      'critical' => ('Critical', theme.colorScheme.error),
-      'important' => ('Important', theme.colorScheme.tertiary),
-      _ => ('Info', theme.colorScheme.outline),
+      'critical' => (l10n.analyticsPriorityCritical, theme.colorScheme.error),
+      'important' => (
+          l10n.analyticsPriorityImportant,
+          theme.colorScheme.tertiary
+        ),
+      _ => (l10n.analyticsPriorityInfo, theme.colorScheme.outline),
     };
     return Chip(
       label: Text(label),

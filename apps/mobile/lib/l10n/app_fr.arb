@@ -328,6 +328,88 @@
   "planningEndForecast": "Fin de la prévision",
   "planningExpectedEvents": "Événements récurrents prévus",
   "planningNoPattern": "Aucune habitude récurrente solide n’a été trouvée.",
+  "analyticsRefreshTooltip": "Actualiser les analyses",
+  "analyticsUnavailable": "Analyses indisponibles",
+  "analyticsUnavailableDetail": "Vérifiez votre connexion et réessayez. Rien n’a été perdu.",
+  "analyticsPeriodLabel": "Période d’analyse",
+  "analyticsThisWeek": "Cette semaine",
+  "analyticsThisMonth": "Ce mois-ci",
+  "analyticsLastThreeMonths": "Les 3 derniers mois",
+  "analyticsLastSixMonths": "Les 6 derniers mois",
+  "analyticsLastYear": "L’année dernière",
+  "analyticsAllHistory": "Tout l’historique",
+  "analyticsCustomRange": "Période personnalisée",
+  "analyticsChooseFirstDay": "Choisissez le premier jour",
+  "analyticsChooseLastDay": "Choisissez le dernier jour",
+  "analyticsHistoryEmptyTitle": "Pas encore assez d’historique de transactions",
+  "analyticsHistoryEmptyDetail": "Connectez une banque ou ajoutez des transactions pour voir les tendances.",
+  "analyticsExplainableInsights": "Analyses explicables",
+  "analyticsEvidenceCount": "Basé sur {count, plural, =1{1 transaction} other{{count} transactions}}",
+  "@analyticsEvidenceCount": {
+    "placeholders": {
+      "count": {"type": "num"}
+    }
+  },
+  "analyticsTimeline": "Chronologie financière",
+  "analyticsPlanAction": "Planifier un achat ou voir votre prévision",
+  "analyticsIncome": "Revenus",
+  "analyticsNetExpenses": "Dépenses nettes",
+  "analyticsSavings": "Épargne",
+  "analyticsSavingsRate": "Taux d’épargne",
+  "analyticsPaceNoHistory": "Continuez à utiliser FINVERSE pour établir une base historique utile.",
+  "analyticsPaceNoComparison": "Il n’y a pas assez d’historique comparable pour comparer le rythme.",
+  "analyticsPaceProjected": "Les dépenses projetées sont {percent}% {direction} que votre rythme historique.",
+  "@analyticsPaceProjected": {
+    "placeholders": {
+      "percent": {"type": "String"},
+      "direction": {"type": "String"}
+    }
+  },
+  "analyticsPaceAbove": "au-dessus",
+  "analyticsPaceBelow": "en dessous",
+  "analyticsPaceTitle": "Rythme des dépenses : {amount}",
+  "@analyticsPaceTitle": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "analyticsPaceCurrent": "Actuel : {amount}",
+  "@analyticsPaceCurrent": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "analyticsRefundsMatched": "Remboursements associés",
+  "analyticsRefundsDetail": "Ces remboursements ont été reliés à des achats antérieurs à l’aide du commerçant et du montant.",
+  "analyticsRefundRow": "{amount} remboursé · {days} jours après l’achat",
+  "@analyticsRefundRow": {
+    "placeholders": {
+      "amount": {"type": "String"},
+      "days": {"type": "num"}
+    }
+  },
+  "analyticsRecurringCharges": "{count, plural, =1{1 frais récurrent} other{{count} frais récurrents}}",
+  "@analyticsRecurringCharges": {
+    "placeholders": {
+      "count": {"type": "num"}
+    }
+  },
+  "analyticsSubscriptionTotals": "{monthly}/mois · {yearly}/an",
+  "@analyticsSubscriptionTotals": {
+    "placeholders": {
+      "monthly": {"type": "String"},
+      "yearly": {"type": "String"}
+    }
+  },
+  "analyticsPriceRiseCount": "{count, plural, =1{1 hausse de prix} other{{count} hausses de prix}}",
+  "@analyticsPriceRiseCount": {
+    "placeholders": {
+      "count": {"type": "num"}
+    }
+  },
+  "analyticsPriorityCritical": "Critique",
+  "analyticsPriorityImportant": "Important",
+  "analyticsPriorityInfo": "Info",
   "errorConnection": "Impossible de joindre le serveur. Vérifiez votre connexion.",
   "errorServerUnavailable": "Le serveur est temporairement indisponible. Réessayez bientôt.",
   "errorSessionInvalid": "Votre session n'est plus valide. Connectez-vous à nouveau.",

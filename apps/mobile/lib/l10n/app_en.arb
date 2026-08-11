@@ -328,6 +328,88 @@
   "planningEndForecast": "End of forecast",
   "planningExpectedEvents": "Expected recurring events",
   "planningNoPattern": "No strong recurring pattern was found.",
+  "analyticsRefreshTooltip": "Refresh analytics",
+  "analyticsUnavailable": "Analytics are unavailable",
+  "analyticsUnavailableDetail": "Check your connection and try again. Nothing has been lost.",
+  "analyticsPeriodLabel": "Analytics period",
+  "analyticsThisWeek": "This week",
+  "analyticsThisMonth": "This month",
+  "analyticsLastThreeMonths": "Last 3 months",
+  "analyticsLastSixMonths": "Last 6 months",
+  "analyticsLastYear": "Last year",
+  "analyticsAllHistory": "All history",
+  "analyticsCustomRange": "Custom range",
+  "analyticsChooseFirstDay": "Choose the first day",
+  "analyticsChooseLastDay": "Choose the last day",
+  "analyticsHistoryEmptyTitle": "Not enough transaction history yet",
+  "analyticsHistoryEmptyDetail": "Connect a bank or add transactions to see trends.",
+  "analyticsExplainableInsights": "Explainable insights",
+  "analyticsEvidenceCount": "Based on {count, plural, =1{1 transaction} other{{count} transactions}}",
+  "@analyticsEvidenceCount": {
+    "placeholders": {
+      "count": {"type": "num"}
+    }
+  },
+  "analyticsTimeline": "Financial timeline",
+  "analyticsPlanAction": "Plan a purchase or view your forecast",
+  "analyticsIncome": "Income",
+  "analyticsNetExpenses": "Net expenses",
+  "analyticsSavings": "Savings",
+  "analyticsSavingsRate": "Savings rate",
+  "analyticsPaceNoHistory": "Keep using FINVERSE to build a useful historical baseline.",
+  "analyticsPaceNoComparison": "There is not enough comparable history for a pace comparison.",
+  "analyticsPaceProjected": "Projected spending is {percent}% {direction} your historical pace.",
+  "@analyticsPaceProjected": {
+    "placeholders": {
+      "percent": {"type": "String"},
+      "direction": {"type": "String"}
+    }
+  },
+  "analyticsPaceAbove": "above",
+  "analyticsPaceBelow": "below",
+  "analyticsPaceTitle": "Spending pace: {amount}",
+  "@analyticsPaceTitle": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "analyticsPaceCurrent": "Current: {amount}",
+  "@analyticsPaceCurrent": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "analyticsRefundsMatched": "Refunds matched",
+  "analyticsRefundsDetail": "These refunds were linked to earlier purchases using merchant and amount evidence.",
+  "analyticsRefundRow": "{amount} refunded · {days} days after purchase",
+  "@analyticsRefundRow": {
+    "placeholders": {
+      "amount": {"type": "String"},
+      "days": {"type": "num"}
+    }
+  },
+  "analyticsRecurringCharges": "{count, plural, =1{1 recurring charge} other{{count} recurring charges}}",
+  "@analyticsRecurringCharges": {
+    "placeholders": {
+      "count": {"type": "num"}
+    }
+  },
+  "analyticsSubscriptionTotals": "{monthly}/month · {yearly}/year",
+  "@analyticsSubscriptionTotals": {
+    "placeholders": {
+      "monthly": {"type": "String"},
+      "yearly": {"type": "String"}
+    }
+  },
+  "analyticsPriceRiseCount": "{count, plural, =1{1 price rise} other{{count} price rises}}",
+  "@analyticsPriceRiseCount": {
+    "placeholders": {
+      "count": {"type": "num"}
+    }
+  },
+  "analyticsPriorityCritical": "Critical",
+  "analyticsPriorityImportant": "Important",
+  "analyticsPriorityInfo": "Info",
   "errorConnection": "Couldn't reach the server. Check your connection.",
   "errorServerUnavailable": "The server is temporarily unavailable. Try again shortly.",
   "errorSessionInvalid": "Your session is no longer valid. Sign in again.",

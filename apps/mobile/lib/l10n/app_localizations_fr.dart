@@ -715,6 +715,164 @@ class AppLocalizationsFr extends AppLocalizations {
       'Aucune habitude récurrente solide n’a été trouvée.';
 
   @override
+  String get analyticsRefreshTooltip => 'Actualiser les analyses';
+
+  @override
+  String get analyticsUnavailable => 'Analyses indisponibles';
+
+  @override
+  String get analyticsUnavailableDetail =>
+      'Vérifiez votre connexion et réessayez. Rien n’a été perdu.';
+
+  @override
+  String get analyticsPeriodLabel => 'Période d’analyse';
+
+  @override
+  String get analyticsThisWeek => 'Cette semaine';
+
+  @override
+  String get analyticsThisMonth => 'Ce mois-ci';
+
+  @override
+  String get analyticsLastThreeMonths => 'Les 3 derniers mois';
+
+  @override
+  String get analyticsLastSixMonths => 'Les 6 derniers mois';
+
+  @override
+  String get analyticsLastYear => 'L’année dernière';
+
+  @override
+  String get analyticsAllHistory => 'Tout l’historique';
+
+  @override
+  String get analyticsCustomRange => 'Période personnalisée';
+
+  @override
+  String get analyticsChooseFirstDay => 'Choisissez le premier jour';
+
+  @override
+  String get analyticsChooseLastDay => 'Choisissez le dernier jour';
+
+  @override
+  String get analyticsHistoryEmptyTitle =>
+      'Pas encore assez d’historique de transactions';
+
+  @override
+  String get analyticsHistoryEmptyDetail =>
+      'Connectez une banque ou ajoutez des transactions pour voir les tendances.';
+
+  @override
+  String get analyticsExplainableInsights => 'Analyses explicables';
+
+  @override
+  String analyticsEvidenceCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count transactions',
+      one: '1 transaction',
+    );
+    return 'Basé sur $_temp0';
+  }
+
+  @override
+  String get analyticsTimeline => 'Chronologie financière';
+
+  @override
+  String get analyticsPlanAction =>
+      'Planifier un achat ou voir votre prévision';
+
+  @override
+  String get analyticsIncome => 'Revenus';
+
+  @override
+  String get analyticsNetExpenses => 'Dépenses nettes';
+
+  @override
+  String get analyticsSavings => 'Épargne';
+
+  @override
+  String get analyticsSavingsRate => 'Taux d’épargne';
+
+  @override
+  String get analyticsPaceNoHistory =>
+      'Continuez à utiliser FINVERSE pour établir une base historique utile.';
+
+  @override
+  String get analyticsPaceNoComparison =>
+      'Il n’y a pas assez d’historique comparable pour comparer le rythme.';
+
+  @override
+  String analyticsPaceProjected(String percent, String direction) {
+    return 'Les dépenses projetées sont $percent% $direction que votre rythme historique.';
+  }
+
+  @override
+  String get analyticsPaceAbove => 'au-dessus';
+
+  @override
+  String get analyticsPaceBelow => 'en dessous';
+
+  @override
+  String analyticsPaceTitle(String amount) {
+    return 'Rythme des dépenses : $amount';
+  }
+
+  @override
+  String analyticsPaceCurrent(String amount) {
+    return 'Actuel : $amount';
+  }
+
+  @override
+  String get analyticsRefundsMatched => 'Remboursements associés';
+
+  @override
+  String get analyticsRefundsDetail =>
+      'Ces remboursements ont été reliés à des achats antérieurs à l’aide du commerçant et du montant.';
+
+  @override
+  String analyticsRefundRow(String amount, num days) {
+    return '$amount remboursé · $days jours après l’achat';
+  }
+
+  @override
+  String analyticsRecurringCharges(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count frais récurrents',
+      one: '1 frais récurrent',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String analyticsSubscriptionTotals(String monthly, String yearly) {
+    return '$monthly/mois · $yearly/an';
+  }
+
+  @override
+  String analyticsPriceRiseCount(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count hausses de prix',
+      one: '1 hausse de prix',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get analyticsPriorityCritical => 'Critique';
+
+  @override
+  String get analyticsPriorityImportant => 'Important';
+
+  @override
+  String get analyticsPriorityInfo => 'Info';
+
+  @override
   String get errorConnection =>
       'Impossible de joindre le serveur. Vérifiez votre connexion.';
 
