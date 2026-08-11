@@ -3,10 +3,17 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../api/client.dart';
 import '../api/session_store.dart';
+import '../l10n/app_localizations.dart';
+import '../l10n/app_localizations_en.dart';
 import '../models/models.dart';
 
-const _sessionPersistenceError =
-    'Your credentials were accepted, but this device could not save the secure session. Unlock your phone and try again.';
+/// Isolated embedders (including authentication tests) may not install the
+/// app's localization delegates. Keep the sign-in path usable in English
+/// rather than failing before a user can recover their account.
+AppLocalizations _localizations(BuildContext context) {
+  return Localizations.of<AppLocalizations>(context, AppLocalizations) ??
+      AppLocalizationsEn();
+}
 
 /// Sign in or create an account.
 ///
@@ -48,15 +55,13 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     if (_registering && _legal == null) {
-      setState(
-          () => _error = 'Legal documents could not be loaded. Try again.');
+      setState(() => _error = _localizations(context).loginLegalUnavailable);
       return;
     }
     if (_registering &&
         _legal!.registrationRequired &&
         (!_acceptedTerms || !_acceptedPrivacyNotice)) {
-      setState(() => _error =
-          'Accept the Terms of Service and Privacy Notice to continue.');
+      setState(() => _error = _localizations(context).loginAcceptLegal);
       return;
     }
 
@@ -89,21 +94,19 @@ class _LoginScreenState extends State<LoginScreen> {
         context: context,
         barrierDismissible: false,
         builder: (dialogContext) => AlertDialog(
-          title: const Text('Verify it\'s you'),
+          title: Text(_localizations(context).loginMfaTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'Enter the 6-digit code from your authenticator app, or one of your recovery codes.',
-              ),
+              Text(_localizations(context).loginMfaDetail),
               const SizedBox(height: 16),
               TextField(
                 onChanged: (value) => code = value,
                 autofocus: true,
                 autocorrect: false,
                 textInputAction: TextInputAction.done,
-                decoration: const InputDecoration(
-                  labelText: 'Authenticator or recovery code',
+                decoration: InputDecoration(
+                  labelText: _localizations(context).loginMfaCode,
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -112,11 +115,11 @@ class _LoginScreenState extends State<LoginScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancel'),
+              child: Text(_localizations(context).commonCancel),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(dialogContext, code.trim()),
-              child: const Text('Verify'),
+              child: Text(_localizations(context).commonVerify),
             ),
           ],
         ),
@@ -133,11 +136,12 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       } on SessionStoreUnavailableException {
         if (mounted) {
-          setState(() => _error = _sessionPersistenceError);
+          setState(() =>
+              _error = _localizations(context).loginSessionPersistenceFailed);
         }
       } catch (error) {
         if (mounted) {
-          setState(() => _error = 'Verification failed. Try signing in again.');
+          setState(() => _error = _localizations(context).loginMfaFailed);
         }
       }
     } on AuthException catch (error) {
@@ -145,7 +149,8 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _error = error.displayMessage);
     } on SessionStoreUnavailableException {
       if (!mounted) return;
-      setState(() => _error = _sessionPersistenceError);
+      setState(
+          () => _error = _localizations(context).loginSessionPersistenceFailed);
     } catch (error) {
       if (!mounted) return;
       setState(() => _error = widget.api.connectionFailureMessage);
@@ -184,8 +189,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted || !_registering) return;
       setState(() {
         _legalLoading = false;
-        _error =
-            'Legal documents could not be loaded. Check your connection and try again.';
+        _error = _localizations(context).loginLegalLoadFailed;
       });
       debugPrint('Legal policy load failed: $error');
     }
@@ -198,7 +202,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
     if (!opened && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open the legal document.')),
+        SnackBar(content: Text(_localizations(context).loginOpenLegalFailed)),
       );
     }
   }
@@ -208,23 +212,23 @@ class _LoginScreenState extends State<LoginScreen> {
     final requested = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Reset password'),
+        title: Text(_localizations(context).loginResetTitle),
         content: TextField(
           controller: email,
           keyboardType: TextInputType.emailAddress,
-          decoration: const InputDecoration(
-            labelText: 'Email',
+          decoration: InputDecoration(
+            labelText: _localizations(context).emailLabel,
             border: OutlineInputBorder(),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'),
+            child: Text(_localizations(context).commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(email.text.trim()),
-            child: const Text('Send reset code'),
+            child: Text(_localizations(context).loginResetSend),
           ),
         ],
       ),
@@ -240,8 +244,7 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     } catch (error) {
       if (!mounted) return;
-      setState(
-          () => _error = "Couldn't reach the server. Check your connection.");
+      setState(() => _error = _localizations(context).errorConnection);
       return;
     }
     if (!mounted) return;
@@ -251,18 +254,17 @@ class _LoginScreenState extends State<LoginScreen> {
     final values = await showDialog<List<String>>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Enter your reset code'),
+        title: Text(_localizations(context).loginResetCodeTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-                'If an account exists, a one-hour reset code has been sent.'),
+            Text(_localizations(context).loginResetSent),
             const SizedBox(height: 12),
             TextField(
               controller: token,
               autocorrect: false,
-              decoration: const InputDecoration(
-                labelText: 'Reset code',
+              decoration: InputDecoration(
+                labelText: _localizations(context).loginResetCode,
                 border: OutlineInputBorder(),
               ),
             ),
@@ -270,8 +272,8 @@ class _LoginScreenState extends State<LoginScreen> {
             TextField(
               controller: nextPassword,
               obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'New password (12+ characters)',
+              decoration: InputDecoration(
+                labelText: _localizations(context).loginNewPassword,
                 border: OutlineInputBorder(),
               ),
             ),
@@ -280,14 +282,14 @@ class _LoginScreenState extends State<LoginScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Later'),
+            child: Text(_localizations(context).loginLater),
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop([
               token.text.trim(),
               nextPassword.text,
             ]),
-            child: const Text('Set new password'),
+            child: Text(_localizations(context).loginSetNewPassword),
           ),
         ],
       ),
@@ -300,7 +302,7 @@ class _LoginScreenState extends State<LoginScreen> {
       await widget.api.confirmPasswordReset(values[0], values[1]);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password updated. You can sign in now.')),
+        SnackBar(content: Text(_localizations(context).loginPasswordUpdated)),
       );
     } on AuthException catch (error) {
       if (mounted) setState(() => _error = error.displayMessage);
@@ -310,6 +312,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = _localizations(context);
 
     return Scaffold(
       body: SafeArea(
@@ -334,10 +337,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 6),
                     Text(
                       _registering
-                          ? 'Create your account'
+                          ? l10n.loginCreateAccountHeading
                           : _recovering
-                              ? 'Restore your account'
-                              : 'Welcome back',
+                              ? l10n.loginRestoreAccountHeading
+                              : l10n.loginWelcomeBack,
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
@@ -350,16 +353,16 @@ class _LoginScreenState extends State<LoginScreen> {
                       autocorrect: false,
                       autofillHints: const [AutofillHints.email],
                       textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
+                      decoration: InputDecoration(
+                        labelText: l10n.emailLabel,
                         border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.mail_outline),
                       ),
                       validator: (value) {
                         final text = value?.trim() ?? '';
-                        if (text.isEmpty) return 'Enter your email address.';
+                        if (text.isEmpty) return l10n.loginEmailRequired;
                         if (!text.contains('@') || !text.contains('.')) {
-                          return 'Enter a valid email address.';
+                          return l10n.loginEmailInvalid;
                         }
                         return null;
                       },
@@ -368,7 +371,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 14),
                       const LinearProgressIndicator(),
                       const SizedBox(height: 8),
-                      const Text('Loading current legal documents…'),
+                      Text(l10n.loginLegalLoading),
                     ],
                     if (_registering &&
                         _legal?.registrationRequired == true) ...[
@@ -381,13 +384,13 @@ class _LoginScreenState extends State<LoginScreen> {
                             ? null
                             : (value) =>
                                 setState(() => _acceptedTerms = value ?? false),
-                        title: const Text('I accept the Terms of Service'),
+                        title: Text(l10n.loginAcceptTerms),
                         subtitle: Align(
                           alignment: Alignment.centerLeft,
                           child: TextButton(
                             onPressed: () => _openLegal(_legal!.terms!),
                             child: Text(
-                              'Read Terms (${_legal!.terms!.version})',
+                              l10n.loginReadTerms(_legal!.terms!.version),
                             ),
                           ),
                         ),
@@ -400,13 +403,14 @@ class _LoginScreenState extends State<LoginScreen> {
                             ? null
                             : (value) => setState(
                                 () => _acceptedPrivacyNotice = value ?? false),
-                        title: const Text('I acknowledge the Privacy Notice'),
+                        title: Text(l10n.loginAcknowledgePrivacy),
                         subtitle: Align(
                           alignment: Alignment.centerLeft,
                           child: TextButton(
                             onPressed: () => _openLegal(_legal!.privacyNotice!),
                             child: Text(
-                              'Read Privacy Notice (${_legal!.privacyNotice!.version})',
+                              l10n.loginReadPrivacy(
+                                  _legal!.privacyNotice!.version),
                             ),
                           ),
                         ),
@@ -424,28 +428,30 @@ class _LoginScreenState extends State<LoginScreen> {
                       textInputAction: TextInputAction.done,
                       onFieldSubmitted: (_) => _busy ? null : _submit(),
                       decoration: InputDecoration(
-                        labelText: 'Password',
+                        labelText: l10n.passwordLabel,
                         border: const OutlineInputBorder(),
                         prefixIcon: const Icon(Icons.lock_outline),
                         helperText:
-                            _registering ? 'At least 12 characters' : null,
+                            _registering ? l10n.loginPasswordHelper : null,
                         suffixIcon: IconButton(
                           icon: Icon(_obscure
                               ? Icons.visibility_off
                               : Icons.visibility),
-                          tooltip: _obscure ? 'Show password' : 'Hide password',
+                          tooltip: _obscure
+                              ? l10n.loginShowPassword
+                              : l10n.loginHidePassword,
                           onPressed: () => setState(() => _obscure = !_obscure),
                         ),
                       ),
                       validator: (value) {
                         if ((value ?? '').isEmpty) {
-                          return 'Enter your password.';
+                          return l10n.loginPasswordRequired;
                         }
                         // Only enforced client-side when registering. Blocking a
                         // short password at sign-in would tell someone their
                         // guess was malformed rather than simply wrong.
                         if (_registering && value!.length < 12) {
-                          return 'Use at least 12 characters.';
+                          return l10n.loginPasswordMinimum;
                         }
                         return null;
                       },
@@ -499,24 +505,24 @@ class _LoginScreenState extends State<LoginScreen> {
                             )
                           : Text(
                               _registering
-                                  ? 'Create account'
+                                  ? l10n.registerAction
                                   : _recovering
-                                      ? 'Restore account'
-                                      : 'Sign in',
+                                      ? l10n.loginRestoreAction
+                                      : l10n.signInAction,
                             ),
                     ),
                     if (!_registering && !_recovering)
                       TextButton(
                         onPressed: _busy ? null : _resetPassword,
-                        child: const Text('Forgot password?'),
+                        child: Text(l10n.loginForgotPassword),
                       ),
                     const SizedBox(height: 8),
                     TextButton(
                       onPressed: _busy ? null : _toggleRegistration,
                       child: Text(
                         _registering
-                            ? 'I already have an account'
-                            : 'Create an account',
+                            ? l10n.loginAlreadyHaveAccount
+                            : l10n.loginCreateAccountPrompt,
                       ),
                     ),
                     if (!_registering)
@@ -529,8 +535,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 }),
                         child: Text(
                           _recovering
-                              ? 'Back to sign in'
-                              : 'Cancel scheduled account deletion',
+                              ? l10n.loginBackToSignIn
+                              : l10n.loginCancelDeletion,
                         ),
                       ),
                   ],

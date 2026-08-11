@@ -538,6 +538,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get commonRemove => 'Supprimer';
 
   @override
+  String get commonVerify => 'Vérifier';
+
+  @override
   String get budgetCreateTitle => 'Créer un budget mensuel';
 
   @override
@@ -902,6 +905,138 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get onboardingContinue => 'Continuer';
+
+  @override
+  String get loginCreateAccountHeading => 'Créez votre compte';
+
+  @override
+  String get loginCreateAccountPrompt => 'Créer un compte';
+
+  @override
+  String get loginRestoreAccountHeading => 'Restaurez votre compte';
+
+  @override
+  String get loginWelcomeBack => 'Bon retour';
+
+  @override
+  String get loginEmailRequired => 'Entrez votre adresse courriel.';
+
+  @override
+  String get loginEmailInvalid => 'Entrez une adresse courriel valide.';
+
+  @override
+  String get loginPasswordRequired => 'Entrez votre mot de passe.';
+
+  @override
+  String get loginPasswordMinimum => 'Utilisez au moins 12 caractères.';
+
+  @override
+  String get loginPasswordHelper => 'Au moins 12 caractères';
+
+  @override
+  String get loginShowPassword => 'Afficher le mot de passe';
+
+  @override
+  String get loginHidePassword => 'Masquer le mot de passe';
+
+  @override
+  String get loginLegalLoading =>
+      'Chargement des documents juridiques actuels…';
+
+  @override
+  String get loginAcceptTerms => 'J’accepte les conditions d’utilisation';
+
+  @override
+  String loginReadTerms(String version) {
+    return 'Lire les conditions ($version)';
+  }
+
+  @override
+  String get loginAcknowledgePrivacy =>
+      'Je reconnais l’avis de confidentialité';
+
+  @override
+  String loginReadPrivacy(String version) {
+    return 'Lire l’avis de confidentialité ($version)';
+  }
+
+  @override
+  String get loginRestoreAction => 'Restaurer le compte';
+
+  @override
+  String get loginForgotPassword => 'Mot de passe oublié ?';
+
+  @override
+  String get loginAlreadyHaveAccount => 'J’ai déjà un compte';
+
+  @override
+  String get loginBackToSignIn => 'Retour à la connexion';
+
+  @override
+  String get loginCancelDeletion => 'Annuler la suppression prévue du compte';
+
+  @override
+  String get loginLegalLoadFailed =>
+      'Les documents juridiques n’ont pas pu être chargés. Vérifiez votre connexion et réessayez.';
+
+  @override
+  String get loginLegalUnavailable =>
+      'Les documents juridiques n’ont pas pu être chargés. Réessayez.';
+
+  @override
+  String get loginAcceptLegal =>
+      'Acceptez les conditions d’utilisation et l’avis de confidentialité pour continuer.';
+
+  @override
+  String get loginOpenLegalFailed =>
+      'Impossible d’ouvrir le document juridique.';
+
+  @override
+  String get loginSessionPersistenceFailed =>
+      'Vos identifiants ont été acceptés, mais cet appareil n’a pas pu enregistrer la session sécurisée. Déverrouillez votre téléphone et réessayez.';
+
+  @override
+  String get loginMfaTitle => 'Vérifions votre identité';
+
+  @override
+  String get loginMfaDetail =>
+      'Entrez le code à 6 chiffres de votre application d’authentification ou l’un de vos codes de récupération.';
+
+  @override
+  String get loginMfaCode => 'Code d’authentification ou de récupération';
+
+  @override
+  String get loginMfaFailed =>
+      'La vérification a échoué. Essayez de vous reconnecter.';
+
+  @override
+  String get loginResetTitle => 'Réinitialiser le mot de passe';
+
+  @override
+  String get loginResetSend => 'Envoyer le code de réinitialisation';
+
+  @override
+  String get loginResetCodeTitle => 'Entrez votre code de réinitialisation';
+
+  @override
+  String get loginResetSent =>
+      'Si un compte existe, un code de réinitialisation valable une heure a été envoyé.';
+
+  @override
+  String get loginResetCode => 'Code de réinitialisation';
+
+  @override
+  String get loginNewPassword => 'Nouveau mot de passe (12 caractères ou plus)';
+
+  @override
+  String get loginLater => 'Plus tard';
+
+  @override
+  String get loginSetNewPassword => 'Définir le nouveau mot de passe';
+
+  @override
+  String get loginPasswordUpdated =>
+      'Mot de passe mis à jour. Vous pouvez maintenant vous connecter.';
 
   @override
   String get errorConnection =>

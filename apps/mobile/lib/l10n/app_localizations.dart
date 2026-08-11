@@ -968,6 +968,12 @@ abstract class AppLocalizations {
   /// **'Remove'**
   String get commonRemove;
 
+  /// No description provided for @commonVerify.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify'**
+  String get commonVerify;
+
   /// No description provided for @budgetCreateTitle.
   ///
   /// In en, this message translates to:
@@ -1525,6 +1531,240 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Continue'**
   String get onboardingContinue;
+
+  /// No description provided for @loginCreateAccountHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Create your account'**
+  String get loginCreateAccountHeading;
+
+  /// No description provided for @loginCreateAccountPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Create an account'**
+  String get loginCreateAccountPrompt;
+
+  /// No description provided for @loginRestoreAccountHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore your account'**
+  String get loginRestoreAccountHeading;
+
+  /// No description provided for @loginWelcomeBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome back'**
+  String get loginWelcomeBack;
+
+  /// No description provided for @loginEmailRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your email address.'**
+  String get loginEmailRequired;
+
+  /// No description provided for @loginEmailInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid email address.'**
+  String get loginEmailInvalid;
+
+  /// No description provided for @loginPasswordRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your password.'**
+  String get loginPasswordRequired;
+
+  /// No description provided for @loginPasswordMinimum.
+  ///
+  /// In en, this message translates to:
+  /// **'Use at least 12 characters.'**
+  String get loginPasswordMinimum;
+
+  /// No description provided for @loginPasswordHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'At least 12 characters'**
+  String get loginPasswordHelper;
+
+  /// No description provided for @loginShowPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Show password'**
+  String get loginShowPassword;
+
+  /// No description provided for @loginHidePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide password'**
+  String get loginHidePassword;
+
+  /// No description provided for @loginLegalLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading current legal documents…'**
+  String get loginLegalLoading;
+
+  /// No description provided for @loginAcceptTerms.
+  ///
+  /// In en, this message translates to:
+  /// **'I accept the Terms of Service'**
+  String get loginAcceptTerms;
+
+  /// No description provided for @loginReadTerms.
+  ///
+  /// In en, this message translates to:
+  /// **'Read Terms ({version})'**
+  String loginReadTerms(String version);
+
+  /// No description provided for @loginAcknowledgePrivacy.
+  ///
+  /// In en, this message translates to:
+  /// **'I acknowledge the Privacy Notice'**
+  String get loginAcknowledgePrivacy;
+
+  /// No description provided for @loginReadPrivacy.
+  ///
+  /// In en, this message translates to:
+  /// **'Read Privacy Notice ({version})'**
+  String loginReadPrivacy(String version);
+
+  /// No description provided for @loginRestoreAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore account'**
+  String get loginRestoreAction;
+
+  /// No description provided for @loginForgotPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Forgot password?'**
+  String get loginForgotPassword;
+
+  /// No description provided for @loginAlreadyHaveAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'I already have an account'**
+  String get loginAlreadyHaveAccount;
+
+  /// No description provided for @loginBackToSignIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to sign in'**
+  String get loginBackToSignIn;
+
+  /// No description provided for @loginCancelDeletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel scheduled account deletion'**
+  String get loginCancelDeletion;
+
+  /// No description provided for @loginLegalLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Legal documents could not be loaded. Check your connection and try again.'**
+  String get loginLegalLoadFailed;
+
+  /// No description provided for @loginLegalUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Legal documents could not be loaded. Try again.'**
+  String get loginLegalUnavailable;
+
+  /// No description provided for @loginAcceptLegal.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept the Terms of Service and Privacy Notice to continue.'**
+  String get loginAcceptLegal;
+
+  /// No description provided for @loginOpenLegalFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open the legal document.'**
+  String get loginOpenLegalFailed;
+
+  /// No description provided for @loginSessionPersistenceFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Your credentials were accepted, but this device could not save the secure session. Unlock your phone and try again.'**
+  String get loginSessionPersistenceFailed;
+
+  /// No description provided for @loginMfaTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify it\'s you'**
+  String get loginMfaTitle;
+
+  /// No description provided for @loginMfaDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the 6-digit code from your authenticator app, or one of your recovery codes.'**
+  String get loginMfaDetail;
+
+  /// No description provided for @loginMfaCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Authenticator or recovery code'**
+  String get loginMfaCode;
+
+  /// No description provided for @loginMfaFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification failed. Try signing in again.'**
+  String get loginMfaFailed;
+
+  /// No description provided for @loginResetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset password'**
+  String get loginResetTitle;
+
+  /// No description provided for @loginResetSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send reset code'**
+  String get loginResetSend;
+
+  /// No description provided for @loginResetCodeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your reset code'**
+  String get loginResetCodeTitle;
+
+  /// No description provided for @loginResetSent.
+  ///
+  /// In en, this message translates to:
+  /// **'If an account exists, a one-hour reset code has been sent.'**
+  String get loginResetSent;
+
+  /// No description provided for @loginResetCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset code'**
+  String get loginResetCode;
+
+  /// No description provided for @loginNewPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'New password (12+ characters)'**
+  String get loginNewPassword;
+
+  /// No description provided for @loginLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get loginLater;
+
+  /// No description provided for @loginSetNewPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Set new password'**
+  String get loginSetNewPassword;
+
+  /// No description provided for @loginPasswordUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Password updated. You can sign in now.'**
+  String get loginPasswordUpdated;
 
   /// No description provided for @errorConnection.
   ///

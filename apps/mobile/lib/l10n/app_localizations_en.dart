@@ -533,6 +533,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonRemove => 'Remove';
 
   @override
+  String get commonVerify => 'Verify';
+
+  @override
   String get budgetCreateTitle => 'Create monthly budget';
 
   @override
@@ -890,6 +893,133 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingContinue => 'Continue';
+
+  @override
+  String get loginCreateAccountHeading => 'Create your account';
+
+  @override
+  String get loginCreateAccountPrompt => 'Create an account';
+
+  @override
+  String get loginRestoreAccountHeading => 'Restore your account';
+
+  @override
+  String get loginWelcomeBack => 'Welcome back';
+
+  @override
+  String get loginEmailRequired => 'Enter your email address.';
+
+  @override
+  String get loginEmailInvalid => 'Enter a valid email address.';
+
+  @override
+  String get loginPasswordRequired => 'Enter your password.';
+
+  @override
+  String get loginPasswordMinimum => 'Use at least 12 characters.';
+
+  @override
+  String get loginPasswordHelper => 'At least 12 characters';
+
+  @override
+  String get loginShowPassword => 'Show password';
+
+  @override
+  String get loginHidePassword => 'Hide password';
+
+  @override
+  String get loginLegalLoading => 'Loading current legal documents…';
+
+  @override
+  String get loginAcceptTerms => 'I accept the Terms of Service';
+
+  @override
+  String loginReadTerms(String version) {
+    return 'Read Terms ($version)';
+  }
+
+  @override
+  String get loginAcknowledgePrivacy => 'I acknowledge the Privacy Notice';
+
+  @override
+  String loginReadPrivacy(String version) {
+    return 'Read Privacy Notice ($version)';
+  }
+
+  @override
+  String get loginRestoreAction => 'Restore account';
+
+  @override
+  String get loginForgotPassword => 'Forgot password?';
+
+  @override
+  String get loginAlreadyHaveAccount => 'I already have an account';
+
+  @override
+  String get loginBackToSignIn => 'Back to sign in';
+
+  @override
+  String get loginCancelDeletion => 'Cancel scheduled account deletion';
+
+  @override
+  String get loginLegalLoadFailed =>
+      'Legal documents could not be loaded. Check your connection and try again.';
+
+  @override
+  String get loginLegalUnavailable =>
+      'Legal documents could not be loaded. Try again.';
+
+  @override
+  String get loginAcceptLegal =>
+      'Accept the Terms of Service and Privacy Notice to continue.';
+
+  @override
+  String get loginOpenLegalFailed => 'Could not open the legal document.';
+
+  @override
+  String get loginSessionPersistenceFailed =>
+      'Your credentials were accepted, but this device could not save the secure session. Unlock your phone and try again.';
+
+  @override
+  String get loginMfaTitle => 'Verify it\'s you';
+
+  @override
+  String get loginMfaDetail =>
+      'Enter the 6-digit code from your authenticator app, or one of your recovery codes.';
+
+  @override
+  String get loginMfaCode => 'Authenticator or recovery code';
+
+  @override
+  String get loginMfaFailed => 'Verification failed. Try signing in again.';
+
+  @override
+  String get loginResetTitle => 'Reset password';
+
+  @override
+  String get loginResetSend => 'Send reset code';
+
+  @override
+  String get loginResetCodeTitle => 'Enter your reset code';
+
+  @override
+  String get loginResetSent =>
+      'If an account exists, a one-hour reset code has been sent.';
+
+  @override
+  String get loginResetCode => 'Reset code';
+
+  @override
+  String get loginNewPassword => 'New password (12+ characters)';
+
+  @override
+  String get loginLater => 'Later';
+
+  @override
+  String get loginSetNewPassword => 'Set new password';
+
+  @override
+  String get loginPasswordUpdated => 'Password updated. You can sign in now.';
 
   @override
   String get errorConnection =>
