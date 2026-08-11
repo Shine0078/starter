@@ -90,6 +90,27 @@ async function bootstrap(): Promise<void> {
   const webAppBuilt = existsSync(join(webAppDir, 'index.html'));
 
   if (webAppBuilt) {
+    // Dev/tunnel instances rebuild and re-deploy a changing bundle. A real
+    // service worker would pin a browser to a stale main.dart.js, which shows
+    // the "Still loading" splash forever. Serve a no-op worker that deletes
+    // every cache and unregisters itself, and never cache the bundle.
+    app.use('/app/flutter_service_worker.js', (request: Request, response: Response, next: NextFunction) => {
+      if (request.method !== 'GET') return next();
+      response
+        .type('application/javascript')
+        .send(
+          'self.addEventListener("install", (e) => self.skipWaiting());' +
+            'self.addEventListener("activate", async (e) => {' +
+            '  const keys = await caches.keys();' +
+            '  await Promise.all(keys.map((k) => caches.delete(k)));' +
+            '  await self.registration.unregister();' +
+            '});',
+        );
+    });
+    app.use('/app', (request: Request, response: Response, next: NextFunction) => {
+      response.setHeader('cache-control', 'no-store');
+      next();
+    });
     app.useStaticAssets(webAppDir, { prefix: '/app' });
 
     // Flutter routes client-side, so a deep link or a hard refresh inside the
