@@ -203,7 +203,10 @@ features them.
 **Named repeatedly / core to the pitch**
 
 - Conversational AI assistant — **deterministic aggregate answers are now implemented** for common spending, merchant, savings, subscription, and comparison questions. A zero-retention LLM agreement is still required before adding free-form model prompts.
-- ML categoriser trained on user corrections — rules-only today
+- ML categoriser trained on user corrections — a conservative, explainable
+  per-user learner now trains from durable manual corrections only. It yields
+  to rules/lexicon and rejects weak or conflicting examples; a global learned
+  model and held-out-accuracy evidence are still future work.
 - Monthly PDF report core is complete — a private three-page report now covers
   summary metrics, cash-flow comparisons, spending categories, budgets,
   subscriptions, a 30-day forecast, and an action plan. The mission's later
@@ -219,7 +222,9 @@ features them.
 - Fraud and anomaly detection — exact and near-descriptor duplicate prompts, conservative
   category outliers, and explainable refund matching are implemented; foreign-spend
   rules and a trained fraud model are not
-- Receipt OCR
+- Receipt OCR — direct Android ML Kit and iOS Apple Vision source now return
+  locally recognized text for user review; physical Android/iPhone scans remain
+  validation gates and receipt images are never uploaded.
 
 **Named once, clearly later-phase**
 

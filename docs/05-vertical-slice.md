@@ -45,9 +45,12 @@ Two things about it are deliberate:
 
 ### 2. Categorize
 
-Three tiers, first match wins: user rules → merchant lexicon → (model, Phase 2),
-falling back to `unknown`. Around **92%** of the generated ledger gets a
-category; the rest lands in a review queue rather than being guessed at.
+Three tiers, first match wins: user rules → merchant lexicon → a conservative
+per-user learner trained only from explicit manual corrections, falling back to
+`unknown`. The learner accepts only exact or highly similar non-conflicting
+merchant evidence; the rest lands in a review queue rather than being guessed at.
+Around **92%** of the generated ledger gets a category without relying on the
+learner.
 
 ### 3. Store
 

@@ -22,8 +22,15 @@ Three tiers, evaluated in strict priority order, first match wins:
    Confidence `1.0`. Always wins, including over a confident model.
 2. **Merchant lexicon** — curated normalized-descriptor → category map, with
    per-entry confidence 0.7–0.95.
-3. **ML classifier** *(Phase 2)* — only consulted when tiers 1 and 2 miss, and only
-   accepted above a confidence floor.
+3. **Per-user correction learner** — only consulted when tiers 1 and 2 miss,
+   and only accepted above a confidence floor. It is a bounded,
+   nearest-neighbour model rebuilt from that user's durable `user_manual`
+   labels at sync time.
+   - Exact normalized-descriptor matches are high confidence; fuzzy matches
+     require at least three shared tokens, strong token-set overlap, and a
+     clear margin over a different category.
+   - Conflicting corrections for one normalized descriptor are ignored rather
+     than resolved by recency. It sends no transaction text to a third party.
    - **Fallback:** `Unknown`, confidence `0`. Never guess a category we can't justify.
 
 When a user corrects a transaction, we recategorize it **and offer to create a Tier 1
@@ -53,14 +60,15 @@ and store numbers, and city/state tails. Lowercase, collapse whitespace.
 **Good:** works on day one with no training data. Fully explainable — we can always
 say why a transaction got its category, which the mission requires. User corrections
 compound into a personal, deterministic system that gets better per-user immediately
-rather than after a retraining cycle. And the accumulated corrections become the
-labelled dataset that makes Phase 2's model possible.
+rather than after a retraining cycle. One-off corrections also give Tier 3 a safe,
+explainable personal example without needing an external model or a global
+training-data retention path.
 
 **Bad:** the lexicon needs curation, which is ongoing manual work. Coverage is
 regional — a lexicon tuned for US merchants performs poorly in Canada or the UK, so
 each new market carries a lexicon cost. Tier 2 will plateau somewhere around 85% on
-common merchants, and long-tail and local businesses stay `Unknown` until the model
-lands.
+common merchants, and long-tail/local businesses without a strong personal correction
+stay `Unknown`.
 
 Leaving low-confidence transactions as `Unknown` rather than guessing means a visible
 "needs review" queue. We consider that a feature: it is honest, and it is the fastest

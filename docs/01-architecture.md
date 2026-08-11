@@ -84,7 +84,8 @@ Salary is positive. This makes cash-flow arithmetic a plain sum with no special 
 ```
 1. User rules        deterministic, always wins, confidence 1.0
 2. Merchant lexicon  normalized descriptor → category, confidence 0.7–0.95
-3. ML classifier     (Phase 2) embeddings + gradient boosting
+3. Per-user learner  explicit manual corrections only; exact/very-similar
+                     neighbour matches above conservative confidence rules
    └─ fallback       Unknown, confidence 0
 ```
 
@@ -92,6 +93,11 @@ A user correction does two things: it recategorizes the transaction, and it *off
 write a rule*. Tier 1 then guarantees the app never makes that mistake again. This is
 the single highest-leverage trust mechanism in the product — an app that repeats a
 correction you already made feels broken regardless of its aggregate accuracy.
+
+For a correction made without a broad rule, Tier 3 also learns a bounded, per-user
+nearest-neighbour example. It is rebuilt from durable `user_manual` choices at sync
+time, never leaves FINVERSE, ignores conflicting labels, and falls back to `Unknown`
+for a vague match. It is deliberately not a global black-box model.
 
 Bank descriptors are hostile: `SQ *BLUE BOTTLE 0093 SAN FRAN`, `AMZN Mktp US*2K4L91`.
 Normalization strips processor prefixes (`SQ *`, `TST*`, `PAYPAL *`), trailing

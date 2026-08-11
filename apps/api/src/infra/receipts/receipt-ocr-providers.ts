@@ -17,8 +17,9 @@ export class RuleBasedReceiptOcr implements ReceiptOcrProvider {
 }
 
 /**
- * Placeholder for a real vision/LLM provider (e.g. Google Vision, Tesseract,
- * or an on-device model). Fails closed until credentials are configured.
+ * Fallback only for a deliberately disabled local parser. Direct receipt-image
+ * recognition lives in the native mobile adapters (Android ML Kit / Apple
+ * Vision), so the server never needs image credentials or image bytes.
  */
 export class UnconfiguredReceiptOcr implements ReceiptOcrProvider {
   readonly name = 'unconfigured';
