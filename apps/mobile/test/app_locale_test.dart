@@ -7,6 +7,7 @@ import 'package:finverse/app_locale.dart';
 import 'package:finverse/l10n/app_localizations.dart';
 import 'package:finverse/screens/assistant_screen.dart';
 import 'package:finverse/screens/bank_connections_screen.dart';
+import 'package:finverse/screens/help_support_screen.dart';
 
 void main() {
   test('restores only a supported persisted display language', () async {
@@ -118,5 +119,25 @@ void main() {
 
     expect(find.text('Comptes'), findsOneWidget);
     expect(find.text('Ajouter manuellement'), findsOneWidget);
+  });
+
+  testWidgets('localizes the support and recovery centre', (tester) async {
+    final api = ApiClient(
+      baseUrl: 'http://example.com',
+      sessionStore: InMemorySessionStore(),
+    );
+    addTearDown(api.close);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('fr'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: HelpSupportScreen(api: api),
+      ),
+    );
+
+    expect(find.text('Aide et assistance'), findsOneWidget);
+    expect(find.text('QUESTIONS COURANTES'), findsOneWidget);
   });
 }

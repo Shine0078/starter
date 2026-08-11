@@ -2522,6 +2522,168 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Apply filters'**
   String get transactionsApplyFilters;
+
+  /// No description provided for @helpDiagnosticsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'FINVERSE support diagnostics'**
+  String get helpDiagnosticsTitle;
+
+  /// No description provided for @helpDiagnosticsApiOrigin.
+  ///
+  /// In en, this message translates to:
+  /// **'API origin: {origin}'**
+  String helpDiagnosticsApiOrigin(String origin);
+
+  /// No description provided for @helpDiagnosticsResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Result: {result}'**
+  String helpDiagnosticsResult(String result);
+
+  /// No description provided for @helpDiagnosticsNotChecked.
+  ///
+  /// In en, this message translates to:
+  /// **'Not checked'**
+  String get helpDiagnosticsNotChecked;
+
+  /// No description provided for @helpDiagnosticsHttpStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'HTTP status: {status}'**
+  String helpDiagnosticsHttpStatus(num status);
+
+  /// No description provided for @helpDiagnosticsChecked.
+  ///
+  /// In en, this message translates to:
+  /// **'Checked: {date}'**
+  String helpDiagnosticsChecked(String date);
+
+  /// No description provided for @helpDiagnosticsCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Diagnostics copied to the clipboard.'**
+  String get helpDiagnosticsCopied;
+
+  /// No description provided for @helpSupportNotConfigured.
+  ///
+  /// In en, this message translates to:
+  /// **'Support contact is not configured for this build.'**
+  String get helpSupportNotConfigured;
+
+  /// No description provided for @helpNoEmailApp.
+  ///
+  /// In en, this message translates to:
+  /// **'No email app is available on this device.'**
+  String get helpNoEmailApp;
+
+  /// No description provided for @helpEmailSubject.
+  ///
+  /// In en, this message translates to:
+  /// **'FINVERSE support request'**
+  String get helpEmailSubject;
+
+  /// No description provided for @helpHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Get unstuck quickly'**
+  String get helpHeading;
+
+  /// No description provided for @helpPrivacyDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'FINVERSE keeps your bank credentials with the provider. These checks never include your password, access token, or transaction data.'**
+  String get helpPrivacyDetail;
+
+  /// No description provided for @helpQuestionsSection.
+  ///
+  /// In en, this message translates to:
+  /// **'COMMON QUESTIONS'**
+  String get helpQuestionsSection;
+
+  /// No description provided for @helpIphoneQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'My iPhone cannot connect'**
+  String get helpIphoneQuestion;
+
+  /// No description provided for @helpIphoneAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'A release build must point to the public HTTPS API origin. If it was built with a local address, rebuild it with the API_BASE_URL value supplied by the deployment. Tailscale is not required for a public deployment.'**
+  String get helpIphoneAnswer;
+
+  /// No description provided for @helpBankQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'My bank needs attention'**
+  String get helpBankQuestion;
+
+  /// No description provided for @helpBankAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Settings → Bank connections and choose Reconnect. You will confirm your FINVERSE password first, then Plaid will ask you to sign in with the institution again. Existing transactions stay in your history.'**
+  String get helpBankAnswer;
+
+  /// No description provided for @helpSessionQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'I left the app and it asked me to sign in'**
+  String get helpSessionQuestion;
+
+  /// No description provided for @helpSessionAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'FINVERSE stores the rotating session credentials in the phone keystore. Unlock the phone once after a restart, then use Try again. A revoked or expired session requires a fresh sign-in for your protection.'**
+  String get helpSessionAnswer;
+
+  /// No description provided for @helpOfflineQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'What works offline?'**
+  String get helpOfflineQuestion;
+
+  /// No description provided for @helpOfflineAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent authenticated reads can be shown from encrypted device cache. Transaction preference edits are queued and replayed later. Balances, bank sync, and other server-authoritative changes wait for a connection.'**
+  String get helpOfflineAnswer;
+
+  /// No description provided for @helpDeleteQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'How do I remove my account?'**
+  String get helpDeleteQuestion;
+
+  /// No description provided for @helpDeleteAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Settings → Delete account. FINVERSE revokes sessions immediately and schedules permanent erasure after the recovery window described in the privacy notice.'**
+  String get helpDeleteAnswer;
+
+  /// No description provided for @helpCopyDiagnostics.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy diagnostics'**
+  String get helpCopyDiagnostics;
+
+  /// No description provided for @helpContactSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact support'**
+  String get helpContactSupport;
+
+  /// No description provided for @helpConnectionNotChecked.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection not checked yet'**
+  String get helpConnectionNotChecked;
+
+  /// No description provided for @helpCheckConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'Check connection'**
+  String get helpCheckConnection;
 }
 
 class _AppLocalizationsDelegate

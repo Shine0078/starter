@@ -108,7 +108,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get planTitle => 'Forfait';
 
   @override
-  String get helpTitle => 'Aide et soutien';
+  String get helpTitle => 'Aide et assistance';
 
   @override
   String get languageTitle => 'Langue';
@@ -1470,4 +1470,103 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get transactionsApplyFilters => 'Appliquer les filtres';
+
+  @override
+  String get helpDiagnosticsTitle => 'Diagnostics d’assistance FINVERSE';
+
+  @override
+  String helpDiagnosticsApiOrigin(String origin) {
+    return 'Origine de l’API : $origin';
+  }
+
+  @override
+  String helpDiagnosticsResult(String result) {
+    return 'Résultat : $result';
+  }
+
+  @override
+  String get helpDiagnosticsNotChecked => 'Non vérifié';
+
+  @override
+  String helpDiagnosticsHttpStatus(num status) {
+    return 'État HTTP : $status';
+  }
+
+  @override
+  String helpDiagnosticsChecked(String date) {
+    return 'Vérifié : $date';
+  }
+
+  @override
+  String get helpDiagnosticsCopied =>
+      'Diagnostics copiés dans le presse-papiers.';
+
+  @override
+  String get helpSupportNotConfigured =>
+      'Le contact d’assistance n’est pas configuré dans cette version.';
+
+  @override
+  String get helpNoEmailApp =>
+      'Aucune application de courriel n’est disponible sur cet appareil.';
+
+  @override
+  String get helpEmailSubject => 'Demande d’assistance FINVERSE';
+
+  @override
+  String get helpHeading => 'Reprenez rapidement le contrôle';
+
+  @override
+  String get helpPrivacyDetail =>
+      'FINVERSE conserve vos identifiants bancaires chez le fournisseur. Ces vérifications n’incluent jamais votre mot de passe, jeton d’accès ni données de transaction.';
+
+  @override
+  String get helpQuestionsSection => 'QUESTIONS COURANTES';
+
+  @override
+  String get helpIphoneQuestion => 'Mon iPhone ne peut pas se connecter';
+
+  @override
+  String get helpIphoneAnswer =>
+      'Une version de production doit pointer vers l’origine HTTPS publique de l’API. Si elle a été compilée avec une adresse locale, recompilez-la avec la valeur API_BASE_URL fournie par le déploiement. Tailscale n’est pas nécessaire pour un déploiement public.';
+
+  @override
+  String get helpBankQuestion => 'Ma banque exige mon attention';
+
+  @override
+  String get helpBankAnswer =>
+      'Ouvrez Réglages → Connexions bancaires et choisissez Reconnecter. Vous confirmerez d’abord votre mot de passe FINVERSE, puis Plaid vous demandera de vous reconnecter à l’institution. Les transactions existantes restent dans votre historique.';
+
+  @override
+  String get helpSessionQuestion =>
+      'J’ai quitté l’application et elle m’a demandé de me reconnecter';
+
+  @override
+  String get helpSessionAnswer =>
+      'FINVERSE conserve les identifiants de session tournants dans le trousseau du téléphone. Déverrouillez le téléphone une fois après un redémarrage, puis utilisez Réessayer. Une session révoquée ou expirée exige une nouvelle connexion pour votre protection.';
+
+  @override
+  String get helpOfflineQuestion => 'Qu’est-ce qui fonctionne hors ligne ?';
+
+  @override
+  String get helpOfflineAnswer =>
+      'Les lectures authentifiées récentes peuvent être affichées depuis le cache chiffré de l’appareil. Les modifications de préférences de transaction sont mises en file d’attente puis rejouées plus tard. Les soldes, la synchronisation bancaire et les autres changements dont le serveur est responsable attendent une connexion.';
+
+  @override
+  String get helpDeleteQuestion => 'Comment supprimer mon compte ?';
+
+  @override
+  String get helpDeleteAnswer =>
+      'Ouvrez Réglages → Supprimer le compte. FINVERSE révoque les sessions immédiatement et programme un effacement définitif après la période de récupération décrite dans l’avis de confidentialité.';
+
+  @override
+  String get helpCopyDiagnostics => 'Copier les diagnostics';
+
+  @override
+  String get helpContactSupport => 'Contacter l’assistance';
+
+  @override
+  String get helpConnectionNotChecked => 'Connexion non vérifiée';
+
+  @override
+  String get helpCheckConnection => 'Vérifier la connexion';
 }

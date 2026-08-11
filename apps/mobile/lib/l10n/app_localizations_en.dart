@@ -1449,4 +1449,100 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get transactionsApplyFilters => 'Apply filters';
+
+  @override
+  String get helpDiagnosticsTitle => 'FINVERSE support diagnostics';
+
+  @override
+  String helpDiagnosticsApiOrigin(String origin) {
+    return 'API origin: $origin';
+  }
+
+  @override
+  String helpDiagnosticsResult(String result) {
+    return 'Result: $result';
+  }
+
+  @override
+  String get helpDiagnosticsNotChecked => 'Not checked';
+
+  @override
+  String helpDiagnosticsHttpStatus(num status) {
+    return 'HTTP status: $status';
+  }
+
+  @override
+  String helpDiagnosticsChecked(String date) {
+    return 'Checked: $date';
+  }
+
+  @override
+  String get helpDiagnosticsCopied => 'Diagnostics copied to the clipboard.';
+
+  @override
+  String get helpSupportNotConfigured =>
+      'Support contact is not configured for this build.';
+
+  @override
+  String get helpNoEmailApp => 'No email app is available on this device.';
+
+  @override
+  String get helpEmailSubject => 'FINVERSE support request';
+
+  @override
+  String get helpHeading => 'Get unstuck quickly';
+
+  @override
+  String get helpPrivacyDetail =>
+      'FINVERSE keeps your bank credentials with the provider. These checks never include your password, access token, or transaction data.';
+
+  @override
+  String get helpQuestionsSection => 'COMMON QUESTIONS';
+
+  @override
+  String get helpIphoneQuestion => 'My iPhone cannot connect';
+
+  @override
+  String get helpIphoneAnswer =>
+      'A release build must point to the public HTTPS API origin. If it was built with a local address, rebuild it with the API_BASE_URL value supplied by the deployment. Tailscale is not required for a public deployment.';
+
+  @override
+  String get helpBankQuestion => 'My bank needs attention';
+
+  @override
+  String get helpBankAnswer =>
+      'Open Settings → Bank connections and choose Reconnect. You will confirm your FINVERSE password first, then Plaid will ask you to sign in with the institution again. Existing transactions stay in your history.';
+
+  @override
+  String get helpSessionQuestion => 'I left the app and it asked me to sign in';
+
+  @override
+  String get helpSessionAnswer =>
+      'FINVERSE stores the rotating session credentials in the phone keystore. Unlock the phone once after a restart, then use Try again. A revoked or expired session requires a fresh sign-in for your protection.';
+
+  @override
+  String get helpOfflineQuestion => 'What works offline?';
+
+  @override
+  String get helpOfflineAnswer =>
+      'Recent authenticated reads can be shown from encrypted device cache. Transaction preference edits are queued and replayed later. Balances, bank sync, and other server-authoritative changes wait for a connection.';
+
+  @override
+  String get helpDeleteQuestion => 'How do I remove my account?';
+
+  @override
+  String get helpDeleteAnswer =>
+      'Open Settings → Delete account. FINVERSE revokes sessions immediately and schedules permanent erasure after the recovery window described in the privacy notice.';
+
+  @override
+  String get helpCopyDiagnostics => 'Copy diagnostics';
+
+  @override
+  String get helpContactSupport => 'Contact support';
+
+  @override
+  String get helpConnectionNotChecked => 'Connection not checked yet';
+
+  @override
+  String get helpCheckConnection => 'Check connection';
 }
