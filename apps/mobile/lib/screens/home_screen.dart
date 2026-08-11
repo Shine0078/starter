@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../api/client.dart';
 import '../api/app_lock.dart';
+import '../l10n/app_localizations.dart';
 import 'bank_connections_screen.dart';
 import 'dashboard_screen.dart';
 import 'transactions_screen.dart';
@@ -31,7 +32,9 @@ class _HomeScreenState extends State<HomeScreen> {
   var _index = 0;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Scaffold(
         body: ValueListenableBuilder<DateTime?>(
           valueListenable: widget.api.offlineCacheStatus,
           builder: (context, cachedAt, _) => ValueListenableBuilder<int>(
@@ -45,11 +48,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       dense: true,
                       leading: const Icon(Icons.cloud_off_outlined),
                       title: Text(pending > 0
-                          ? 'Offline changes pending'
-                          : 'Offline - showing saved data'),
+                          ? l10n.offlineBannerPending
+                          : l10n.offlineBannerTitle),
                       subtitle: Text(pending > 0
-                          ? '$pending change${pending == 1 ? '' : 's'} saved on this device and will sync automatically when you are online.'
-                          : 'Last updated ${DateFormat.yMMMd().add_jm().format(cachedAt!.toLocal())}. Changes are read-only until you reconnect.'),
+                          ? l10n.offlineBannerPendingDetail(pending)
+                          : l10n.offlineBannerLastUpdated(DateFormat.yMMMd()
+                              .add_jm()
+                              .format(cachedAt!.toLocal()))),
                     ),
                   ),
                 Expanded(
@@ -81,18 +86,21 @@ class _HomeScreenState extends State<HomeScreen> {
         bottomNavigationBar: NavigationBar(
           selectedIndex: _index,
           onDestinationSelected: (index) => setState(() => _index = index),
-          destinations: const [
+          destinations: [
             NavigationDestination(
-                icon: Icon(Icons.home_outlined), label: 'Home'),
+                icon: const Icon(Icons.home_outlined), label: l10n.navHome),
             NavigationDestination(
-                icon: Icon(Icons.receipt_long_outlined), label: 'Transactions'),
+                icon: const Icon(Icons.receipt_long_outlined),
+                label: l10n.navTransactions),
             NavigationDestination(
-                icon: Icon(Icons.insights_outlined), label: 'Analytics'),
+                icon: const Icon(Icons.insights_outlined),
+                label: l10n.navAnalytics),
             NavigationDestination(
-                icon: Icon(Icons.account_balance_outlined), label: 'Accounts'),
+                icon: const Icon(Icons.account_balance_outlined),
+                label: l10n.navAccounts),
             NavigationDestination(
-                icon: Icon(Icons.person_outline), label: 'Profile'),
+                icon: const Icon(Icons.person_outline), label: l10n.navProfile),
           ],
-        ),
-      );
+        ));
+  }
 }

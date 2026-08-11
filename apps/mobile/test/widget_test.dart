@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:cryptography/cryptography.dart';
@@ -15,6 +16,7 @@ import 'package:finverse/api/local_notifications.dart';
 import 'package:finverse/api/onboarding_store.dart';
 import 'package:finverse/api/offline_cache.dart';
 import 'package:finverse/api/session_store.dart';
+import 'package:finverse/l10n/app_localizations.dart';
 import 'package:finverse/main.dart';
 import 'package:finverse/models/models.dart';
 import 'package:finverse/screens/home_screen.dart';
@@ -39,6 +41,14 @@ ApiClient clientWith(MockClient http,
       sessionStore: store ?? InMemorySessionStore(),
       offlineCache: offlineCache,
     );
+
+class LocalizationProbe extends StatelessWidget {
+  const LocalizationProbe({super.key});
+
+  @override
+  Widget build(BuildContext context) =>
+      Text(AppLocalizations.of(context).navHome);
+}
 
 class FakeDeviceAuthenticator implements DeviceAuthenticator {
   FakeDeviceAuthenticator({this.supported = true, this.result = true});
@@ -1584,6 +1594,24 @@ void main() {
     expect(credentials.first['credentialId'], 'cred-1');
   });
 
+  testWidgets('localizations resolve translated strings for a second locale',
+      (tester) async {
+    await tester.pumpWidget(const MaterialApp(
+      localizationsDelegates: [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        AppLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: Locale('fr'),
+      home: LocalizationProbe(),
+    ));
+
+    expect(find.text('Accueil'), findsOneWidget);
+    expect(find.text('Transactions'), findsNothing);
+  });
+
   test('parses scanned and stored receipts', () async {
     var sawPut = false;
     final api = clientWith(MockClient((request) async {
@@ -1869,6 +1897,13 @@ void main() {
     );
     await appLock.initialize();
     await tester.pumpWidget(MaterialApp(
+      localizationsDelegates: [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        AppLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
       home: HomeScreen(
         api: api,
         appLockController: appLock,

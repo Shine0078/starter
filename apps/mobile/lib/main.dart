@@ -8,6 +8,7 @@ import 'api/session_store.dart';
 import 'api/platform/device_auth.dart';
 import 'api/platform/offline_cache_factory.dart';
 import 'design/design.dart';
+import 'l10n/app_localizations.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/onboarding_screen.dart';
@@ -54,9 +55,11 @@ class FinverseApp extends StatelessWidget {
       // Localisation plumbing for the date pickers, tooltips, and text-selection
       // menus. English is the single shipped locale today; adding a locale file
       // under l10n/ is all a translation needs from here.
-      localizationsDelegates: GlobalMaterialLocalizations.delegates,
-      supportedLocales: const [Locale('en')],
-      locale: const Locale('en'),
+      localizationsDelegates: [
+        ...GlobalMaterialLocalizations.delegates,
+        AppLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
       home: OnboardingGate(
         api: api,
         store: onboardingStore,
