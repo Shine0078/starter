@@ -100,9 +100,15 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
       final result = await widget.plaidLink.consumePending();
       if (result?.succeeded == true && result!.publicToken != null) {
         await _exchange(result);
+        await _load();
       }
     } on MissingPluginException {
       // Expected in widget tests and on platforms without the Android bridge.
+    } catch (error) {
+      // An OAuth return can land after a cold start or a process restart. A
+      // failed exchange (plan limit, provider outage, revoked link) must be
+      // shown, not left as an unhandled asynchronous error.
+      if (mounted) setState(() => _error = _friendly(error));
     }
   }
 

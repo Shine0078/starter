@@ -77,7 +77,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
       if (!mounted) return;
       setState(() => _category = previous);
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(error.toString())));
+          .showSnackBar(SnackBar(content: Text(friendlyErrorMessage(error))));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -139,7 +139,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
           });
         }
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.toString())));
+            .showSnackBar(SnackBar(content: Text(friendlyErrorMessage(error))));
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -166,7 +166,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
           setState(() => _excludedFromAnalytics = previous);
         }
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.toString())));
+            .showSnackBar(SnackBar(content: Text(friendlyErrorMessage(error))));
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -201,7 +201,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
           });
         }
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.toString())));
+            .showSnackBar(SnackBar(content: Text(friendlyErrorMessage(error))));
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -228,7 +228,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
           setState(() => _duplicateReported = previous);
         }
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.toString())));
+            .showSnackBar(SnackBar(content: Text(friendlyErrorMessage(error))));
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -257,7 +257,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
       if (mounted) {
         setState(() => _category = previous);
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.toString())));
+            .showSnackBar(SnackBar(content: Text(friendlyErrorMessage(error))));
       }
     } finally {
       if (mounted) setState(() => _saving = false);

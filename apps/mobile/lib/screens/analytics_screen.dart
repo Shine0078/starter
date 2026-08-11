@@ -89,7 +89,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     } catch (error) {
       if (!mounted || generation != _loadGeneration) return;
       setState(() {
-        _error = error.toString();
+        _error = friendlyErrorMessage(error);
         _loading = false;
       });
     }
@@ -238,7 +238,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                           : Theme.of(context).colorScheme.tertiary,
                     ),
                     title: Text(insight.title),
-                    trailing: _priorityChip(Theme.of(context), insight.priority),
+                    trailing:
+                        _priorityChip(Theme.of(context), insight.priority),
                     subtitle: Text(
                       '${insight.detail}\nBased on ${insight.evidenceCount} transaction(s)',
                     ),

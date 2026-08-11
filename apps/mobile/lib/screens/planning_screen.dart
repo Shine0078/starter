@@ -55,7 +55,7 @@ class _PlanningScreenState extends State<PlanningScreen> {
       }
       await _loadForecast();
     } catch (error) {
-      if (mounted) setState(() => _error = error.toString());
+      if (mounted) setState(() => _error = friendlyErrorMessage(error));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -72,7 +72,7 @@ class _PlanningScreenState extends State<PlanningScreen> {
           await widget.api.cashFlowForecast(days: _days, currency: _currency);
       if (mounted) setState(() => _forecast = forecast);
     } catch (error) {
-      if (mounted) setState(() => _error = error.toString());
+      if (mounted) setState(() => _error = friendlyErrorMessage(error));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -124,7 +124,7 @@ class _PlanningScreenState extends State<PlanningScreen> {
       );
       if (mounted) setState(() => _scenario = scenario);
     } catch (error) {
-      if (mounted) setState(() => _error = error.toString());
+      if (mounted) setState(() => _error = friendlyErrorMessage(error));
     } finally {
       if (mounted) setState(() => _simulating = false);
     }

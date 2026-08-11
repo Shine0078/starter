@@ -1455,6 +1455,59 @@ class ApiException implements Exception {
   String toString() => 'ApiException($statusCode on $path): $body';
 }
 
+/// Turns any failure a screen can hit into something worth showing the user.
+///
+/// Financial apps should never render `ApiException(500 on /api/...): {...}`.
+/// The detail stays in the log via [toString]; the person gets the reason and,
+/// where possible, the action. Falls back to the raw value only when nothing
+/// better exists, so a programming error is still visible during development.
+String friendlyErrorMessage(Object error) {
+  if (error is AuthException) return error.displayMessage;
+  if (error is PlanUpgradeRequiredException) return error.message;
+  if (error is OfflineMutationQueuedException) return error.toString();
+  if (error is MfaRequiredException) {
+    return 'Enter the verification code to continue.';
+  }
+  if (error is ApiException) {
+    final parsed = _apiMessage(error);
+    if (parsed != null) return parsed;
+    if (error.statusCode == 503) {
+      return 'The server is temporarily unavailable. Try again shortly.';
+    }
+    if (error.statusCode == 401) {
+      return 'Your session is no longer valid. Sign in again.';
+    }
+    if (error.statusCode >= 500) {
+      return 'Something went wrong on our side. Try again shortly.';
+    }
+  }
+  if (error is TimeoutException) {
+    return 'The server did not respond. Check your connection and try again.';
+  }
+  if (error is http.ClientException) {
+    return "Couldn't reach the server. Check your connection.";
+  }
+  return error.toString();
+}
+
+/// Extracts a server-provided message (string or array) from an API error body.
+String? _apiMessage(ApiException error) {
+  if (error.body.trim().isEmpty) return null;
+  try {
+    final decoded = jsonDecode(error.body);
+    if (decoded is! Map<String, dynamic>) return null;
+    final message = decoded['message'];
+    if (message is String && message.isNotEmpty) return message;
+    if (message is List) {
+      final joined = message.whereType<String>().join(' ');
+      if (joined.isNotEmpty) return joined;
+    }
+  } catch (_) {
+    // Not JSON; fall through to the generic wording.
+  }
+  return null;
+}
+
 /// The server refused because the user's plan does not include this.
 ///
 /// Recognised centrally in the client rather than screen by screen, so that a

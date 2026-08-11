@@ -1510,6 +1510,40 @@ void main() {
     expect(dateOnly(DateTime.utc(2026, 12, 31)), '2026-12-31');
   });
 
+  test('turns API failures into user-friendly messages', () {
+    expect(
+      friendlyErrorMessage(ApiException('/api/x', 500, '{"message":"boom"}')),
+      'boom',
+    );
+    expect(
+      friendlyErrorMessage(ApiException('/api/x', 503, '')),
+      'The server is temporarily unavailable. Try again shortly.',
+    );
+    expect(
+      friendlyErrorMessage(ApiException('/api/x', 401, '')),
+      'Your session is no longer valid. Sign in again.',
+    );
+    expect(
+      friendlyErrorMessage(AuthException('Wrong password.')),
+      'Wrong password.',
+    );
+    expect(
+      friendlyErrorMessage(TimeoutException('late')),
+      'The server did not respond. Check your connection and try again.',
+    );
+    expect(
+      friendlyErrorMessage(http.ClientException('down')),
+      "Couldn't reach the server. Check your connection.",
+    );
+    expect(
+      friendlyErrorMessage(PlanUpgradeRequiredException(
+        path: '/api/x',
+        message: 'Your plan does not include this feature.',
+      )),
+      'Your plan does not include this feature.',
+    );
+  });
+
   test(
       'account deletion is confirmed server-side before credentials are cleared',
       () async {

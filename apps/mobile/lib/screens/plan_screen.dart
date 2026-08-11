@@ -22,12 +22,15 @@ String entitlementLabel(String slug) =>
     _entitlementLabels[slug] ??
     slug
         .split('_')
-        .map((word) => word.isEmpty ? word : '${word[0].toUpperCase()}${word.substring(1)}')
+        .map((word) => word.isEmpty
+            ? word
+            : '${word[0].toUpperCase()}${word.substring(1)}')
         .join(' ');
 
 /// Plan state, what each tier includes, and the way to change it.
 class PlanScreen extends StatefulWidget {
-  const PlanScreen({required this.api, BillingPurchaseMode? purchaseMode, super.key})
+  const PlanScreen(
+      {required this.api, BillingPurchaseMode? purchaseMode, super.key})
       : purchaseMode = purchaseMode ?? kBillingPurchaseMode;
 
   final ApiClient api;
@@ -77,14 +80,15 @@ class _PlanScreenState extends State<PlanScreen> {
         // Never leave the selection on an interval this deployment cannot sell,
         // which would produce a checkout the server has to refuse.
         if (!summary.intervals.contains(_interval)) {
-          _interval = summary.intervals.isEmpty ? 'month' : summary.intervals.first;
+          _interval =
+              summary.intervals.isEmpty ? 'month' : summary.intervals.first;
         }
         _loading = false;
       });
     } catch (error) {
       if (!mounted) return;
       setState(() {
-        _error = error.toString();
+        _error = friendlyErrorMessage(error);
         _loading = false;
       });
     }
@@ -145,7 +149,7 @@ class _PlanScreenState extends State<PlanScreen> {
     _showMessage(switch (error) {
       ApiException(statusCode: 503) =>
         'Billing is not configured on this server yet.',
-      _ => error.toString(),
+      _ => friendlyErrorMessage(error),
     });
   }
 
@@ -277,8 +281,8 @@ class _PlanScreenState extends State<PlanScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('CURRENT PLAN',
-                style: theme.textTheme.labelSmall
-                    ?.copyWith(letterSpacing: 1.2)),
+                style:
+                    theme.textTheme.labelSmall?.copyWith(letterSpacing: 1.2)),
             const SizedBox(height: 6),
             Text(summary.planName, style: theme.textTheme.headlineSmall),
             const SizedBox(height: 8),

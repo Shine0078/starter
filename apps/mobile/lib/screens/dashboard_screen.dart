@@ -153,7 +153,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     } catch (error) {
       if (!mounted) return;
       setState(() {
-        _error = error.toString();
+        _error = friendlyErrorMessage(error);
         _loading = false;
       });
     }
@@ -276,7 +276,9 @@ class _DashboardScreenState extends State<DashboardScreen>
     } on Object catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not send verification: $error')),
+        SnackBar(
+            content: Text('Could not send verification: '
+                '${friendlyErrorMessage(error)}')),
       );
       return;
     }

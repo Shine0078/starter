@@ -41,7 +41,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
       final goals = await widget.api.goals();
       if (mounted) setState(() => _goals = goals);
     } catch (error) {
-      if (mounted) setState(() => _error = error.toString());
+      if (mounted) setState(() => _error = friendlyErrorMessage(error));
     } finally {
       if (mounted) setState(() => _loading = false);
     }

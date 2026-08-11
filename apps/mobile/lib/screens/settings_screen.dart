@@ -252,7 +252,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.toString())));
+            .showSnackBar(SnackBar(content: Text(friendlyErrorMessage(error))));
       }
     } finally {
       if (mounted) setState(() => _mfaBusy = false);
@@ -308,7 +308,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.toString())));
+            .showSnackBar(SnackBar(content: Text(friendlyErrorMessage(error))));
       }
     } finally {
       if (mounted) setState(() => _mfaBusy = false);
@@ -340,7 +340,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(error.toString())));
+          .showSnackBar(SnackBar(content: Text(friendlyErrorMessage(error))));
     }
   }
 
@@ -430,8 +430,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
     } catch (error) {
       if (!mounted) return;
-      final message =
-          error is AuthException ? error.displayMessage : error.toString();
+      final message = friendlyErrorMessage(error);
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(message)));
     } finally {
@@ -462,7 +461,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(error.toString())));
+          .showSnackBar(SnackBar(content: Text(friendlyErrorMessage(error))));
     } finally {
       if (mounted) setState(() => _reporting = false);
     }
@@ -475,7 +474,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(error.toString())));
+          .showSnackBar(SnackBar(content: Text(friendlyErrorMessage(error))));
     }
   }
 

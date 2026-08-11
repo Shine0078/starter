@@ -15,8 +15,7 @@ class CategorizationRulesScreen extends StatefulWidget {
       _CategorizationRulesScreenState();
 }
 
-class _CategorizationRulesScreenState
-    extends State<CategorizationRulesScreen> {
+class _CategorizationRulesScreenState extends State<CategorizationRulesScreen> {
   List<CategorizationRule> _rules = const [];
   Map<String, String> _categoryNames = const {};
   bool _loading = true;
@@ -52,7 +51,7 @@ class _CategorizationRulesScreenState
     } catch (error) {
       if (!mounted) return;
       setState(() {
-        _error = error.toString();
+        _error = friendlyErrorMessage(error);
         _loading = false;
       });
     }
@@ -85,7 +84,8 @@ class _CategorizationRulesScreenState
     try {
       await widget.api.deleteCategorizationRule(rule.id);
       if (!mounted) return;
-      setState(() => _rules = _rules.where((item) => item.id != rule.id).toList());
+      setState(
+          () => _rules = _rules.where((item) => item.id != rule.id).toList());
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Rule deleted.')),
       );

@@ -89,7 +89,7 @@ class _FinancialCalendarScreenState extends State<FinancialCalendarScreen> {
     } catch (error) {
       if (!mounted) return;
       setState(() {
-        _error = error.toString();
+        _error = friendlyErrorMessage(error);
         _loading = false;
       });
     }

@@ -118,7 +118,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       }
     } catch (error) {
       if (mounted && generation == _loadGeneration) {
-        setState(() => _error = error.toString());
+        setState(() => _error = friendlyErrorMessage(error));
       }
     } finally {
       if (mounted && generation == _loadGeneration) {
@@ -157,9 +157,10 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       });
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not load older transactions: $error')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              'Could not load older transactions: ${friendlyErrorMessage(error)}'),
+        ));
       }
     } finally {
       if (mounted) setState(() => _loadingMore = false);

@@ -48,7 +48,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
       final answer = await widget.api.askAssistant(value);
       if (mounted) setState(() => _answer = answer);
     } catch (error) {
-      if (mounted) setState(() => _error = error.toString());
+      if (mounted) setState(() => _error = friendlyErrorMessage(error));
     } finally {
       if (mounted) setState(() => _loading = false);
     }

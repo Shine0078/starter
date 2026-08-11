@@ -42,7 +42,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       if (mounted) {
         setState(() {
           _loading = false;
-          _error = error.toString();
+          _error = friendlyErrorMessage(error);
         });
       }
     }
@@ -120,7 +120,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       await widget.api.markAllNotificationsRead();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$unread alert${unread == 1 ? '' : 's'} marked as read.')),
+        SnackBar(
+            content:
+                Text('$unread alert${unread == 1 ? '' : 's'} marked as read.')),
       );
     } catch (_) {
       if (mounted) setState(() => _rows = previous);

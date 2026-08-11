@@ -48,7 +48,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     } catch (error) {
       if (!mounted) return;
       setState(() {
-        _error = error.toString();
+        _error = friendlyErrorMessage(error);
         _loading = false;
       });
     }
