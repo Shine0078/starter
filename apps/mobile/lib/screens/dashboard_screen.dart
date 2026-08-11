@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../api/client.dart';
 import '../api/app_lock.dart';
 import '../design/design.dart';
+import '../l10n/app_localizations.dart';
 import '../models/models.dart';
 import '../widgets/budget_tile.dart';
 import '../widgets/health_score_card.dart';
@@ -464,6 +465,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Widget _buildBody(ThemeData theme) {
+    final l10n = AppLocalizations.of(context);
     // A skeleton in the shape of the real dashboard, not a spinner in the
     // middle of a blank screen (§33). Nothing jumps when the data lands.
     if (_loading) return const FinDashboardSkeleton();
@@ -494,17 +496,56 @@ class _DashboardScreenState extends State<DashboardScreen>
             const SizedBox(height: 20),
           ],
           if (_insights != null) ...[
-            _sectionLabel(theme, 'This month'),
+            _sectionLabel(theme, l10n.analyticsThisMonth),
             Card(
               child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  children: [
-                    _statRow(theme, 'Income', _insights!.income),
-                    _statRow(theme, 'Expenses', _insights!.expenses),
-                    _statRow(theme, 'Net cash flow', _insights!.netCashFlow),
-                    _statRow(theme, 'Savings rate', _insights!.savingsRate),
-                  ],
+                padding: const EdgeInsets.all(12),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final tileWidth = (constraints.maxWidth - 12) / 2;
+                    return Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        SizedBox(
+                          width: tileWidth,
+                          child: FinSummaryTile(
+                            label: l10n.analyticsIncome,
+                            value: _insights!.income,
+                            icon: Icons.south_west,
+                            accent: context.finColors.income,
+                          ),
+                        ),
+                        SizedBox(
+                          width: tileWidth,
+                          child: FinSummaryTile(
+                            label: l10n.analyticsNetExpenses,
+                            value: _insights!.expenses,
+                            icon: Icons.north_east,
+                            accent: context.finColors.expense,
+                          ),
+                        ),
+                        SizedBox(
+                          width: tileWidth,
+                          child: FinSummaryTile(
+                            label: l10n.dashboardNetCashFlow,
+                            value: _insights!.netCashFlow,
+                            icon: Icons.swap_vert,
+                            accent: context.finColors.positiveTrend,
+                          ),
+                        ),
+                        SizedBox(
+                          width: tileWidth,
+                          child: FinSummaryTile(
+                            label: l10n.analyticsSavingsRate,
+                            value: _insights!.savingsRate,
+                            icon: Icons.savings_outlined,
+                            accent: theme.colorScheme.primary,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
             ),
@@ -519,17 +560,17 @@ class _DashboardScreenState extends State<DashboardScreen>
             ],
           ],
           if (_health != null) ...[
-            _sectionLabel(theme, 'Financial health'),
+            _sectionLabel(theme, l10n.dashboardFinancialHealth),
             HealthScoreCard(score: _health!),
             const SizedBox(height: 20),
           ],
           if (_budgets.isNotEmpty) ...[
-            _sectionLabel(theme, 'Budgets'),
+            _sectionLabel(theme, l10n.budgetsTitle),
             ..._budgets.map((b) => BudgetTile(progress: b)),
             const SizedBox(height: 20),
           ],
           if (_insights != null && _insights!.insights.isNotEmpty) ...[
-            _sectionLabel(theme, 'Insights'),
+            _sectionLabel(theme, l10n.dashboardInsights),
             ..._insights!.insights.take(4).map(
                   (insight) => Card(
                     child: ListTile(
@@ -552,7 +593,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ),
             const SizedBox(height: 20),
           ],
-          _sectionLabel(theme, 'Recent transactions'),
+          _sectionLabel(theme, l10n.dashboardRecentTransactions),
           ..._transactions.map(
             (txn) => TransactionTile(
               transaction: txn,
@@ -597,7 +638,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Compared with last period',
+              Text(AppLocalizations.of(context).dashboardComparedWithPeriod,
                   style: theme.textTheme.titleSmall),
               const SizedBox(height: 6),
               for (final entry in [
@@ -667,22 +708,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                   ),
             ],
           ),
-        ),
-      );
-
-  Widget _statRow(ThemeData theme, String label, String value) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 3),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(label, style: theme.textTheme.bodyMedium),
-            Text(
-              value,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
         ),
       );
 

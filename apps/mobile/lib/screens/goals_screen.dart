@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api/client.dart';
+import '../design/design.dart';
 import '../l10n/app_localizations.dart';
 import '../models/models.dart';
 
@@ -178,7 +179,10 @@ class _GoalsScreenState extends State<GoalsScreen> {
         label: Text(l10n.goalNew),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? ListView(
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 96),
+              children: [FinListSkeleton(rows: 4)],
+            )
           : _error != null
               ? Center(
                   child: FilledButton(

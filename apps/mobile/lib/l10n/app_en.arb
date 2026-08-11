@@ -701,5 +701,10 @@
   "transactionCategoryUtilities": "utilities",
   "transactionCategoryStreaming": "streaming",
   "transactionCategoryFitness": "fitness",
-  "transactionCategoryHealthcare": "healthcare"
+  "transactionCategoryHealthcare": "healthcare",
+  "dashboardNetCashFlow": "Net cash flow",
+  "dashboardComparedWithPeriod": "Compared with last period",
+  "dashboardRecentTransactions": "Recent transactions",
+  "dashboardFinancialHealth": "Financial health",
+  "dashboardInsights": "Insights"
 }

@@ -1732,4 +1732,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get transactionCategoryHealthcare => 'healthcare';
+
+  @override
+  String get dashboardNetCashFlow => 'Net cash flow';
+
+  @override
+  String get dashboardComparedWithPeriod => 'Compared with last period';
+
+  @override
+  String get dashboardRecentTransactions => 'Recent transactions';
+
+  @override
+  String get dashboardFinancialHealth => 'Financial health';
+
+  @override
+  String get dashboardInsights => 'Insights';
 }

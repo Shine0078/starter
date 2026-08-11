@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api/client.dart';
+import '../design/design.dart';
 import '../l10n/app_localizations.dart';
 import '../models/models.dart';
 
@@ -75,7 +76,12 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
 
   Widget _buildBody() {
     final l10n = AppLocalizations.of(context);
-    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_loading) {
+      return ListView(
+        padding: EdgeInsets.fromLTRB(16, 16, 16, 24),
+        children: [FinListSkeleton(rows: 5)],
+      );
+    }
     if (_error != null) {
       return Center(
         child: Padding(

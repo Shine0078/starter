@@ -9,8 +9,10 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finverse/design/design.dart';
 
-Widget host(Widget child, {Brightness brightness = Brightness.light}) => MaterialApp(
-      theme: brightness == Brightness.light ? FinTheme.light() : FinTheme.dark(),
+Widget host(Widget child, {Brightness brightness = Brightness.light}) =>
+    MaterialApp(
+      theme:
+          brightness == Brightness.light ? FinTheme.light() : FinTheme.dark(),
       home: Scaffold(body: Center(child: child)),
     );
 
@@ -32,7 +34,8 @@ void main() {
       );
     });
 
-    testWidgets('marks direction with a sign, not only a colour', (tester) async {
+    testWidgets('marks direction with a sign, not only a colour',
+        (tester) async {
       // Roughly one man in twelve cannot separate red from green. Without the
       // sign, money in and money out render as identical strings.
       await tester.pumpWidget(host(
@@ -129,6 +132,31 @@ void main() {
       ));
 
       expect(find.byIcon(Icons.arrow_upward), findsOneWidget);
+    });
+  });
+
+  group('FinSummaryTile', () {
+    testWidgets('keeps a formatted financial value readable and announced',
+        (tester) async {
+      final semantics = tester.ensureSemantics();
+      await tester.pumpWidget(host(
+        const SizedBox(
+          width: 180,
+          child: FinSummaryTile(
+            label: 'Net cash flow',
+            value: r'$1,240.00',
+            supporting: 'This month',
+            icon: Icons.swap_vert,
+          ),
+        ),
+      ));
+
+      expect(find.text(r'$1,240.00'), findsOneWidget);
+      expect(
+        tester.getSemantics(find.byType(FinSummaryTile)).label,
+        startsWith('Net cash flow: \$1,240.00, This month'),
+      );
+      semantics.dispose();
     });
   });
 

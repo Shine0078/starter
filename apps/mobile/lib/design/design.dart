@@ -11,6 +11,7 @@ library;
 
 export 'colors.dart';
 export 'components/fin_metric_tile.dart';
+export 'components/fin_summary_tile.dart';
 export 'components/fin_skeleton.dart';
 export 'components/fin_states.dart';
 export 'components/money_text.dart';

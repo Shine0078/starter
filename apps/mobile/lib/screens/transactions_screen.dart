@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../api/client.dart';
+import '../design/design.dart';
 import '../l10n/app_localizations.dart';
 import '../models/models.dart';
 import '../widgets/transaction_tile.dart';
@@ -261,7 +262,12 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   }
 
   Widget _body() {
-    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_loading) {
+      return ListView(
+        padding: EdgeInsets.fromLTRB(16, 12, 16, 24),
+        children: [FinListSkeleton(rows: 7)],
+      );
+    }
     if (_error != null) {
       return Center(
           child: FilledButton(

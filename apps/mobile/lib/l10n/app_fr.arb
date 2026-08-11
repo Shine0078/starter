@@ -701,5 +701,10 @@
   "transactionCategoryUtilities": "services publics",
   "transactionCategoryStreaming": "diffusion en continu",
   "transactionCategoryFitness": "conditionnement physique",
-  "transactionCategoryHealthcare": "soins de santé"
+  "transactionCategoryHealthcare": "soins de santé",
+  "dashboardNetCashFlow": "Flux de trésorerie net",
+  "dashboardComparedWithPeriod": "Comparé à la période précédente",
+  "dashboardRecentTransactions": "Transactions récentes",
+  "dashboardFinancialHealth": "Santé financière",
+  "dashboardInsights": "Points importants"
 }

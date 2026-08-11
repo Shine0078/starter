@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../api/client.dart';
+import '../design/design.dart';
 import '../api/plaid_link.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/app_localizations_en.dart';
@@ -562,7 +563,10 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? ListView(
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 168),
+              children: [FinListSkeleton(rows: 4)],
+            )
           : RefreshIndicator(
               onRefresh: _load,
               child: ListView(

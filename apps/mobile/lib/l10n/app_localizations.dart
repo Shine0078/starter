@@ -3002,6 +3002,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'healthcare'**
   String get transactionCategoryHealthcare;
+
+  /// No description provided for @dashboardNetCashFlow.
+  ///
+  /// In en, this message translates to:
+  /// **'Net cash flow'**
+  String get dashboardNetCashFlow;
+
+  /// No description provided for @dashboardComparedWithPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'Compared with last period'**
+  String get dashboardComparedWithPeriod;
+
+  /// No description provided for @dashboardRecentTransactions.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent transactions'**
+  String get dashboardRecentTransactions;
+
+  /// No description provided for @dashboardFinancialHealth.
+  ///
+  /// In en, this message translates to:
+  /// **'Financial health'**
+  String get dashboardFinancialHealth;
+
+  /// No description provided for @dashboardInsights.
+  ///
+  /// In en, this message translates to:
+  /// **'Insights'**
+  String get dashboardInsights;
 }
 
 class _AppLocalizationsDelegate

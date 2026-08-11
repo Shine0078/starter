@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../api/client.dart';
+import '../design/design.dart';
 import '../l10n/app_localizations.dart';
 import '../models/models.dart';
 
@@ -82,7 +83,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? ListView(
+              padding: EdgeInsets.fromLTRB(12, 16, 12, 24),
+              children: [FinListSkeleton(rows: 5)],
+            )
           : RefreshIndicator(
               onRefresh: _load,
               child: ListView(

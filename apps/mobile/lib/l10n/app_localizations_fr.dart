@@ -1756,4 +1756,19 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get transactionCategoryHealthcare => 'soins de santé';
+
+  @override
+  String get dashboardNetCashFlow => 'Flux de trésorerie net';
+
+  @override
+  String get dashboardComparedWithPeriod => 'Comparé à la période précédente';
+
+  @override
+  String get dashboardRecentTransactions => 'Transactions récentes';
+
+  @override
+  String get dashboardFinancialHealth => 'Santé financière';
+
+  @override
+  String get dashboardInsights => 'Points importants';
 }

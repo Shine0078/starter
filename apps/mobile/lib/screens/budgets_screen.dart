@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api/client.dart';
+import '../design/design.dart';
 import '../l10n/app_localizations.dart';
 import '../models/models.dart';
 import '../widgets/budget_tile.dart';
@@ -157,7 +158,10 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
         label: Text(l10n.budgetNew),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? ListView(
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 96),
+              children: [FinListSkeleton(rows: 5)],
+            )
           : _error != null
               ? Center(
                   child: FilledButton(
