@@ -2,6 +2,21 @@
 
 > ## 2026-08-11 continuation — this supersedes stale statements below
 >
+> - Latest UI/deployment commits: `8960fa0` simplifies the dashboard into a
+>   responsive 2x2 financial summary and replaces spinner-only loading states
+>   on transaction, budget, goal, subscription, notification, and account
+>   screens with shared skeletons. The full Flutter suite now has **93 passing
+>   tests** and analysis is clean.
+> - Commit `8d56799` adds the permanent public-hosting path: `render.yaml`,
+>   `Dockerfile.public`, and `docs/14-public-hosting-render.md`. It deploys the
+>   API and Flutter PWA together behind Render HTTPS with managed PostgreSQL;
+>   no VPN, Tailscale, home PC, or tunnel is required. A one-click Render
+>   button is in `README.md`. The deployment itself is not yet created because
+>   the owner must authorize Render and enter secrets/legal settings.
+> - The current owner-facing Plaid Sandbox CIBC test values are `user_good` /
+>   `pass_good`, not a real card number or real bank password. Sandbox MFA is
+>   commonly `1234`. See `docs/11-run-on-your-phone.md`.
+>
 > - Commit `9c713f3` localizes transaction-row status badges and the category
 >   correction menu, including the common quick categories in English and
 >   French. Flutter analysis is clean and all **92** tests pass.
