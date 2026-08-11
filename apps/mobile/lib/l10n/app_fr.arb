@@ -685,5 +685,21 @@
   "planNotNow": "Pas maintenant",
   "planSeePlans": "Voir les forfaits",
   "planWebPurchaseUnavailable": "Les abonnements sont gérés sur le web. Connectez-vous à votre page de compte FINVERSE pour passer au niveau supérieur.",
-  "planNativePurchaseUnavailable": "Les achats intégrés ne sont pas encore disponibles dans cette version."
+  "planNativePurchaseUnavailable": "Les achats intégrés ne sont pas encore disponibles dans cette version.",
+  "transactionTileChangeCategory": "Modifier la catégorie",
+  "transactionTilePending": "en attente",
+  "transactionTileReview": "à vérifier",
+  "transactionTileExcluded": "exclue",
+  "transactionCategoryGroceries": "épicerie",
+  "transactionCategoryRestaurants": "restaurants",
+  "transactionCategoryCoffee": "café",
+  "transactionCategoryFoodDelivery": "livraison de repas",
+  "transactionCategoryFuel": "carburant",
+  "transactionCategoryRideshare": "transport avec chauffeur",
+  "transactionCategoryShopping": "achats",
+  "transactionCategoryRent": "loyer",
+  "transactionCategoryUtilities": "services publics",
+  "transactionCategoryStreaming": "diffusion en continu",
+  "transactionCategoryFitness": "conditionnement physique",
+  "transactionCategoryHealthcare": "soins de santé"
 }

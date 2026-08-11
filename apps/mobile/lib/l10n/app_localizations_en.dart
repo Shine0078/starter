@@ -1684,4 +1684,52 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get planNativePurchaseUnavailable =>
       'In-app purchasing is not available in this build yet.';
+
+  @override
+  String get transactionTileChangeCategory => 'Change category';
+
+  @override
+  String get transactionTilePending => 'pending';
+
+  @override
+  String get transactionTileReview => 'review';
+
+  @override
+  String get transactionTileExcluded => 'excluded';
+
+  @override
+  String get transactionCategoryGroceries => 'groceries';
+
+  @override
+  String get transactionCategoryRestaurants => 'restaurants';
+
+  @override
+  String get transactionCategoryCoffee => 'coffee';
+
+  @override
+  String get transactionCategoryFoodDelivery => 'food delivery';
+
+  @override
+  String get transactionCategoryFuel => 'fuel';
+
+  @override
+  String get transactionCategoryRideshare => 'rideshare';
+
+  @override
+  String get transactionCategoryShopping => 'shopping';
+
+  @override
+  String get transactionCategoryRent => 'rent';
+
+  @override
+  String get transactionCategoryUtilities => 'utilities';
+
+  @override
+  String get transactionCategoryStreaming => 'streaming';
+
+  @override
+  String get transactionCategoryFitness => 'fitness';
+
+  @override
+  String get transactionCategoryHealthcare => 'healthcare';
 }

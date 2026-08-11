@@ -2906,6 +2906,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'In-app purchasing is not available in this build yet.'**
   String get planNativePurchaseUnavailable;
+
+  /// No description provided for @transactionTileChangeCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Change category'**
+  String get transactionTileChangeCategory;
+
+  /// No description provided for @transactionTilePending.
+  ///
+  /// In en, this message translates to:
+  /// **'pending'**
+  String get transactionTilePending;
+
+  /// No description provided for @transactionTileReview.
+  ///
+  /// In en, this message translates to:
+  /// **'review'**
+  String get transactionTileReview;
+
+  /// No description provided for @transactionTileExcluded.
+  ///
+  /// In en, this message translates to:
+  /// **'excluded'**
+  String get transactionTileExcluded;
+
+  /// No description provided for @transactionCategoryGroceries.
+  ///
+  /// In en, this message translates to:
+  /// **'groceries'**
+  String get transactionCategoryGroceries;
+
+  /// No description provided for @transactionCategoryRestaurants.
+  ///
+  /// In en, this message translates to:
+  /// **'restaurants'**
+  String get transactionCategoryRestaurants;
+
+  /// No description provided for @transactionCategoryCoffee.
+  ///
+  /// In en, this message translates to:
+  /// **'coffee'**
+  String get transactionCategoryCoffee;
+
+  /// No description provided for @transactionCategoryFoodDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'food delivery'**
+  String get transactionCategoryFoodDelivery;
+
+  /// No description provided for @transactionCategoryFuel.
+  ///
+  /// In en, this message translates to:
+  /// **'fuel'**
+  String get transactionCategoryFuel;
+
+  /// No description provided for @transactionCategoryRideshare.
+  ///
+  /// In en, this message translates to:
+  /// **'rideshare'**
+  String get transactionCategoryRideshare;
+
+  /// No description provided for @transactionCategoryShopping.
+  ///
+  /// In en, this message translates to:
+  /// **'shopping'**
+  String get transactionCategoryShopping;
+
+  /// No description provided for @transactionCategoryRent.
+  ///
+  /// In en, this message translates to:
+  /// **'rent'**
+  String get transactionCategoryRent;
+
+  /// No description provided for @transactionCategoryUtilities.
+  ///
+  /// In en, this message translates to:
+  /// **'utilities'**
+  String get transactionCategoryUtilities;
+
+  /// No description provided for @transactionCategoryStreaming.
+  ///
+  /// In en, this message translates to:
+  /// **'streaming'**
+  String get transactionCategoryStreaming;
+
+  /// No description provided for @transactionCategoryFitness.
+  ///
+  /// In en, this message translates to:
+  /// **'fitness'**
+  String get transactionCategoryFitness;
+
+  /// No description provided for @transactionCategoryHealthcare.
+  ///
+  /// In en, this message translates to:
+  /// **'healthcare'**
+  String get transactionCategoryHealthcare;
 }
 
 class _AppLocalizationsDelegate

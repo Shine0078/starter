@@ -1708,4 +1708,52 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get planNativePurchaseUnavailable =>
       'Les achats intégrés ne sont pas encore disponibles dans cette version.';
+
+  @override
+  String get transactionTileChangeCategory => 'Modifier la catégorie';
+
+  @override
+  String get transactionTilePending => 'en attente';
+
+  @override
+  String get transactionTileReview => 'à vérifier';
+
+  @override
+  String get transactionTileExcluded => 'exclue';
+
+  @override
+  String get transactionCategoryGroceries => 'épicerie';
+
+  @override
+  String get transactionCategoryRestaurants => 'restaurants';
+
+  @override
+  String get transactionCategoryCoffee => 'café';
+
+  @override
+  String get transactionCategoryFoodDelivery => 'livraison de repas';
+
+  @override
+  String get transactionCategoryFuel => 'carburant';
+
+  @override
+  String get transactionCategoryRideshare => 'transport avec chauffeur';
+
+  @override
+  String get transactionCategoryShopping => 'achats';
+
+  @override
+  String get transactionCategoryRent => 'loyer';
+
+  @override
+  String get transactionCategoryUtilities => 'services publics';
+
+  @override
+  String get transactionCategoryStreaming => 'diffusion en continu';
+
+  @override
+  String get transactionCategoryFitness => 'conditionnement physique';
+
+  @override
+  String get transactionCategoryHealthcare => 'soins de santé';
 }

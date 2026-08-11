@@ -685,5 +685,21 @@
   "planNotNow": "Not now",
   "planSeePlans": "See plans",
   "planWebPurchaseUnavailable": "Subscriptions are managed on the web. Sign in at your FINVERSE account page to upgrade.",
-  "planNativePurchaseUnavailable": "In-app purchasing is not available in this build yet."
+  "planNativePurchaseUnavailable": "In-app purchasing is not available in this build yet.",
+  "transactionTileChangeCategory": "Change category",
+  "transactionTilePending": "pending",
+  "transactionTileReview": "review",
+  "transactionTileExcluded": "excluded",
+  "transactionCategoryGroceries": "groceries",
+  "transactionCategoryRestaurants": "restaurants",
+  "transactionCategoryCoffee": "coffee",
+  "transactionCategoryFoodDelivery": "food delivery",
+  "transactionCategoryFuel": "fuel",
+  "transactionCategoryRideshare": "rideshare",
+  "transactionCategoryShopping": "shopping",
+  "transactionCategoryRent": "rent",
+  "transactionCategoryUtilities": "utilities",
+  "transactionCategoryStreaming": "streaming",
+  "transactionCategoryFitness": "fitness",
+  "transactionCategoryHealthcare": "healthcare"
 }
