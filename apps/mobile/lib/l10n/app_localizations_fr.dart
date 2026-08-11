@@ -127,6 +127,66 @@ class AppLocalizationsFr extends AppLocalizations {
       'Certaines pages sont encore en cours de traduction.';
 
   @override
+  String get verificationEmailSent => 'E-mail de vérification envoyé.';
+
+  @override
+  String get profileSettingsPrivacyTitle => 'Paramètres et confidentialité';
+
+  @override
+  String get profileSettingsPrivacyDetail =>
+      'Sécurité, A2F, verrouillage de l’app, consentement, exportation et contrôles de compte';
+
+  @override
+  String get profilePlanningSection => 'Planification';
+
+  @override
+  String get profileBudgetDetail =>
+      'Définissez des limites et suivez vos catégories';
+
+  @override
+  String get profileGoalsDetail =>
+      'Créez des objectifs d’épargne et des contributions';
+
+  @override
+  String get profileCashFlowPlanningTitle => 'Planification de trésorerie';
+
+  @override
+  String get profileCashFlowPlanningDetail =>
+      'Prévoyez les soldes et simulez des achats';
+
+  @override
+  String get profileFinancialCalendarTitle => 'Calendrier financier';
+
+  @override
+  String get profileFinancialCalendarDetail =>
+      'Consultez les factures, revenus, objectifs et avertissements';
+
+  @override
+  String get profileInsightsSection => 'Analyses et alertes';
+
+  @override
+  String get profileAnalyticsDetail =>
+      'Explorez les tendances, catégories et votre santé financière';
+
+  @override
+  String get profileSubscriptionsTitle => 'Abonnements';
+
+  @override
+  String get profileSubscriptionsDetail =>
+      'Examinez les coûts récurrents et les hausses de prix';
+
+  @override
+  String get profileNotificationsDetail =>
+      'Consultez les alertes et vos préférences de notification';
+
+  @override
+  String get profileCategorizationRulesTitle => 'Règles de catégorisation';
+
+  @override
+  String get profileCategorizationRulesDetail =>
+      'Examinez ou supprimez les règles enregistrées';
+
+  @override
   String get errorConnection =>
       'Impossible de joindre le serveur. Vérifiez votre connexion.';
 

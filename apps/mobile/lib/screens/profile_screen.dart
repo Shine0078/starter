@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../api/app_lock.dart';
 import '../api/client.dart';
+import '../l10n/app_localizations.dart';
 import 'analytics_screen.dart';
 import 'categorization_rules_screen.dart';
 import 'financial_calendar_screen.dart';
@@ -33,7 +34,9 @@ class ProfileScreen extends StatelessWidget {
       await api.requestEmailVerification();
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Verification email sent.')),
+          SnackBar(
+              content:
+                  Text(AppLocalizations.of(context).verificationEmailSent)),
         );
       }
     } on AuthException catch (error) {
@@ -50,102 +53,104 @@ class ProfileScreen extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Profile')),
-        body: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-          children: [
-            Card(
-              child: ListTile(
-                leading: const CircleAvatar(child: Icon(Icons.person_outline)),
-                title: const Text('Settings and privacy'),
-                subtitle: const Text(
-                    'Security, MFA, app lock, consent, export, and account controls'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => _open(
-                  context,
-                  SettingsScreen(
-                    api: api,
-                    appLockController: appLockController,
-                    onVerifyEmail: () => _requestVerification(context),
-                    onSignOut: onSignOut,
-                    onDeleteAccount: onAccountDeleted,
-                    onSignedOutEverywhere: onSignOut,
-                  ),
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.profileTitle)),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+        children: [
+          Card(
+            child: ListTile(
+              leading: const CircleAvatar(child: Icon(Icons.person_outline)),
+              title: Text(l10n.profileSettingsPrivacyTitle),
+              subtitle: Text(l10n.profileSettingsPrivacyDetail),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _open(
+                context,
+                SettingsScreen(
+                  api: api,
+                  appLockController: appLockController,
+                  onVerifyEmail: () => _requestVerification(context),
+                  onSignOut: onSignOut,
+                  onDeleteAccount: onAccountDeleted,
+                  onSignedOutEverywhere: onSignOut,
                 ),
               ),
             ),
-            const SizedBox(height: 12),
-            _section(context, 'Planning', [
-              _destination(
-                context,
-                icon: Icons.pie_chart_outline,
-                title: 'Budgets',
-                subtitle: 'Set limits and track category progress',
-                screen: BudgetsScreen(api: api),
-              ),
-              _destination(
-                context,
-                icon: Icons.flag_outlined,
-                title: 'Goals',
-                subtitle: 'Build savings targets and contributions',
-                screen: GoalsScreen(api: api),
-              ),
-              _destination(
-                context,
-                icon: Icons.show_chart,
-                title: 'Cash-flow planning',
-                subtitle: 'Forecast balances and simulate purchases',
-                screen: PlanningScreen(api: api),
-              ),
-              _destination(
-                context,
-                icon: Icons.calendar_month_outlined,
-                title: 'Financial calendar',
-                subtitle: 'See bills, income, goal dates, and warnings',
-                screen: FinancialCalendarScreen(api: api),
-              ),
-            ]),
-            const SizedBox(height: 12),
-            _section(context, 'Insights and alerts', [
-              _destination(
-                context,
-                icon: Icons.insights_outlined,
-                title: 'Analytics',
-                subtitle: 'Explore trends, categories, and health',
-                screen: AnalyticsScreen(api: api),
-              ),
-              _destination(
-                context,
-                icon: Icons.subscriptions_outlined,
-                title: 'Subscriptions',
-                subtitle: 'Review recurring costs and price changes',
-                screen: SubscriptionsScreen(api: api),
-              ),
-              _destination(
-                context,
-                icon: Icons.notifications_outlined,
-                title: 'Notifications',
-                subtitle: 'Review alerts and notification preferences',
-                screen: NotificationsScreen(api: api),
-              ),
-              _destination(
-                context,
-                icon: Icons.auto_fix_high_outlined,
-                title: 'Categorization rules',
-                subtitle: 'Review or remove saved merchant rules',
-                screen: CategorizationRulesScreen(api: api),
-              ),
-            ]),
-            const SizedBox(height: 20),
-            OutlinedButton.icon(
-              onPressed: onSignOut,
-              icon: const Icon(Icons.logout),
-              label: const Text('Sign out'),
+          ),
+          const SizedBox(height: 12),
+          _section(context, l10n.profilePlanningSection, [
+            _destination(
+              context,
+              icon: Icons.pie_chart_outline,
+              title: l10n.budgetsTitle,
+              subtitle: l10n.profileBudgetDetail,
+              screen: BudgetsScreen(api: api),
             ),
-          ],
-        ),
-      );
+            _destination(
+              context,
+              icon: Icons.flag_outlined,
+              title: l10n.goalsTitle,
+              subtitle: l10n.profileGoalsDetail,
+              screen: GoalsScreen(api: api),
+            ),
+            _destination(
+              context,
+              icon: Icons.show_chart,
+              title: l10n.profileCashFlowPlanningTitle,
+              subtitle: l10n.profileCashFlowPlanningDetail,
+              screen: PlanningScreen(api: api),
+            ),
+            _destination(
+              context,
+              icon: Icons.calendar_month_outlined,
+              title: l10n.profileFinancialCalendarTitle,
+              subtitle: l10n.profileFinancialCalendarDetail,
+              screen: FinancialCalendarScreen(api: api),
+            ),
+          ]),
+          const SizedBox(height: 12),
+          _section(context, l10n.profileInsightsSection, [
+            _destination(
+              context,
+              icon: Icons.insights_outlined,
+              title: l10n.navAnalytics,
+              subtitle: l10n.profileAnalyticsDetail,
+              screen: AnalyticsScreen(api: api),
+            ),
+            _destination(
+              context,
+              icon: Icons.subscriptions_outlined,
+              title: l10n.profileSubscriptionsTitle,
+              subtitle: l10n.profileSubscriptionsDetail,
+              screen: SubscriptionsScreen(api: api),
+            ),
+            _destination(
+              context,
+              icon: Icons.notifications_outlined,
+              title: l10n.notificationsTitle,
+              subtitle: l10n.profileNotificationsDetail,
+              screen: NotificationsScreen(api: api),
+            ),
+            _destination(
+              context,
+              icon: Icons.auto_fix_high_outlined,
+              title: l10n.profileCategorizationRulesTitle,
+              subtitle: l10n.profileCategorizationRulesDetail,
+              screen: CategorizationRulesScreen(api: api),
+            ),
+          ]),
+          const SizedBox(height: 20),
+          OutlinedButton.icon(
+            onPressed: onSignOut,
+            icon: const Icon(Icons.logout),
+            label: Text(l10n.commonSignOut),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _section(
           BuildContext context, String title, List<Widget> destinations) =>

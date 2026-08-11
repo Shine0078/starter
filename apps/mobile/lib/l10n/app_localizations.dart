@@ -308,6 +308,108 @@ abstract class AppLocalizations {
   /// **'Some screens are still being translated.'**
   String get languageBetaDetail;
 
+  /// No description provided for @verificationEmailSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification email sent.'**
+  String get verificationEmailSent;
+
+  /// No description provided for @profileSettingsPrivacyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings and privacy'**
+  String get profileSettingsPrivacyTitle;
+
+  /// No description provided for @profileSettingsPrivacyDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Security, MFA, app lock, consent, export, and account controls'**
+  String get profileSettingsPrivacyDetail;
+
+  /// No description provided for @profilePlanningSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Planning'**
+  String get profilePlanningSection;
+
+  /// No description provided for @profileBudgetDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Set limits and track category progress'**
+  String get profileBudgetDetail;
+
+  /// No description provided for @profileGoalsDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Build savings targets and contributions'**
+  String get profileGoalsDetail;
+
+  /// No description provided for @profileCashFlowPlanningTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash-flow planning'**
+  String get profileCashFlowPlanningTitle;
+
+  /// No description provided for @profileCashFlowPlanningDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Forecast balances and simulate purchases'**
+  String get profileCashFlowPlanningDetail;
+
+  /// No description provided for @profileFinancialCalendarTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Financial calendar'**
+  String get profileFinancialCalendarTitle;
+
+  /// No description provided for @profileFinancialCalendarDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'See bills, income, goal dates, and warnings'**
+  String get profileFinancialCalendarDetail;
+
+  /// No description provided for @profileInsightsSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Insights and alerts'**
+  String get profileInsightsSection;
+
+  /// No description provided for @profileAnalyticsDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore trends, categories, and health'**
+  String get profileAnalyticsDetail;
+
+  /// No description provided for @profileSubscriptionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscriptions'**
+  String get profileSubscriptionsTitle;
+
+  /// No description provided for @profileSubscriptionsDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Review recurring costs and price changes'**
+  String get profileSubscriptionsDetail;
+
+  /// No description provided for @profileNotificationsDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Review alerts and notification preferences'**
+  String get profileNotificationsDetail;
+
+  /// No description provided for @profileCategorizationRulesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Categorization rules'**
+  String get profileCategorizationRulesTitle;
+
+  /// No description provided for @profileCategorizationRulesDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Review or remove saved merchant rules'**
+  String get profileCategorizationRulesDetail;
+
   /// No description provided for @errorConnection.
   ///
   /// In en, this message translates to:

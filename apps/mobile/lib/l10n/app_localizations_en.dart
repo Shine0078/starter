@@ -126,6 +126,63 @@ class AppLocalizationsEn extends AppLocalizations {
   String get languageBetaDetail => 'Some screens are still being translated.';
 
   @override
+  String get verificationEmailSent => 'Verification email sent.';
+
+  @override
+  String get profileSettingsPrivacyTitle => 'Settings and privacy';
+
+  @override
+  String get profileSettingsPrivacyDetail =>
+      'Security, MFA, app lock, consent, export, and account controls';
+
+  @override
+  String get profilePlanningSection => 'Planning';
+
+  @override
+  String get profileBudgetDetail => 'Set limits and track category progress';
+
+  @override
+  String get profileGoalsDetail => 'Build savings targets and contributions';
+
+  @override
+  String get profileCashFlowPlanningTitle => 'Cash-flow planning';
+
+  @override
+  String get profileCashFlowPlanningDetail =>
+      'Forecast balances and simulate purchases';
+
+  @override
+  String get profileFinancialCalendarTitle => 'Financial calendar';
+
+  @override
+  String get profileFinancialCalendarDetail =>
+      'See bills, income, goal dates, and warnings';
+
+  @override
+  String get profileInsightsSection => 'Insights and alerts';
+
+  @override
+  String get profileAnalyticsDetail => 'Explore trends, categories, and health';
+
+  @override
+  String get profileSubscriptionsTitle => 'Subscriptions';
+
+  @override
+  String get profileSubscriptionsDetail =>
+      'Review recurring costs and price changes';
+
+  @override
+  String get profileNotificationsDetail =>
+      'Review alerts and notification preferences';
+
+  @override
+  String get profileCategorizationRulesTitle => 'Categorization rules';
+
+  @override
+  String get profileCategorizationRulesDetail =>
+      'Review or remove saved merchant rules';
+
+  @override
   String get errorConnection =>
       'Couldn\'t reach the server. Check your connection.';
 
