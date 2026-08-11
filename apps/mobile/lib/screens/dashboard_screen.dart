@@ -128,7 +128,17 @@ class _DashboardScreenState extends State<DashboardScreen>
     });
 
     try {
-      if (sync) await widget.api.refreshConnectedBanks();
+      if (sync) {
+        // A bank that needs re-authentication fails its sync with a 503, but
+        // that must not blank the whole dashboard. Sync is best-effort here;
+        // the Accounts screen owns the reconnect prompt.
+        try {
+          await widget.api.refreshConnectedBanks();
+        } catch (bankSyncError) {
+          debugPrint(
+              'Bank sync during dashboard refresh failed: $bankSyncError');
+        }
+      }
       unawaited(_loadQuality());
 
       final accounts = await widget.api.accounts();
