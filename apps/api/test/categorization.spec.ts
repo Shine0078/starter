@@ -61,6 +61,21 @@ describe('categorizeDescriptor', () => {
     expect(categorizeDescriptor('SHELL OIL 574812 TX').categorySlug).toBe('fuel');
   });
 
+  it('covers major subscriptions, merchants, and bills', () => {
+    expect(categorizeDescriptor('NETFLIX.COM 8887638').categorySlug).toBe('streaming');
+    expect(categorizeDescriptor('PARAMOUNT PLUS').categorySlug).toBe('streaming');
+    expect(categorizeDescriptor('PEACOCK TV').categorySlug).toBe('streaming');
+    expect(categorizeDescriptor('CHATGPT SUBSCRIPTION').categorySlug).toBe('software');
+    expect(categorizeDescriptor('XBOX GAME PASS').categorySlug).toBe('gaming');
+    expect(categorizeDescriptor('CHICK-FIL-A #04281').categorySlug).toBe('fast_food');
+    expect(categorizeDescriptor('INSTACART 800-000').categorySlug).toBe('food_delivery');
+    expect(categorizeDescriptor('EXXONMOBIL #5-1384').categorySlug).toBe('fuel');
+    expect(categorizeDescriptor('GEICO PAYMENT').categorySlug).toBe('insurance');
+    expect(categorizeDescriptor('AIR CANADA TICKET').categorySlug).toBe('travel');
+    expect(categorizeDescriptor('DUKE ENERGY BILL PAY').categorySlug).toBe('utilities');
+    expect(categorizeDescriptor('WEALTHSIMPLE').categorySlug).toBe('investments');
+  });
+
   it('lets a user rule beat a confident lexicon match', () => {
     const rules: CategorizationRule[] = [
       { id: 'r1', matchType: 'contains', pattern: 'starbucks', categorySlug: 'entertainment', priority: 0 },
