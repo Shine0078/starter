@@ -10,7 +10,6 @@ services:
     # expires after 30 days.
     plan: free
     healthCheckPath: /healthz
-    preDeployCommand: node dist/infra/postgres/migrate.js
     envVars:
       # Free Render is a preview only: it uses the development email adapter,
       # avoids SMTP restrictions, and must never receive real financial data.
@@ -19,8 +18,11 @@ services:
         value: development
       - key: STORE
         value: postgres
+      # Free Render does not support deployment hooks, so the preview applies
+      # migrations during startup. Production changes this to false and runs
+      # node dist/infra/postgres/migrate.js as a separate deployment step.
       - key: MIGRATE_ON_BOOT
-        value: "false"
+        value: "true"
       - key: PORT
         value: "3000"
       - key: DATABASE_URL

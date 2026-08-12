@@ -18,17 +18,21 @@ Tailscale, a home router, or a phone being on the same network.
 3. For an immediate preview, keep the Blueprint's **Free** web and Postgres
    plans. Render will not require a payment card. Free web services sleep after
    inactivity and free Postgres expires after 30 days, so upgrade both to
-   `Starter`/`Basic` before accepting real users. The Blueprint deliberately
-   runs this free preview with `NODE_ENV=development`, Sandbox/no real bank
-   data, and the development email adapter; it is not a production deployment.
+   `Starter`/`Basic` before accepting real users. Free Render does not support
+   deployment hooks, so this preview applies migrations at API startup. The
+   Blueprint deliberately runs this free preview with `NODE_ENV=development`,
+   Sandbox/no real bank data, and the development email adapter; it is not a
+   production deployment.
 4. After the database is created, copy its internal connection string and set
    `DATABASE_APP_URL` to the same host/database with username `finverse_app`
    and a new strong password. The pre-deploy migration creates that restricted
    role from `DATABASE_URL`.
 5. Set `CORS_ORIGINS` to the final service origin, for example
    `https://finverse.onrender.com`.
-6. For production, change `NODE_ENV` to `production` and supply reviewed HTTPS
-   Terms and Privacy URLs/version IDs, SMTP credentials,
+6. For production, change `NODE_ENV` to `production`, change
+   `MIGRATE_ON_BOOT` to `false`, run
+   `node dist/infra/postgres/migrate.js` as a separate deployment step, and
+   supply reviewed HTTPS Terms and Privacy URLs/version IDs, SMTP credentials,
    `MFA_ENCRYPTION_KEY`, and `BANK_TOKEN_ENCRYPTION_KEY`.
 7. Deploy and verify:
 
