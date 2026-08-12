@@ -15,8 +15,10 @@ Tailscale, a home router, or a phone being on the same network.
 
 1. Create a Render account and connect the GitHub repository.
 2. Create a Blueprint from the repository. Render reads `render.yaml`.
-3. Choose a paid web plan and managed PostgreSQL plan. A free/sleeping service
-   is not suitable for a financial application.
+3. For an immediate preview, keep the Blueprint's **Free** web and Postgres
+   plans. Render will not require a payment card. Free web services sleep after
+   inactivity and free Postgres expires after 30 days, so upgrade both to
+   `Starter`/`Basic` before accepting real users.
 4. After the database is created, copy its internal connection string and set
    `DATABASE_APP_URL` to the same host/database with username `finverse_app`
    and a new strong password. The pre-deploy migration creates that restricted

@@ -4,7 +4,11 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile.public
     dockerContext: .
-    plan: starter
+    # Free is intentionally the default so the owner can preview the app
+    # without entering payment information. Upgrade this to `starter` before
+    # accepting real users; Render free services sleep and the free database
+    # expires after 30 days.
+    plan: free
     healthCheckPath: /healthz
     preDeployCommand: node dist/infra/postgres/migrate.js
     envVars:
@@ -77,6 +81,6 @@ services:
 
 databases:
   - name: finverse-db
-    plan: basic-256mb
+    plan: free
     databaseName: finverse
     user: finverse
