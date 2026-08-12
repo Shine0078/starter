@@ -12,8 +12,11 @@ services:
     healthCheckPath: /healthz
     preDeployCommand: node dist/infra/postgres/migrate.js
     envVars:
+      # Free Render is a preview only: it uses the development email adapter,
+      # avoids SMTP restrictions, and must never receive real financial data.
+      # Change to production and fill every secret before accepting users.
       - key: NODE_ENV
-        value: production
+        value: development
       - key: STORE
         value: postgres
       - key: MIGRATE_ON_BOOT
@@ -55,7 +58,7 @@ services:
       - key: PLAID_SECRET
         sync: false
       - key: PLAID_ENVIRONMENT
-        value: production
+        value: sandbox
       - key: PLAID_COUNTRIES
         value: CA,US
       - key: PLAID_WEBHOOK_URL
