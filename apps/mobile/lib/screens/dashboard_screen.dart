@@ -484,115 +484,210 @@ class _DashboardScreenState extends State<DashboardScreen>
       );
     }
 
+    final hero = NetPositionCard(accounts: _accounts);
+    final dataQuality = (_dataQuality?.needsAttention == true)
+        ? _dataQualityCard(theme, _dataQuality!)
+        : null;
+    final sections = _sections(theme, l10n);
+
     return RefreshIndicator(
       onRefresh: () => _load(sync: true),
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-        children: [
-          NetPositionCard(accounts: _accounts),
-          const SizedBox(height: 20),
-          if (_dataQuality?.needsAttention == true) ...[
-            _dataQualityCard(theme, _dataQuality!),
-            const SizedBox(height: 20),
-          ],
-          if (_insights != null) ...[
-            _sectionLabel(theme, l10n.analyticsThisMonth),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final tileWidth = (constraints.maxWidth - 12) / 2;
-                    return Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: [
-                        SizedBox(
-                          width: tileWidth,
-                          child: FinSummaryTile(
-                            label: l10n.analyticsIncome,
-                            value: _insights!.income,
-                            icon: Icons.south_west,
-                            accent: context.finColors.income,
-                          ),
-                        ),
-                        SizedBox(
-                          width: tileWidth,
-                          child: FinSummaryTile(
-                            label: l10n.analyticsNetExpenses,
-                            value: _insights!.expenses,
-                            icon: Icons.north_east,
-                            accent: context.finColors.expense,
-                          ),
-                        ),
-                        SizedBox(
-                          width: tileWidth,
-                          child: FinSummaryTile(
-                            label: l10n.dashboardNetCashFlow,
-                            value: _insights!.netCashFlow,
-                            icon: Icons.swap_vert,
-                            accent: context.finColors.positiveTrend,
-                          ),
-                        ),
-                        SizedBox(
-                          width: tileWidth,
-                          child: FinSummaryTile(
-                            label: l10n.analyticsSavingsRate,
-                            value: _insights!.savingsRate,
-                            icon: Icons.savings_outlined,
-                            accent: theme.colorScheme.primary,
-                          ),
-                        ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // Phones stay a single column; tablets and landscape split the
+          // sections into two, so more of the month is visible without
+          // scrolling past a wall of cards.
+          final wide = constraints.maxWidth >= 900;
+          if (!wide) {
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+              children: [
+                hero,
+                const SizedBox(height: 20),
+                if (dataQuality != null) ...[
+                  dataQuality,
+                  const SizedBox(height: 20),
+                ],
+                ..._spaced(sections),
+              ],
+            );
+          }
+
+          final left = <Widget>[];
+          final right = <Widget>[];
+          for (var i = 0; i < sections.length; i++) {
+            (i.isEven ? left : right).add(sections[i]);
+          }
+
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+            children: [
+              Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1080),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      hero,
+                      const SizedBox(height: 20),
+                      if (dataQuality != null) ...[
+                        dataQuality,
+                        const SizedBox(height: 20),
                       ],
-                    );
-                  },
-                ),
-              ),
-            ),
-            if (_insights!.comparison?.hasAny == true) ...[
-              const SizedBox(height: 8),
-              _comparisonCard(theme, _insights!.comparison!),
-            ],
-            const SizedBox(height: 20),
-            if (_insights!.topCategories.isNotEmpty) ...[
-              SpendingChart(categories: _insights!.topCategories),
-              const SizedBox(height: 20),
-            ],
-          ],
-          if (_health != null) ...[
-            _sectionLabel(theme, l10n.dashboardFinancialHealth),
-            HealthScoreCard(score: _health!),
-            const SizedBox(height: 20),
-          ],
-          if (_budgets.isNotEmpty) ...[
-            _sectionLabel(theme, l10n.budgetsTitle),
-            ..._budgets.map((b) => BudgetTile(progress: b)),
-            const SizedBox(height: 20),
-          ],
-          if (_insights != null && _insights!.insights.isNotEmpty) ...[
-            _sectionLabel(theme, l10n.dashboardInsights),
-            ..._insights!.insights.take(4).map(
-                  (insight) => Card(
-                    child: ListTile(
-                      leading: Icon(
-                        insight.severity == 'positive'
-                            ? Icons.trending_down
-                            : Icons.trending_up,
-                        color: insight.severity == 'positive'
-                            ? Colors.green
-                            : theme.colorScheme.error,
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: Column(children: _spaced(left))),
+                          const SizedBox(width: 16),
+                          Expanded(child: Column(children: _spaced(right))),
+                        ],
                       ),
-                      title: Text(insight.title),
-                      trailing: _priorityChip(theme, insight.priority),
-                      subtitle: Text(
-                        '${insight.detail}\nBased on ${insight.evidenceCount} transaction(s)',
-                      ),
-                      isThreeLine: true,
-                    ),
+                    ],
                   ),
                 ),
-            const SizedBox(height: 20),
-          ],
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  /// The dashboard sections below the hero, in display order. Kept as a flat
+  /// list of self-contained columns so the narrow and wide layouts can consume
+  /// the same content without duplicating it.
+  List<Widget> _sections(ThemeData theme, AppLocalizations l10n) => [
+        if (_insights != null) _insightsSection(theme, l10n),
+        if (_insights != null && _insights!.topCategories.isNotEmpty)
+          SpendingChart(categories: _insights!.topCategories),
+        if (_health != null) _healthSection(theme, l10n),
+        if (_budgets.isNotEmpty) _budgetsSection(theme, l10n),
+        if (_insights != null && _insights!.insights.isNotEmpty)
+          _insightsListSection(theme, l10n),
+        _transactionsSection(theme, l10n),
+      ];
+
+  List<Widget> _spaced(List<Widget> items) {
+    final result = <Widget>[];
+    for (var i = 0; i < items.length; i++) {
+      if (i > 0) result.add(const SizedBox(height: 20));
+      result.add(items[i]);
+    }
+    return result;
+  }
+
+  Widget _insightsSection(ThemeData theme, AppLocalizations l10n) {
+    final insights = _insights!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionLabel(theme, l10n.analyticsThisMonth),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final tileWidth = (constraints.maxWidth - 12) / 2;
+                return Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    SizedBox(
+                      width: tileWidth,
+                      child: FinSummaryTile(
+                        label: l10n.analyticsIncome,
+                        value: insights.income,
+                        icon: Icons.south_west,
+                        accent: context.finColors.income,
+                      ),
+                    ),
+                    SizedBox(
+                      width: tileWidth,
+                      child: FinSummaryTile(
+                        label: l10n.analyticsNetExpenses,
+                        value: insights.expenses,
+                        icon: Icons.north_east,
+                        accent: context.finColors.expense,
+                      ),
+                    ),
+                    SizedBox(
+                      width: tileWidth,
+                      child: FinSummaryTile(
+                        label: l10n.dashboardNetCashFlow,
+                        value: insights.netCashFlow,
+                        icon: Icons.swap_vert,
+                        accent: context.finColors.positiveTrend,
+                      ),
+                    ),
+                    SizedBox(
+                      width: tileWidth,
+                      child: FinSummaryTile(
+                        label: l10n.analyticsSavingsRate,
+                        value: insights.savingsRate,
+                        icon: Icons.savings_outlined,
+                        accent: theme.colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ),
+        if (insights.comparison?.hasAny == true) ...[
+          const SizedBox(height: 8),
+          _comparisonCard(theme, insights.comparison!),
+        ],
+      ],
+    );
+  }
+
+  Widget _healthSection(ThemeData theme, AppLocalizations l10n) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionLabel(theme, l10n.dashboardFinancialHealth),
+          HealthScoreCard(score: _health!),
+        ],
+      );
+
+  Widget _budgetsSection(ThemeData theme, AppLocalizations l10n) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionLabel(theme, l10n.budgetsTitle),
+          ..._budgets.map((b) => BudgetTile(progress: b)),
+        ],
+      );
+
+  Widget _insightsListSection(ThemeData theme, AppLocalizations l10n) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionLabel(theme, l10n.dashboardInsights),
+          ..._insights!.insights.take(4).map(
+                (insight) => Card(
+                  child: ListTile(
+                    leading: Icon(
+                      insight.severity == 'positive'
+                          ? Icons.trending_down
+                          : Icons.trending_up,
+                      color: insight.severity == 'positive'
+                          ? context.finColors.income
+                          : theme.colorScheme.error,
+                    ),
+                    title: Text(insight.title),
+                    trailing: _priorityChip(theme, insight.priority),
+                    subtitle: Text(
+                      '${insight.detail}\nBased on ${insight.evidenceCount} transaction(s)',
+                    ),
+                    isThreeLine: true,
+                  ),
+                ),
+              ),
+        ],
+      );
+
+  Widget _transactionsSection(ThemeData theme, AppLocalizations l10n) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           _sectionLabel(theme, l10n.dashboardRecentTransactions),
           ..._transactions.map(
             (txn) => TransactionTile(
@@ -616,9 +711,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             ),
           ),
         ],
-      ),
-    );
-  }
+      );
 
   Widget _sectionLabel(ThemeData theme, String text) => Padding(
         padding: const EdgeInsets.only(bottom: 8, top: 4),
