@@ -510,6 +510,7 @@
   "bankManualChecking": "Offline chequing",
   "bankManualSavings": "Offline savings",
   "bankManualInvestment": "Investment value",
+  "bankManualProperty": "Property value",
   "bankManualLoan": "Loan or other debt",
   "bankAmountOwedLabel": "Amount owed",
   "bankCurrentValueLabel": "Current value",
@@ -553,6 +554,7 @@
   "bankTypeChecking": "Chequing",
   "bankTypeSavings": "Savings",
   "bankTypeInvestment": "Investment",
+  "bankTypeProperty": "Property",
   "bankTypeLoan": "Loan",
   "bankTypeCash": "Cash",
   "bankReconnectAction": "Reconnect",
@@ -567,7 +569,7 @@
   "bankLastSynced": "Last synced {date}",
   "@bankLastSynced": {"placeholders": {"date": {"type": "String"}}},
   "transactionsTitle": "Transactions",
-  "transactionsSearchHint": "Search merchant or description",
+  "transactionsSearchHint": "Try ‘coffee over $20 last month’",
   "transactionsFilterAction": "Filter transactions",
   "transactionsFiltersActive": "Filters ({count} active)",
   "@transactionsFiltersActive": {"placeholders": {"count": {"type": "num"}}},
@@ -707,6 +709,18 @@
   "dashboardRecentTransactions": "Recent transactions",
   "dashboardFinancialHealth": "Financial health",
   "dashboardInsights": "Insights",
+  "netWorthHistoryTitle": "Net position history",
+  "netWorthHistorySubtitle": "Observed balances after account updates — no estimated exchange rates",
+  "netWorthHistoryCurrent": "Current",
+  "netWorthHistorySemantics": "Net position history with {count} observations from {start} to {end}. Current position {current}.",
+  "@netWorthHistorySemantics": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "start": { "type": "String" },
+      "end": { "type": "String" },
+      "current": { "type": "String" }
+    }
+  },
   "dashboardSignOutTitle": "Sign out?",
   "dashboardSignOutDetail": "You will need your email and password to sign back in.",
   "dashboardDeleteTitle": "Delete your account?",
