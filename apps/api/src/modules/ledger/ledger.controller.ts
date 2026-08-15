@@ -44,6 +44,7 @@ const MANUAL_TYPES = new Set([
   'checking',
   'savings',
   'investment',
+  'property',
   'loan',
   'credit_card',
 ]);
@@ -120,7 +121,7 @@ function manualAccountDetails(body: ManualAccountBody) {
 
   return {
     name,
-    type: type as 'cash' | 'checking' | 'savings' | 'investment' | 'loan' | 'credit_card',
+    type: type as 'cash' | 'checking' | 'savings' | 'investment' | 'property' | 'loan' | 'credit_card',
     currency,
     balanceCurrent: balance as number,
     ...(creditLimit === undefined ? {} : { creditLimit }),
@@ -152,6 +153,31 @@ export class LedgerController {
   async accounts(@CurrentUser() userId: string) {
     const accounts = await this.ledger.listAccounts(userId);
     return accounts.map(presentAccount);
+  }
+
+  @Get('accounts/net-worth-history')
+  async netWorthHistory(
+    @CurrentUser() userId: string,
+    @Query('currency') requestedCurrency?: string,
+    @Query('limit') requestedLimit?: string,
+  ) {
+    const currency = requestedCurrency?.trim().toUpperCase();
+    if (currency && !/^[A-Z]{3}$/.test(currency)) {
+      throw new BadRequestException('currency must be a 3-letter ISO code');
+    }
+    const limit = requestedLimit === undefined ? 365 : Number(requestedLimit);
+    if (!Number.isInteger(limit) || limit < 1 || limit > 730) {
+      throw new BadRequestException('limit must be a whole number from 1 through 730');
+    }
+    const rows = await this.ledger.listNetWorthHistory(userId, limit);
+    return rows
+      .filter((row) => !currency || row.currency === currency)
+      .map((row) => ({
+        ...row,
+        assetsFormatted: formatMoney(money(row.assets, row.currency)),
+        debtsFormatted: formatMoney(money(row.debts, row.currency)),
+        netPositionFormatted: formatMoney(money(row.netPosition, row.currency)),
+      }));
   }
 
   @Post('accounts/manual')
@@ -212,16 +238,21 @@ export class LedgerController {
     if (parsedMinAmount !== undefined && parsedMaxAmount !== undefined && parsedMinAmount > parsedMaxAmount) {
       throw new BadRequestException('minAmount cannot be greater than maxAmount.');
     }
+    const interpreted = search?.trim()
+      ? this.ledger.interpretTransactionSearch(search)
+      : null;
     const rows = await this.ledger.listTransactions(userId, {
-      search,
-      categorySlug: category,
+      search: interpreted?.query.search ?? search,
+      categorySlug: category ?? interpreted?.query.categorySlug,
       accountId: account,
       categoryKind: parseCategoryKind(kind),
-      pending: parseOptionalBoolean(pending, 'pending'),
-      recurring: parseOptionalBoolean(recurring, 'recurring'),
-      amountMin: parsedMinAmount,
-      amountMax: parsedMaxAmount,
-      range: parsedFrom && parsedTo ? { start: parsedFrom, end: parsedTo } : undefined,
+      pending: parseOptionalBoolean(pending, 'pending') ?? interpreted?.query.pending,
+      recurring: parseOptionalBoolean(recurring, 'recurring') ?? interpreted?.query.recurring,
+      amountMin: parsedMinAmount ?? interpreted?.query.amountMin,
+      amountMax: parsedMaxAmount ?? interpreted?.query.amountMax,
+      range: parsedFrom && parsedTo
+        ? { start: parsedFrom, end: parsedTo }
+        : interpreted?.query.range,
       before: cursor,
       limit: pageSize,
     });
@@ -231,6 +262,7 @@ export class LedgerController {
       nextCursor: rows.length > 0 && rows.length === pageSize
         ? encodeCursor(rows[rows.length - 1]!)
         : null,
+      interpretation: interpreted?.explanation ?? null,
     };
   }
 
