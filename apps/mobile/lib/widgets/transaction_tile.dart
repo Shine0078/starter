@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../design/design.dart';
 import '../l10n/app_localizations.dart';
 import '../models/models.dart';
 
@@ -38,6 +39,7 @@ class TransactionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final fin = context.finColors;
     final l10n = AppLocalizations.of(context);
     final isOutflow = transaction.amount < 0;
 
@@ -45,6 +47,19 @@ class TransactionTile extends StatelessWidget {
       onTap: onTap,
       dense: true,
       contentPadding: EdgeInsets.zero,
+      leading: CircleAvatar(
+        radius: 20,
+        backgroundColor:
+            (isOutflow ? theme.colorScheme.onSurface : fin.income)
+                .withValues(alpha: 0.12),
+        child: Text(
+          _initial(transaction.displayName),
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: isOutflow ? theme.colorScheme.onSurface : fin.income,
+          ),
+        ),
+      ),
       title: Text(
         transaction.displayName,
         maxLines: 1,
@@ -85,7 +100,7 @@ class TransactionTile extends StatelessWidget {
             transaction.amountFormatted,
             style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.w600,
-              color: isOutflow ? null : Colors.green.shade600,
+              color: isOutflow ? null : fin.income,
             ),
           ),
           PopupMenuButton<String>(
@@ -120,6 +135,12 @@ class TransactionTile extends StatelessWidget {
         style: theme.textTheme.labelSmall?.copyWith(color: color, fontSize: 10),
       ),
     );
+  }
+
+  String _initial(String name) {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return '•';
+    return trimmed[0].toUpperCase();
   }
 
   String _categoryLabel(AppLocalizations l10n, String slug) => switch (slug) {
