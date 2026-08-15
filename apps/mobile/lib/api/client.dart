@@ -942,6 +942,19 @@ class ApiClient implements BackgroundSyncClient {
         .toList();
   }
 
+  Future<List<NetWorthSnapshot>> netWorthHistory({
+    required String currency,
+    int limit = 365,
+  }) async {
+    final json = await _get(
+      '/accounts/net-worth-history?currency=${Uri.encodeQueryComponent(currency)}&limit=$limit',
+    ) as List<dynamic>;
+    return json
+        .map(
+            (entry) => NetWorthSnapshot.fromJson(entry as Map<String, dynamic>))
+        .toList();
+  }
+
   Future<Account> createManualAccount({
     required String name,
     required String type,
@@ -1070,6 +1083,7 @@ class ApiClient implements BackgroundSyncClient {
     return TransactionPage(
       transactions: rows,
       nextCursor: json['nextCursor'] as String?,
+      interpretation: json['interpretation'] as String?,
     );
   }
 
@@ -1514,10 +1528,15 @@ class ApiClient implements BackgroundSyncClient {
 }
 
 class TransactionPage {
-  const TransactionPage({required this.transactions, required this.nextCursor});
+  const TransactionPage({
+    required this.transactions,
+    required this.nextCursor,
+    this.interpretation,
+  });
 
   final List<Transaction> transactions;
   final String? nextCursor;
+  final String? interpretation;
 }
 
 /// A rejected sign-in or registration, with something worth showing the user.
