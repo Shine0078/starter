@@ -510,6 +510,7 @@
   "bankManualChecking": "Compte courant hors ligne",
   "bankManualSavings": "Épargne hors ligne",
   "bankManualInvestment": "Valeur des placements",
+  "bankManualProperty": "Valeur immobilière",
   "bankManualLoan": "Prêt ou autre dette",
   "bankAmountOwedLabel": "Montant dû",
   "bankCurrentValueLabel": "Valeur actuelle",
@@ -553,6 +554,7 @@
   "bankTypeChecking": "Compte courant",
   "bankTypeSavings": "Épargne",
   "bankTypeInvestment": "Placement",
+  "bankTypeProperty": "Propriété",
   "bankTypeLoan": "Prêt",
   "bankTypeCash": "Espèces",
   "bankReconnectAction": "Reconnecter",
@@ -567,7 +569,7 @@
   "bankLastSynced": "Dernière synchronisation : {date}",
   "@bankLastSynced": {"placeholders": {"date": {"type": "String"}}},
   "transactionsTitle": "Transactions",
-  "transactionsSearchHint": "Rechercher un marchand ou une description",
+  "transactionsSearchHint": "Essayez « café de plus de 20 $ le mois dernier »",
   "transactionsFilterAction": "Filtrer les transactions",
   "transactionsFiltersActive": "Filtres ({count} actifs)",
   "@transactionsFiltersActive": {"placeholders": {"count": {"type": "num"}}},
@@ -707,6 +709,18 @@
   "dashboardRecentTransactions": "Transactions récentes",
   "dashboardFinancialHealth": "Santé financière",
   "dashboardInsights": "Points importants",
+  "netWorthHistoryTitle": "Historique de la position nette",
+  "netWorthHistorySubtitle": "Soldes observés après les mises à jour — sans taux de change estimé",
+  "netWorthHistoryCurrent": "Actuelle",
+  "netWorthHistorySemantics": "Historique de la position nette avec {count} observations du {start} au {end}. Position actuelle : {current}.",
+  "@netWorthHistorySemantics": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "start": { "type": "String" },
+      "end": { "type": "String" },
+      "current": { "type": "String" }
+    }
+  },
   "dashboardSignOutTitle": "Se déconnecter ?",
   "dashboardSignOutDetail": "Vous aurez besoin de votre courriel et de votre mot de passe pour vous reconnecter.",
   "dashboardDeleteTitle": "Supprimer votre compte ?",
