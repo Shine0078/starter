@@ -1,0 +1,69 @@
+name: Database release
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: GitHub environment containing the database secrets
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      confirmation:
+        description: Type "release staging" or "release production"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: database-release-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Migrate ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DATABASE_APP_URL: ${{ secrets.DATABASE_APP_URL }}
+    steps:
+      - name: Validate operator confirmation and secrets
+        shell: bash
+        env:
+          EXPECTED_CONFIRMATION: release ${{ inputs.environment }}
+          ACTUAL_CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          test "$ACTUAL_CONFIRMATION" = "$EXPECTED_CONFIRMATION"
+          test -n "$DATABASE_URL"
+          test -n "$DATABASE_APP_URL"
+
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: Report migration plan
+        run: npm run migrate:status --workspace @finverse/api
+
+      - name: Apply forward-only migrations
+        run: npm run migrate --workspace @finverse/api
+
+      - name: Verify schema is current
+        run: npm run migrate:verify --workspace @finverse/api
+
+      - name: Write release summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Database release"
+            echo "- Environment: ${{ inputs.environment }}"
+            echo "- Commit: $GITHUB_SHA"
+            echo "- Result: ${{ job.status }}"
+          } >> "$GITHUB_STEP_SUMMARY"
