@@ -297,6 +297,7 @@ export class BankingService implements OnModuleInit, OnModuleDestroy {
       // institutions entirely.
       const transfers = await this.reconcileInternalTransfers(userId);
       const recurringDetected = await this.reconcileRecurring(userId);
+      await this.accounts.recordNetWorthSnapshot(userId, this.clock.today());
 
       const result = {
         fetched,
