@@ -181,20 +181,20 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Future<void> _confirmSignOut() async {
+    final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Sign out?'),
-        content: const Text(
-            'You will need your email and password to sign back in.'),
+        title: Text(l10n.dashboardSignOutTitle),
+        content: Text(l10n.dashboardSignOutDetail),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
+            child: Text(l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Sign out'),
+            child: Text(l10n.commonSignOut),
           ),
         ],
       ),
@@ -204,37 +204,35 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Future<void> _confirmAccountDeletion() async {
+    final l10n = AppLocalizations.of(context);
     final password = TextEditingController();
     final confirmation = TextEditingController();
     final submitted = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete your account?'),
+        title: Text(l10n.dashboardDeleteTitle),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Access ends immediately. You have 30 days to restore the account; '
-                'after that, your profile and finance data are permanently erased.',
-              ),
+              Text(l10n.dashboardDeleteDetail),
               const SizedBox(height: 16),
               TextField(
                 controller: password,
                 obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'Current password',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.dashboardDeletePasswordLabel,
+                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: confirmation,
                 autocorrect: false,
-                decoration: const InputDecoration(
-                  labelText: 'Type DELETE to confirm',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.dashboardDeleteConfirmLabel,
+                  border: const OutlineInputBorder(),
                 ),
               ),
             ],
@@ -243,14 +241,14 @@ class _DashboardScreenState extends State<DashboardScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Keep account'),
+            child: Text(l10n.dashboardDeleteKeepAction),
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(dialogContext).colorScheme.error,
             ),
-            child: const Text('Schedule deletion'),
+            child: Text(l10n.dashboardDeleteScheduleAction),
           ),
         ],
       ),
@@ -264,8 +262,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     if (passwordText.isEmpty || confirmationText != 'DELETE') {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Enter your password and type DELETE exactly.')),
+        SnackBar(content: Text(l10n.dashboardDeleteInvalid)),
       );
       return;
     }
@@ -282,14 +279,15 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Future<void> _verifyEmail() async {
+    final l10n = AppLocalizations.of(context);
     try {
       await widget.api.requestEmailVerification();
     } on Object catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text('Could not send verification: '
-                '${friendlyErrorMessage(error)}')),
+            content: Text(l10n.dashboardVerifySendFailed(
+                friendlyErrorMessage(error)))),
       );
       return;
     }
@@ -299,19 +297,18 @@ class _DashboardScreenState extends State<DashboardScreen>
     final submitted = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Verify your email'),
+        title: Text(l10n.dashboardVerifyEmailTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-                'Enter the 24-hour verification code sent to your email.'),
+            Text(l10n.dashboardVerifyEmailDetail),
             const SizedBox(height: 12),
             TextField(
               controller: token,
               autocorrect: false,
-              decoration: const InputDecoration(
-                labelText: 'Verification code',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: l10n.dashboardVerifyCodeLabel,
+                border: const OutlineInputBorder(),
               ),
             ),
           ],
@@ -319,11 +316,11 @@ class _DashboardScreenState extends State<DashboardScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Later'),
+            child: Text(l10n.dashboardVerifyLaterAction),
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(token.text.trim()),
-            child: const Text('Verify'),
+            child: Text(l10n.commonVerify),
           ),
         ],
       ),
@@ -335,7 +332,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       await widget.api.confirmEmailVerification(submitted);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Email verified.')),
+        SnackBar(content: Text(l10n.dashboardVerifyEmailVerified)),
       );
     } on AuthException catch (error) {
       if (!mounted) return;
@@ -348,6 +345,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -355,54 +353,54 @@ class _DashboardScreenState extends State<DashboardScreen>
         actions: [
           IconButton(
             icon: const Icon(Icons.show_chart),
-            tooltip: 'Cash-flow planning',
+            tooltip: l10n.profileCashFlowPlanningTitle,
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(
               builder: (_) => PlanningScreen(api: widget.api),
             )),
           ),
           IconButton(
             icon: const Icon(Icons.calendar_month_outlined),
-            tooltip: 'Financial calendar',
+            tooltip: l10n.profileFinancialCalendarTitle,
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(
               builder: (_) => FinancialCalendarScreen(api: widget.api),
             )),
           ),
           IconButton(
             icon: const Icon(Icons.insights_outlined),
-            tooltip: 'Analytics',
+            tooltip: l10n.navAnalytics,
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(
               builder: (_) => AnalyticsScreen(api: widget.api),
             )),
           ),
           IconButton(
             icon: const Icon(Icons.auto_awesome_outlined),
-            tooltip: 'Ask FINVERSE',
+            tooltip: l10n.assistantTitle,
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(
               builder: (_) => AssistantScreen(api: widget.api),
             )),
           ),
           IconButton(
             icon: const Icon(Icons.subscriptions_outlined),
-            tooltip: 'Subscriptions',
+            tooltip: l10n.profileSubscriptionsTitle,
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(
               builder: (_) => SubscriptionsScreen(api: widget.api),
             )),
           ),
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
-            tooltip: 'Notifications',
+            tooltip: l10n.notificationsTitle,
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(
               builder: (_) => NotificationsScreen(api: widget.api),
             )),
           ),
           IconButton(
             icon: const Icon(Icons.sync),
-            tooltip: 'Sync accounts',
+            tooltip: l10n.dashboardSyncTooltip,
             onPressed: _loading ? null : () => _load(sync: true),
           ),
           if (widget.onSignOut != null)
             PopupMenuButton<String>(
-              tooltip: 'Account menu',
+              tooltip: l10n.dashboardAccountMenuTooltip,
               onSelected: (value) {
                 if (value == 'settings') {
                   Navigator.of(context).push(MaterialPageRoute(
@@ -424,25 +422,25 @@ class _DashboardScreenState extends State<DashboardScreen>
                 if (value == 'delete-account') _confirmAccountDeletion();
               },
               itemBuilder: (context) => [
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: 'settings',
                   child: ListTile(
-                    leading: Icon(Icons.settings_outlined),
-                    title: Text('Settings & privacy'),
+                    leading: const Icon(Icons.settings_outlined),
+                    title: Text(l10n.profileSettingsPrivacyTitle),
                   ),
                 ),
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: 'sign-out',
                   child: ListTile(
-                    leading: Icon(Icons.logout),
-                    title: Text('Sign out'),
+                    leading: const Icon(Icons.logout),
+                    title: Text(l10n.commonSignOut),
                   ),
                 ),
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: 'verify-email',
                   child: ListTile(
-                    leading: Icon(Icons.mark_email_read_outlined),
-                    title: Text('Verify email'),
+                    leading: const Icon(Icons.mark_email_read_outlined),
+                    title: Text(l10n.dashboardVerifyEmailMenu),
                   ),
                 ),
                 if (widget.onAccountDeleted != null)
@@ -453,7 +451,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         Icons.delete_forever,
                         color: Theme.of(context).colorScheme.error,
                       ),
-                      title: const Text('Delete account'),
+                      title: Text(l10n.dashboardDeleteAccountMenu),
                     ),
                   ),
               ],

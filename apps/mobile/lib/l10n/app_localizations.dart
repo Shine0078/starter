@@ -3032,6 +3032,210 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Insights'**
   String get dashboardInsights;
+
+  /// No description provided for @dashboardSignOutTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out?'**
+  String get dashboardSignOutTitle;
+
+  /// No description provided for @dashboardSignOutDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'You will need your email and password to sign back in.'**
+  String get dashboardSignOutDetail;
+
+  /// No description provided for @dashboardDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete your account?'**
+  String get dashboardDeleteTitle;
+
+  /// No description provided for @dashboardDeleteDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Access ends immediately. You have 30 days to restore the account; after that, your profile and finance data are permanently erased.'**
+  String get dashboardDeleteDetail;
+
+  /// No description provided for @dashboardDeletePasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Current password'**
+  String get dashboardDeletePasswordLabel;
+
+  /// No description provided for @dashboardDeleteConfirmLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Type DELETE to confirm'**
+  String get dashboardDeleteConfirmLabel;
+
+  /// No description provided for @dashboardDeleteKeepAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep account'**
+  String get dashboardDeleteKeepAction;
+
+  /// No description provided for @dashboardDeleteScheduleAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule deletion'**
+  String get dashboardDeleteScheduleAction;
+
+  /// No description provided for @dashboardDeleteInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your password and type DELETE exactly.'**
+  String get dashboardDeleteInvalid;
+
+  /// No description provided for @dashboardVerifyEmailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify your email'**
+  String get dashboardVerifyEmailTitle;
+
+  /// No description provided for @dashboardVerifyEmailDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the 24-hour verification code sent to your email.'**
+  String get dashboardVerifyEmailDetail;
+
+  /// No description provided for @dashboardVerifyCodeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification code'**
+  String get dashboardVerifyCodeLabel;
+
+  /// No description provided for @dashboardVerifyLaterAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get dashboardVerifyLaterAction;
+
+  /// No description provided for @dashboardVerifyEmailVerified.
+  ///
+  /// In en, this message translates to:
+  /// **'Email verified.'**
+  String get dashboardVerifyEmailVerified;
+
+  /// No description provided for @dashboardVerifySendFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not send verification: {detail}'**
+  String dashboardVerifySendFailed(String detail);
+
+  /// No description provided for @dashboardSyncTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync accounts'**
+  String get dashboardSyncTooltip;
+
+  /// No description provided for @dashboardAccountMenuTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Account menu'**
+  String get dashboardAccountMenuTooltip;
+
+  /// No description provided for @dashboardVerifyEmailMenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify email'**
+  String get dashboardVerifyEmailMenu;
+
+  /// No description provided for @dashboardDeleteAccountMenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete account'**
+  String get dashboardDeleteAccountMenu;
+
+  /// No description provided for @appLockLockedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'FINVERSE is locked'**
+  String get appLockLockedTitle;
+
+  /// No description provided for @appLockLockedDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Use your device PIN, fingerprint, or face to view financial information.'**
+  String get appLockLockedDetail;
+
+  /// No description provided for @appLockWaitingForDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for device…'**
+  String get appLockWaitingForDevice;
+
+  /// No description provided for @appLockUnlockAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock FINVERSE'**
+  String get appLockUnlockAction;
+
+  /// No description provided for @appLockSignOutInstead.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out instead'**
+  String get appLockSignOutInstead;
+
+  /// No description provided for @secureStorageWaitTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'FINVERSE is waiting for secure storage'**
+  String get secureStorageWaitTitle;
+
+  /// No description provided for @secureStorageWaitDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock your phone, then try again. Your saved session was not deleted.'**
+  String get secureStorageWaitDetail;
+
+  /// No description provided for @secureStorageTryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get secureStorageTryAgain;
+
+  /// No description provided for @analyticsTimelineKindIncome.
+  ///
+  /// In en, this message translates to:
+  /// **'Income'**
+  String get analyticsTimelineKindIncome;
+
+  /// No description provided for @analyticsTimelineKindRefund.
+  ///
+  /// In en, this message translates to:
+  /// **'Refund'**
+  String get analyticsTimelineKindRefund;
+
+  /// No description provided for @analyticsTimelineKindTransfer.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer'**
+  String get analyticsTimelineKindTransfer;
+
+  /// No description provided for @analyticsTimelineKindSubscription.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription'**
+  String get analyticsTimelineKindSubscription;
+
+  /// No description provided for @analyticsTimelineKindBill.
+  ///
+  /// In en, this message translates to:
+  /// **'Bill'**
+  String get analyticsTimelineKindBill;
+
+  /// No description provided for @analyticsTimelineKindUnusual.
+  ///
+  /// In en, this message translates to:
+  /// **'Unusual'**
+  String get analyticsTimelineKindUnusual;
+
+  /// No description provided for @analyticsTimelineKindSpending.
+  ///
+  /// In en, this message translates to:
+  /// **'Spending'**
+  String get analyticsTimelineKindSpending;
 }
 
 class _AppLocalizationsDelegate

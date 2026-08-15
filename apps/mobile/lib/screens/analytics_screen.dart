@@ -280,7 +280,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                           dense: true,
                           leading: Icon(_timelineIcon(event.kind)),
                           title: Text(event.label),
-                          subtitle: Text('${event.date} · ${event.kind}'),
+                          subtitle:
+                              Text('${event.date} · ${_timelineKind(event.kind)}'),
                           trailing: Text(event.amountFormatted),
                         ))
                     .toList(),
@@ -432,6 +433,26 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         return Icons.warning_amber;
       default:
         return Icons.shopping_bag_outlined;
+    }
+  }
+
+  String _timelineKind(String kind) {
+    final l10n = AppLocalizations.of(context);
+    switch (kind) {
+      case 'income':
+        return l10n.analyticsTimelineKindIncome;
+      case 'refund':
+        return l10n.analyticsTimelineKindRefund;
+      case 'transfer':
+        return l10n.analyticsTimelineKindTransfer;
+      case 'subscription':
+        return l10n.analyticsTimelineKindSubscription;
+      case 'bill':
+        return l10n.analyticsTimelineKindBill;
+      case 'unusual':
+        return l10n.analyticsTimelineKindUnusual;
+      default:
+        return l10n.analyticsTimelineKindSpending;
     }
   }
 

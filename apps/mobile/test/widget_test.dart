@@ -21,6 +21,7 @@ import 'package:finverse/main.dart';
 import 'package:finverse/models/models.dart';
 import 'package:finverse/screens/home_screen.dart';
 import 'package:finverse/screens/bank_connections_screen.dart';
+import 'package:finverse/screens/dashboard_screen.dart';
 import 'package:finverse/screens/help_support_screen.dart';
 import 'package:finverse/screens/login_screen.dart';
 import 'package:finverse/screens/plan_screen.dart';
@@ -1612,6 +1613,44 @@ void main() {
     expect(find.text('Transactions'), findsNothing);
   });
 
+  testWidgets('dashboard account menu and sign-out dialog speak French',
+      (tester) async {
+    final api = clientWith(MockClient((request) async {
+      if (request.url.path.endsWith('/accounts')) {
+        return http.Response('[]', 200);
+      }
+      return http.Response('{"transactions":[],"budgets":[],"count":0}', 200);
+    }));
+
+    await tester.pumpWidget(MaterialApp(
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        AppLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('fr'),
+      home: DashboardScreen(
+        api: api,
+        onSignOut: () async {},
+        onAccountDeleted: () async {},
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Menu du compte'));
+    await tester.pumpAndSettle();
+    expect(find.text('Se déconnecter'), findsOneWidget);
+    expect(find.text('Vérifier le courriel'), findsOneWidget);
+    expect(find.text('Supprimer le compte'), findsOneWidget);
+
+    await tester.tap(find.text('Se déconnecter'));
+    await tester.pumpAndSettle();
+    expect(find.text('Se déconnecter ?'), findsOneWidget);
+    expect(find.text('Annuler'), findsOneWidget);
+  });
+
   test('parses scanned and stored receipts', () async {
     var sawPut = false;
     final api = clientWith(MockClient((request) async {
@@ -1985,7 +2024,7 @@ void main() {
 
     await tester.tap(find.byTooltip('Account menu'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Settings & privacy'));
+    await tester.tap(find.text('Settings and privacy'));
     await tester.pumpAndSettle();
     expect(find.text('sam@example.com'), findsOneWidget);
     expect(find.text('Your plan'), findsOneWidget);

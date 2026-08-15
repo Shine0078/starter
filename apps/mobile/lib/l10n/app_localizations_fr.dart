@@ -1771,4 +1771,114 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get dashboardInsights => 'Points importants';
+
+  @override
+  String get dashboardSignOutTitle => 'Se déconnecter ?';
+
+  @override
+  String get dashboardSignOutDetail =>
+      'Vous aurez besoin de votre courriel et de votre mot de passe pour vous reconnecter.';
+
+  @override
+  String get dashboardDeleteTitle => 'Supprimer votre compte ?';
+
+  @override
+  String get dashboardDeleteDetail =>
+      'L\'accès prend fin immédiatement. Vous disposez de 30 jours pour restaurer le compte ; après cela, votre profil et vos données financières sont effacés définitivement.';
+
+  @override
+  String get dashboardDeletePasswordLabel => 'Mot de passe actuel';
+
+  @override
+  String get dashboardDeleteConfirmLabel => 'Tapez DELETE pour confirmer';
+
+  @override
+  String get dashboardDeleteKeepAction => 'Conserver le compte';
+
+  @override
+  String get dashboardDeleteScheduleAction => 'Planifier la suppression';
+
+  @override
+  String get dashboardDeleteInvalid =>
+      'Saisissez votre mot de passe et tapez exactement DELETE.';
+
+  @override
+  String get dashboardVerifyEmailTitle => 'Vérifier votre courriel';
+
+  @override
+  String get dashboardVerifyEmailDetail =>
+      'Saisissez le code de vérification valide 24 heures envoyé à votre courriel.';
+
+  @override
+  String get dashboardVerifyCodeLabel => 'Code de vérification';
+
+  @override
+  String get dashboardVerifyLaterAction => 'Plus tard';
+
+  @override
+  String get dashboardVerifyEmailVerified => 'Courriel vérifié.';
+
+  @override
+  String dashboardVerifySendFailed(String detail) {
+    return 'Impossible d\'envoyer la vérification : $detail';
+  }
+
+  @override
+  String get dashboardSyncTooltip => 'Synchroniser les comptes';
+
+  @override
+  String get dashboardAccountMenuTooltip => 'Menu du compte';
+
+  @override
+  String get dashboardVerifyEmailMenu => 'Vérifier le courriel';
+
+  @override
+  String get dashboardDeleteAccountMenu => 'Supprimer le compte';
+
+  @override
+  String get appLockLockedTitle => 'FINVERSE est verrouillé';
+
+  @override
+  String get appLockLockedDetail =>
+      'Utilisez le code de votre appareil, votre empreinte ou votre visage pour afficher vos informations financières.';
+
+  @override
+  String get appLockWaitingForDevice => 'En attente de l\'appareil…';
+
+  @override
+  String get appLockUnlockAction => 'Déverrouiller FINVERSE';
+
+  @override
+  String get appLockSignOutInstead => 'Se déconnecter plutôt';
+
+  @override
+  String get secureStorageWaitTitle => 'FINVERSE attend le stockage sécurisé';
+
+  @override
+  String get secureStorageWaitDetail =>
+      'Déverrouillez votre téléphone, puis réessayez. Votre session enregistrée n\'a pas été supprimée.';
+
+  @override
+  String get secureStorageTryAgain => 'Réessayer';
+
+  @override
+  String get analyticsTimelineKindIncome => 'Revenu';
+
+  @override
+  String get analyticsTimelineKindRefund => 'Remboursement';
+
+  @override
+  String get analyticsTimelineKindTransfer => 'Transfert';
+
+  @override
+  String get analyticsTimelineKindSubscription => 'Abonnement';
+
+  @override
+  String get analyticsTimelineKindBill => 'Facture';
+
+  @override
+  String get analyticsTimelineKindUnusual => 'Inhabituel';
+
+  @override
+  String get analyticsTimelineKindSpending => 'Dépense';
 }

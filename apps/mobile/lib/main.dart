@@ -13,9 +13,18 @@ import 'api/platform/background_sync.dart';
 import 'api/platform/offline_cache_factory.dart';
 import 'design/design.dart';
 import 'l10n/app_localizations.dart';
+import 'l10n/app_localizations_en.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/onboarding_screen.dart';
+
+/// Isolated embedders (including app-lock and session-recovery tests) may not
+/// install the app's localization delegates. Keep these recovery paths usable
+/// in English rather than failing before a user can regain access.
+AppLocalizations _localizations(BuildContext context) {
+  return Localizations.of<AppLocalizations>(context, AppLocalizations) ??
+      AppLocalizationsEn();
+}
 
 // Both factories resolve per target: the encrypted SQLite cache and the system
 // biometric prompt on Android and iOS, no-op equivalents in a browser. Neither
@@ -221,6 +230,7 @@ class _AuthGateState extends State<AuthGate> {
     }
 
     if (_restoreError != null) {
+      final l10n = _localizations(context);
       return Scaffold(
         body: SafeArea(
           child: Center(
@@ -232,20 +242,20 @@ class _AuthGateState extends State<AuthGate> {
                   const Icon(Icons.lock_clock_outlined, size: 56),
                   const SizedBox(height: 16),
                   Text(
-                    'FINVERSE is waiting for secure storage',
+                    l10n.secureStorageWaitTitle,
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Unlock your phone, then try again. Your saved session was not deleted.',
+                  Text(
+                    l10n.secureStorageWaitDetail,
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 20),
                   FilledButton.icon(
                     onPressed: _checking ? null : _restore,
                     icon: const Icon(Icons.refresh),
-                    label: const Text('Try again'),
+                    label: Text(l10n.secureStorageTryAgain),
                   ),
                 ],
               ),
@@ -350,6 +360,7 @@ class _AppLockGateState extends State<AppLockGate> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     if (!widget.controller.locked) return widget.child;
+    final l10n = _localizations(context);
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -363,12 +374,12 @@ class _AppLockGateState extends State<AppLockGate> with WidgetsBindingObserver {
                   const Icon(Icons.lock_outline, size: 64),
                   const SizedBox(height: 20),
                   Text(
-                    'FINVERSE is locked',
+                    l10n.appLockLockedTitle,
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Use your device PIN, fingerprint, or face to view financial information.',
+                  Text(
+                    l10n.appLockLockedDetail,
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 24),
@@ -377,12 +388,12 @@ class _AppLockGateState extends State<AppLockGate> with WidgetsBindingObserver {
                         widget.controller.authenticating ? null : _unlock,
                     icon: const Icon(Icons.fingerprint),
                     label: Text(widget.controller.authenticating
-                        ? 'Waiting for device…'
-                        : 'Unlock FINVERSE'),
+                        ? l10n.appLockWaitingForDevice
+                        : l10n.appLockUnlockAction),
                   ),
                   TextButton(
                     onPressed: widget.onSignOut,
-                    child: const Text('Sign out instead'),
+                    child: Text(l10n.appLockSignOutInstead),
                   ),
                 ],
               ),

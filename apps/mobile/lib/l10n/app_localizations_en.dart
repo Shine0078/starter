@@ -1747,4 +1747,114 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dashboardInsights => 'Insights';
+
+  @override
+  String get dashboardSignOutTitle => 'Sign out?';
+
+  @override
+  String get dashboardSignOutDetail =>
+      'You will need your email and password to sign back in.';
+
+  @override
+  String get dashboardDeleteTitle => 'Delete your account?';
+
+  @override
+  String get dashboardDeleteDetail =>
+      'Access ends immediately. You have 30 days to restore the account; after that, your profile and finance data are permanently erased.';
+
+  @override
+  String get dashboardDeletePasswordLabel => 'Current password';
+
+  @override
+  String get dashboardDeleteConfirmLabel => 'Type DELETE to confirm';
+
+  @override
+  String get dashboardDeleteKeepAction => 'Keep account';
+
+  @override
+  String get dashboardDeleteScheduleAction => 'Schedule deletion';
+
+  @override
+  String get dashboardDeleteInvalid =>
+      'Enter your password and type DELETE exactly.';
+
+  @override
+  String get dashboardVerifyEmailTitle => 'Verify your email';
+
+  @override
+  String get dashboardVerifyEmailDetail =>
+      'Enter the 24-hour verification code sent to your email.';
+
+  @override
+  String get dashboardVerifyCodeLabel => 'Verification code';
+
+  @override
+  String get dashboardVerifyLaterAction => 'Later';
+
+  @override
+  String get dashboardVerifyEmailVerified => 'Email verified.';
+
+  @override
+  String dashboardVerifySendFailed(String detail) {
+    return 'Could not send verification: $detail';
+  }
+
+  @override
+  String get dashboardSyncTooltip => 'Sync accounts';
+
+  @override
+  String get dashboardAccountMenuTooltip => 'Account menu';
+
+  @override
+  String get dashboardVerifyEmailMenu => 'Verify email';
+
+  @override
+  String get dashboardDeleteAccountMenu => 'Delete account';
+
+  @override
+  String get appLockLockedTitle => 'FINVERSE is locked';
+
+  @override
+  String get appLockLockedDetail =>
+      'Use your device PIN, fingerprint, or face to view financial information.';
+
+  @override
+  String get appLockWaitingForDevice => 'Waiting for device…';
+
+  @override
+  String get appLockUnlockAction => 'Unlock FINVERSE';
+
+  @override
+  String get appLockSignOutInstead => 'Sign out instead';
+
+  @override
+  String get secureStorageWaitTitle => 'FINVERSE is waiting for secure storage';
+
+  @override
+  String get secureStorageWaitDetail =>
+      'Unlock your phone, then try again. Your saved session was not deleted.';
+
+  @override
+  String get secureStorageTryAgain => 'Try again';
+
+  @override
+  String get analyticsTimelineKindIncome => 'Income';
+
+  @override
+  String get analyticsTimelineKindRefund => 'Refund';
+
+  @override
+  String get analyticsTimelineKindTransfer => 'Transfer';
+
+  @override
+  String get analyticsTimelineKindSubscription => 'Subscription';
+
+  @override
+  String get analyticsTimelineKindBill => 'Bill';
+
+  @override
+  String get analyticsTimelineKindUnusual => 'Unusual';
+
+  @override
+  String get analyticsTimelineKindSpending => 'Spending';
 }
