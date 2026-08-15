@@ -1,5 +1,8 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
+import '../design/design.dart';
 import '../models/models.dart';
 
 /// The 0–1000 score, its components, and what to do about it.
@@ -13,17 +16,18 @@ class HealthScoreCard extends StatelessWidget {
   final HealthScore score;
 
   Color _bandColor(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final fin = context.finColors;
     return switch (score.band) {
-      'excellent' || 'good' => Colors.green.shade600,
-      'fair' => Colors.orange.shade700,
-      _ => scheme.error,
+      'excellent' || 'good' => fin.income,
+      'fair' => fin.warning,
+      _ => fin.expense,
     };
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final fin = context.finColors;
     final color = _bandColor(context);
 
     return Card(
@@ -37,22 +41,73 @@ class HealthScoreCard extends StatelessWidget {
               label:
                   'Financial health score ${score.score} out of 1000, ${score.band}.',
               child: ExcludeSemantics(
-                child: Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 4,
-                  runSpacing: 4,
+                child: Row(
                   children: [
-                    Text(
-                      '${score.score}',
-                      style: theme.textTheme.displaySmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: color,
+                    SizedBox(
+                      width: 96,
+                      height: 96,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          CustomPaint(
+                            size: const Size(96, 96),
+                            painter: _ScoreGaugePainter(
+                              fraction: (score.score / 1000).clamp(0.0, 1.0),
+                              color: color,
+                              trackColor:
+                                  theme.colorScheme.surfaceContainerHighest,
+                            ),
+                          ),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Padding(
+                              padding: const EdgeInsets.all(8),
+                              child: Text(
+                                '${score.score}',
+                                style: theme.textTheme.headlineMedium?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: color,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    Text('/ 1000', style: theme.textTheme.bodySmall),
-                    Chip(
-                      label: Text(score.band),
-                      visualDensity: VisualDensity.compact,
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Financial health',
+                              style: theme.textTheme.titleMedium),
+                          const SizedBox(height: 4),
+                          Text(
+                            'out of 1000 points',
+                            style: theme.textTheme.bodySmall,
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: color.withValues(alpha: 0.14),
+                                  borderRadius: FinRadius.pillBorder,
+                                ),
+                                child: Text(
+                                  score.band,
+                                  style: theme.textTheme.labelMedium?.copyWith(
+                                    color: color,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -91,6 +146,7 @@ class HealthScoreCard extends StatelessWidget {
                           child: LinearProgressIndicator(
                             value: component.ratio,
                             minHeight: 5,
+                            color: fin.income,
                             backgroundColor:
                                 theme.colorScheme.surfaceContainerHighest,
                           ),
@@ -128,4 +184,48 @@ class HealthScoreCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ScoreGaugePainter extends CustomPainter {
+  const _ScoreGaugePainter({
+    required this.fraction,
+    required this.color,
+    required this.trackColor,
+  });
+
+  final double fraction;
+  final Color color;
+  final Color trackColor;
+
+  static const _strokeWidth = 10.0;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (math.min(size.width, size.height) - _strokeWidth) / 2;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+    const startAngle = -math.pi / 2;
+
+    final track = Paint()
+      ..color = trackColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = _strokeWidth
+      ..strokeCap = StrokeCap.round;
+    canvas.drawArc(rect, 0, 2 * math.pi, false, track);
+
+    if (fraction > 0) {
+      final value = Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = _strokeWidth
+        ..strokeCap = StrokeCap.round;
+      canvas.drawArc(rect, startAngle, fraction * 2 * math.pi, false, value);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ScoreGaugePainter oldDelegate) =>
+      oldDelegate.fraction != fraction ||
+      oldDelegate.color != color ||
+      oldDelegate.trackColor != trackColor;
 }
