@@ -23,6 +23,7 @@ export type AccountType =
   | 'savings'
   | 'credit_card'
   | 'investment'
+  | 'property'
   | 'cash'
   | 'loan';
 
@@ -53,6 +54,17 @@ export interface AccountDto {
   creditLimit?: number;
   /** 0–1 for credit cards, null otherwise. */
   utilization: number | null;
+}
+
+export interface NetWorthSnapshotDto {
+  recordedOn: string;
+  currency: string;
+  assets: number;
+  assetsFormatted: string;
+  debts: number;
+  debtsFormatted: string;
+  netPosition: number;
+  netPositionFormatted: string;
 }
 
 export interface TransactionDto {
