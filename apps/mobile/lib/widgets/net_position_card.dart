@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../design/design.dart';
 import '../models/models.dart';
 
-/// A currency-safe balance-sheet summary.
+/// A currency-safe balance-sheet summary, presented as the app's hero.
 ///
 /// Balances in different currencies are intentionally never added together.
 /// Doing so without a quoted FX rate would show a precise but false net worth.
+///
+/// This is the one surface allowed to be loud: it is the single number every
+/// user opens the app to see, so it gets the brand gradient while the rest of
+/// the dashboard stays calm and outlined.
 class NetPositionCard extends StatelessWidget {
   const NetPositionCard({required this.accounts, super.key});
 
@@ -15,36 +20,64 @@ class NetPositionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final fin = context.finColors;
     final positions = _positions(accounts);
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Net position', style: theme.textTheme.titleMedium),
-            const SizedBox(height: 4),
-            Text(
-              '${accounts.length} connected account${accounts.length == 1 ? '' : 's'}',
-              style: theme.textTheme.bodySmall,
-            ),
-            if (positions.length > 1) ...[
-              const SizedBox(height: 6),
-              Text(
-                'Currencies are shown separately; no estimated exchange rate is applied.',
-                style: theme.textTheme.bodySmall,
+    return ClipRRect(
+      borderRadius: FinRadius.cardBorder,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [fin.heroGradientStart, fin.heroGradientEnd],
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.account_balance_wallet_outlined,
+                      size: 18, color: fin.onHeroMuted),
+                  const SizedBox(width: FinSpace.sm),
+                  Text(
+                    'Net position',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: fin.onHeroMuted,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
+              const SizedBox(height: 4),
+              Text(
+                '${accounts.length} connected account${accounts.length == 1 ? '' : 's'}',
+                style: theme.textTheme.bodySmall?.copyWith(color: fin.onHeroMuted),
+              ),
+              if (positions.length > 1) ...[
+                const SizedBox(height: 6),
+                Text(
+                  'Currencies are shown separately; no estimated exchange rate is applied.',
+                  style:
+                      theme.textTheme.bodySmall?.copyWith(color: fin.onHeroMuted),
+                ),
+              ],
+              if (positions.isEmpty) ...[
+                const SizedBox(height: 14),
+                Text(
+                  'Connect an account to see your assets and debts.',
+                  style: theme.textTheme.bodyMedium?.copyWith(color: fin.onHero),
+                ),
+              ],
+              for (final position in positions) ...[
+                const SizedBox(height: 16),
+                _CurrencyPosition(position: position, fin: fin),
+              ],
             ],
-            if (positions.isEmpty) ...[
-              const SizedBox(height: 14),
-              const Text('Connect an account to see your assets and debts.'),
-            ],
-            for (final position in positions) ...[
-              const SizedBox(height: 16),
-              _CurrencyPosition(position: position),
-            ],
-          ],
+          ),
         ),
       ),
     );
@@ -52,9 +85,10 @@ class NetPositionCard extends StatelessWidget {
 }
 
 class _CurrencyPosition extends StatelessWidget {
-  const _CurrencyPosition({required this.position});
+  const _CurrencyPosition({required this.position, required this.fin});
 
   final _Position position;
+  final FinColors fin;
 
   @override
   Widget build(BuildContext context) {
@@ -83,10 +117,13 @@ class _CurrencyPosition extends StatelessWidget {
                   net,
                   style: theme.textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: position.net < 0 ? theme.colorScheme.error : null,
+                    color: fin.onHero,
                   ),
                 ),
-                Text(position.currency, style: theme.textTheme.labelLarge),
+                Text(
+                  position.currency,
+                  style: theme.textTheme.labelLarge?.copyWith(color: fin.onHeroMuted),
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -94,14 +131,14 @@ class _CurrencyPosition extends StatelessWidget {
               label: 'Assets',
               amount: assets,
               value: position.assets / divisor,
-              color: theme.colorScheme.primary,
+              color: fin.onHero,
             ),
             const SizedBox(height: 9),
             _BalanceBar(
               label: 'Debts',
               amount: debts,
               value: position.debts / divisor,
-              color: theme.colorScheme.error,
+              color: fin.heroDebt,
             ),
           ],
         ),
@@ -128,8 +165,25 @@ class _BalanceBar extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(child: Text(label)),
-              Flexible(child: Text(amount, textAlign: TextAlign.end)),
+              Expanded(
+                child: Text(
+                  label,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: color.withValues(alpha: 0.9)),
+                ),
+              ),
+              Flexible(
+                child: Text(
+                  amount,
+                  textAlign: TextAlign.end,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: color, fontWeight: FontWeight.w600),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 4),
@@ -137,10 +191,9 @@ class _BalanceBar extends StatelessWidget {
             borderRadius: BorderRadius.circular(99),
             child: LinearProgressIndicator(
               value: value.clamp(0, 1),
-              minHeight: 9,
+              minHeight: 8,
               color: color,
-              backgroundColor:
-                  Theme.of(context).colorScheme.surfaceContainerHighest,
+              backgroundColor: color.withValues(alpha: 0.22),
             ),
           ),
         ],
