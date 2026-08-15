@@ -15,11 +15,23 @@ provider, or legal approval already exists.
 - CI type-checks, tests with both stores, applies migrations twice, builds the API,
   analyzes/tests Flutter, compiles Android, and compiles the native iOS target
   without signing on macOS.
+- `.github/workflows/database-release.yml` is the guarded staging/production
+  migration path. It requires an exact operator confirmation, uses protected
+  GitHub environments, reports the migration plan, applies only forward
+  migrations, and verifies that no migrations remain pending. The runner also
+  takes a PostgreSQL advisory lock so hosting hooks and Actions cannot migrate
+  the same database concurrently.
 - `infra/scripts/backup-postgres.ps1` creates a compressed custom-format PostgreSQL
   backup, validates its archive structure, and rolls off files older than the chosen
   retention window.
 - `infra/scripts/restore-drill-postgres.ps1` restores only to a database whose name
   ends in `_restore_test`, then verifies migration history is readable.
+- CI performs a real backup/restore drill after applying migrations. The scheduled
+  `.github/workflows/uptime.yml` probes production three times, opens one deduplicated
+  GitHub incident, and closes it after recovery. It stays dormant until the
+  `PRODUCTION_HEALTH_URL` repository variable is configured.
+- `docs/15-incident-response.md` defines severity, containment, recovery,
+  communications, and post-incident steps.
 
 ## Required production configuration
 
@@ -127,6 +139,17 @@ remain SHA-256 hashes and cannot be recovered from the database.
    `npm run purge:accounts:dev --workspace @finverse/api`.
 8. Schedule daily backups and a recurring restore drill to a disposable
    `_restore_test` database.
+9. Set repository variable `PRODUCTION_HEALTH_URL` to the public `/healthz` URL,
+   subscribe the response team to `uptime-alert` issues, and rehearse
+   `docs/15-incident-response.md` before launch.
+
+### GitHub environment setup
+
+Create `staging` and `production` environments in the repository settings. Add
+`DATABASE_URL` and `DATABASE_APP_URL` as environment secrets to each. Require a
+reviewer for the production environment and prevent unreviewed branches from
+deploying there. Run **Database release** manually and enter the exact requested
+confirmation phrase. The workflow never prints either connection string.
 
 For native iOS Plaid OAuth, set the Xcode build setting
 `PLAID_UNIVERSAL_LINK_DOMAIN` to the host in `PLAID_IOS_REDIRECT_URI` (for
