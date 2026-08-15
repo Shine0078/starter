@@ -14,6 +14,23 @@ insights, and account lifecycle controls. Production Plaid access,
 hosting, legal review, store approval, and billing remain external launch gates
 ([selling audit](docs/08-what-blocks-selling.md)).
 
+## Public builds
+
+Zero-cost distribution, no store account required:
+
+- **Web / PWA** — <https://shine0078.github.io/starter/app/> (installable from
+  Safari on iPhone via **Share → Add to Home Screen**, and from Chrome/Edge on
+  Android and desktop).
+- **Android APK** — the latest release-signed APK is at
+  <https://github.com/Shine0078/starter/releases/latest>.
+- **Source** — this repository.
+
+The web build and APK target the FINVERSE API at
+`https://finverse.onrender.com`. That service is provisioned by the one-click
+Render Blueprint below; until it is deployed the app UI loads but account
+creation and bank sync are unavailable. See
+[`docs/14-public-hosting-render.md`](docs/14-public-hosting-render.md).
+
 ## Quick start
 
 ```bash
