@@ -117,8 +117,8 @@ has a `docker-compose.yml` for local development and a CI workflow. That is all.
 | 4.2 | **No hosting** | No cloud account, no infrastructure-as-code, no environments | 1–2 weeks |
 | 4.3 | **No hosting deployment** | Tagged releases now publish the API image and APK; no provider has been selected to receive the image | external account + days |
 | 4.4 | **No managed database** | No provisioning, no connection pooling at scale, no read replicas | days |
-| 4.5 | **Backups not scheduled** | Backup and guarded restore-drill scripts now exist; storage, encryption policy, schedule, and a real drill need a production database | external account + drill |
-| 4.6 | **No monitoring, metrics, or alerting** | **Repository support completed:** `/healthz` fails with HTTP 503 when PostgreSQL is down, and `/api/metrics` exposes bounded Prometheus counters and durations behind `METRICS_TOKEN`. An external scraper, dashboards, and alerts still require an owner-selected service | external account + days |
+| 4.5 | **Production backups not scheduled** | Backup and guarded restore scripts exist and CI now proves a real backup/isolated restore on every change; encrypted production storage, its schedule, and a recorded production drill still need the selected database/storage provider | external account + drill |
+| 4.6 | **Production monitoring not activated** | `/healthz`, protected bounded Prometheus metrics, and a scheduled three-retry GitHub uptime incident workflow are implemented. Configure `PRODUCTION_HEALTH_URL`, responder notifications, provider dashboards, and an independent public status host | external setup + rehearsal |
 | 4.7 | **External error tracking absent** | Structured request logs now carry correlation ids and deliberately omit headers, bodies, queries, users, merchants, and amounts; no external log/error service is configured | external account + days |
 | 4.8 | **Shared rate limiting** | **Completed for the PostgreSQL launch path:** opaque fixed-window counters and block state are atomic across API instances and survive restarts. The memory development path remains process-local by design | production load testing remains |
 | 4.9 | **Limited scheduler coverage** | The API now runs hourly account-purge/session cleanup while alive and Plaid webhooks use a durable PostgreSQL retry queue; proactive notification refresh and recurring report delivery still need platform jobs | external host + days |
@@ -187,7 +187,7 @@ and a second integration for the mobile stores.
 |---|---|
 | 7.1 | Help centre and in-app contact route are implemented in Settings. The optional `SUPPORT_EMAIL` build define opens a prefilled mail message and never includes credentials or financial payloads | Owner must configure a staffed support mailbox and escalation process |
 | 7.2 | No admin tooling — no way to look up a user's problem without raw SQL, which RLS now (correctly) blocks |
-| 7.3 | No incident process, on-call, or status page |
+| 7.3 | Incident severity, containment, recovery, communication, and review procedures now live in `docs/15-incident-response.md`; named on-call responders and an independently hosted public status page remain external launch work |
 | 7.4 | No analytics or product telemetry is installed. A default-off, versioned consent surface now exists before any analytics SDK is introduced |
 | 7.5 | The versioned registration gate, document links, and evidence trail exist, but no counsel-approved Terms of Service or Privacy Notice is shipped |
 | 7.6 | First-launch onboarding and an offline-friendly in-app help centre are implemented | Public help articles and customer-facing docs remain |
