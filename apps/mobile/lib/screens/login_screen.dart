@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -420,11 +421,17 @@ class _LoginScreenState extends State<LoginScreen> {
                     TextFormField(
                       controller: _password,
                       obscureText: _obscure,
-                      autofillHints: [
-                        _registering
-                            ? AutofillHints.newPassword
-                            : AutofillHints.password,
-                      ],
+                      // iOS Safari's password AutoFill intercepts Flutter
+                      // web's hidden password input and never raises the
+                      // keyboard. Autofill stays enabled for the native apps,
+                      // where the platform text field handles it correctly.
+                      autofillHints: kIsWeb
+                          ? null
+                          : [
+                              _registering
+                                  ? AutofillHints.newPassword
+                                  : AutofillHints.password,
+                            ],
                       textInputAction: TextInputAction.done,
                       onFieldSubmitted: (_) => _busy ? null : _submit(),
                       decoration: InputDecoration(

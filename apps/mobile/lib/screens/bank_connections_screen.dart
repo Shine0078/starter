@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -204,7 +205,10 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
             TextField(
               autofocus: true,
               obscureText: true,
-              autofillHints: const [AutofillHints.password],
+              // Native-only for the same iOS Safari keyboard reason as the
+              // sign-in password field.
+              autofillHints:
+                  kIsWeb ? null : const [AutofillHints.password],
               textInputAction: TextInputAction.done,
               onChanged: (value) => enteredPassword = value,
               onSubmitted: (value) => Navigator.pop(dialogContext, value),

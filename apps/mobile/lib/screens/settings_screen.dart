@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -395,7 +396,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             TextField(
               controller: password,
               obscureText: true,
-              autofillHints: const [AutofillHints.password],
+              // Native-only for the same iOS Safari keyboard reason as the
+              // sign-in password field.
+              autofillHints:
+                  kIsWeb ? null : const [AutofillHints.password],
               decoration: const InputDecoration(
                 labelText: 'Current password',
                 border: OutlineInputBorder(),
