@@ -231,21 +231,40 @@ not a promise, and the loading issue at the end is **unresolved and the top prio
 
 ## 1. Live test link (iPhone, right now)
 
-**`https://drums-lasting-marine-toolbox.trycloudflare.com`**
+> **Replaced 2026-08-15 by the takeover deployment below; the old URL is dead.**
 
-How it is served right now (all of this dies if the PC sleeps/reboots, and the URL regenerates on tunnel restart):
+**`https://pitch-reveals-network-gazette.trycloudflare.com`**
+
+Deployed during the 2026-08-15 takeover, this time on the **persistent
+PostgreSQL store** (not the data-losing memory adapter), with the fresh
+post-localization web bundle:
 
 | Piece | Process | Notes |
 |---|---|---|
-| Cloudflare quick tunnel (no account) | `cloudflared.exe` in `%TEMP%\opencode` | public HTTPS → localhost:3000 |
-| FINVERSE API (`npm run dev`, ts-node) | `node.exe` on port 3000 | `STORE=memory` — **data resets on restart** |
-| Flutter web PWA | built at `apps/mobile/build/web`, served at `/app/` | same-origin API calls, no `API_BASE_URL` define |
+| Cloudflare quick tunnel (no account) | `cloudflared.exe` PID 4692/18152 in `%TEMP%\opencode` | public HTTPS → localhost:3000; logs at `%TEMP%\opencode\tunnel-live.{out,err}.log` |
+| FINVERSE API (compiled `dist/main.js`) | `node.exe` PID 35432 on port 3000 | **`Store postgres`** — data survives API restarts in `apps/api/.postgres-data`; logs at `%TEMP%\opencode\finverse-api-live.log` |
+| Embedded PostgreSQL | PID 4472 on localhost:55432 | started via `npm run db:start`; migrations applied |
+| Flutter web PWA | built 2026-08-15 with `--no-web-resources-cdn --base-href=/app/` | same-origin API calls, local CanvasKit, migration-only worker |
 
-Verified live through the tunnel: `/healthz` 200, `/app/` 200, `/api/legal` 200, `/api/categories` 200, `main.dart.js` 200 and contains **no** placeholder host.
+Verified live through the public URL on 2026-08-15: `/healthz` 200,
+`/app/` 200, `main.dart.js` 200 (3.9 MB), `flutter_bootstrap.js` 200 with
+`canvasKitBaseUrl: 'canvaskit/'` taking priority over the (dead) gstatic
+branch, `canvaskit.wasm` 200 (7.2 MB), `flutter_service_worker.js` 200,
+`/api/legal` 200 (`registrationRequired:false` in dev), `/api/categories` 200.
 
-The PC-side firewall allows TCP 3000 (`FINVERSE dev 3000` rule, added with elevation).
+Caveats (unchanged): the URL dies if this PC sleeps/reboots or the tunnel
+restarts, quick tunnels have no uptime guarantee, and `THROTTLE_DISABLED=true`
+is set in the local `.env` — fine for phone testing, never for a real
+deployment. To restart after a reboot: `npm run db:start --workspace
+@finverse/api`, then `node dist/main.js` (in `apps/api`), then
+`cloudflared tunnel --url http://localhost:3000` — and record the new URL here.
 
-**How to reach the same app away from this PC (owner gate, not code):** deploy `infra/docker-compose.public.yml` (Caddy auto-HTTPS) on any VPS with a domain. The repo is fully ready; a domain + hosting account are the only missing pieces.
+**Physical iPhone verification is still the open gate:** open the URL above in
+Safari and Chrome-on-iOS. If this phone ever loaded a previously broken build,
+clear Safari Website Data or reload twice. Do not close the loading-splash
+issue until onboarding visibly renders on the phone.
+
+**How to reach the same app away from this PC (owner gate, not code):** deploy `infra/docker-compose.public.yml` (Caddy auto-HTTPS) on any VPS with a domain, or the Render Blueprint in `render.yaml`. The repo is fully ready; a domain + hosting account are the only missing pieces.
 
 ---
 
