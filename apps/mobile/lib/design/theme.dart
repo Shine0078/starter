@@ -12,9 +12,11 @@ import 'tokens.dart';
 import 'typography.dart';
 
 abstract final class FinTheme {
-  /// The brand seed. Blue reads as institutional and calm; the greens and reds
-  /// are reserved for money moving, so they mean something when they appear.
-  static const Color seed = Color(0xFF2F6DF6);
+  /// The brand seed. Emerald-teal reads as money itself — the register of a
+  /// savings app rather than an institution's back office — while the lighter
+  /// greens and the red stay reserved for money moving, so they still mean
+  /// something when they appear.
+  static const Color seed = Color(0xFF0E7C66);
 
   static ThemeData light() => _build(Brightness.light, FinColors.light);
   static ThemeData dark() => _build(Brightness.dark, FinColors.dark);
