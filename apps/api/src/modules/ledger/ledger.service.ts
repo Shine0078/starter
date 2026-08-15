@@ -6,6 +6,7 @@ import { UserCorrectionClassifier } from '../../domain/categorization/user-corre
 import { normalizeDescriptor } from '../../domain/categorization/normalize';
 import { isKnownCategory } from '../../domain/categories';
 import { detectSubscriptions } from '../../domain/insights/subscriptions';
+import { interpretTransactionSearch } from '../../domain/transactions/natural-search';
 import { FinanceEventBus } from '../../infra/events/finance-event-bus';
 import type { Account, CategorizationRule, RawTransaction, Transaction } from '../../domain/types';
 import {
@@ -54,6 +55,7 @@ export class LedgerService {
   async sync(userId: string, linkId = 'link_demo'): Promise<SyncResult> {
     const remoteAccounts = await this.aggregator.listAccounts(linkId);
     await this.accounts.upsertMany(userId, remoteAccounts);
+    await this.accounts.recordNetWorthSnapshot(userId, this.clock.today());
 
     const { transactions: raw } = await this.aggregator.fetchTransactions(linkId);
     const [rules, historicalTransactions] = await Promise.all([
@@ -162,6 +164,7 @@ export class LedgerService {
       source: 'manual',
     };
     await this.accounts.upsertMany(userId, [account]);
+    await this.accounts.recordNetWorthSnapshot(userId, this.clock.today());
     this.events.publish({
       type: 'AccountConnected',
       userId,
@@ -186,6 +189,7 @@ export class LedgerService {
       source: 'manual',
     };
     await this.accounts.upsertMany(userId, [account]);
+    await this.accounts.recordNetWorthSnapshot(userId, this.clock.today());
     this.events.publish({
       type: 'AccountUpdated',
       userId,
@@ -200,6 +204,7 @@ export class LedgerService {
       throw new NotFoundException('No editable manual account was found.');
     }
     await this.accounts.remove(userId, accountId);
+    await this.accounts.recordNetWorthSnapshot(userId, this.clock.today());
     this.events.publish({
       type: 'AccountDisconnected',
       userId,
@@ -209,6 +214,14 @@ export class LedgerService {
 
   listTransactions(userId: string, query: TransactionQuery): Promise<Transaction[]> {
     return this.transactions.list(userId, query);
+  }
+
+  listNetWorthHistory(userId: string, limit = 365) {
+    return this.accounts.listNetWorthHistory(userId, limit);
+  }
+
+  interpretTransactionSearch(input: string) {
+    return interpretTransactionSearch(input, this.clock.today());
   }
 
   listCategorizationRules(userId: string): Promise<CategorizationRule[]> {
