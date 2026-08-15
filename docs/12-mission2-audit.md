@@ -188,9 +188,12 @@ file would be required to verify any requirements unique to that document.
 
 ## Evidence
 
-- API in-memory suite: 475 passing, 5 database-only skips.
-- PostgreSQL contract/RLS suite: 564 passing in embedded PostgreSQL.
-- Flutter: 84 tests passing, `flutter analyze` clean.
+- API in-memory suite: 487 passing, 5 database-only skips (re-measured
+  2026-08-15; 475 at the original audit).
+- PostgreSQL contract/RLS suite: 596 passing in embedded PostgreSQL
+  (re-measured 2026-08-15; 564 at the original audit).
+- Flutter: 94 tests passing, `flutter analyze` clean (re-measured 2026-08-15;
+  84 at the original audit).
 - Android release-mode APK and web release build both compile. The local
   release APK uses the deliberately configured debug-signing fallback; a real
   store artifact still needs the owner's upload-key secret. The Android emulator

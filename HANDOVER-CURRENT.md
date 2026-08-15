@@ -1,6 +1,63 @@
 # FINVERSE — CURRENT HANDOVER (for the next agent)
 
-> ## 2026-08-11 continuation — this supersedes stale statements below
+> ## 2026-08-15 takeover audit — this supersedes stale statements below
+>
+> A fresh agent re-ran the complete verification suite against the actual
+> repository (branch `main`, commit `9a7898b` + the takeover commits, clean
+> working tree at start). Nothing below the previous handovers was trusted
+> without evidence.
+>
+> **Re-measured on this workstation (2026-08-15):**
+>
+> - `npm test` (API in-memory): **487 passed, 5 Postgres-only skips** (49.5 s).
+> - `npm run test:db` (real embedded PostgreSQL incl. the full RLS suite):
+>   **596 passed** (55.9 s).
+> - `npm run typecheck --workspace @finverse/api`: clean.
+> - `npm run build --workspace @finverse/api`: clean.
+> - `npm run load:smoke` (memory adapter): 250 requests, concurrency 10,
+>   **0 failures, p95 117.3 ms, p99 172.1 ms** (ceiling 750 ms).
+> - `flutter analyze`: clean; `flutter test`: **94 passed**.
+> - `flutter build web --release --no-web-resources-cdn --base-href=/app/`:
+>   built; served from the compiled API on an isolated port with `/app/`, a
+>   deep route (GET returns the shell, 200), bootstrap, local CanvasKit
+>   JS+Wasm, and the migration worker all 200/no-cache.
+> - `flutter build apk --release`: 87.0 MB APK via the intentional
+>   debug-signing fallback (upload keystore remains an owner secret).
+> - **Plaid Sandbox credentials verified live**: a `link_token/create` call
+>   against `https://sandbox.plaid.com` succeeded with the local `.env` keys
+>   (never printed, never committed). Provider error mapping in
+>   `banking.service.ts` returns actionable per-platform messages.
+>
+> **Changes made during the takeover:**
+>
+> - Localized the previously hardcoded English dashboard dialogs and controls
+>   (sign-out confirm, account-deletion confirm, verify-email dialog, app-bar
+>   tooltips, account popup menu), the app-lock gate, the secure-storage retry
+>   screen, and the analytics timeline kind labels — English + French, with a
+>   delegate-free English fallback for isolated embedders. New French widget
+>   regression included (94th test).
+> - `Dockerfile.public` (the Render image) now builds the web bundle with
+>   `--no-web-resources-cdn`, matching CI and `release.yml`; the public image
+>   previously could fetch the renderer from gstatic even though the bootstrap
+>   pins local CanvasKit.
+> - Docs re-synced to reality: `07-session-notes.md`, `08-what-blocks-selling.md`,
+>   `12-mission2-audit.md` now carry the 487/596/94 evidence and 2026-08-15
+>   measurements.
+>
+> **Verified as still true:** production refuses the in-memory store and
+> boot-time migrations; the mock-aggregator `/api/sync` route is refused for
+> every persistent Postgres deployment and in production (MockAggregator can
+> only feed the in-memory demo); no secrets/keystores are tracked by git.
+>
+> **Still open and external (unchanged):** the live tunnel from §1 is dead
+> (nothing listens on port 3000 after the reboot; in-memory data was lost by
+> design). Physical iPhone Safari/Chrome-on-iOS verification of the PWA has
+> still never happened — after any deploy, reload the current URL twice (or
+> clear Website Data) and confirm onboarding renders; only then close that
+> gate. Everything in §8 (domain/hosting, Plaid production, Apple/Mac, push
+> credentials, legal/Stripe, pen-test) remains owner action.
+>
+> ## 2026-08-11 continuation — supersedes stale statements below
 >
 > - Latest UI/deployment commits: `8960fa0` simplifies the dashboard into a
 >   responsive 2x2 financial summary and replaces spinner-only loading states

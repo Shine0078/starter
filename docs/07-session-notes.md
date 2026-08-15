@@ -5,7 +5,7 @@ memory of how any of it got here. Last updated after the MFA, professional
 monthly-report, smart-alert, core-accessibility, shared-rate-limit, load-smoke,
 analytics-cache, session-restore, Plaid Sandbox, deterministic-assistant,
 protected-metrics, and secure-session-error verification milestones on
-2026-08-10.
+2026-08-10, and re-measured during the 2026-08-15 takeover audit.
 
 Read [`MISSION.md`](../MISSION.md) for the product, [`HANDOVER.md`](../HANDOVER.md)
 for the backlog, and [`04-roadmap.md`](04-roadmap.md) for the sequence. This file
@@ -15,8 +15,8 @@ is the shortest path to being productive again.
 
 ```bash
 npm install
-npm test          # 455 tests, no database needed
-npm run test:db   # 564 tests, spins up a real PostgreSQL and tears it down
+npm test          # 487 tests, no database needed
+npm run test:db   # 596 tests, spins up a real PostgreSQL and tears it down
 npm run dev       # API + dev dashboard on http://localhost:3000
 ```
 
@@ -27,15 +27,18 @@ is fine.
 ## Verified state
 
 Every number below was produced by running the thing, not by reading the code.
+The 2026-08-15 takeover re-ran the complete suite on this workstation.
 
 | Check | Result |
 |---|---|
-| API tests, in-memory | 455 passed |
-| API tests, real Postgres | 564 passed |
+| API tests, in-memory | 487 passed, 5 Postgres-only skips (2026-08-15) |
+| API tests, real Postgres | 596 passed, including the full RLS suite (2026-08-15) |
 | `tsc --noEmit`, `npm run build` | clean |
-| `flutter analyze`, `flutter test` | clean, 79 passed |
-| Android debug compile | `com.finverse.finance`, API 36, 170.9 MB APK; debug-only artifact built successfully |
-| Authenticated load smoke, memory | 250 requests, concurrency 10, 0 failures, 43.3 ms p95, 298.5 req/s |
+| `flutter analyze`, `flutter test` | clean, 94 passed (2026-08-15) |
+| Plaid Sandbox credentials | live `link_token/create` verified against `sandbox.plaid.com` (2026-08-15) |
+| Web release bundle | `--no-web-resources-cdn --base-href=/app/` build serves `/app/`, deep routes, local CanvasKit, and the migration worker as 200/no-cache from the compiled API (2026-08-15) |
+| Android release build | 87.0 MB APK built with the intentional debug-signing fallback (2026-08-15) |
+| Authenticated load smoke, memory | 250 requests, concurrency 10, 0 failures, 117.3 ms p95, 133.1 req/s (2026-08-15) |
 | Authenticated load smoke, real Postgres | 250 requests, concurrency 10, 0 failures, 229.1 ms p95, 146.8 req/s |
 | Dashboard | register → sync → correct → logout, verified in a browser |
 | API on Postgres as `finverse_app` | two users, 183 transactions each, sync → correct → re-sync → budget, isolation confirmed against the raw tables |
