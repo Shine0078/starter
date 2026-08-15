@@ -5,6 +5,7 @@ export type AccountType =
   | 'savings'
   | 'credit_card'
   | 'investment'
+  | 'property'
   | 'cash'
   | 'loan';
 
@@ -48,6 +49,16 @@ export interface Account {
   statementDay?: number;
   /** Credit cards only. Day of month, 1–31. */
   paymentDueDay?: number;
+}
+
+/** One currency-safe balance-sheet observation. Currencies are deliberately
+ * never converted or combined without an explicit quoted FX rate. */
+export interface NetWorthSnapshot {
+  recordedOn: IsoDate;
+  currency: string;
+  assets: number;
+  debts: number;
+  netPosition: number;
 }
 
 export interface Transaction {
