@@ -21,6 +21,13 @@ import { getPool, withTransaction } from './pool';
  */
 
 const MIGRATIONS_DIR = join(__dirname, '..', '..', '..', 'migrations');
+const MIGRATION_LOCK_NAME = 'finverse:schema-migrations';
+
+export interface MigrationStatus {
+  applied: string[];
+  pending: string[];
+  unknown: string[];
+}
 
 async function ensureMigrationsTable(pg: Pool): Promise<void> {
   await pg.query(`
@@ -31,32 +38,68 @@ async function ensureMigrationsTable(pg: Pool): Promise<void> {
   `);
 }
 
-export async function runMigrations(pg: Pool = getPool()): Promise<string[]> {
+export async function inspectMigrations(pg: Pool = getPool()): Promise<MigrationStatus> {
   await ensureMigrationsTable(pg);
 
   const { rows } = await pg.query<{ name: string }>('SELECT name FROM schema_migrations');
-  const applied = new Set(rows.map((r) => r.name));
-
   const files = (await readdir(MIGRATIONS_DIR))
     .filter((f) => f.endsWith('.sql'))
     .sort();
+  const known = new Set(files);
+  const recorded = rows.map((row) => row.name).sort();
 
-  const ran: string[] = [];
+  return {
+    applied: recorded.filter((name) => known.has(name)),
+    pending: files.filter((name) => !recorded.includes(name)),
+    unknown: recorded.filter((name) => !known.has(name)),
+  };
+}
 
-  for (const file of files) {
-    if (applied.has(file)) continue;
+export async function runMigrations(pg: Pool = getPool()): Promise<string[]> {
+  const lock = await pg.connect();
+  let lockAcquired = false;
+  try {
+    // The database lock protects releases from a second runner outside this
+    // repository (for example, a hosting pre-deploy hook racing GitHub Actions).
+    const { rows } = await lock.query<{ acquired: boolean }>(
+      'SELECT pg_try_advisory_lock(hashtext($1)) AS acquired',
+      [MIGRATION_LOCK_NAME],
+    );
+    lockAcquired = rows[0]?.acquired === true;
+    if (!lockAcquired) {
+      throw new Error('Another database migration is already running.');
+    }
 
-    const sql = await readFile(join(MIGRATIONS_DIR, file), 'utf8');
+    const status = await inspectMigrations(pg);
+    if (status.unknown.length > 0) {
+      throw new Error(
+        `Database contains migration records missing from this release: ${status.unknown.join(', ')}`,
+      );
+    }
 
-    await withTransaction(pg, async (client) => {
-      await client.query(sql);
-      await client.query('INSERT INTO schema_migrations (name) VALUES ($1)', [file]);
-    });
+    const ran: string[] = [];
 
-    ran.push(file);
+    for (const file of status.pending) {
+      const sql = await readFile(join(MIGRATIONS_DIR, file), 'utf8');
+
+      await withTransaction(pg, async (client) => {
+        await client.query(sql);
+        await client.query('INSERT INTO schema_migrations (name) VALUES ($1)', [file]);
+      });
+
+      ran.push(file);
+    }
+
+    return ran;
+  } finally {
+    try {
+      if (lockAcquired) {
+        await lock.query('SELECT pg_advisory_unlock(hashtext($1))', [MIGRATION_LOCK_NAME]);
+      }
+    } finally {
+      lock.release();
+    }
   }
-
-  return ran;
 }
 
 /** `npm run migrate` — the deploy step, when MIGRATE_ON_BOOT=false. */
