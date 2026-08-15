@@ -23,6 +23,7 @@ import type {
   CategorizationRule,
   GoalContribution,
   NotificationPreferences,
+  NetWorthSnapshot,
   SavingsGoal,
   UserNotification,
   Transaction,
@@ -161,6 +162,84 @@ export class PostgresAccountStore implements AccountStore {
       return (result.rowCount ?? 0) > 0;
     });
   }
+
+  async recordNetWorthSnapshot(
+    userId: string,
+    recordedOn: string,
+  ): Promise<NetWorthSnapshot[]> {
+    return withUserScope(this.pg, userId, async (client) => {
+      // Replace the whole observation for this day. If the user removed their
+      // final CAD account, retaining yesterday's same-day CAD row would show a
+      // balance they no longer own.
+      await client.query(
+        'DELETE FROM net_worth_snapshots WHERE user_id = $1 AND recorded_on = $2::date',
+        [userId, recordedOn],
+      );
+      const { rows } = await client.query<{
+        recorded_on: string;
+        currency: string;
+        assets: number;
+        debts: number;
+        net_position: number;
+      }>(
+        `INSERT INTO net_worth_snapshots
+           (user_id, recorded_on, currency, assets, debts, net_position)
+         SELECT
+           $1,
+           $2::date,
+           currency,
+           sum(CASE WHEN balance_current >= 0 THEN balance_current ELSE 0 END),
+           sum(CASE WHEN balance_current < 0 THEN -balance_current ELSE 0 END),
+           sum(balance_current)
+         FROM accounts
+         WHERE user_id = $1
+         GROUP BY currency
+         RETURNING recorded_on, currency, assets, debts, net_position`,
+        [userId, recordedOn],
+      );
+      return rows.map(toNetWorthSnapshot);
+    });
+  }
+
+  async listNetWorthHistory(userId: string, limit = 365): Promise<NetWorthSnapshot[]> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const { rows } = await client.query<{
+        recorded_on: string;
+        currency: string;
+        assets: number;
+        debts: number;
+        net_position: number;
+      }>(
+        `SELECT recorded_on, currency, assets, debts, net_position
+         FROM (
+           SELECT recorded_on, currency, assets, debts, net_position
+           FROM net_worth_snapshots
+           WHERE user_id = $1
+           ORDER BY recorded_on DESC, currency
+           LIMIT $2
+         ) recent
+         ORDER BY recorded_on, currency`,
+        [userId, limit],
+      );
+      return rows.map(toNetWorthSnapshot);
+    });
+  }
+}
+
+function toNetWorthSnapshot(row: {
+  recorded_on: string;
+  currency: string;
+  assets: number;
+  debts: number;
+  net_position: number;
+}): NetWorthSnapshot {
+  return {
+    recordedOn: row.recorded_on,
+    currency: row.currency,
+    assets: row.assets,
+    debts: row.debts,
+    netPosition: row.net_position,
+  };
 }
 
 // ------------------------------------------------------------ transactions
