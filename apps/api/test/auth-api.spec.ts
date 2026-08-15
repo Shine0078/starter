@@ -581,6 +581,15 @@ describe('auth API', () => {
         row.pending === false && Math.abs(row.amount) >= 1 && Math.abs(row.amount) <= 100000000,
       )).toBe(true);
 
+      const natural = await request(http)
+        .get('/api/transactions?search=coffee%20over%20%241')
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .expect(200);
+      expect(natural.body.interpretation).toContain('category Coffee');
+      expect(natural.body.transactions.every((row: { categorySlug: string; amount: number }) =>
+        row.categorySlug === 'coffee' && Math.abs(row.amount) > 100,
+      )).toBe(true);
+
       const analytics = await request(http)
         .get('/api/analytics?period=3m&asOf=2026-08-07&currency=USD')
         .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
@@ -706,6 +715,19 @@ describe('auth API', () => {
         .send({ name: 'Wallet cash', type: 'cash', currency: 'CAD', balanceCurrent: 14000 })
         .expect(200);
       expect(updated.body.balanceCurrent).toBe(14000);
+
+      const property = await request(http)
+        .post('/api/accounts/manual')
+        .set(aliceAuth)
+        .send({
+          name: 'Primary residence',
+          type: 'property',
+          currency: 'CAD',
+          balanceCurrent: 65000000,
+        })
+        .expect(201);
+      expect(property.body.type).toBe('property');
+      expect(property.body.balanceCurrent).toBe(65000000);
 
       await request(http)
         .patch(`/api/accounts/manual/${created.body.id}`)
@@ -868,6 +890,7 @@ describe('auth API', () => {
         recoveryCodesRemaining: 0,
       });
       expect(exported.body.transactions.length).toBeGreaterThan(0);
+      expect(exported.body.netWorthHistory.length).toBeGreaterThan(0);
       expect(exported.body.sessions.some((session: { current: boolean }) => session.current)).toBe(
         true,
       );
