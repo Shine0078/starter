@@ -207,8 +207,7 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
               obscureText: true,
               // Native-only for the same iOS Safari keyboard reason as the
               // sign-in password field.
-              autofillHints:
-                  kIsWeb ? null : const [AutofillHints.password],
+              autofillHints: kIsWeb ? null : const [AutofillHints.password],
               textInputAction: TextInputAction.done,
               onChanged: (value) => enteredPassword = value,
               onSubmitted: (value) => Navigator.pop(dialogContext, value),
@@ -347,6 +346,9 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
                     DropdownMenuItem(
                         value: 'investment',
                         child: Text(_l10n.bankManualInvestment)),
+                    DropdownMenuItem(
+                        value: 'property',
+                        child: Text(_l10n.bankManualProperty)),
                     DropdownMenuItem(
                         value: 'loan', child: Text(_l10n.bankManualLoan)),
                   ],
@@ -653,7 +655,9 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
                 ? Icons.request_quote_outlined
                 : account.type == 'investment'
                     ? Icons.trending_up
-                    : Icons.account_balance_wallet_outlined),
+                    : account.type == 'property'
+                        ? Icons.home_work_outlined
+                        : Icons.account_balance_wallet_outlined),
           ),
           title: Text(account.name),
           subtitle: Text(account.isManual
@@ -692,6 +696,7 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
         'checking' => _l10n.bankTypeChecking,
         'savings' => _l10n.bankTypeSavings,
         'investment' => _l10n.bankTypeInvestment,
+        'property' => _l10n.bankTypeProperty,
         'loan' => _l10n.bankTypeLoan,
         'cash' => _l10n.bankTypeCash,
         _ => type,
