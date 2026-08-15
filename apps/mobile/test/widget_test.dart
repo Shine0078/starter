@@ -16,6 +16,7 @@ import 'package:finverse/api/local_notifications.dart';
 import 'package:finverse/api/onboarding_store.dart';
 import 'package:finverse/api/offline_cache.dart';
 import 'package:finverse/api/session_store.dart';
+import 'package:finverse/app_theme.dart';
 import 'package:finverse/l10n/app_localizations.dart';
 import 'package:finverse/main.dart';
 import 'package:finverse/models/models.dart';
@@ -1833,7 +1834,8 @@ void main() {
     );
     await tester.tap(find.text('Attach a receipt'));
     await tester.pumpAndSettle();
-    expect(find.bySemanticsLabel(RegExp('Scan a receipt photo')), findsOneWidget);
+    expect(
+        find.bySemanticsLabel(RegExp('Scan a receipt photo')), findsOneWidget);
     expect(find.bySemanticsLabel(RegExp('Paste receipt text')), findsOneWidget);
   });
 
@@ -1947,6 +1949,7 @@ void main() {
       authenticator: FakeDeviceAuthenticator(),
     );
     await appLock.initialize();
+    final themeColors = ThemeColorController.inMemory();
     await tester.pumpWidget(MaterialApp(
       localizationsDelegates: [
         GlobalMaterialLocalizations.delegate,
@@ -1955,6 +1958,10 @@ void main() {
         AppLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
+      builder: (context, child) => ThemeColorControllerScope(
+        controller: themeColors,
+        child: child ?? const SizedBox.shrink(),
+      ),
       home: HomeScreen(
         api: api,
         appLockController: appLock,
@@ -2032,6 +2039,16 @@ void main() {
     // Scrolled to rather than asserted in place: the account card grows as
     // settings are added, and a test that depends on what fits above the fold
     // breaks every time one is.
+    await tester.scrollUntilVisible(
+      find.text('Theme color'),
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Theme color'), findsOneWidget);
+    expect(find.text('Emerald'), findsOneWidget);
+    expect(find.text('Indigo'), findsOneWidget);
+    expect(find.text('Custom'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('Authenticator security'),
       300,

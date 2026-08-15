@@ -741,5 +741,20 @@
   "analyticsTimelineKindSubscription": "Abonnement",
   "analyticsTimelineKindBill": "Facture",
   "analyticsTimelineKindUnusual": "Inhabituel",
-  "analyticsTimelineKindSpending": "Dépense"
+  "analyticsTimelineKindSpending": "Dépense",
+  "settingsThemeColorTitle": "Couleur du thème",
+  "settingsThemeColorDetail": "Choisissez la couleur d'accent utilisée dans FINVERSE.",
+  "settingsThemeColorEmerald": "Émeraude",
+  "settingsThemeColorIndigo": "Indigo",
+  "settingsThemeColorOcean": "Océan",
+  "settingsThemeColorPlum": "Prune",
+  "settingsThemeColorAmber": "Ambre",
+  "settingsThemeColorCustom": "Personnalisée",
+  "settingsThemeColorCustomDetail": "Créez votre propre couleur d'accent",
+  "settingsThemeColorPickerTitle": "Créer une couleur personnalisée",
+  "settingsThemeColorHexLabel": "Couleur hexadécimale",
+  "settingsThemeColorHue": "Teinte",
+  "settingsThemeColorSaturation": "Saturation",
+  "settingsThemeColorBrightness": "Luminosité",
+  "settingsThemeColorApply": "Utiliser la couleur"
 }

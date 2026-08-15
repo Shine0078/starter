@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'app_locale.dart';
+import 'app_theme.dart';
 import 'api/client.dart';
 import 'api/app_lock.dart';
 import 'api/onboarding_store.dart';
@@ -34,9 +35,11 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await configureBackgroundSync();
   final localeController = LocaleController();
+  final themeColorController = ThemeColorController();
   runApp(FinverseApp(
     api: ApiClient(offlineCache: createOfflineCache()),
     localeController: localeController,
+    themeColorController: themeColorController,
     onboardingStore: SecureOnboardingStore(),
     appLockController: AppLockController(
       store: SecureAppLockStore(),
@@ -47,6 +50,7 @@ Future<void> main() async {
   // state. Showing the system language first protects the first Flutter frame
   // from a temporarily unavailable platform preference store.
   unawaited(localeController.restore());
+  unawaited(themeColorController.restore());
 }
 
 class FinverseApp extends StatelessWidget {
@@ -55,9 +59,12 @@ class FinverseApp extends StatelessWidget {
     OnboardingStore? onboardingStore,
     AppLockController? appLockController,
     LocaleController? localeController,
+    ThemeColorController? themeColorController,
     super.key,
   })  : onboardingStore = onboardingStore ?? CompletedOnboardingStore(),
         localeController = localeController ?? LocaleController.inMemory(),
+        themeColorController =
+            themeColorController ?? ThemeColorController.inMemory(),
         appLockController = appLockController ??
             AppLockController(
               store: InMemoryAppLockStore(),
@@ -68,36 +75,43 @@ class FinverseApp extends StatelessWidget {
   final OnboardingStore onboardingStore;
   final AppLockController appLockController;
   final LocaleController localeController;
+  final ThemeColorController themeColorController;
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: localeController,
-      builder: (context, _) => MaterialApp(
-        title: 'FINVERSE',
-        debugShowCheckedModeBanner: false,
-        theme: FinTheme.light(),
-        darkTheme: FinTheme.dark(),
-        // Follow the OS. A finance app opened at night should not flashbang you.
-        themeMode: ThemeMode.system,
-        locale: localeController.locale,
-        // Localisation plumbing for the date pickers, tooltips, and text-selection
-        // menus. English and French ship today; adding a locale file under l10n/
-        // and extending [LocaleController.supportedLanguageCodes] is all a
-        // future translation needs from here.
-        localizationsDelegates: [
-          ...GlobalMaterialLocalizations.delegates,
-          AppLocalizations.delegate,
-        ],
-        supportedLocales: AppLocalizations.supportedLocales,
-        builder: (context, child) => LocaleControllerScope(
-          controller: localeController,
-          child: child ?? const SizedBox.shrink(),
-        ),
-        home: OnboardingGate(
-          api: api,
-          store: onboardingStore,
-          appLockController: appLockController,
+      builder: (context, _) => ListenableBuilder(
+        listenable: themeColorController,
+        builder: (context, _) => MaterialApp(
+          title: 'FINVERSE',
+          debugShowCheckedModeBanner: false,
+          theme: FinTheme.light(themeColorController.color),
+          darkTheme: FinTheme.dark(themeColorController.color),
+          // Follow the OS. A finance app opened at night should not flashbang you.
+          themeMode: ThemeMode.system,
+          locale: localeController.locale,
+          // Localisation plumbing for the date pickers, tooltips, and text-selection
+          // menus. English and French ship today; adding a locale file under l10n/
+          // and extending [LocaleController.supportedLanguageCodes] is all a
+          // future translation needs from here.
+          localizationsDelegates: [
+            ...GlobalMaterialLocalizations.delegates,
+            AppLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) => LocaleControllerScope(
+            controller: localeController,
+            child: ThemeColorControllerScope(
+              controller: themeColorController,
+              child: child ?? const SizedBox.shrink(),
+            ),
+          ),
+          home: OnboardingGate(
+            api: api,
+            store: onboardingStore,
+            appLockController: appLockController,
+          ),
         ),
       ),
     );

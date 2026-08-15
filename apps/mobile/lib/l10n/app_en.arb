@@ -741,5 +741,20 @@
   "analyticsTimelineKindSubscription": "Subscription",
   "analyticsTimelineKindBill": "Bill",
   "analyticsTimelineKindUnusual": "Unusual",
-  "analyticsTimelineKindSpending": "Spending"
+  "analyticsTimelineKindSpending": "Spending",
+  "settingsThemeColorTitle": "Theme color",
+  "settingsThemeColorDetail": "Choose the accent used throughout FINVERSE.",
+  "settingsThemeColorEmerald": "Emerald",
+  "settingsThemeColorIndigo": "Indigo",
+  "settingsThemeColorOcean": "Ocean",
+  "settingsThemeColorPlum": "Plum",
+  "settingsThemeColorAmber": "Amber",
+  "settingsThemeColorCustom": "Custom",
+  "settingsThemeColorCustomDetail": "Build your own accent color",
+  "settingsThemeColorPickerTitle": "Create a custom color",
+  "settingsThemeColorHexLabel": "Hex color",
+  "settingsThemeColorHue": "Hue",
+  "settingsThemeColorSaturation": "Saturation",
+  "settingsThemeColorBrightness": "Brightness",
+  "settingsThemeColorApply": "Use color"
 }

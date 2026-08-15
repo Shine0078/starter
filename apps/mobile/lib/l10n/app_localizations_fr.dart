@@ -1881,4 +1881,51 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get analyticsTimelineKindSpending => 'Dépense';
+
+  @override
+  String get settingsThemeColorTitle => 'Couleur du thème';
+
+  @override
+  String get settingsThemeColorDetail =>
+      'Choisissez la couleur d\'accent utilisée dans FINVERSE.';
+
+  @override
+  String get settingsThemeColorEmerald => 'Émeraude';
+
+  @override
+  String get settingsThemeColorIndigo => 'Indigo';
+
+  @override
+  String get settingsThemeColorOcean => 'Océan';
+
+  @override
+  String get settingsThemeColorPlum => 'Prune';
+
+  @override
+  String get settingsThemeColorAmber => 'Ambre';
+
+  @override
+  String get settingsThemeColorCustom => 'Personnalisée';
+
+  @override
+  String get settingsThemeColorCustomDetail =>
+      'Créez votre propre couleur d\'accent';
+
+  @override
+  String get settingsThemeColorPickerTitle => 'Créer une couleur personnalisée';
+
+  @override
+  String get settingsThemeColorHexLabel => 'Couleur hexadécimale';
+
+  @override
+  String get settingsThemeColorHue => 'Teinte';
+
+  @override
+  String get settingsThemeColorSaturation => 'Saturation';
+
+  @override
+  String get settingsThemeColorBrightness => 'Luminosité';
+
+  @override
+  String get settingsThemeColorApply => 'Utiliser la couleur';
 }

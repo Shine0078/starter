@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import '../app_locale.dart';
+import '../app_theme.dart';
 import '../api/client.dart';
 import '../api/app_lock.dart';
 import '../api/platform/file_share.dart';
@@ -398,8 +399,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               obscureText: true,
               // Native-only for the same iOS Safari keyboard reason as the
               // sign-in password field.
-              autofillHints:
-                  kIsWeb ? null : const [AutofillHints.password],
+              autofillHints: kIsWeb ? null : const [AutofillHints.password],
               decoration: const InputDecoration(
                 labelText: 'Current password',
                 border: OutlineInputBorder(),
@@ -519,6 +519,231 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Future<void> _showCustomThemeColor(ThemeColorController controller) async {
+    final l10n = AppLocalizations.of(context);
+    var hsv = HSVColor.fromColor(controller.customColor);
+    final hex = TextEditingController(text: _hexColor(controller.customColor));
+    final selected = await showDialog<Color>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final color = hsv.toColor();
+          final parsed = _parseHexColor(hex.text);
+          return AlertDialog(
+            title: Text(l10n.settingsThemeColorPickerTitle),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(
+                    height: 72,
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: const BorderRadius.all(Radius.circular(18)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: hex,
+                    autocorrect: false,
+                    textCapitalization: TextCapitalization.characters,
+                    maxLength: 7,
+                    decoration: InputDecoration(
+                      labelText: l10n.settingsThemeColorHexLabel,
+                      hintText: '#0E7C66',
+                      border: const OutlineInputBorder(),
+                      errorText: hex.text.isEmpty || parsed != null
+                          ? null
+                          : 'Use a six-digit color such as #0E7C66.',
+                    ),
+                    onChanged: (value) {
+                      final parsed = _parseHexColor(value);
+                      setDialogState(() {
+                        if (parsed != null) hsv = HSVColor.fromColor(parsed);
+                      });
+                    },
+                  ),
+                  _colorSlider(
+                    label: l10n.settingsThemeColorHue,
+                    value: hsv.hue,
+                    max: 360,
+                    onChanged: (value) => setDialogState(() {
+                      hsv = hsv.withHue(value);
+                      hex.text = _hexColor(hsv.toColor());
+                    }),
+                  ),
+                  _colorSlider(
+                    label: l10n.settingsThemeColorSaturation,
+                    value: hsv.saturation,
+                    max: 1,
+                    onChanged: (value) => setDialogState(() {
+                      hsv = hsv.withSaturation(value);
+                      hex.text = _hexColor(hsv.toColor());
+                    }),
+                  ),
+                  _colorSlider(
+                    label: l10n.settingsThemeColorBrightness,
+                    value: hsv.value,
+                    max: 1,
+                    onChanged: (value) => setDialogState(() {
+                      hsv = hsv.withValue(value);
+                      hex.text = _hexColor(hsv.toColor());
+                    }),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: Text(l10n.commonCancel),
+              ),
+              FilledButton(
+                onPressed: parsed == null
+                    ? null
+                    : () => Navigator.of(dialogContext).pop(color),
+                child: Text(l10n.settingsThemeColorApply),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    hex.dispose();
+    if (selected != null) await controller.selectCustom(selected);
+  }
+
+  Widget _colorSlider({
+    required String label,
+    required double value,
+    required double max,
+    required ValueChanged<double> onChanged,
+  }) =>
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(label),
+              Text(value.round().toString()),
+            ],
+          ),
+          Slider(value: value, max: max, onChanged: onChanged),
+        ],
+      );
+
+  String _themeColorLabel(AppLocalizations l10n, String id) => switch (id) {
+        FinThemeColors.indigo => l10n.settingsThemeColorIndigo,
+        FinThemeColors.ocean => l10n.settingsThemeColorOcean,
+        FinThemeColors.plum => l10n.settingsThemeColorPlum,
+        FinThemeColors.amber => l10n.settingsThemeColorAmber,
+        FinThemeColors.custom => l10n.settingsThemeColorCustom,
+        _ => l10n.settingsThemeColorEmerald,
+      };
+
+  Widget _themeColorSection(
+      ThemeColorController controller, AppLocalizations l10n) {
+    final ids = [...FinThemeColors.presets, FinThemeColors.custom];
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 560 ? 3 : 2;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(l10n.settingsThemeColorTitle,
+                style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 4),
+            Text(l10n.settingsThemeColorDetail),
+            const SizedBox(height: 12),
+            GridView.builder(
+              itemCount: ids.length,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: columns,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                childAspectRatio: 2.5,
+              ),
+              itemBuilder: (context, index) {
+                final id = ids[index];
+                final color = id == FinThemeColors.custom
+                    ? controller.customColor
+                    : FinThemeColors.preset(id);
+                final selected = controller.selected == id;
+                return Semantics(
+                  button: true,
+                  selected: selected,
+                  label: _themeColorLabel(l10n, id),
+                  child: InkWell(
+                    borderRadius: const BorderRadius.all(Radius.circular(16)),
+                    onTap: () {
+                      if (id == FinThemeColors.custom) {
+                        unawaited(_showCustomThemeColor(controller));
+                      } else {
+                        unawaited(controller.selectPreset(id));
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color:
+                            Theme.of(context).colorScheme.surfaceContainerLow,
+                        borderRadius:
+                            const BorderRadius.all(Radius.circular(16)),
+                        border: Border.all(
+                          color: selected
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context)
+                                  .colorScheme
+                                  .outlineVariant
+                                  .withValues(alpha: 0.6),
+                          width: selected ? 2 : 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 26,
+                            height: 26,
+                            decoration: BoxDecoration(
+                              color: color,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .outlineVariant),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _themeColorLabel(l10n, id),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                          if (selected)
+                            Icon(Icons.check_circle,
+                                size: 18,
+                                color: Theme.of(context).colorScheme.primary),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('Settings & privacy')),
@@ -548,6 +773,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final user = _user!;
     final l10n = AppLocalizations.of(context);
     final localeController = LocaleControllerScope.maybeOf(context);
+    final themeColorController = ThemeColorControllerScope.maybeOf(context);
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       children: [
@@ -676,6 +902,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
           icon: const Icon(Icons.phonelink_erase),
           label: const Text('Sign out every device'),
         ),
+        if (themeColorController != null) ...[
+          const SizedBox(height: 20),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+              child: _themeColorSection(themeColorController, l10n),
+            ),
+          ),
+        ],
         const SizedBox(height: 20),
         _heading('PRIVACY & ACCESS'),
         if (_mfa != null)
@@ -845,3 +1080,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _date(String value) =>
       DateFormat.yMMMd().add_jm().format(DateTime.parse(value).toLocal());
 }
+
+Color? _parseHexColor(String value) {
+  final normalized = value.trim().replaceFirst('#', '');
+  if (!RegExp(r'^[0-9a-fA-F]{6}$').hasMatch(normalized)) return null;
+  return Color(int.parse('FF$normalized', radix: 16));
+}
+
+String _hexColor(Color color) =>
+    '#${color.toARGB32().toRadixString(16).substring(2).toUpperCase()}';

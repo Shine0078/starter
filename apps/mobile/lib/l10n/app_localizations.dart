@@ -3236,6 +3236,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Spending'**
   String get analyticsTimelineKindSpending;
+
+  /// No description provided for @settingsThemeColorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme color'**
+  String get settingsThemeColorTitle;
+
+  /// No description provided for @settingsThemeColorDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the accent used throughout FINVERSE.'**
+  String get settingsThemeColorDetail;
+
+  /// No description provided for @settingsThemeColorEmerald.
+  ///
+  /// In en, this message translates to:
+  /// **'Emerald'**
+  String get settingsThemeColorEmerald;
+
+  /// No description provided for @settingsThemeColorIndigo.
+  ///
+  /// In en, this message translates to:
+  /// **'Indigo'**
+  String get settingsThemeColorIndigo;
+
+  /// No description provided for @settingsThemeColorOcean.
+  ///
+  /// In en, this message translates to:
+  /// **'Ocean'**
+  String get settingsThemeColorOcean;
+
+  /// No description provided for @settingsThemeColorPlum.
+  ///
+  /// In en, this message translates to:
+  /// **'Plum'**
+  String get settingsThemeColorPlum;
+
+  /// No description provided for @settingsThemeColorAmber.
+  ///
+  /// In en, this message translates to:
+  /// **'Amber'**
+  String get settingsThemeColorAmber;
+
+  /// No description provided for @settingsThemeColorCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get settingsThemeColorCustom;
+
+  /// No description provided for @settingsThemeColorCustomDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Build your own accent color'**
+  String get settingsThemeColorCustomDetail;
+
+  /// No description provided for @settingsThemeColorPickerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a custom color'**
+  String get settingsThemeColorPickerTitle;
+
+  /// No description provided for @settingsThemeColorHexLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Hex color'**
+  String get settingsThemeColorHexLabel;
+
+  /// No description provided for @settingsThemeColorHue.
+  ///
+  /// In en, this message translates to:
+  /// **'Hue'**
+  String get settingsThemeColorHue;
+
+  /// No description provided for @settingsThemeColorSaturation.
+  ///
+  /// In en, this message translates to:
+  /// **'Saturation'**
+  String get settingsThemeColorSaturation;
+
+  /// No description provided for @settingsThemeColorBrightness.
+  ///
+  /// In en, this message translates to:
+  /// **'Brightness'**
+  String get settingsThemeColorBrightness;
+
+  /// No description provided for @settingsThemeColorApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Use color'**
+  String get settingsThemeColorApply;
 }
 
 class _AppLocalizationsDelegate

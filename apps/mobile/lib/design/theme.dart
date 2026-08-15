@@ -18,15 +18,35 @@ abstract final class FinTheme {
   /// something when they appear.
   static const Color seed = Color(0xFF0E7C66);
 
-  static ThemeData light() => _build(Brightness.light, FinColors.light);
-  static ThemeData dark() => _build(Brightness.dark, FinColors.dark);
+  static ThemeData light([Color? brandSeed]) =>
+      _build(Brightness.light, FinColors.light, brandSeed);
+  static ThemeData dark([Color? brandSeed]) =>
+      _build(Brightness.dark, FinColors.dark, brandSeed);
 
-  static ThemeData _build(Brightness brightness, FinColors fin) {
-    final scheme = ColorScheme.fromSeed(seedColor: seed, brightness: brightness);
+  static ThemeData _build(
+      Brightness brightness, FinColors fin, Color? brandSeed) {
+    final selectedSeed = brandSeed ?? seed;
+    final scheme =
+        ColorScheme.fromSeed(seedColor: selectedSeed, brightness: brightness);
+    final heroBase = brightness == Brightness.light
+        ? scheme.primary
+        : scheme.primaryContainer;
+    final heroEnd = Color.lerp(heroBase, Colors.black, 0.2)!;
+    final themedFin = fin.copyWith(
+      heroGradientStart: heroBase,
+      heroGradientEnd: heroEnd,
+      onHero: brightness == Brightness.light
+          ? scheme.onPrimary
+          : scheme.onPrimaryContainer,
+      onHeroMuted: (brightness == Brightness.light
+              ? scheme.onPrimary
+              : scheme.onPrimaryContainer)
+          .withValues(alpha: 0.78),
+    );
     final base = ThemeData(colorScheme: scheme, useMaterial3: true);
 
     return base.copyWith(
-      extensions: [fin],
+      extensions: [themedFin],
       textTheme: FinType.textTheme(base.textTheme),
       scaffoldBackgroundColor: scheme.surface,
 
@@ -68,7 +88,8 @@ abstract final class FinTheme {
         style: FilledButton.styleFrom(
           minimumSize: const Size(64, FinTouch.minTarget),
           padding: const EdgeInsets.symmetric(horizontal: FinSpace.xl),
-          shape: const RoundedRectangleBorder(borderRadius: FinRadius.pillBorder),
+          shape:
+              const RoundedRectangleBorder(borderRadius: FinRadius.pillBorder),
           textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
         ),
       ),
@@ -76,7 +97,8 @@ abstract final class FinTheme {
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(64, FinTouch.minTarget),
           padding: const EdgeInsets.symmetric(horizontal: FinSpace.xl),
-          shape: const RoundedRectangleBorder(borderRadius: FinRadius.pillBorder),
+          shape:
+              const RoundedRectangleBorder(borderRadius: FinRadius.pillBorder),
           textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
         ),
       ),
@@ -100,7 +122,8 @@ abstract final class FinTheme {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: FinRadius.cardBorder,
-          borderSide: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.6)),
+          borderSide:
+              BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.6)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: FinRadius.cardBorder,
@@ -116,7 +139,8 @@ abstract final class FinTheme {
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: scheme.surfaceContainerLow,
         surfaceTintColor: Colors.transparent,
-        shape: const RoundedRectangleBorder(borderRadius: FinRadius.sheetBorder),
+        shape:
+            const RoundedRectangleBorder(borderRadius: FinRadius.sheetBorder),
         showDragHandle: true,
       ),
 
@@ -137,8 +161,9 @@ abstract final class FinTheme {
         labelTextStyle: WidgetStateProperty.resolveWith(
           (states) => TextStyle(
             fontSize: 11.5,
-            fontWeight:
-                states.contains(WidgetState.selected) ? FontWeight.w700 : FontWeight.w500,
+            fontWeight: states.contains(WidgetState.selected)
+                ? FontWeight.w700
+                : FontWeight.w500,
           ),
         ),
       ),

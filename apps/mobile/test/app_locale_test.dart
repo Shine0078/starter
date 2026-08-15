@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:finverse/api/client.dart';
 import 'package:finverse/api/session_store.dart';
 import 'package:finverse/app_locale.dart';
+import 'package:finverse/app_theme.dart';
+import 'package:finverse/design/theme.dart';
 import 'package:finverse/l10n/app_localizations.dart';
 import 'package:finverse/screens/assistant_screen.dart';
 import 'package:finverse/screens/bank_connections_screen.dart';
@@ -49,6 +51,40 @@ void main() {
       controller.select(const Locale('es')),
       throwsArgumentError,
     );
+  });
+
+  test('restores a selected theme color and custom color', () async {
+    final store = InMemoryThemeColorPreferenceStore()
+      ..themeColor = FinThemeColors.custom
+      ..customColor = const Color(0xFF123456).toARGB32();
+    final controller = ThemeColorController.inMemory(store: store);
+
+    await controller.restore();
+
+    expect(controller.selected, FinThemeColors.custom);
+    expect(controller.color, const Color(0xFF123456));
+  });
+
+  test('persists preset and custom theme color choices', () async {
+    final store = InMemoryThemeColorPreferenceStore();
+    final controller = ThemeColorController.inMemory(store: store);
+
+    await controller.selectPreset(FinThemeColors.indigo);
+    expect(controller.color, FinThemeColors.preset(FinThemeColors.indigo));
+    expect(store.themeColor, FinThemeColors.indigo);
+
+    await controller.selectCustom(const Color(0xFFABCDEF));
+    expect(controller.selected, FinThemeColors.custom);
+    expect(controller.color, const Color(0xFFABCDEF));
+    expect(store.customColor, const Color(0xFFABCDEF).toARGB32());
+  });
+
+  test('selected theme color changes the Material color scheme', () {
+    final emerald =
+        FinTheme.light(FinThemeColors.preset(FinThemeColors.emerald));
+    final indigo = FinTheme.light(FinThemeColors.preset(FinThemeColors.indigo));
+
+    expect(emerald.colorScheme.primary, isNot(indigo.colorScheme.primary));
   });
 
   testWidgets('applies a selected language across the app scope',
