@@ -27,6 +27,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   List<CategoryDefinition> _categories = const [];
   List<Account> _accounts = const [];
   String? _nextCursor;
+  String? _interpretation;
   bool _loading = true;
   bool _loadingMore = false;
   String? _error;
@@ -116,6 +117,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         setState(() {
           _rows = page.transactions;
           _nextCursor = page.nextCursor;
+          _interpretation = page.interpretation;
         });
       }
     } catch (error) {
@@ -255,6 +257,23 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
               onSubmitted: (_) => _load(),
             ),
           ),
+          if (_interpretation != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.auto_awesome_outlined, size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _interpretation!,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           Expanded(child: _body()),
         ],
       ),
