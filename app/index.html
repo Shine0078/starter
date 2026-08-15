@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base href="/starter/app/">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="FINVERSE - privacy-first personal finance.">
+
+  <!--
+    viewport-fit=cover lets the app paint under the notch and home indicator
+    once iOS runs it standalone. Without it there are black bars at both ends
+    and it reads as a web page in a costume rather than an app.
+  -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+
+  <!--
+    Installing to the iPhone home screen.
+
+    `apple-mobile-web-app-capable` is what removes the Safari address bar and
+    toolbar; without it, "Add to Home Screen" produces a bookmark that opens in
+    the browser rather than something that behaves like an app.
+
+    `black-translucent` lets the Flutter UI extend behind the status bar, which
+    is what the viewport-fit above is for.
+
+    iOS ignores manifest.json for the home-screen icon and title, so both are
+    declared here as well. They are not duplication for its own sake - drop
+    them and the icon becomes a grey screenshot of the page.
+  -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FINVERSE">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="apple-touch-icon" sizes="512x512" href="icons/Icon-512.png">
+
+  <meta name="theme-color" content="#2F6DF6">
+
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>FINVERSE</title>
+  <link rel="manifest" href="manifest.json">
+
+  <style>
+    /* Matches the app's seed colour so the launch is a colour, not a white
+       flash, on a phone that has just come off a dark home screen. */
+    body {
+      margin: 0;
+      background-color: #0B1220;
+      color: #E6EDF7;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    @media (prefers-color-scheme: light) {
+      body { background-color: #F7F9FC; color: #1B2436; }
+    }
+
+    /*
+      The first load fetches a multi-megabyte renderer. Without something on
+      screen that is an unexplained blank page for several seconds, which reads
+      as a crash — and a finance app that looks crashed is one you close and do
+      not reopen. This is removed by the bootstrap below the moment Flutter
+      paints its first frame.
+    */
+    #boot {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      transition: opacity 220ms ease-out;
+    }
+    #boot.done { opacity: 0; pointer-events: none; }
+    #boot .mark { font-size: 22px; font-weight: 600; letter-spacing: 3px; }
+    #boot .hint { font-size: 13px; opacity: 0.65; max-width: 260px; text-align: center; }
+    #boot .bar {
+      width: 180px; height: 3px; border-radius: 3px;
+      background: rgba(127, 155, 200, 0.25);
+      overflow: hidden;
+    }
+    #boot .bar i {
+      display: block; height: 100%; width: 40%; border-radius: 3px;
+      background: #2F6DF6;
+      animation: slide 1.15s ease-in-out infinite;
+    }
+    @keyframes slide {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(350%); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #boot .bar i { animation: none; width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div id="boot">
+    <div class="mark">FINVERSE</div>
+    <div class="bar"><i></i></div>
+    <div class="hint" id="boot-hint">Loading&hellip;</div>
+  </div>
+
+  <script>
+    // Dismissing this overlay.
+    //
+    // It used to rely solely on the `flutter-first-frame` event. That event does
+    // not fire in every Flutter/bootstrap combination — it does not fire in this
+    // one — and the result was the failure this whole file exists to prevent:
+    // a fully rendered, working app sitting invisible underneath a splash that
+    // could never be removed. Reported as "stuck on loading forever", and blamed
+    // in turn on Safari's version, service workers, CanvasKit, and the API.
+    //
+    // The rule now: **this overlay must never be able to outlive the app it
+    // covers.** Three independent ways out, because a cover with a single
+    // release mechanism is a cover that eventually jams.
+    (function () {
+      var bootHint = document.getElementById('boot-hint');
+      var dismissed = false;
+
+      function dismiss() {
+        if (dismissed) return;
+        dismissed = true;
+        clearTimeout(slow);
+        clearTimeout(safety);
+        if (observer) observer.disconnect();
+        var boot = document.getElementById('boot');
+        if (!boot) return;
+        boot.classList.add('done');
+        setTimeout(function () { if (boot.parentNode) boot.remove(); }, 260);
+      }
+
+      // Ground truth: Flutter has put its view in the document. This is what
+      // actually matters, and unlike an event it cannot be missed by attaching
+      // a listener a moment too late.
+      function painted() {
+        return !!document.querySelector('flutter-view, flt-glass-pane, flt-scene-host');
+      }
+
+      // 1. The fast path, when the engine does emit it.
+      window.addEventListener('flutter-first-frame', dismiss);
+
+      // 2. Watch the DOM. Covers every bootstrap that never emits the event.
+      var observer = null;
+      if (window.MutationObserver) {
+        observer = new MutationObserver(function () { if (painted()) dismiss(); });
+        observer.observe(document.body, { childList: true, subtree: true });
+      }
+      // The view may already exist by the time this runs.
+      if (painted()) dismiss();
+
+      // A slow network is not a failure, but after a while it is worth saying so
+      // rather than animating silently at someone.
+      var slow = setTimeout(function () {
+        if (!dismissed && bootHint) {
+          bootHint.textContent = 'Still loading. The first open downloads the app; later ones are quicker.';
+        }
+      }, 6000);
+
+      // 3. The backstop. If the app has painted, get out of its way no matter
+      // what the other two did. If it genuinely has not, say something true and
+      // offer the one action that helps — rather than the previous message,
+      // which told people to update iOS for a problem that was never theirs.
+      var safety = setTimeout(function () {
+        if (dismissed) return;
+        if (painted()) { dismiss(); return; }
+        if (bootHint) {
+          bootHint.innerHTML =
+            'FINVERSE is taking longer than expected to start.<br>' +
+            '<a href="" style="color:#7FA9FF">Reload</a>';
+        }
+      }, 12000);
+    })();
+  </script>
+
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
