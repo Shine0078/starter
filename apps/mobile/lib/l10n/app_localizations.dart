@@ -2001,6 +2001,12 @@ abstract class AppLocalizations {
   /// **'Investment value'**
   String get bankManualInvestment;
 
+  /// No description provided for @bankManualProperty.
+  ///
+  /// In en, this message translates to:
+  /// **'Property value'**
+  String get bankManualProperty;
+
   /// No description provided for @bankManualLoan.
   ///
   /// In en, this message translates to:
@@ -2241,6 +2247,12 @@ abstract class AppLocalizations {
   /// **'Investment'**
   String get bankTypeInvestment;
 
+  /// No description provided for @bankTypeProperty.
+  ///
+  /// In en, this message translates to:
+  /// **'Property'**
+  String get bankTypeProperty;
+
   /// No description provided for @bankTypeLoan.
   ///
   /// In en, this message translates to:
@@ -2316,7 +2328,7 @@ abstract class AppLocalizations {
   /// No description provided for @transactionsSearchHint.
   ///
   /// In en, this message translates to:
-  /// **'Search merchant or description'**
+  /// **'Try ‘coffee over \$20 last month’'**
   String get transactionsSearchHint;
 
   /// No description provided for @transactionsFilterAction.
@@ -3032,6 +3044,31 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Insights'**
   String get dashboardInsights;
+
+  /// No description provided for @netWorthHistoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Net position history'**
+  String get netWorthHistoryTitle;
+
+  /// No description provided for @netWorthHistorySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Observed balances after account updates — no estimated exchange rates'**
+  String get netWorthHistorySubtitle;
+
+  /// No description provided for @netWorthHistoryCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'Current'**
+  String get netWorthHistoryCurrent;
+
+  /// No description provided for @netWorthHistorySemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Net position history with {count} observations from {start} to {end}. Current position {current}.'**
+  String netWorthHistorySemantics(
+      int count, String start, String end, String current);
 
   /// No description provided for @dashboardSignOutTitle.
   ///
