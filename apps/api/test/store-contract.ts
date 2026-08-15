@@ -125,6 +125,36 @@ export function runStoreContract(name: string, create: () => Promise<StoreSet>):
         expect(await stores.accounts.get(OTHER, ACCOUNT.id)).toEqual(ACCOUNT);
         expect(await stores.accounts.remove(USER, ACCOUNT.id)).toBe(false);
       });
+
+      it('records currency-safe net-worth history and replaces a same-day observation', async () => {
+        expect(await stores.accounts.recordNetWorthSnapshot(USER, '2026-08-01')).toEqual([
+          {
+            recordedOn: '2026-08-01',
+            currency: 'USD',
+            assets: 384_512,
+            debts: 142_300,
+            netPosition: 242_212,
+          },
+        ]);
+        await stores.accounts.upsertMany(USER, [{ ...ACCOUNT, balanceCurrent: 400_000 }]);
+        await stores.accounts.recordNetWorthSnapshot(USER, '2026-08-01');
+        await stores.accounts.recordNetWorthSnapshot(USER, '2026-08-02');
+        expect(await stores.accounts.listNetWorthHistory(USER)).toEqual([
+          expect.objectContaining({ recordedOn: '2026-08-01', netPosition: 257_700 }),
+          expect.objectContaining({ recordedOn: '2026-08-02', netPosition: 257_700 }),
+        ]);
+        expect(await stores.accounts.listNetWorthHistory(OTHER)).toEqual([]);
+      });
+
+      it('never combines account currencies in net-worth history', async () => {
+        await stores.accounts.upsertMany(USER, [{ ...ACCOUNT, id: 'acc_cad', currency: 'CAD' }]);
+        const rows = await stores.accounts.recordNetWorthSnapshot(USER, '2026-08-03');
+        expect(rows.map((row) => row.currency)).toEqual(['CAD', 'USD']);
+        await stores.accounts.remove(USER, 'acc_cad');
+        await stores.accounts.recordNetWorthSnapshot(USER, '2026-08-03');
+        expect((await stores.accounts.listNetWorthHistory(USER)).map((row) => row.currency))
+          .toEqual(['USD']);
+      });
     });
 
     describe('transactions', () => {
