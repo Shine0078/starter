@@ -158,6 +158,7 @@ if (ownerUrl) {
         'receipts',
         'push_tokens',
         'webauthn_credentials',
+        'net_worth_snapshots',
       ]) {
         const column = table === 'users' ? 'id' : 'user_id';
         const result = await harness.owner.query(
