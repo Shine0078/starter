@@ -16,6 +16,7 @@ import type {
   DateRange,
   GoalContribution,
   NotificationPreferences,
+  NetWorthSnapshot,
   RawTransaction,
   SavingsGoal,
   UserNotification,
@@ -36,6 +37,8 @@ export interface AccountStore {
   get(userId: string, accountId: string): Promise<Account | null>;
   upsertMany(userId: string, accounts: readonly Account[]): Promise<void>;
   remove(userId: string, accountId: string): Promise<boolean>;
+  recordNetWorthSnapshot(userId: string, recordedOn: string): Promise<NetWorthSnapshot[]>;
+  listNetWorthHistory(userId: string, limit?: number): Promise<NetWorthSnapshot[]>;
 }
 
 export interface TransactionQuery {
