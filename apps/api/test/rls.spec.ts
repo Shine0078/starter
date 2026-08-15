@@ -39,6 +39,7 @@ const PROTECTED_TABLES = [
   'receipts',
   'push_tokens',
   'webauthn_credentials',
+  'net_worth_snapshots',
 ];
 
 /** Seeds one account and one transaction for a user, as the owner. */
@@ -123,6 +124,12 @@ async function seed(owner: Pool, userId: string, amount: number): Promise<void> 
     `INSERT INTO webauthn_credentials (user_id, credential_id, public_key_pem, created_at)
      VALUES ($1, $2, '-----BEGIN PUBLIC KEY-----', now())`,
     [userId, `wa_${userId}`],
+  );
+  await owner.query(
+    `INSERT INTO net_worth_snapshots
+       (user_id, recorded_on, currency, assets, debts, net_position)
+     VALUES ($1, '2026-08-08', 'USD', 100000, 0, 100000)`,
+    [userId],
   );
 }
 
