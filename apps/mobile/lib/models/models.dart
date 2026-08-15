@@ -347,6 +347,40 @@ class Account {
   bool get isManual => source == 'manual';
 }
 
+class NetWorthSnapshot {
+  const NetWorthSnapshot({
+    required this.recordedOn,
+    required this.currency,
+    required this.assets,
+    required this.assetsFormatted,
+    required this.debts,
+    required this.debtsFormatted,
+    required this.netPosition,
+    required this.netPositionFormatted,
+  });
+
+  factory NetWorthSnapshot.fromJson(Map<String, dynamic> json) =>
+      NetWorthSnapshot(
+        recordedOn: json['recordedOn'] as String,
+        currency: json['currency'] as String,
+        assets: json['assets'] as int,
+        assetsFormatted: json['assetsFormatted'] as String,
+        debts: json['debts'] as int,
+        debtsFormatted: json['debtsFormatted'] as String,
+        netPosition: json['netPosition'] as int,
+        netPositionFormatted: json['netPositionFormatted'] as String,
+      );
+
+  final String recordedOn;
+  final String currency;
+  final int assets;
+  final String assetsFormatted;
+  final int debts;
+  final String debtsFormatted;
+  final int netPosition;
+  final String netPositionFormatted;
+}
+
 class Transaction {
   Transaction({
     required this.id,
