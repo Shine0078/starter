@@ -1851,6 +1851,9 @@ void main() {
           201,
         );
       }
+      if (path.endsWith('/accounts/net-worth-history')) {
+        return http.Response('[]', 200);
+      }
       if (path.endsWith('/accounts')) {
         return http.Response(
           manualAccountCreated
@@ -2084,7 +2087,7 @@ void main() {
 
     await tester.tap(find.text('Transactions'));
     await tester.pumpAndSettle();
-    expect(find.text('Search merchant or description'), findsOneWidget);
+    expect(find.text('Try ‘coffee over \$20 last month’'), findsOneWidget);
     expect(find.text('No matching transactions.'), findsOneWidget);
     await tester.tap(find.byTooltip('Filter transactions'));
     await tester.pumpAndSettle();
@@ -2119,6 +2122,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('No balances yet'), findsOneWidget);
     await tester.tap(find.text('Add manual'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cash or wallet'));
+    await tester.pumpAndSettle();
+    expect(find.text('Property value'), findsOneWidget);
+    await tester.tap(find.text('Property value'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).at(0), 'Wallet cash');
     await tester.enterText(find.byType(TextField).at(1), '125');
