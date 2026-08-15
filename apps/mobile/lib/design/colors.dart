@@ -33,6 +33,11 @@ class FinColors extends ThemeExtension<FinColors> {
     required this.skeleton,
     required this.skeletonHighlight,
     required this.chartSeries,
+    required this.heroGradientStart,
+    required this.heroGradientEnd,
+    required this.onHero,
+    required this.onHeroMuted,
+    required this.heroDebt,
   });
 
   /// Money arriving.
@@ -69,61 +74,87 @@ class FinColors extends ThemeExtension<FinColors> {
   /// keeps a pie chart readable in greyscale and to a colour-blind reader.
   final List<Color> chartSeries;
 
+  /// The brand gradient behind the net-position hero. Emerald into deep teal —
+  /// the one surface in the app allowed to be loud, because it is the single
+  /// number every user opens the app to see.
+  final Color heroGradientStart;
+  final Color heroGradientEnd;
+
+  /// Text on that hero. Always high-contrast against [heroGradientStart].
+  final Color onHero;
+
+  /// Secondary text on the hero — the caption under the balance.
+  final Color onHeroMuted;
+
+  /// The debts accent on the hero. A warm coral that reads clearly against the
+  /// green gradient without vibrating the way a saturated red would.
+  final Color heroDebt;
+
   static const light = FinColors(
-    income: Color(0xFF00696D),
-    incomeContainer: Color(0xFFCFF7F5),
-    onIncomeContainer: Color(0xFF00201F),
-    expense: Color(0xFFA4343A),
-    expenseContainer: Color(0xFFFFE1E1),
-    onExpenseContainer: Color(0xFF3B0708),
+    income: Color(0xFF006B5C),
+    incomeContainer: Color(0xFFC7F2E3),
+    onIncomeContainer: Color(0xFF00201B),
+    expense: Color(0xFFB42318),
+    expenseContainer: Color(0xFFFFDAD5),
+    onExpenseContainer: Color(0xFF410002),
     warning: Color(0xFF8A5300),
     warningContainer: Color(0xFFFFEBD1),
     onWarningContainer: Color(0xFF2C1700),
-    positiveTrend: Color(0xFF00696D),
-    negativeTrend: Color(0xFFA4343A),
+    positiveTrend: Color(0xFF0B7A57),
+    negativeTrend: Color(0xFFB42318),
     neutral: Color(0xFF5A5F6A),
     skeleton: Color(0xFFE4E7EC),
     skeletonHighlight: Color(0xFFF4F6F9),
     chartSeries: [
-      Color(0xFF2F6DF6),
-      Color(0xFF00A0A6),
-      Color(0xFF7A4FD4),
+      Color(0xFF0E7C66),
+      Color(0xFF3B82F6),
+      Color(0xFF8B5CF6),
+      Color(0xFFF59E0B),
+      Color(0xFFEC4899),
+      Color(0xFF14B8A6),
+      Color(0xFF64748B),
       Color(0xFFD97706),
-      Color(0xFF3F7F3F),
-      Color(0xFFB5397F),
-      Color(0xFF5A6B8C),
-      Color(0xFF9A6B2F),
     ],
+    heroGradientStart: Color(0xFF0B8A5F),
+    heroGradientEnd: Color(0xFF00695C),
+    onHero: Color(0xFFFFFFFF),
+    onHeroMuted: Color(0xFFD2F1E4),
+    heroDebt: Color(0xFFFFD0C9),
   );
 
   /// Not the light palette dimmed. Saturated reds and greens vibrate against a
   /// dark background and fail contrast; these are lifted in lightness and
   /// pulled back in chroma so they stay legible at 4.5:1 on the dark surface.
   static const dark = FinColors(
-    income: Color(0xFF4FDBD6),
-    incomeContainer: Color(0xFF00504F),
-    onIncomeContainer: Color(0xFFCFF7F5),
-    expense: Color(0xFFFFB3B3),
-    expenseContainer: Color(0xFF6B1D22),
-    onExpenseContainer: Color(0xFFFFE1E1),
+    income: Color(0xFF62D9AE),
+    incomeContainer: Color(0xFF00513F),
+    onIncomeContainer: Color(0xFFBFF2DD),
+    expense: Color(0xFFFFB4AB),
+    expenseContainer: Color(0xFF690005),
+    onExpenseContainer: Color(0xFFFFDAD5),
     warning: Color(0xFFFFC46B),
     warningContainer: Color(0xFF5C3A00),
     onWarningContainer: Color(0xFFFFEBD1),
-    positiveTrend: Color(0xFF4FDBD6),
-    negativeTrend: Color(0xFFFFB3B3),
+    positiveTrend: Color(0xFF62D9AE),
+    negativeTrend: Color(0xFFFFB4AB),
     neutral: Color(0xFFA8AEBB),
     skeleton: Color(0xFF232A36),
     skeletonHighlight: Color(0xFF2E3746),
     chartSeries: [
-      Color(0xFF7FA9FF),
-      Color(0xFF4FD5DB),
-      Color(0xFFB79BFF),
-      Color(0xFFFFB86B),
-      Color(0xFF86C986),
-      Color(0xFFFF8FC4),
-      Color(0xFF9FB0CE),
-      Color(0xFFE0B071),
+      Color(0xFF34D399),
+      Color(0xFF60A5FA),
+      Color(0xFFA78BFA),
+      Color(0xFFFBBF24),
+      Color(0xFFF472B6),
+      Color(0xFF2DD4BF),
+      Color(0xFF94A3B8),
+      Color(0xFFF59E0B),
     ],
+    heroGradientStart: Color(0xFF0F3D34),
+    heroGradientEnd: Color(0xFF0E3A42),
+    onHero: Color(0xFFE4FFF2),
+    onHeroMuted: Color(0xFFA8D9C5),
+    heroDebt: Color(0xFFFFC9C0),
   );
 
   @override
@@ -143,6 +174,11 @@ class FinColors extends ThemeExtension<FinColors> {
     Color? skeleton,
     Color? skeletonHighlight,
     List<Color>? chartSeries,
+    Color? heroGradientStart,
+    Color? heroGradientEnd,
+    Color? onHero,
+    Color? onHeroMuted,
+    Color? heroDebt,
   }) =>
       FinColors(
         income: income ?? this.income,
@@ -160,6 +196,11 @@ class FinColors extends ThemeExtension<FinColors> {
         skeleton: skeleton ?? this.skeleton,
         skeletonHighlight: skeletonHighlight ?? this.skeletonHighlight,
         chartSeries: chartSeries ?? this.chartSeries,
+        heroGradientStart: heroGradientStart ?? this.heroGradientStart,
+        heroGradientEnd: heroGradientEnd ?? this.heroGradientEnd,
+        onHero: onHero ?? this.onHero,
+        onHeroMuted: onHeroMuted ?? this.onHeroMuted,
+        heroDebt: heroDebt ?? this.heroDebt,
       );
 
   @override
@@ -181,6 +222,11 @@ class FinColors extends ThemeExtension<FinColors> {
       skeleton: Color.lerp(skeleton, other.skeleton, t)!,
       skeletonHighlight: Color.lerp(skeletonHighlight, other.skeletonHighlight, t)!,
       chartSeries: t < 0.5 ? chartSeries : other.chartSeries,
+      heroGradientStart: Color.lerp(heroGradientStart, other.heroGradientStart, t)!,
+      heroGradientEnd: Color.lerp(heroGradientEnd, other.heroGradientEnd, t)!,
+      onHero: Color.lerp(onHero, other.onHero, t)!,
+      onHeroMuted: Color.lerp(onHeroMuted, other.onHeroMuted, t)!,
+      heroDebt: Color.lerp(heroDebt, other.heroDebt, t)!,
     );
   }
 }
