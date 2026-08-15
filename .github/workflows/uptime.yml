@@ -1,0 +1,82 @@
+name: Production uptime
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: production-uptime
+  cancel-in-progress: true
+
+jobs:
+  health:
+    name: Check production health
+    runs-on: ubuntu-latest
+    env:
+      PRODUCTION_HEALTH_URL: ${{ vars.PRODUCTION_HEALTH_URL }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Probe health endpoint
+        id: probe
+        shell: bash
+        run: |
+          if [ -z "$PRODUCTION_HEALTH_URL" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "healthy=true" >> "$GITHUB_OUTPUT"
+            echo "PRODUCTION_HEALTH_URL is not configured; uptime monitoring is dormant." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+          for attempt in 1 2 3; do
+            if curl --fail --silent --show-error --max-time 15 "$PRODUCTION_HEALTH_URL" > /dev/null; then
+              echo "healthy=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "healthy=false" >> "$GITHUB_OUTPUT"
+
+      - name: Open or resolve uptime incident
+        if: steps.probe.outputs.configured == 'true'
+        shell: bash
+        env:
+          HEALTHY: ${{ steps.probe.outputs.healthy }}
+        run: |
+          gh label create uptime-alert \
+            --repo "$GITHUB_REPOSITORY" \
+            --description "Automated production health alert" \
+            --color D73A4A \
+            --force
+
+          open_issues="$(gh issue list \
+            --repo "$GITHUB_REPOSITORY" \
+            --label uptime-alert \
+            --state open \
+            --json number \
+            --jq '.[].number')"
+
+          if [ "$HEALTHY" = "true" ]; then
+            for issue in $open_issues; do
+              gh issue comment "$issue" --repo "$GITHUB_REPOSITORY" \
+                --body "The automated health check recovered at $(date -u +'%Y-%m-%dT%H:%M:%SZ')."
+              gh issue close "$issue" --repo "$GITHUB_REPOSITORY" --reason completed
+            done
+            echo "Production health check passed." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          if [ -z "$open_issues" ]; then
+            gh issue create \
+              --repo "$GITHUB_REPOSITORY" \
+              --label uptime-alert \
+              --title "[Uptime] Production health check failed" \
+              --body "The production health endpoint failed three checks at $(date -u +'%Y-%m-%dT%H:%M:%SZ'). Follow docs/15-incident-response.md. No response body or financial data was recorded."
+          fi
+          echo "Production health check failed. An uptime incident is open." >> "$GITHUB_STEP_SUMMARY"
+          exit 1
