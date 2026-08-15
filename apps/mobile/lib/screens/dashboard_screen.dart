@@ -10,6 +10,7 @@ import '../models/models.dart';
 import '../widgets/budget_tile.dart';
 import '../widgets/health_score_card.dart';
 import '../widgets/net_position_card.dart';
+import '../widgets/net_worth_history_chart.dart';
 import '../widgets/spending_chart.dart';
 import '../widgets/transaction_tile.dart';
 import 'notifications_screen.dart';
@@ -54,6 +55,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   DateTime? _lastResumeRefresh;
 
   List<Account> _accounts = const [];
+  List<NetWorthSnapshot> _netWorthHistory = const [];
   HealthScore? _health;
   List<BudgetProgress> _budgets = const [];
   List<Transaction> _transactions = const [];
@@ -150,6 +152,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         widget.api.budgetProgress(),
         widget.api.transactions(limit: 20),
         widget.api.insights(currency: currency),
+        widget.api.netWorthHistory(currency: currency),
       ]);
 
       if (!mounted) return;
@@ -159,6 +162,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         _budgets = results[2] as List<BudgetProgress>;
         _transactions = results[3] as List<Transaction>;
         _insights = results[4] as InsightsReport;
+        _netWorthHistory = results[5] as List<NetWorthSnapshot>;
         _loading = false;
       });
     } catch (error) {
@@ -286,8 +290,8 @@ class _DashboardScreenState extends State<DashboardScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text(l10n.dashboardVerifySendFailed(
-                friendlyErrorMessage(error)))),
+            content: Text(
+                l10n.dashboardVerifySendFailed(friendlyErrorMessage(error)))),
       );
       return;
     }
@@ -555,6 +559,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   /// list of self-contained columns so the narrow and wide layouts can consume
   /// the same content without duplicating it.
   List<Widget> _sections(ThemeData theme, AppLocalizations l10n) => [
+        if (_netWorthHistory.isNotEmpty)
+          NetWorthHistoryChart(points: _netWorthHistory),
         if (_insights != null) _insightsSection(theme, l10n),
         if (_insights != null && _insights!.topCategories.isNotEmpty)
           SpendingChart(categories: _insights!.topCategories),
