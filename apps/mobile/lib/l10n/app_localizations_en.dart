@@ -1158,6 +1158,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bankManualInvestment => 'Investment value';
 
   @override
+  String get bankManualProperty => 'Property value';
+
+  @override
   String get bankManualLoan => 'Loan or other debt';
 
   @override
@@ -1295,6 +1298,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bankTypeInvestment => 'Investment';
 
   @override
+  String get bankTypeProperty => 'Property';
+
+  @override
   String get bankTypeLoan => 'Loan';
 
   @override
@@ -1335,7 +1341,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get transactionsTitle => 'Transactions';
 
   @override
-  String get transactionsSearchHint => 'Search merchant or description';
+  String get transactionsSearchHint => 'Try ‘coffee over \$20 last month’';
 
   @override
   String get transactionsFilterAction => 'Filter transactions';
@@ -1747,6 +1753,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dashboardInsights => 'Insights';
+
+  @override
+  String get netWorthHistoryTitle => 'Net position history';
+
+  @override
+  String get netWorthHistorySubtitle =>
+      'Observed balances after account updates — no estimated exchange rates';
+
+  @override
+  String get netWorthHistoryCurrent => 'Current';
+
+  @override
+  String netWorthHistorySemantics(
+      int count, String start, String end, String current) {
+    return 'Net position history with $count observations from $start to $end. Current position $current.';
+  }
 
   @override
   String get dashboardSignOutTitle => 'Sign out?';
