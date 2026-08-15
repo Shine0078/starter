@@ -8,12 +8,13 @@ import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import compression from 'compression';
 import type { NextFunction, Request, Response } from 'express';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { extname, join } from 'node:path';
 
 import { AppModule } from './app.module';
 import { loadConfig, shouldServeDevelopmentDashboard } from './config';
 import { installHttpControls } from './infra/http/controls';
+import { checkWebBundleBaseHref } from './infra/http/web-bundle';
 import { parseAppRole, provisionAppRole } from './infra/postgres/app-role';
 import { closePool, getPool } from './infra/postgres/pool';
 import { runMigrations } from './infra/postgres/migrate';
@@ -92,6 +93,16 @@ async function bootstrap(): Promise<void> {
   const webAppBuilt = existsSync(join(webAppDir, 'index.html'));
 
   if (webAppBuilt) {
+    // A bundle built for a different base path serves 200s for index.html and
+    // 404s for every asset it then asks for, so the page renders nothing at all
+    // and the server still looks healthy. See web-bundle.ts for why this check
+    // exists and why it warns rather than refusing to boot.
+    const bundle = checkWebBundleBaseHref(
+      readFileSync(join(webAppDir, 'index.html'), 'utf8'),
+      '/app/',
+    );
+    if (!bundle.ok) logger.error(bundle.reason);
+
     // A changing financial web bundle must be revalidated before use, but the
     // multi-megabyte renderer may still be conditionally reused when unchanged.
     // `web/flutter_service_worker.js` is a migration-only worker for clients
