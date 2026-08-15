@@ -15,6 +15,7 @@ import type {
   CategorizationRule,
   GoalContribution,
   NotificationPreferences,
+  NetWorthSnapshot,
   SavingsGoal,
   UserNotification,
   Transaction,
@@ -41,6 +42,7 @@ function bucket<T>(map: Map<string, T[]>, userId: string): T[] {
 
 export class InMemoryAccountStore implements AccountStore {
   private readonly byUser = new Map<string, Account[]>();
+  private readonly snapshotsByUser = new Map<string, NetWorthSnapshot[]>();
 
   async list(userId: string): Promise<Account[]> {
     return [...bucket(this.byUser, userId)];
@@ -67,9 +69,55 @@ export class InMemoryAccountStore implements AccountStore {
     return true;
   }
 
+  async recordNetWorthSnapshot(
+    userId: string,
+    recordedOn: string,
+  ): Promise<NetWorthSnapshot[]> {
+    const totals = netWorthByCurrency(bucket(this.byUser, userId), recordedOn);
+    const history = bucket(this.snapshotsByUser, userId);
+    for (let index = history.length - 1; index >= 0; index -= 1) {
+      const row = history[index];
+      if (row?.recordedOn === recordedOn) history.splice(index, 1);
+    }
+    history.push(...totals);
+    history.sort(
+      (a, b) => a.recordedOn.localeCompare(b.recordedOn) || a.currency.localeCompare(b.currency),
+    );
+    return totals;
+  }
+
+  async listNetWorthHistory(userId: string, limit = 365): Promise<NetWorthSnapshot[]> {
+    const history = [...bucket(this.snapshotsByUser, userId)];
+    return history.slice(Math.max(0, history.length - limit));
+  }
+
   purgeUser(userId: string): void {
     this.byUser.delete(userId);
+    this.snapshotsByUser.delete(userId);
   }
+}
+
+function netWorthByCurrency(
+  accounts: readonly Account[],
+  recordedOn: string,
+): NetWorthSnapshot[] {
+  const totals = new Map<string, { assets: number; debts: number }>();
+  for (const account of accounts) {
+    const currency = account.currency.toUpperCase();
+    const current = totals.get(currency) ?? { assets: 0, debts: 0 };
+    if (account.balanceCurrent >= 0) current.assets += account.balanceCurrent;
+    else current.debts += Math.abs(account.balanceCurrent);
+    totals.set(currency, current);
+  }
+  return [...totals.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([currency, total]) => ({
+      recordedOn,
+      currency,
+      assets: total.assets,
+      debts: total.debts,
+      netPosition: total.assets - total.debts,
+    }));
 }
 
 export class InMemoryTransactionStore implements TransactionStore {
