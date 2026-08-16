@@ -68,6 +68,10 @@ HTTPS, and prints the permanent `run.app` URL. Replace
 Cloud Run supplies the `PORT` variable automatically; do not add `PORT` to the
 private env file.
 
+If a previous build completed but a later deployment step failed, you can
+reuse that image by setting `FINVERSE_IMAGE` to the image printed by Cloud
+Build. This avoids rebuilding unchanged source.
+
 Visit `https://SERVICE-URL/app/` for the PWA and `https://SERVICE-URL/healthz`
 for the health check. Keep `MIGRATE_ON_BOOT=false`; migrations are a release
 step so two Cloud Run instances cannot race on startup.

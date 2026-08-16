@@ -17,7 +17,7 @@ PROJECT_ID="${GOOGLE_CLOUD_PROJECT:-$(gcloud config get-value project 2>/dev/nul
 REGION="${CLOUD_RUN_REGION:-us-central1}"
 REPOSITORY="${ARTIFACT_REPOSITORY:-finverse}"
 SERVICE="${CLOUD_RUN_SERVICE:-finverse}"
-IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${SERVICE}:$(git rev-parse --short HEAD)"
+IMAGE="${FINVERSE_IMAGE:-${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${SERVICE}:$(git rev-parse --short HEAD)}"
 
 if [[ -z "${PROJECT_ID}" || "${PROJECT_ID}" == "(unset)" ]]; then
   echo "No Google Cloud project is selected. Run: gcloud config set project PROJECT_ID" >&2
