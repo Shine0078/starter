@@ -30,11 +30,18 @@ import type {
 } from '../../domain/types';
 import { CATEGORIES } from '../../domain/categories';
 import type {
+  SplitExpense,
+  SplitGroup,
+  SplitGroupMember,
+  SplitSettlement,
+} from '../../domain/split/types';
+import type {
   AccountStore,
   BudgetStore,
   GoalStore,
   NotificationStore,
   RuleStore,
+  SplitStore,
   TransactionQuery,
   TransactionStore,
 } from '../../ports';
@@ -49,6 +56,11 @@ import {
   toNotification,
   toNotificationPreferences,
   toRule,
+  toSplitExpense,
+  toSplitGroup,
+  toSplitMember,
+  toSplitParticipant,
+  toSplitSettlement,
   toTransaction,
   type AccountRow,
   type BudgetRow,
@@ -57,6 +69,11 @@ import {
   type NotificationPreferenceRow,
   type NotificationRow,
   type RuleRow,
+  type SplitExpenseRow,
+  type SplitGroupRow,
+  type SplitMemberRow,
+  type SplitParticipantRow,
+  type SplitSettlementRow,
   type TransactionRow,
 } from './rows';
 
@@ -810,6 +827,194 @@ export class PostgresRuleStore implements RuleStore {
         [userId, id],
       );
       return (result.rowCount ?? 0) > 0;
+    });
+  }
+}
+
+// ------------------------------------------------------------------- splits
+
+const SPLIT_GROUP_COLUMNS = 'id, name, currency, created_by, created_at, archived_at';
+const SPLIT_MEMBER_COLUMNS = 'group_id, user_id, role, joined_at';
+const SPLIT_EXPENSE_COLUMNS = `
+  id, group_id, description, category, amount, currency,
+  paid_by_user_id, split_method, date, created_at
+`;
+const SPLIT_PARTICIPANT_COLUMNS = 'expense_id, group_id, user_id, amount';
+const SPLIT_SETTLEMENT_COLUMNS =
+  'id, group_id, from_user_id, to_user_id, amount, currency, note, created_at';
+
+export class PostgresSplitStore implements SplitStore {
+  constructor(private readonly pg: Pool) {}
+
+  async listGroups(userId: string): Promise<SplitGroup[]> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const { rows } = await client.query<SplitGroupRow>(
+        `SELECT g.id, g.name, g.currency, g.created_by, g.created_at, g.archived_at
+           FROM split_groups g
+           JOIN split_group_members m ON m.group_id = g.id
+          WHERE m.user_id = $1 AND g.archived_at IS NULL
+          ORDER BY g.created_at, g.id`,
+        [userId],
+      );
+      return rows.map(toSplitGroup);
+    });
+  }
+
+  async getGroup(userId: string, groupId: string): Promise<SplitGroup | null> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const { rows } = await client.query<SplitGroupRow>(
+        `SELECT ${SPLIT_GROUP_COLUMNS} FROM split_groups
+         WHERE id = $1 AND finverse_is_split_member(id)`,
+        [groupId],
+      );
+      return rows[0] ? toSplitGroup(rows[0]) : null;
+    });
+  }
+
+  async createGroup(
+    userId: string,
+    group: SplitGroup,
+    membership: SplitGroupMember,
+  ): Promise<SplitGroup> {
+    return withUserScope(this.pg, userId, async (client) => {
+      // No RETURNING here: on an RLS table, INSERT ... RETURNING re-checks the
+      // row against the SELECT policy, which fails for a group whose membership
+      // has not been inserted yet. The full object is already in hand.
+      await client.query(
+        `INSERT INTO split_groups (id, name, currency, created_by, created_at)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [group.id, group.name, group.currency, userId, group.createdAt],
+      );
+      await client.query(
+        `INSERT INTO split_group_members (group_id, user_id, role)
+         VALUES ($1, $2, $3)`,
+        [membership.groupId, membership.userId, membership.role],
+      );
+      return group;
+    });
+  }
+
+  async archiveGroup(userId: string, groupId: string): Promise<boolean> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const result = await client.query(
+        `UPDATE split_groups SET archived_at = now()
+         WHERE id = $1 AND archived_at IS NULL AND finverse_is_split_member(id)`,
+        [groupId],
+      );
+      return (result.rowCount ?? 0) > 0;
+    });
+  }
+
+  async listMembers(userId: string, groupId: string): Promise<SplitGroupMember[]> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const { rows } = await client.query<SplitMemberRow>(
+        `SELECT ${SPLIT_MEMBER_COLUMNS} FROM split_group_members
+         WHERE group_id = $1 ORDER BY joined_at, user_id`,
+        [groupId],
+      );
+      return rows.map(toSplitMember);
+    });
+  }
+
+  async addMember(
+    userId: string,
+    membership: SplitGroupMember,
+  ): Promise<SplitGroupMember> {
+    return withUserScope(this.pg, userId, async (client) => {
+      await client.query(
+        `INSERT INTO split_group_members (group_id, user_id, role)
+         VALUES ($1, $2, $3)`,
+        [membership.groupId, membership.userId, membership.role],
+      );
+      return membership;
+    });
+  }
+
+  async listExpenses(userId: string, groupId: string): Promise<SplitExpense[]> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const { rows } = await client.query<SplitExpenseRow>(
+        `SELECT ${SPLIT_EXPENSE_COLUMNS} FROM split_expenses
+         WHERE group_id = $1 ORDER BY date DESC, id DESC`,
+        [groupId],
+      );
+      const participants = await client.query<SplitParticipantRow>(
+        `SELECT ${SPLIT_PARTICIPANT_COLUMNS} FROM split_expense_participants
+         WHERE group_id = $1`,
+        [groupId],
+      );
+      const byExpense = new Map<string, typeof participants.rows>();
+      for (const row of participants.rows) {
+        const list = byExpense.get(row.expense_id) ?? [];
+        list.push(row);
+        byExpense.set(row.expense_id, list);
+      }
+      return rows.map((row) =>
+        toSplitExpense(row, (byExpense.get(row.id) ?? []).map(toSplitParticipant)),
+      );
+    });
+  }
+
+  async addExpense(userId: string, expense: SplitExpense): Promise<SplitExpense> {
+    return withUserScope(this.pg, userId, async (client) => {
+      await client.query(
+        `INSERT INTO split_expenses
+           (id, group_id, description, category, amount, currency,
+            paid_by_user_id, split_method, date)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [
+          expense.id,
+          expense.groupId,
+          expense.description,
+          expense.category,
+          expense.amount,
+          expense.currency,
+          expense.paidByUserId,
+          expense.splitMethod,
+          expense.date,
+        ],
+      );
+      for (const participant of expense.participants) {
+        await client.query(
+          `INSERT INTO split_expense_participants (expense_id, group_id, user_id, amount)
+           VALUES ($1, $2, $3, $4)`,
+          [expense.id, expense.groupId, participant.userId, participant.amount],
+        );
+      }
+      return expense;
+    });
+  }
+
+  async listSettlements(userId: string, groupId: string): Promise<SplitSettlement[]> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const { rows } = await client.query<SplitSettlementRow>(
+        `SELECT ${SPLIT_SETTLEMENT_COLUMNS} FROM split_settlements
+         WHERE group_id = $1 ORDER BY created_at DESC, id DESC`,
+        [groupId],
+      );
+      return rows.map(toSplitSettlement);
+    });
+  }
+
+  async addSettlement(
+    userId: string,
+    settlement: SplitSettlement,
+  ): Promise<SplitSettlement> {
+    return withUserScope(this.pg, userId, async (client) => {
+      await client.query(
+        `INSERT INTO split_settlements
+           (id, group_id, from_user_id, to_user_id, amount, currency, note)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [
+          settlement.id,
+          settlement.groupId,
+          settlement.fromUserId,
+          settlement.toUserId,
+          settlement.amount,
+          settlement.currency,
+          settlement.note || null,
+        ],
+      );
+      return settlement;
     });
   }
 }

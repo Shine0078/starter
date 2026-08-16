@@ -17,6 +17,13 @@ import type {
   UserNotification,
   Transaction,
 } from '../../domain/types';
+import type {
+  SplitExpense,
+  SplitGroup,
+  SplitGroupMember,
+  SplitParticipant,
+  SplitSettlement,
+} from '../../domain/split/types';
 
 export interface AccountRow {
   id: string;
@@ -216,6 +223,108 @@ export function toRule(row: RuleRow): CategorizationRule {
     pattern: row.pattern,
     categorySlug: row.category_slug,
     priority: row.priority,
+  };
+}
+
+export interface SplitGroupRow {
+  id: string;
+  name: string;
+  currency: string;
+  created_by: string | null;
+  created_at: string;
+  archived_at: Date | null;
+}
+
+export function toSplitGroup(row: SplitGroupRow): SplitGroup {
+  return {
+    id: row.id,
+    name: row.name,
+    currency: row.currency,
+    createdBy: row.created_by,
+    createdAt: row.created_at,
+    archivedAt: row.archived_at?.toISOString() ?? null,
+  };
+}
+
+export interface SplitMemberRow {
+  group_id: string;
+  user_id: string;
+  role: string;
+  joined_at: Date;
+}
+
+export function toSplitMember(row: SplitMemberRow): SplitGroupMember {
+  return {
+    groupId: row.group_id,
+    userId: row.user_id,
+    role: row.role as SplitGroupMember['role'],
+    joinedAt: row.joined_at.toISOString(),
+  };
+}
+
+export interface SplitExpenseRow {
+  id: string;
+  group_id: string;
+  description: string;
+  category: string;
+  amount: number;
+  currency: string;
+  paid_by_user_id: string;
+  split_method: string;
+  date: string;
+  created_at: Date;
+}
+
+export interface SplitParticipantRow {
+  expense_id: string;
+  user_id: string;
+  amount: number;
+}
+
+export function toSplitParticipant(row: SplitParticipantRow): SplitParticipant {
+  return { expenseId: row.expense_id, userId: row.user_id, amount: row.amount };
+}
+
+export function toSplitExpense(
+  row: SplitExpenseRow,
+  participants: readonly SplitParticipant[],
+): SplitExpense {
+  return {
+    id: row.id,
+    groupId: row.group_id,
+    description: row.description,
+    category: row.category,
+    amount: row.amount,
+    currency: row.currency,
+    paidByUserId: row.paid_by_user_id,
+    splitMethod: row.split_method as SplitExpense['splitMethod'],
+    date: row.date,
+    createdAt: row.created_at.toISOString(),
+    participants: [...participants],
+  };
+}
+
+export interface SplitSettlementRow {
+  id: string;
+  group_id: string;
+  from_user_id: string;
+  to_user_id: string;
+  amount: number;
+  currency: string;
+  note: string | null;
+  created_at: Date;
+}
+
+export function toSplitSettlement(row: SplitSettlementRow): SplitSettlement {
+  return {
+    id: row.id,
+    groupId: row.group_id,
+    fromUserId: row.from_user_id,
+    toUserId: row.to_user_id,
+    amount: row.amount,
+    currency: row.currency,
+    note: row.note ?? '',
+    createdAt: row.created_at.toISOString(),
   };
 }
 

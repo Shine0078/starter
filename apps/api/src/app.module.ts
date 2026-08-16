@@ -27,6 +27,7 @@ import { LedgerModule } from './modules/ledger/ledger.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PrivacyModule } from './modules/privacy/privacy.module';
 import { ReceiptsModule } from './modules/receipts/receipts.module';
+import { SplitModule } from './modules/split/split.module';
 import { PushModule } from './modules/push/push.module';
 import { WebAuthnModule } from './modules/webauthn/webauthn.module';
 import { httpMetrics, metricsTokenMatches } from './infra/http/metrics';
@@ -162,6 +163,7 @@ class MetaController {
     InsightsModule,
     PrivacyModule,
     ReceiptsModule,
+    SplitModule,
     PushModule,
     WebAuthnModule,
   ],

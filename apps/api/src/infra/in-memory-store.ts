@@ -23,11 +23,18 @@ import type {
 import { isWithin } from '../domain/dates';
 import { getCategory } from '../domain/categories';
 import type {
+  SplitExpense,
+  SplitGroup,
+  SplitGroupMember,
+  SplitSettlement,
+} from '../domain/split/types';
+import type {
   AccountStore,
   BudgetStore,
   GoalStore,
   NotificationStore,
   RuleStore,
+  SplitStore,
   TransactionQuery,
   TransactionStore,
 } from '../ports';
@@ -418,5 +425,125 @@ export class InMemoryRuleStore implements RuleStore {
 
   purgeUser(userId: string): void {
     this.byUser.delete(userId);
+  }
+}
+
+// ------------------------------------------------------------------- splits
+
+export class InMemorySplitStore implements SplitStore {
+  private readonly groups = new Map<string, SplitGroup>();
+  private readonly members = new Map<string, SplitGroupMember[]>();
+  private readonly expenses = new Map<string, SplitExpense[]>();
+  private readonly settlements = new Map<string, SplitSettlement[]>();
+
+  private memberIds(groupId: string): string[] {
+    return (this.members.get(groupId) ?? []).map((m) => m.userId);
+  }
+
+  async listGroups(userId: string): Promise<SplitGroup[]> {
+    return [...this.groups.values()]
+      .filter((group) => !group.archivedAt && this.memberIds(group.id).includes(userId))
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
+  }
+
+  async getGroup(userId: string, groupId: string): Promise<SplitGroup | null> {
+    const group = this.groups.get(groupId);
+    if (!group || !this.memberIds(groupId).includes(userId)) return null;
+    return group;
+  }
+
+  async createGroup(
+    userId: string,
+    group: SplitGroup,
+    membership: SplitGroupMember,
+  ): Promise<SplitGroup> {
+    this.groups.set(group.id, group);
+    this.members.set(group.id, [membership]);
+    return group;
+  }
+
+  async archiveGroup(userId: string, groupId: string): Promise<boolean> {
+    const group = await this.getGroup(userId, groupId);
+    if (!group || group.archivedAt) return false;
+    group.archivedAt = new Date().toISOString();
+    return true;
+  }
+
+  async listMembers(userId: string, groupId: string): Promise<SplitGroupMember[]> {
+    if (!(await this.getGroup(userId, groupId))) return [];
+    return [...(this.members.get(groupId) ?? [])].sort((a, b) =>
+      a.joinedAt.localeCompare(b.joinedAt) || a.userId.localeCompare(b.userId),
+    );
+  }
+
+  async addMember(
+    userId: string,
+    membership: SplitGroupMember,
+  ): Promise<SplitGroupMember> {
+    if (!(await this.getGroup(userId, membership.groupId))) {
+      throw new Error('Not a member of this group.');
+    }
+    const rows = this.members.get(membership.groupId) ?? [];
+    if (!rows.some((m) => m.userId === membership.userId)) rows.push(membership);
+    this.members.set(membership.groupId, rows);
+    return membership;
+  }
+
+  async listExpenses(userId: string, groupId: string): Promise<SplitExpense[]> {
+    if (!(await this.getGroup(userId, groupId))) return [];
+    return [...(this.expenses.get(groupId) ?? [])].sort((a, b) =>
+      b.date.localeCompare(a.date) || b.id.localeCompare(a.id),
+    );
+  }
+
+  async addExpense(userId: string, expense: SplitExpense): Promise<SplitExpense> {
+    if (!(await this.getGroup(userId, expense.groupId))) {
+      throw new Error('Not a member of this group.');
+    }
+    const rows = this.expenses.get(expense.groupId) ?? [];
+    rows.push(expense);
+    this.expenses.set(expense.groupId, rows);
+    return expense;
+  }
+
+  async listSettlements(userId: string, groupId: string): Promise<SplitSettlement[]> {
+    if (!(await this.getGroup(userId, groupId))) return [];
+    return [...(this.settlements.get(groupId) ?? [])].sort((a, b) =>
+      b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id),
+    );
+  }
+
+  async addSettlement(
+    userId: string,
+    settlement: SplitSettlement,
+  ): Promise<SplitSettlement> {
+    if (!(await this.getGroup(userId, settlement.groupId))) {
+      throw new Error('Not a member of this group.');
+    }
+    const rows = this.settlements.get(settlement.groupId) ?? [];
+    rows.push(settlement);
+    this.settlements.set(settlement.groupId, rows);
+    return settlement;
+  }
+
+  purgeUser(userId: string): void {
+    for (const [groupId, memberRows] of this.members) {
+      this.members.set(groupId, memberRows.filter((m) => m.userId !== userId));
+    }
+    for (const [groupId, expenseRows] of this.expenses) {
+      const kept: SplitExpense[] = [];
+      for (const expense of expenseRows) {
+        if (expense.paidByUserId === userId) continue;
+        expense.participants = expense.participants.filter((p) => p.userId !== userId);
+        kept.push(expense);
+      }
+      this.expenses.set(groupId, kept);
+    }
+    for (const [groupId, settlementRows] of this.settlements) {
+      this.settlements.set(
+        groupId,
+        settlementRows.filter((s) => s.fromUserId !== userId && s.toUserId !== userId),
+      );
+    }
   }
 }

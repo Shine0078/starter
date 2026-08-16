@@ -22,6 +22,12 @@ import type {
   UserNotification,
   Transaction,
 } from '../domain/types';
+import type {
+  SplitExpense,
+  SplitGroup,
+  SplitGroupMember,
+  SplitSettlement,
+} from '../domain/split/types';
 
 export const ACCOUNT_STORE = 'ACCOUNT_STORE';
 export const TRANSACTION_STORE = 'TRANSACTION_STORE';
@@ -29,6 +35,7 @@ export const BUDGET_STORE = 'BUDGET_STORE';
 export const RULE_STORE = 'RULE_STORE';
 export const GOAL_STORE = 'GOAL_STORE';
 export const NOTIFICATION_STORE = 'NOTIFICATION_STORE';
+export const SPLIT_STORE = 'SPLIT_STORE';
 export const AGGREGATOR = 'AGGREGATOR';
 export const CLOCK = 'CLOCK';
 
@@ -104,6 +111,29 @@ export interface NotificationStore {
     userId: string,
     preferences: NotificationPreferences,
   ): Promise<NotificationPreferences>;
+}
+
+/**
+ * Shared expenses between FINVERSE users. Unlike every other store, the
+ * visibility boundary is group membership, not a `user_id` column — each
+ * method's `userId` is the acting member, and row-level security does the
+ * enforcement on Postgres.
+ */
+export interface SplitStore {
+  listGroups(userId: string): Promise<SplitGroup[]>;
+  getGroup(userId: string, groupId: string): Promise<SplitGroup | null>;
+  createGroup(
+    userId: string,
+    group: SplitGroup,
+    membership: SplitGroupMember,
+  ): Promise<SplitGroup>;
+  archiveGroup(userId: string, groupId: string): Promise<boolean>;
+  listMembers(userId: string, groupId: string): Promise<SplitGroupMember[]>;
+  addMember(userId: string, membership: SplitGroupMember): Promise<SplitGroupMember>;
+  listExpenses(userId: string, groupId: string): Promise<SplitExpense[]>;
+  addExpense(userId: string, expense: SplitExpense): Promise<SplitExpense>;
+  listSettlements(userId: string, groupId: string): Promise<SplitSettlement[]>;
+  addSettlement(userId: string, settlement: SplitSettlement): Promise<SplitSettlement>;
 }
 
 export interface RuleStore {

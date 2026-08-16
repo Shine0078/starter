@@ -113,6 +113,12 @@ export async function provisionAppRole(pg: Pool, appDatabaseUrl: string): Promis
             app_role
           );
         END IF;
+        IF to_regprocedure('public.finverse_is_split_member(text)') IS NOT NULL THEN
+          EXECUTE format(
+            'GRANT EXECUTE ON FUNCTION public.finverse_is_split_member(text) TO %I',
+            app_role
+          );
+        END IF;
 
         -- Tables added by a later migration are covered without anyone having to
         -- remember to come back here.

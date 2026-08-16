@@ -20,6 +20,7 @@ import { ACCOUNT_DELETION_STORE, type AccountDeletionStore } from '../src/ports/
 import { EMAIL_SENDER } from '../src/ports/auth';
 import type { DevelopmentEmailSender } from '../src/infra/auth/auth-action-stores';
 import { totpAt } from '../src/domain/auth/totp';
+import { isSpendingCategory, UNKNOWN_CATEGORY } from '../src/domain/categories';
 
 // Must be set before anything calls loadConfig(), which memoises.
 process.env.STORE = 'memory';
@@ -1007,7 +1008,8 @@ describe('auth API', () => {
           row.postedAt.startsWith('2026-08') &&
           row.amount < 0 &&
           !row.pending &&
-          !['unknown', 'transfer', 'income', 'salary', 'refund'].includes(row.categorySlug),
+          row.categorySlug !== UNKNOWN_CATEGORY &&
+          isSpendingCategory(row.categorySlug),
       );
       expect(budgetable).toBeTruthy();
       await request(http)

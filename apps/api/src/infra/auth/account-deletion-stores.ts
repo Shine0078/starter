@@ -7,6 +7,7 @@ import {
   InMemoryGoalStore,
   InMemoryNotificationStore,
   InMemoryRuleStore,
+  InMemorySplitStore,
   InMemoryTransactionStore,
 } from '../in-memory-store';
 import { withTransaction } from '../postgres/pool';
@@ -37,6 +38,7 @@ export class InMemoryAccountDeletionStore implements AccountDeletionStore {
     private readonly rules: InMemoryRuleStore,
     private readonly goals: InMemoryGoalStore,
     private readonly notifications: InMemoryNotificationStore,
+    private readonly splits: InMemorySplitStore,
     private readonly bankLinks: InMemoryBankLinkStore,
     private readonly bankWebhooks: InMemoryBankWebhookStore,
     private readonly consents: InMemoryConsentStore,
@@ -73,6 +75,7 @@ export class InMemoryAccountDeletionStore implements AccountDeletionStore {
       this.rules.purgeUser(userId);
       this.goals.purgeUser(userId);
       this.notifications.purgeUser(userId);
+      this.splits.purgeUser(userId);
       this.bankLinks.purgeUser(userId);
       this.bankWebhooks.purgeUser(userId);
       this.consents.purgeUser(userId);

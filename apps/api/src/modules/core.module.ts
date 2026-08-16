@@ -10,6 +10,7 @@ import {
   InMemoryGoalStore,
   InMemoryNotificationStore,
   InMemoryRuleStore,
+  InMemorySplitStore,
   InMemoryTransactionStore,
 } from '../infra/in-memory-store';
 import { MockAggregator } from '../infra/mock-aggregator';
@@ -20,6 +21,7 @@ import {
   PostgresGoalStore,
   PostgresNotificationStore,
   PostgresRuleStore,
+  PostgresSplitStore,
   PostgresTransactionStore,
 } from '../infra/postgres/stores';
 import { Argon2PasswordHasher } from '../infra/auth/argon2-hasher';
@@ -105,6 +107,7 @@ import {
   GOAL_STORE,
   NOTIFICATION_STORE,
   RULE_STORE,
+  SPLIT_STORE,
   TRANSACTION_STORE,
 } from '../ports';
 import {
@@ -148,6 +151,7 @@ function storeProviders(): Provider[] {
     const rules = new InMemoryRuleStore();
     const goals = new InMemoryGoalStore();
     const notifications = new InMemoryNotificationStore();
+    const splits = new InMemorySplitStore();
     const bankLinks = new InMemoryBankLinkStore();
     const bankWebhooks = new InMemoryBankWebhookStore();
     const users = new InMemoryUserStore();
@@ -171,6 +175,7 @@ function storeProviders(): Provider[] {
       rules,
       goals,
       notifications,
+      splits,
       bankLinks,
       bankWebhooks,
       consents,
@@ -187,6 +192,7 @@ function storeProviders(): Provider[] {
       { provide: RULE_STORE, useValue: rules },
       { provide: GOAL_STORE, useValue: goals },
       { provide: NOTIFICATION_STORE, useValue: notifications },
+      { provide: SPLIT_STORE, useValue: splits },
       { provide: BANK_LINK_STORE, useValue: bankLinks },
       { provide: BANK_WEBHOOK_STORE, useValue: bankWebhooks },
       { provide: USER_STORE, useValue: users },
@@ -226,6 +232,7 @@ function storeProviders(): Provider[] {
     { provide: RULE_STORE, useFactory: () => new PostgresRuleStore(pool) },
     { provide: GOAL_STORE, useFactory: () => new PostgresGoalStore(pool) },
     { provide: NOTIFICATION_STORE, useFactory: () => new PostgresNotificationStore(pool) },
+    { provide: SPLIT_STORE, useFactory: () => new PostgresSplitStore(pool) },
     { provide: BANK_LINK_STORE, useFactory: () => new PostgresBankLinkStore(pool) },
     { provide: BANK_WEBHOOK_STORE, useFactory: () => new PostgresBankWebhookStore(pool) },
     { provide: USER_STORE, useFactory: () => new PostgresUserStore(pool) },
@@ -379,6 +386,7 @@ function storeProviders(): Provider[] {
     RULE_STORE,
     GOAL_STORE,
     NOTIFICATION_STORE,
+    SPLIT_STORE,
     BANK_LINK_STORE,
     BANK_PROVIDER,
     BANK_ACCOUNT_REVOKER,
