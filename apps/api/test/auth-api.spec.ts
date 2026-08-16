@@ -393,6 +393,7 @@ describe('auth API', () => {
 
     it('allows health and categories without a token', async () => {
       await request(http).get('/healthz').expect(200);
+      await request(http).get('/api/readiness').expect(200);
       await request(http).get('/api/categories').expect(200);
       const metrics = await request(http).get('/api/metrics').expect(200);
       expect(metrics.headers['content-type']).toContain('text/plain');

@@ -47,7 +47,10 @@ class MetaController {
    * carries no user data.
    */
   @Public()
-  @Get('healthz')
+  // `/healthz` remains the platform-neutral endpoint used by local Docker and
+  // existing monitors. `/api/readiness` is an equivalent prefixed route for
+  // hosts that reserve or intercept common health-check paths.
+  @Get(['healthz', 'readiness'])
   async health() {
     const config = loadConfig();
     const base = {

@@ -29,6 +29,27 @@ if [[ ! -f "${ENV_FILE}" ]]; then
   exit 1
 fi
 
+# The migration job needs the schema-owner URL; the serving process must not
+# receive it. Build a private, short-lived runtime env file containing only the
+# least-privileged application URL and the ordinary service settings.
+umask 077
+RUNTIME_ENV_FILE="$(mktemp /tmp/finverse-runtime-env.XXXXXX)"
+case "${RUNTIME_ENV_FILE}" in
+  /tmp/finverse-runtime-env.*) ;;
+  *) echo "Unexpected temporary env path: ${RUNTIME_ENV_FILE}" >&2; exit 1 ;;
+esac
+cleanup_runtime_env() {
+  if [[ -n "${RUNTIME_ENV_FILE:-}" && -f "${RUNTIME_ENV_FILE}" && "${RUNTIME_ENV_FILE}" == /tmp/finverse-runtime-env.* ]]; then
+    rm -f -- "${RUNTIME_ENV_FILE}"
+  fi
+}
+trap cleanup_runtime_env EXIT
+grep -v '^DATABASE_URL:' "${ENV_FILE}" > "${RUNTIME_ENV_FILE}"
+if ! grep -q '^DATABASE_APP_URL:' "${RUNTIME_ENV_FILE}"; then
+  echo "DATABASE_APP_URL is required in ${ENV_FILE}." >&2
+  exit 1
+fi
+
 gcloud artifacts repositories describe "${REPOSITORY}" \
   --location="${REGION}" --project="${PROJECT_ID}" >/dev/null 2>&1 || \
   gcloud artifacts repositories create "${REPOSITORY}" \
@@ -58,13 +79,13 @@ gcloud run jobs execute "${SERVICE}-migrate" \
 gcloud run deploy "${SERVICE}" \
   --image="${IMAGE}" --region="${REGION}" --project="${PROJECT_ID}" \
   --allow-unauthenticated --port=3000 --memory=1Gi --max-instances=1 \
-  --env-vars-file="${ENV_FILE}"
+  --env-vars-file="${RUNTIME_ENV_FILE}"
 
 URL="$(gcloud run services describe "${SERVICE}" --region="${REGION}" \
   --project="${PROJECT_ID}" --format='value(status.url)')"
 echo
 echo "FINVERSE is live at: ${URL}/app/"
-echo "Health check:        ${URL}/healthz"
+echo "Health check:        ${URL}/api/readiness"
 echo
 echo "Set CORS_ORIGINS to ${URL} in ${ENV_FILE}, then rerun this script once"
 echo "to replace the temporary CORS origin with the final Cloud Run origin."

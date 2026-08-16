@@ -73,8 +73,10 @@ If a previous build completed but a later deployment step failed, you can
 reuse that image by setting `FINVERSE_IMAGE` to the image printed by Cloud
 Build. This avoids rebuilding unchanged source.
 
-Visit `https://SERVICE-URL/app/` for the PWA and `https://SERVICE-URL/healthz`
-for the health check. Keep `MIGRATE_ON_BOOT=false`; migrations are a release
+Visit `https://SERVICE-URL/app/` for the PWA and
+`https://SERVICE-URL/api/readiness` for the Cloud Run health check. The
+platform-neutral `/healthz` route remains available on ordinary hosts. Keep
+`MIGRATE_ON_BOOT=false`; migrations are a release
 step so two Cloud Run instances cannot race on startup.
 
 ## Before accepting real customers
