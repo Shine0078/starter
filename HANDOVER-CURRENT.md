@@ -231,22 +231,24 @@ not a promise, and the loading issue at the end is **unresolved and the top prio
 
 ## 1. Live test link (iPhone, right now)
 
-> **Replaced 2026-08-15 by the takeover deployment below; the old URL is dead.**
+> **Replaced 2026-08-16 because port 3000 was occupied by an unrelated SPLITLY
+> process; the previous URL now reaches that service.**
 
-**`https://pitch-reveals-network-gazette.trycloudflare.com`**
+**`https://mystery-democrats-header-timeline.trycloudflare.com`**
 
-Deployed during the 2026-08-15 takeover, this time on the **persistent
-PostgreSQL store** (not the data-losing memory adapter), with the fresh
-post-localization web bundle:
+Deployed on 2026-08-16 for UI testing on port 3001 with the fresh
+post-theme-customization web bundle. It uses the **in-memory development
+store** because the embedded PostgreSQL process stopped and port 3000 is owned
+by SPLITLY; do not use this link for real financial data:
 
 | Piece | Process | Notes |
 |---|---|---|
-| Cloudflare quick tunnel (no account) | `cloudflared.exe` PID 4692/18152 in `%TEMP%\opencode` | public HTTPS → localhost:3000; logs at `%TEMP%\opencode\tunnel-live.{out,err}.log` |
-| FINVERSE API (compiled `dist/main.js`) | `node.exe` PID 35432 on port 3000 | **`Store postgres`** — data survives API restarts in `apps/api/.postgres-data`; logs at `%TEMP%\opencode\finverse-api-live.log` |
-| Embedded PostgreSQL | PID 4472 on localhost:55432 | started via `npm run db:start`; migrations applied |
+| Cloudflare quick tunnel (no account) | `cloudflared.exe` in `%TEMP%\opencode` | public HTTPS → localhost:3001; logs at `%TEMP%\opencode\tunnel-ui.{out,err}.log` |
+| FINVERSE API (compiled `dist/main.js`) | `node.exe` on port 3001 | **`Store memory`** — data resets on restart; logs at `%TEMP%\opencode\finverse-api-ui.log` |
+| Port 3000 | unrelated SPLITLY process | do not stop it; the old FINVERSE URL reaches SPLITLY |
 | Flutter web PWA | built 2026-08-15 with `--no-web-resources-cdn --base-href=/app/` | same-origin API calls, local CanvasKit, migration-only worker |
 
-Verified live through the public URL on 2026-08-15: `/healthz` 200,
+Verified live through the public URL on 2026-08-16: `/healthz` 200,
 `/app/` 200, `main.dart.js` 200 (3.9 MB), `flutter_bootstrap.js` 200 with
 `canvasKitBaseUrl: 'canvaskit/'` taking priority over the (dead) gstatic
 branch, `canvaskit.wasm` 200 (7.2 MB), `flutter_service_worker.js` 200,
@@ -256,8 +258,9 @@ Caveats (unchanged): the URL dies if this PC sleeps/reboots or the tunnel
 restarts, quick tunnels have no uptime guarantee, and `THROTTLE_DISABLED=true`
 is set in the local `.env` — fine for phone testing, never for a real
 deployment. To restart after a reboot: `npm run db:start --workspace
-@finverse/api`, then `node dist/main.js` (in `apps/api`), then
-`cloudflared tunnel --url http://localhost:3000` — and record the new URL here.
+@finverse/api`, then set `PORT=3001` and `STORE=memory` before running
+`node dist/main.js` in `apps/api`, then
+`cloudflared tunnel --url http://localhost:3001` — and record the new URL here.
 
 **Physical iPhone verification is still the open gate:** open the URL above in
 Safari and Chrome-on-iOS. If this phone ever loaded a previously broken build,
