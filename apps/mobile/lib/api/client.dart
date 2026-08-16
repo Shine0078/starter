@@ -1252,6 +1252,70 @@ class ApiClient implements BackgroundSyncClient {
     await _send('DELETE', '/goals/$goalId');
   }
 
+  Future<List<SplitGroup>> splitGroups() async {
+    final json = await _get('/split/groups') as Map<String, dynamic>;
+    return (json['groups'] as List<dynamic>)
+        .map((e) => SplitGroup.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<SplitGroup> createSplitGroup({
+    required String name,
+    String currency = 'USD',
+  }) async {
+    final json = await _send('POST', '/split/groups', {
+      'name': name,
+      'currency': currency,
+    }) as Map<String, dynamic>;
+    return SplitGroup.fromJson(json);
+  }
+
+  Future<SplitGroupDetail> splitGroupDetail(String groupId) async {
+    final json = await _get('/split/groups/$groupId') as Map<String, dynamic>;
+    return SplitGroupDetail.fromJson(json);
+  }
+
+  Future<void> addSplitMember(String groupId, String email) async {
+    await _send('POST', '/split/groups/$groupId/members', {'email': email});
+  }
+
+  Future<void> addSplitExpense(
+    String groupId, {
+    required String description,
+    required int amount,
+    String? paidByUserId,
+    String splitMethod = 'equal',
+    Map<String, int>? shares,
+  }) async {
+    await _send('POST', '/split/groups/$groupId/expenses', {
+      'description': description,
+      'amount': amount,
+      if (paidByUserId != null) 'paidByUserId': paidByUserId,
+      'splitMethod': splitMethod,
+      if (shares != null)
+        'shares': shares.entries
+            .map((entry) => {'userId': entry.key, 'amount': entry.value})
+            .toList(),
+    });
+  }
+
+  Future<void> addSplitSettlement(
+    String groupId, {
+    required String toUserId,
+    required int amount,
+    String? note,
+  }) async {
+    await _send('POST', '/split/groups/$groupId/settlements', {
+      'toUserId': toUserId,
+      'amount': amount,
+      if (note != null && note.isNotEmpty) 'note': note,
+    });
+  }
+
+  Future<void> archiveSplitGroup(String groupId) async {
+    await _send('POST', '/split/groups/$groupId/archive');
+  }
+
   Future<List<BankLink>> bankLinks() async {
     final json = await _get('/bank-links') as Map<String, dynamic>;
     return (json['links'] as List<dynamic>)

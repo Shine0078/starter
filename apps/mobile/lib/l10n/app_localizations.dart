@@ -3274,6 +3274,120 @@ abstract class AppLocalizations {
   /// **'Spending'**
   String get analyticsTimelineKindSpending;
 
+  /// No description provided for @splitTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared expenses'**
+  String get splitTitle;
+
+  /// No description provided for @splitNewGroupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New group'**
+  String get splitNewGroupTitle;
+
+  /// No description provided for @splitNewGroupAction.
+  ///
+  /// In en, this message translates to:
+  /// **'New group'**
+  String get splitNewGroupAction;
+
+  /// No description provided for @splitGroupNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Group name'**
+  String get splitGroupNameLabel;
+
+  /// No description provided for @splitEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No shared groups yet'**
+  String get splitEmptyTitle;
+
+  /// No description provided for @splitEmptyDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a group to split bills and track who owes whom with friends or family.'**
+  String get splitEmptyDetail;
+
+  /// No description provided for @splitAddMemberTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a member'**
+  String get splitAddMemberTitle;
+
+  /// No description provided for @splitAddMemberAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get splitAddMemberAction;
+
+  /// No description provided for @splitMembersHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Members'**
+  String get splitMembersHeading;
+
+  /// No description provided for @splitBalancesHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Balances'**
+  String get splitBalancesHeading;
+
+  /// No description provided for @splitSettleUpHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Settle up'**
+  String get splitSettleUpHeading;
+
+  /// No description provided for @splitSettleUpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Record a settlement'**
+  String get splitSettleUpTitle;
+
+  /// No description provided for @splitRecordSettlementAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Settled'**
+  String get splitRecordSettlementAction;
+
+  /// No description provided for @splitExpensesHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Expenses'**
+  String get splitExpensesHeading;
+
+  /// No description provided for @splitAddExpenseAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get splitAddExpenseAction;
+
+  /// No description provided for @splitAddExpenseTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add an expense'**
+  String get splitAddExpenseTitle;
+
+  /// No description provided for @splitDescriptionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Description'**
+  String get splitDescriptionLabel;
+
+  /// No description provided for @splitAmountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount'**
+  String get splitAmountLabel;
+
+  /// No description provided for @profileSplitDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Split bills and settle up with others'**
+  String get profileSplitDetail;
+
   /// No description provided for @settingsThemeColorTitle.
   ///
   /// In en, this message translates to:

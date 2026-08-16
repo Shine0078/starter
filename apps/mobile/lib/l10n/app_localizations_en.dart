@@ -1881,6 +1881,64 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analyticsTimelineKindSpending => 'Spending';
 
   @override
+  String get splitTitle => 'Shared expenses';
+
+  @override
+  String get splitNewGroupTitle => 'New group';
+
+  @override
+  String get splitNewGroupAction => 'New group';
+
+  @override
+  String get splitGroupNameLabel => 'Group name';
+
+  @override
+  String get splitEmptyTitle => 'No shared groups yet';
+
+  @override
+  String get splitEmptyDetail =>
+      'Create a group to split bills and track who owes whom with friends or family.';
+
+  @override
+  String get splitAddMemberTitle => 'Add a member';
+
+  @override
+  String get splitAddMemberAction => 'Add';
+
+  @override
+  String get splitMembersHeading => 'Members';
+
+  @override
+  String get splitBalancesHeading => 'Balances';
+
+  @override
+  String get splitSettleUpHeading => 'Settle up';
+
+  @override
+  String get splitSettleUpTitle => 'Record a settlement';
+
+  @override
+  String get splitRecordSettlementAction => 'Settled';
+
+  @override
+  String get splitExpensesHeading => 'Expenses';
+
+  @override
+  String get splitAddExpenseAction => 'Add';
+
+  @override
+  String get splitAddExpenseTitle => 'Add an expense';
+
+  @override
+  String get splitDescriptionLabel => 'Description';
+
+  @override
+  String get splitAmountLabel => 'Amount';
+
+  @override
+  String get profileSplitDetail => 'Split bills and settle up with others';
+
+  @override
   String get settingsThemeColorTitle => 'Theme color';
 
   @override

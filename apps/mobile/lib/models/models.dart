@@ -1667,3 +1667,211 @@ class ReceiptRecord {
   final String? currency;
   final List<String> items;
 }
+
+class SplitGroup {
+  SplitGroup({
+    required this.id,
+    required this.name,
+    required this.currency,
+    this.createdAt,
+    this.archivedAt,
+  });
+
+  factory SplitGroup.fromJson(Map<String, dynamic> json) => SplitGroup(
+        id: json['id'] as String,
+        name: json['name'] as String,
+        currency: json['currency'] as String? ?? 'USD',
+        createdAt: json['createdAt'] as String?,
+        archivedAt: json['archivedAt'] as String?,
+      );
+
+  final String id;
+  final String name;
+  final String currency;
+  final String? createdAt;
+  final String? archivedAt;
+}
+
+class SplitMember {
+  SplitMember({required this.userId, required this.role, this.email, this.joinedAt});
+
+  factory SplitMember.fromJson(Map<String, dynamic> json) => SplitMember(
+        userId: json['userId'] as String,
+        role: json['role'] as String? ?? 'member',
+        email: json['email'] as String?,
+        joinedAt: json['joinedAt'] as String?,
+      );
+
+  final String userId;
+  final String role;
+  final String? email;
+  final String? joinedAt;
+}
+
+class SplitParticipant {
+  SplitParticipant({required this.userId, required this.amount, this.email, this.amountFormatted});
+
+  factory SplitParticipant.fromJson(Map<String, dynamic> json) => SplitParticipant(
+        userId: json['userId'] as String,
+        amount: (json['amount'] as num?)?.toInt() ?? 0,
+        email: json['email'] as String?,
+        amountFormatted: json['amountFormatted'] as String?,
+      );
+
+  final String userId;
+  final int amount;
+  final String? email;
+  final String? amountFormatted;
+}
+
+class SplitExpense {
+  SplitExpense({
+    required this.id,
+    required this.description,
+    required this.category,
+    required this.amount,
+    required this.paidByUserId,
+    required this.splitMethod,
+    required this.date,
+    this.amountFormatted,
+    this.paidByEmail,
+    this.participants = const [],
+  });
+
+  factory SplitExpense.fromJson(Map<String, dynamic> json) => SplitExpense(
+        id: json['id'] as String,
+        description: json['description'] as String,
+        category: json['category'] as String? ?? 'other',
+        amount: (json['amount'] as num?)?.toInt() ?? 0,
+        amountFormatted: json['amountFormatted'] as String?,
+        paidByUserId: json['paidByUserId'] as String,
+        paidByEmail: json['paidByEmail'] as String?,
+        splitMethod: json['splitMethod'] as String? ?? 'equal',
+        date: json['date'] as String? ?? '',
+        participants: (json['participants'] as List<dynamic>? ?? const [])
+            .whereType<Map<String, dynamic>>()
+            .map(SplitParticipant.fromJson)
+            .toList(),
+      );
+
+  final String id;
+  final String description;
+  final String category;
+  final int amount;
+  final String? amountFormatted;
+  final String paidByUserId;
+  final String? paidByEmail;
+  final String splitMethod;
+  final String date;
+  final List<SplitParticipant> participants;
+}
+
+class SplitSettlement {
+  SplitSettlement({
+    required this.id,
+    required this.fromUserId,
+    required this.toUserId,
+    required this.amount,
+    this.fromEmail,
+    this.toEmail,
+    this.amountFormatted,
+    this.note = '',
+    this.createdAt,
+  });
+
+  factory SplitSettlement.fromJson(Map<String, dynamic> json) => SplitSettlement(
+        id: json['id'] as String,
+        fromUserId: json['fromUserId'] as String,
+        toUserId: json['toUserId'] as String,
+        amount: (json['amount'] as num?)?.toInt() ?? 0,
+        fromEmail: json['fromEmail'] as String?,
+        toEmail: json['toEmail'] as String?,
+        amountFormatted: json['amountFormatted'] as String?,
+        note: json['note'] as String? ?? '',
+        createdAt: json['createdAt'] as String?,
+      );
+
+  final String id;
+  final String fromUserId;
+  final String toUserId;
+  final int amount;
+  final String? fromEmail;
+  final String? toEmail;
+  final String? amountFormatted;
+  final String note;
+  final String? createdAt;
+}
+
+class SplitBalance {
+  SplitBalance({required this.userId, required this.netAmount, this.email, this.netFormatted});
+
+  factory SplitBalance.fromJson(Map<String, dynamic> json) => SplitBalance(
+        userId: json['userId'] as String,
+        netAmount: (json['netAmount'] as num?)?.toInt() ?? 0,
+        email: json['email'] as String?,
+        netFormatted: json['netFormatted'] as String?,
+      );
+
+  final String userId;
+  final int netAmount;
+  final String? email;
+  final String? netFormatted;
+}
+
+class SplitSuggestion {
+  SplitSuggestion({required this.fromUserId, required this.toUserId, required this.amount, this.amountFormatted});
+
+  factory SplitSuggestion.fromJson(Map<String, dynamic> json) => SplitSuggestion(
+        fromUserId: json['fromUserId'] as String,
+        toUserId: json['toUserId'] as String,
+        amount: (json['amount'] as num?)?.toInt() ?? 0,
+        amountFormatted: json['amountFormatted'] as String?,
+      );
+
+  final String fromUserId;
+  final String toUserId;
+  final int amount;
+  final String? amountFormatted;
+}
+
+class SplitGroupDetail {
+  SplitGroupDetail({
+    required this.group,
+    required this.members,
+    required this.expenses,
+    required this.settlements,
+    required this.balances,
+    required this.suggestions,
+  });
+
+  factory SplitGroupDetail.fromJson(Map<String, dynamic> json) => SplitGroupDetail(
+        group: SplitGroup.fromJson(json['group'] as Map<String, dynamic>),
+        members: (json['members'] as List<dynamic>? ?? const [])
+            .whereType<Map<String, dynamic>>()
+            .map(SplitMember.fromJson)
+            .toList(),
+        expenses: (json['expenses'] as List<dynamic>? ?? const [])
+            .whereType<Map<String, dynamic>>()
+            .map(SplitExpense.fromJson)
+            .toList(),
+        settlements: (json['settlements'] as List<dynamic>? ?? const [])
+            .whereType<Map<String, dynamic>>()
+            .map(SplitSettlement.fromJson)
+            .toList(),
+        balances: (json['balances'] as List<dynamic>? ?? const [])
+            .whereType<Map<String, dynamic>>()
+            .map(SplitBalance.fromJson)
+            .toList(),
+        suggestions: (json['suggestions'] as List<dynamic>? ?? const [])
+            .whereType<Map<String, dynamic>>()
+            .map(SplitSuggestion.fromJson)
+            .toList(),
+      );
+
+  final SplitGroup group;
+  final List<SplitMember> members;
+  final List<SplitExpense> expenses;
+  final List<SplitSettlement> settlements;
+  final List<SplitBalance> balances;
+  final List<SplitSuggestion> suggestions;
+}

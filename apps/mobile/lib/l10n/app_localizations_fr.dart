@@ -1905,6 +1905,65 @@ class AppLocalizationsFr extends AppLocalizations {
   String get analyticsTimelineKindSpending => 'Dépense';
 
   @override
+  String get splitTitle => 'Dépenses partagées';
+
+  @override
+  String get splitNewGroupTitle => 'Nouveau groupe';
+
+  @override
+  String get splitNewGroupAction => 'Nouveau groupe';
+
+  @override
+  String get splitGroupNameLabel => 'Nom du groupe';
+
+  @override
+  String get splitEmptyTitle => 'Aucun groupe partagé';
+
+  @override
+  String get splitEmptyDetail =>
+      'Créez un groupe pour partager les factures et suivre qui doit quoi à qui.';
+
+  @override
+  String get splitAddMemberTitle => 'Ajouter un membre';
+
+  @override
+  String get splitAddMemberAction => 'Ajouter';
+
+  @override
+  String get splitMembersHeading => 'Membres';
+
+  @override
+  String get splitBalancesHeading => 'Soldes';
+
+  @override
+  String get splitSettleUpHeading => 'Régler les comptes';
+
+  @override
+  String get splitSettleUpTitle => 'Enregistrer un règlement';
+
+  @override
+  String get splitRecordSettlementAction => 'Réglé';
+
+  @override
+  String get splitExpensesHeading => 'Dépenses';
+
+  @override
+  String get splitAddExpenseAction => 'Ajouter';
+
+  @override
+  String get splitAddExpenseTitle => 'Ajouter une dépense';
+
+  @override
+  String get splitDescriptionLabel => 'Description';
+
+  @override
+  String get splitAmountLabel => 'Montant';
+
+  @override
+  String get profileSplitDetail =>
+      'Partagez les factures et réglez vos comptes';
+
+  @override
   String get settingsThemeColorTitle => 'Couleur du thème';
 
   @override

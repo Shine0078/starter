@@ -26,6 +26,7 @@ import 'package:finverse/screens/dashboard_screen.dart';
 import 'package:finverse/screens/help_support_screen.dart';
 import 'package:finverse/screens/login_screen.dart';
 import 'package:finverse/screens/plan_screen.dart';
+import 'package:finverse/screens/split_screen.dart';
 import 'package:finverse/screens/transaction_detail_screen.dart';
 import 'package:finverse/widgets/budget_tile.dart';
 import 'package:finverse/widgets/health_score_card.dart';
@@ -1650,6 +1651,33 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Se déconnecter ?'), findsOneWidget);
     expect(find.text('Annuler'), findsOneWidget);
+  });
+
+  testWidgets('shared expenses screen lists groups and speaks French',
+      (tester) async {
+    final api = clientWith(MockClient((request) async {
+      if (request.url.path.endsWith('/split/groups')) {
+        return http.Response('{"count":0,"groups":[]}', 200);
+      }
+      return http.Response('{}', 200);
+    }));
+
+    await tester.pumpWidget(MaterialApp(
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        AppLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('fr'),
+      home: SplitScreen(api: api),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Dépenses partagées'), findsOneWidget);
+    expect(find.text('Aucun groupe partagé'), findsOneWidget);
+    expect(find.text('Nouveau groupe'), findsOneWidget);
   });
 
   test('parses scanned and stored receipts', () async {

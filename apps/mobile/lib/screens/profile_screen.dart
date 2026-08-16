@@ -11,6 +11,7 @@ import 'budgets_screen.dart';
 import 'notifications_screen.dart';
 import 'planning_screen.dart';
 import 'settings_screen.dart';
+import 'split_screen.dart';
 import 'subscriptions_screen.dart';
 
 /// Secondary navigation hub for features that should not compete with the
@@ -94,6 +95,13 @@ class ProfileScreen extends StatelessWidget {
               title: l10n.goalsTitle,
               subtitle: l10n.profileGoalsDetail,
               screen: GoalsScreen(api: api),
+            ),
+            _destination(
+              context,
+              icon: Icons.group_outlined,
+              title: l10n.splitTitle,
+              subtitle: l10n.profileSplitDetail,
+              screen: SplitScreen(api: api),
             ),
             _destination(
               context,
