@@ -142,6 +142,93 @@ class InMemoryThemeColorPreferenceStore implements ThemeColorPreferenceStore {
   Future<void> writeCustomColor(int value) async => customColor = value;
 }
 
+/// Stores the user's light/dark preference independently from the accent color.
+/// `system` remains the default so a new install follows the device without
+/// surprising the user; choosing either switch position persists an explicit
+/// light or dark mode.
+abstract interface class ThemeModePreferenceStore {
+  Future<String?> readThemeMode();
+  Future<void> writeThemeMode(String mode);
+}
+
+class SharedPreferencesThemeModePreferenceStore
+    implements ThemeModePreferenceStore {
+  SharedPreferencesThemeModePreferenceStore(
+      {SharedPreferencesAsync? preferences})
+      : _preferences = preferences ?? _createPreferences();
+
+  static const _themeModeKey = 'finverse.theme_mode';
+
+  final SharedPreferencesAsync _preferences;
+
+  static SharedPreferencesAsync _createPreferences() {
+    ensureSharedPreferencesAsyncPlatform();
+    return SharedPreferencesAsync();
+  }
+
+  @override
+  Future<String?> readThemeMode() => _preferences.getString(_themeModeKey);
+
+  @override
+  Future<void> writeThemeMode(String mode) =>
+      _preferences.setString(_themeModeKey, mode);
+}
+
+class ThemeModeController extends ChangeNotifier {
+  ThemeModeController({ThemeModePreferenceStore? store})
+      : _store = store ?? SharedPreferencesThemeModePreferenceStore();
+
+  ThemeModeController.inMemory({ThemeModePreferenceStore? store})
+      : _store = store ?? InMemoryThemeModePreferenceStore();
+
+  final ThemeModePreferenceStore _store;
+  ThemeMode _mode = ThemeMode.system;
+  var _restored = false;
+
+  ThemeMode get mode => _mode;
+
+  Future<void> restore() async {
+    if (_restored) return;
+    _restored = true;
+    try {
+      final persisted = await _store.readThemeMode();
+      _mode = switch (persisted) {
+        'light' => ThemeMode.light,
+        'dark' => ThemeMode.dark,
+        _ => ThemeMode.system,
+      };
+    } catch (_) {
+      // A visual preference must never delay or block the financial UI.
+    }
+    notifyListeners();
+  }
+
+  Future<void> select(ThemeMode mode) async {
+    if (_mode == mode) return;
+    _mode = mode;
+    notifyListeners();
+    try {
+      await _store.writeThemeMode(switch (mode) {
+        ThemeMode.light => 'light',
+        ThemeMode.dark => 'dark',
+        ThemeMode.system => 'system',
+      });
+    } catch (_) {
+      // Keep the choice for this run if local preferences are unavailable.
+    }
+  }
+}
+
+class InMemoryThemeModePreferenceStore implements ThemeModePreferenceStore {
+  String? themeMode;
+
+  @override
+  Future<String?> readThemeMode() async => themeMode;
+
+  @override
+  Future<void> writeThemeMode(String mode) async => themeMode = mode;
+}
+
 class ThemeColorControllerScope
     extends InheritedNotifier<ThemeColorController> {
   const ThemeColorControllerScope({
@@ -152,5 +239,17 @@ class ThemeColorControllerScope
 
   static ThemeColorController? maybeOf(BuildContext context) => context
       .dependOnInheritedWidgetOfExactType<ThemeColorControllerScope>()
+      ?.notifier;
+}
+
+class ThemeModeControllerScope extends InheritedNotifier<ThemeModeController> {
+  const ThemeModeControllerScope({
+    required ThemeModeController controller,
+    required super.child,
+    super.key,
+  }) : super(notifier: controller);
+
+  static ThemeModeController? maybeOf(BuildContext context) => context
+      .dependOnInheritedWidgetOfExactType<ThemeModeControllerScope>()
       ?.notifier;
 }

@@ -87,6 +87,21 @@ void main() {
     expect(emerald.colorScheme.primary, isNot(indigo.colorScheme.primary));
   });
 
+  test('restores and persists the light/dark appearance preference', () async {
+    final store = InMemoryThemeModePreferenceStore()..themeMode = 'dark';
+    final controller = ThemeModeController.inMemory(store: store);
+
+    await controller.restore();
+    expect(controller.mode, ThemeMode.dark);
+
+    await controller.select(ThemeMode.light);
+    expect(controller.mode, ThemeMode.light);
+    expect(store.themeMode, 'light');
+
+    await controller.select(ThemeMode.system);
+    expect(store.themeMode, 'system');
+  });
+
   testWidgets('applies a selected language across the app scope',
       (tester) async {
     final controller = LocaleController.inMemory();

@@ -803,5 +803,10 @@
   "settingsThemeColorHue": "Teinte",
   "settingsThemeColorSaturation": "Saturation",
   "settingsThemeColorBrightness": "Luminosité",
-  "settingsThemeColorApply": "Utiliser la couleur"
+  "settingsThemeColorApply": "Utiliser la couleur",
+  "settingsDarkModeTitle": "Mode sombre",
+  "settingsDarkModeOn": "Toujours utiliser l'apparence sombre.",
+  "settingsDarkModeOff": "Toujours utiliser l'apparence claire.",
+  "settingsDarkModeSystem": "Suivre l'apparence de votre appareil.",
+  "settingsDarkModeUseDevice": "Utiliser l'apparence de l'appareil"
 }

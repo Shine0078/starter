@@ -3561,6 +3561,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Use color'**
   String get settingsThemeColorApply;
+
+  /// No description provided for @settingsDarkModeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Dark mode'**
+  String get settingsDarkModeTitle;
+
+  /// No description provided for @settingsDarkModeOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Always use the dark appearance.'**
+  String get settingsDarkModeOn;
+
+  /// No description provided for @settingsDarkModeOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Always use the light appearance.'**
+  String get settingsDarkModeOff;
+
+  /// No description provided for @settingsDarkModeSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow your device appearance.'**
+  String get settingsDarkModeSystem;
+
+  /// No description provided for @settingsDarkModeUseDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Use device appearance'**
+  String get settingsDarkModeUseDevice;
 }
 
 class _AppLocalizationsDelegate
