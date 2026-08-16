@@ -182,11 +182,15 @@ repository controls exist but production activation still needs an owner/provide
 
 **- Bill negotiation and merchant marketplace features**
 
-**- Tablet-specific layouts**
+**- [x] Tablet-specific layouts**
 
 **- Full web dashboard**
 
 **- Smartwatch notifications**
+
+The dashboard now uses a persistent navigation rail on tablet/desktop widths,
+keeps the bottom navigation on phones, and provides an action center that routes
+users into account setup, transaction review, cash-flow planning, and reports.
 
 
 
@@ -194,19 +198,23 @@ repository controls exist but production activation still needs an owner/provide
 
 
 
-**The current link is a Cloudflare quick tunnel:**
+**The current public beta link is Google Cloud Run:**
 
 
 
-**`https://pitch-reveals-network-gazette.trycloudflare.com`**
+**`https://finverse-d6vqs5iu7q-uc.a.run.app/app/`**
 
 
 
-**It runs from this PC using local PostgreSQL. It is useful for testing, but it is \*\*not a production deployment\*\*. It stops when the PC sleeps, restarts, or loses internet access, and the URL can change when the tunnel restarts.**
+**The API runs independently of this PC and uses managed Neon PostgreSQL. The
+service is suitable for a technical beta, but permanent domain ownership,
+reviewed legal URLs, Plaid production approval, operational backups, and the
+remaining store/compliance work are still required before commercial launch.**
 
 
 
-**The project is suitable for a controlled Sandbox/private beta, but it is not yet production-ready or commercially sellable.**
+**The project is suitable for a controlled technical beta; it is not yet
+commercially sellable until the external launch controls above are complete.**
 
 ---
 

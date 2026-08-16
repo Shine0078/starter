@@ -35,72 +35,126 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
-        body: ValueListenableBuilder<DateTime?>(
-          valueListenable: widget.api.offlineCacheStatus,
-          builder: (context, cachedAt, _) => ValueListenableBuilder<int>(
-            valueListenable: widget.api.pendingMutationCount,
-            builder: (context, pending, _) => Column(
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            final wide = constraints.maxWidth >= 900;
+            final extended = constraints.maxWidth >= 1120;
+            final content = _content(l10n);
+            if (!wide) return content;
+
+            // Desktop and tablet users get persistent navigation, while the
+            // phone layout keeps the thumb-friendly bottom bar. The same
+            // IndexedStack is used in both modes, so changing orientation
+            // never loses the active screen or its loaded state.
+            return Row(
               children: [
-                if (cachedAt != null || pending > 0)
-                  Material(
-                    color: Theme.of(context).colorScheme.tertiaryContainer,
-                    child: ListTile(
-                      dense: true,
-                      leading: const Icon(Icons.cloud_off_outlined),
-                      title: Text(pending > 0
-                          ? l10n.offlineBannerPending
-                          : l10n.offlineBannerTitle),
-                      subtitle: Text(pending > 0
-                          ? l10n.offlineBannerPendingDetail(pending)
-                          : l10n.offlineBannerLastUpdated(DateFormat.yMMMd()
-                              .add_jm()
-                              .format(cachedAt!.toLocal()))),
-                    ),
-                  ),
-                Expanded(
-                  child: IndexedStack(
-                    index: _index,
-                    children: [
-                      DashboardScreen(
-                        api: widget.api,
-                        appLockController: widget.appLockController,
-                        onSignOut: widget.onSignOut,
-                        onAccountDeleted: widget.onAccountDeleted,
-                      ),
-                      TransactionsScreen(api: widget.api),
-                      AnalyticsScreen(api: widget.api),
-                      BankConnectionsScreen(api: widget.api),
-                      ProfileScreen(
-                        api: widget.api,
-                        appLockController: widget.appLockController,
-                        onSignOut: widget.onSignOut,
-                        onAccountDeleted: widget.onAccountDeleted,
-                      ),
-                    ],
-                  ),
+                NavigationRail(
+                  selectedIndex: _index,
+                  onDestinationSelected: (index) =>
+                      setState(() => _index = index),
+                  extended: extended,
+                  labelType: extended ? null : NavigationRailLabelType.all,
+                  backgroundColor:
+                      Theme.of(context).colorScheme.surfaceContainerLow,
+                  destinations: _railDestinations(l10n),
                 ),
+                const VerticalDivider(width: 1),
+                Expanded(child: content),
               ],
-            ),
-          ),
+            );
+          },
         ),
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: _index,
-          onDestinationSelected: (index) => setState(() => _index = index),
-          destinations: [
-            NavigationDestination(
-                icon: const Icon(Icons.home_outlined), label: l10n.navHome),
-            NavigationDestination(
-                icon: const Icon(Icons.receipt_long_outlined),
-                label: l10n.navTransactions),
-            NavigationDestination(
-                icon: const Icon(Icons.insights_outlined),
-                label: l10n.navAnalytics),
-            NavigationDestination(
-                icon: const Icon(Icons.account_balance_outlined),
-                label: l10n.navAccounts),
-            NavigationDestination(
-                icon: const Icon(Icons.person_outline), label: l10n.navProfile),
-          ],
+        bottomNavigationBar: LayoutBuilder(
+          builder: (context, constraints) => constraints.maxWidth >= 900
+              ? const SizedBox.shrink()
+              : NavigationBar(
+                  selectedIndex: _index,
+                  onDestinationSelected: (index) =>
+                      setState(() => _index = index),
+                  destinations: _bottomDestinations(l10n),
+                ),
         ));
   }
+
+  Widget _content(AppLocalizations l10n) => ValueListenableBuilder<DateTime?>(
+        valueListenable: widget.api.offlineCacheStatus,
+        builder: (context, cachedAt, _) => ValueListenableBuilder<int>(
+          valueListenable: widget.api.pendingMutationCount,
+          builder: (context, pending, _) => Column(
+            children: [
+              if (cachedAt != null || pending > 0)
+                Material(
+                  color: Theme.of(context).colorScheme.tertiaryContainer,
+                  child: ListTile(
+                    dense: true,
+                    leading: const Icon(Icons.cloud_off_outlined),
+                    title: Text(pending > 0
+                        ? l10n.offlineBannerPending
+                        : l10n.offlineBannerTitle),
+                    subtitle: Text(pending > 0
+                        ? l10n.offlineBannerPendingDetail(pending)
+                        : l10n.offlineBannerLastUpdated(DateFormat.yMMMd()
+                            .add_jm()
+                            .format(cachedAt!.toLocal()))),
+                  ),
+                ),
+              Expanded(
+                child: IndexedStack(
+                  index: _index,
+                  children: [
+                    DashboardScreen(
+                      api: widget.api,
+                      appLockController: widget.appLockController,
+                      onSignOut: widget.onSignOut,
+                      onAccountDeleted: widget.onAccountDeleted,
+                    ),
+                    TransactionsScreen(api: widget.api),
+                    AnalyticsScreen(api: widget.api),
+                    BankConnectionsScreen(api: widget.api),
+                    ProfileScreen(
+                      api: widget.api,
+                      appLockController: widget.appLockController,
+                      onSignOut: widget.onSignOut,
+                      onAccountDeleted: widget.onAccountDeleted,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+
+  List<NavigationDestination> _bottomDestinations(AppLocalizations l10n) => [
+        NavigationDestination(
+            icon: const Icon(Icons.home_outlined), label: l10n.navHome),
+        NavigationDestination(
+            icon: const Icon(Icons.receipt_long_outlined),
+            label: l10n.navTransactions),
+        NavigationDestination(
+            icon: const Icon(Icons.insights_outlined),
+            label: l10n.navAnalytics),
+        NavigationDestination(
+            icon: const Icon(Icons.account_balance_outlined),
+            label: l10n.navAccounts),
+        NavigationDestination(
+            icon: const Icon(Icons.person_outline), label: l10n.navProfile),
+      ];
+
+  List<NavigationRailDestination> _railDestinations(AppLocalizations l10n) => [
+        NavigationRailDestination(
+            icon: const Icon(Icons.home_outlined), label: Text(l10n.navHome)),
+        NavigationRailDestination(
+            icon: const Icon(Icons.receipt_long_outlined),
+            label: Text(l10n.navTransactions)),
+        NavigationRailDestination(
+            icon: const Icon(Icons.insights_outlined),
+            label: Text(l10n.navAnalytics)),
+        NavigationRailDestination(
+            icon: const Icon(Icons.account_balance_outlined),
+            label: Text(l10n.navAccounts)),
+        NavigationRailDestination(
+            icon: const Icon(Icons.person_outline),
+            label: Text(l10n.navProfile)),
+      ];
 }

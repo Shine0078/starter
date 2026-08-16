@@ -181,6 +181,15 @@ The most reliable ideas are the ones that recur across unrelated architectures:
 
 ## FINVERSE gap map and recommended order
 
+### Implemented in the dashboard pass
+
+The first UI pass applies the recurring navigation lessons without copying any
+reference code: phones keep a thumb-friendly bottom bar, tablet and desktop
+widths switch to a persistent navigation rail, and the dashboard exposes a
+small action center for account setup, transaction review, cash-flow planning,
+and reports. The actions route to the existing screens and API contracts, so
+there is one source of truth for balances and calculations.
+
 FINVERSE already has a strong pure domain layer, integer minor-unit money,
 currency-separated analytics, bank sync idempotency, preserved raw descriptors,
 user overrides, categorization rules, budgets, goals, recurring detection,

@@ -13,11 +13,14 @@ import '../widgets/net_position_card.dart';
 import '../widgets/net_worth_history_chart.dart';
 import '../widgets/spending_chart.dart';
 import '../widgets/transaction_tile.dart';
+import '../widgets/dashboard_quick_actions.dart';
+import 'bank_connections_screen.dart';
 import 'notifications_screen.dart';
 import 'planning_screen.dart';
 import 'settings_screen.dart';
 import 'subscriptions_screen.dart';
 import 'transaction_detail_screen.dart';
+import 'transactions_screen.dart';
 import 'analytics_screen.dart';
 import 'assistant_screen.dart';
 import 'financial_calendar_screen.dart';
@@ -487,6 +490,21 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
 
     final hero = NetPositionCard(accounts: _accounts);
+    final quickActions = DashboardQuickActions(
+      hasAccounts: _accounts.isNotEmpty,
+      onAccounts: () => Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => BankConnectionsScreen(api: widget.api),
+      )),
+      onTransactions: () => Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => TransactionsScreen(api: widget.api),
+      )),
+      onPlanning: () => Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => PlanningScreen(api: widget.api),
+      )),
+      onAnalytics: () => Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => AnalyticsScreen(api: widget.api),
+      )),
+    );
     final dataQuality = (_dataQuality?.needsAttention == true)
         ? _dataQualityCard(theme, _dataQuality!)
         : null;
@@ -505,6 +523,8 @@ class _DashboardScreenState extends State<DashboardScreen>
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
               children: [
                 hero,
+                const SizedBox(height: 20),
+                quickActions,
                 const SizedBox(height: 20),
                 if (dataQuality != null) ...[
                   dataQuality,
@@ -531,6 +551,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       hero,
+                      const SizedBox(height: 20),
+                      quickActions,
                       const SizedBox(height: 20),
                       if (dataQuality != null) ...[
                         dataQuality,
