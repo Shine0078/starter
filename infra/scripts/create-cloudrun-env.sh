@@ -32,7 +32,6 @@ const values = {
   NODE_ENV: 'production',
   STORE: 'postgres',
   MIGRATE_ON_BOOT: 'false',
-  PORT: '3000',
   TRUST_PROXY_HOPS: '1',
   CORS_ORIGINS: 'https://placeholder.invalid',
   DATABASE_URL: owner.toString(),

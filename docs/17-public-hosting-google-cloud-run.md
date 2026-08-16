@@ -65,6 +65,8 @@ The script builds `Dockerfile.public` with Cloud Build, executes the Postgres
 migrations as a one-shot Cloud Run Job, deploys the service with unauthenticated
 HTTPS, and prints the permanent `run.app` URL. Replace
 `CORS_ORIGINS` in the private env file with that URL and rerun the script once.
+Cloud Run supplies the `PORT` variable automatically; do not add `PORT` to the
+private env file.
 
 Visit `https://SERVICE-URL/app/` for the PWA and `https://SERVICE-URL/healthz`
 for the health check. Keep `MIGRATE_ON_BOOT=false`; migrations are a release

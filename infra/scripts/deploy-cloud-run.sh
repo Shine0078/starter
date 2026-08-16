@@ -35,10 +35,15 @@ gcloud artifacts repositories describe "${REPOSITORY}" \
     --repository-format=docker --location="${REGION}" \
     --description="FINVERSE container images" --project="${PROJECT_ID}"
 
-gcloud builds submit . \
-  --project="${PROJECT_ID}" \
-  --config=cloudbuild.yaml \
-  --substitutions="_IMAGE=${IMAGE}"
+if gcloud artifacts docker images describe "${IMAGE}" \
+  --project="${PROJECT_ID}" >/dev/null 2>&1; then
+  echo "Reusing existing image ${IMAGE}."
+else
+  gcloud builds submit . \
+    --project="${PROJECT_ID}" \
+    --config=cloudbuild.yaml \
+    --substitutions="_IMAGE=${IMAGE}"
+fi
 
 # Migrations run once as a Cloud Run Job with the schema-owner URL. The
 # application service receives the same env file but never runs migrations on
