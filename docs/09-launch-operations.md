@@ -162,6 +162,12 @@ entitlement.
 
 ## Cheap public HTTPS path for the phone
 
+For a zero-dollar six-month beta, use the checked-in Oracle Always Free stack:
+[`docs/15-public-hosting-oracle.md`](15-public-hosting-oracle.md). It includes
+PostgreSQL on the same VM, migration-before-startup, Caddy HTTPS, and a backup
+script. Oracle's Always Free inactivity/capacity rules still apply; use the
+provider-neutral recipe below when moving to a paid or managed host.
+
 The repository includes [`infra/docker-compose.public.yml`](../infra/docker-compose.public.yml)
 and [`infra/Caddyfile`](../infra/Caddyfile) for a small VPS or any Docker host
 with a public IPv4/IPv6 address. It runs the tagged API image and an optional

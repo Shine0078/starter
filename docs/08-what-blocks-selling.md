@@ -114,9 +114,9 @@ has a `docker-compose.yml` for local development and a CI workflow. That is all.
 | # | Item | Detail | Effort |
 |---|---|---|---|
 | 4.1 | **API container image** | **Completed:** non-root Node 22 multi-stage image with health check | Docker daemon on this workstation remains unavailable for a local image build |
-| 4.2 | **No hosting** | No cloud account, no infrastructure-as-code, no environments | 1–2 weeks |
-| 4.3 | **No hosting deployment** | Tagged releases now publish the API image and APK; no provider has been selected to receive the image | external account + days |
-| 4.4 | **No managed database** | No provisioning, no connection pooling at scale, no read replicas | days |
+| 4.2 | **Hosting path** | **Implemented:** Oracle Always Free ARM VM compose stack with Caddy HTTPS, persistent PostgreSQL, and migration gating in `infra/docker-compose.oracle.yml`; the owner still must create the Oracle account/VM and DNS | owner account + setup |
+| 4.3 | **Hosting deployment** | Tagged releases publish the API image and APK; the Oracle VM can build the ARM image locally via `infra/scripts/deploy-oracle.sh` | owner deployment + smoke |
+| 4.4 | **Managed database** | Oracle stack uses a persistent PostgreSQL volume and restricted runtime role; off-host backups and a second-region/managed database remain recommended for paid users | owner backup drill |
 | 4.5 | **Production backups not scheduled** | Backup and guarded restore scripts exist and CI now proves a real backup/isolated restore on every change; encrypted production storage, its schedule, and a recorded production drill still need the selected database/storage provider | external account + drill |
 | 4.6 | **Production monitoring not activated** | `/healthz`, protected bounded Prometheus metrics, and a scheduled three-retry GitHub uptime incident workflow are implemented. Configure `PRODUCTION_HEALTH_URL`, responder notifications, provider dashboards, and an independent public status host | external setup + rehearsal |
 | 4.7 | **External error tracking absent** | Structured request logs now carry correlation ids and deliberately omit headers, bodies, queries, users, merchants, and amounts; no external log/error service is configured | external account + days |
@@ -126,11 +126,11 @@ has a `docker-compose.yml` for local development and a CI workflow. That is all.
 | 4.11 | **No staging environment** | Nowhere to verify a release before users get it | with 4.2 |
 | 4.12 | **Production migration orchestration** | Idempotence is tested and the image defaults `MIGRATE_ON_BOOT=false`; the release guide defines the step | Must wire into selected host |
 
-The repository now includes a provider-neutral Caddy/Docker Compose public-edge
-recipe, including an optional static Flutter web service at `/app/`. It removes
-the Tailscale dependency once an owner supplies a domain, public host, managed
-PostgreSQL instance, and the deployed web bundle; no provider has been selected
-or operated yet.
+The repository now includes both the provider-neutral public-edge recipe and a
+ready-to-run Oracle Always Free path. The latter builds and serves the Flutter
+PWA from the API image, runs PostgreSQL on a named volume, and obtains HTTPS
+through Caddy. It is beta hosting: the owner must create the account, VM, DNS,
+backup destination, and monitoring.
 
 ---
 

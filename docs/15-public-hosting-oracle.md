@@ -9,7 +9,8 @@ Oracle describes Always Free compute as free for the life of the account, but
 it can reclaim a VM that stays below its CPU, network, and (for ARM) memory
 activity thresholds for seven days. It is therefore a beta/early-user hosting
 path, not a production SLA. Keep a second copy of database backups outside the
-VM. See the current Oracle terms before accepting real customer data.
+VM. See the [current Always Free terms](https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm)
+before accepting real customer data.
 
 ## 1. Create the VM
 
@@ -73,6 +74,8 @@ docker compose --env-file infra/.env.oracle \
   -f infra/docker-compose.oracle.yml ps
 curl -fsS "https://${PUBLIC_API_DOMAIN}/healthz"
 ```
+
+The same commands are wrapped by `infra/scripts/deploy-oracle.sh`.
 
 Open `https://YOUR_PUBLIC_HOSTNAME/app/` in a browser. Do not set
 `STORE=memory`; the compose file forces PostgreSQL and runs migrations before
