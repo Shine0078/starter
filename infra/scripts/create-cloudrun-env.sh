@@ -49,7 +49,25 @@ unset OWNER_URL
 mkdir -p "$(dirname "${OUT_FILE}")"
 umask 077
 node <<'NODE' > "${OUT_FILE}"
-const owner = new URL(process.env.FINVERSE_OWNER_URL);
+let owner;
+try {
+  owner = new URL(process.env.FINVERSE_OWNER_URL);
+} catch {
+  throw new Error('The Neon value is not a valid URL. Copy the complete connection string.');
+}
+if (!['postgres:', 'postgresql:'].includes(owner.protocol)) {
+  throw new Error('The Neon value must be a PostgreSQL connection string.');
+}
+if (!owner.hostname.endsWith('.neon.tech')) {
+  throw new Error(
+    'The Neon hostname is incomplete. It must end with .neon.tech; use Copy snippet in Neon.',
+  );
+}
+if (!owner.username || !owner.password || owner.password.includes('*')) {
+  throw new Error(
+    'The Neon connection string must include the real password. Click Show password, then Copy snippet.',
+  );
+}
 const app = new URL(owner);
 app.username = 'finverse_app';
 app.password = process.env.FINVERSE_APP_PASSWORD;
