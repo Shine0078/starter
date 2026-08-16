@@ -47,10 +47,10 @@ nano ~/finverse-cloudrun.env.yaml
 bash infra/scripts/deploy-cloud-run.sh ~/finverse-cloudrun.env.yaml
 ```
 
-To avoid ever typing a database password into terminal history, use the
-interactive helper instead. It prompts for the rotated owner URL without
-echoing it, creates the restricted `finverse_app` URL and encryption keys, and
-writes the file with mode `600`:
+To avoid ever typing credentials into terminal history, use the interactive
+helper instead. It prompts for the rotated owner URL and SMTP app password
+without echoing either, creates the restricted `finverse_app` URL and
+encryption keys, and writes the file with mode `600`:
 
 ```bash
 bash infra/scripts/create-cloudrun-env.sh ~/finverse-cloudrun.env.yaml
@@ -59,7 +59,8 @@ bash infra/scripts/deploy-cloud-run.sh ~/finverse-cloudrun.env.yaml
 
 The helper starts with temporary `example.com` legal links. Replace those four
 values with the reviewed documents before enabling registration or accepting
-customers.
+customers. It defaults to Gmail SMTP (`smtp.gmail.com:587`), but accepts any
+SMTP provider at the prompts.
 
 The script builds `Dockerfile.public` with Cloud Build, executes the Postgres
 migrations as a one-shot Cloud Run Job, deploys the service with unauthenticated

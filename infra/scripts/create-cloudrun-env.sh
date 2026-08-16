@@ -13,11 +13,37 @@ if [[ -z "${OWNER_URL}" ]]; then
   exit 1
 fi
 
+read -r -p "SMTP host [smtp.gmail.com]: " SMTP_HOST
+SMTP_HOST="${SMTP_HOST:-smtp.gmail.com}"
+read -r -p "SMTP port [587]: " SMTP_PORT
+SMTP_PORT="${SMTP_PORT:-587}"
+read -r -p "SMTP secure (true/false) [false]: " SMTP_SECURE
+SMTP_SECURE="${SMTP_SECURE:-false}"
+read -r -p "SMTP username/email: " SMTP_USER
+if [[ -z "${SMTP_USER}" ]]; then
+  echo "An SMTP username/email is required." >&2
+  exit 1
+fi
+read -r -s -p "SMTP app password (hidden): " SMTP_PASSWORD
+echo
+if [[ -z "${SMTP_PASSWORD}" ]]; then
+  echo "An SMTP app password is required." >&2
+  exit 1
+fi
+read -r -p "From address [FINVERSE <${SMTP_USER}>]: " EMAIL_FROM
+EMAIL_FROM="${EMAIL_FROM:-FINVERSE <${SMTP_USER}>}"
+
 export FINVERSE_OWNER_URL="${OWNER_URL}"
 export FINVERSE_APP_PASSWORD="$(openssl rand -hex 24)"
 export FINVERSE_JWT_SECRET="$(node -e "process.stdout.write(require('crypto').randomBytes(48).toString('base64url'))")"
 export FINVERSE_MFA_KEY="$(node -e "process.stdout.write(require('crypto').randomBytes(32).toString('base64'))")"
 export FINVERSE_BANK_KEY="$(node -e "process.stdout.write(require('crypto').randomBytes(32).toString('base64'))")"
+export FINVERSE_SMTP_HOST="${SMTP_HOST}"
+export FINVERSE_SMTP_PORT="${SMTP_PORT}"
+export FINVERSE_SMTP_SECURE="${SMTP_SECURE}"
+export FINVERSE_SMTP_USER="${SMTP_USER}"
+export FINVERSE_SMTP_PASSWORD="${SMTP_PASSWORD}"
+export FINVERSE_EMAIL_FROM="${EMAIL_FROM}"
 unset OWNER_URL
 
 mkdir -p "$(dirname "${OUT_FILE}")"
@@ -40,6 +66,12 @@ const values = {
   MFA_ENCRYPTION_KEY: process.env.FINVERSE_MFA_KEY,
   BANK_TOKEN_ENCRYPTION_KEY: process.env.FINVERSE_BANK_KEY,
   HIBP_PASSWORD_CHECK: 'required',
+  SMTP_HOST: process.env.FINVERSE_SMTP_HOST,
+  SMTP_PORT: process.env.FINVERSE_SMTP_PORT,
+  SMTP_SECURE: process.env.FINVERSE_SMTP_SECURE,
+  SMTP_USER: process.env.FINVERSE_SMTP_USER,
+  SMTP_PASSWORD: process.env.FINVERSE_SMTP_PASSWORD,
+  EMAIL_FROM: process.env.FINVERSE_EMAIL_FROM,
   LEGAL_TERMS_VERSION: 'v1',
   LEGAL_TERMS_URL: 'https://example.com/finverse-terms',
   LEGAL_PRIVACY_VERSION: 'v1',
@@ -52,5 +84,6 @@ for (const [key, value] of Object.entries(values)) {
 NODE
 
 unset FINVERSE_OWNER_URL FINVERSE_APP_PASSWORD FINVERSE_JWT_SECRET FINVERSE_MFA_KEY FINVERSE_BANK_KEY
+unset FINVERSE_SMTP_HOST FINVERSE_SMTP_PORT FINVERSE_SMTP_SECURE FINVERSE_SMTP_USER FINVERSE_SMTP_PASSWORD FINVERSE_EMAIL_FROM
 echo "Created ${OUT_FILE} with mode 600. It contains secrets; never commit or paste it."
 echo "The script uses temporary example legal URLs. Replace all four LEGAL_* values before selling."
