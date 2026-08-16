@@ -21,6 +21,7 @@ the traps that cost time to rediscover.
 | [11-run-on-your-phone.md](11-run-on-your-phone.md)                       | Installing it on your own phone — free as a PWA, or native with a Mac                 |
 | [09-launch-operations.md](09-launch-operations.md)                       | Release order, database operations, backups, monitoring, and infrastructure gates     |
 | [15-public-hosting-oracle.md](15-public-hosting-oracle.md)               | Oracle Always Free VM deployment with persistent PostgreSQL and HTTPS                  |
+| [17-public-hosting-google-cloud-run.md](17-public-hosting-google-cloud-run.md) | Managed Cloud Run + Neon deployment with no VM maintenance                         |
 | [10-threat-model.md](10-threat-model.md)                                 | Assets, trust boundaries, abuse cases, threat register, and production security gates |
 | [16-open-source-finance-patterns.md](16-open-source-finance-patterns.md) | What seven mature finance codebases teach FINVERSE, with license-safe priorities      |
 | [adr/](adr/)                                                             | Decisions with consequences, recorded                                                 |

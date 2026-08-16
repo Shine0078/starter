@@ -1,0 +1,11 @@
+.git
+.gitignore
+.gcloudignore
+node_modules/
+apps/api/.postgres-data/
+apps/mobile/.dart_tool/
+apps/mobile/build/
+apps/mobile/.pub-cache/
+output/
+*.log
+*.tmp

@@ -1,0 +1,78 @@
+﻿# Public hosting: Google Cloud Run + Neon
+
+This is the lowest-operations public deployment path for FINVERSE. Cloud Run
+hosts the API and Flutter PWA in the existing `Dockerfile.public`; Neon hosts
+the persistent PostgreSQL database. There is no VM, Ubuntu installation, or
+SSH server to maintain.
+
+**Credential safety:** if a Neon URL has ever been pasted into chat, source
+control, or a terminal transcript, reset that role's password in Neon before
+continuing. Treat the old URL as revoked and never reuse it.
+
+## One-time Google Cloud setup
+
+In Cloud Shell, select the project and enable the APIs:
+
+```bash
+gcloud config set project gen-lang-client-0585745083
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com
+```
+
+The project must have an attached billing account. Google Cloud's free quota
+is usage-based, not a hard spending cap, so create a budget alert before
+launching. Neon Free currently includes 0.5 GB storage and 100 compute-hours
+per project each month; it scales compute to zero when idle.
+
+## Neon connection details
+
+Open **Connect** in the Neon dashboard and select **Direct connection**. Use
+the owner URL as `DATABASE_URL`. Create a second URL with username
+`finverse_app` and a new strong password for `DATABASE_APP_URL`; the migration
+job creates that least-privileged role and applies the RLS policies.
+
+Do not paste either URL into chat or commit them. Keep them in the private
+Cloud Shell env file copied from `infra/cloudrun.env.example`.
+
+## Build and deploy
+
+Clone the repository in Cloud Shell, copy the example env file, and fill in the
+Neon URLs, generated keys, reviewed legal-document URLs, and the temporary
+Cloud Run origin:
+
+```bash
+git clone https://github.com/Shine0078/starter.git
+cd starter
+cp infra/cloudrun.env.example ~/finverse-cloudrun.env.yaml
+nano ~/finverse-cloudrun.env.yaml
+bash infra/scripts/deploy-cloud-run.sh ~/finverse-cloudrun.env.yaml
+```
+
+To avoid ever typing a database password into terminal history, use the
+interactive helper instead. It prompts for the rotated owner URL without
+echoing it, creates the restricted `finverse_app` URL and encryption keys, and
+writes the file with mode `600`:
+
+```bash
+bash infra/scripts/create-cloudrun-env.sh ~/finverse-cloudrun.env.yaml
+bash infra/scripts/deploy-cloud-run.sh ~/finverse-cloudrun.env.yaml
+```
+
+The helper starts with temporary `example.com` legal links. Replace those four
+values with the reviewed documents before enabling registration or accepting
+customers.
+
+The script builds `Dockerfile.public` with Cloud Build, executes the Postgres
+migrations as a one-shot Cloud Run Job, deploys the service with unauthenticated
+HTTPS, and prints the permanent `run.app` URL. Replace
+`CORS_ORIGINS` in the private env file with that URL and rerun the script once.
+
+Visit `https://SERVICE-URL/app/` for the PWA and `https://SERVICE-URL/healthz`
+for the health check. Keep `MIGRATE_ON_BOOT=false`; migrations are a release
+step so two Cloud Run instances cannot race on startup.
+
+## Before accepting real customers
+
+Replace the temporary legal URLs with counsel-approved HTTPS documents, set a
+custom domain (and then update `CORS_ORIGINS`), add Cloud Run/Neon backup and
+alerting, and only then add production Plaid and Stripe credentials. Sandbox
+Plaid credentials are intentionally rejected by the production configuration.

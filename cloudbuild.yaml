@@ -1,0 +1,15 @@
+steps:
+  # Dockerfile.public packages the NestJS API and the Flutter PWA in one
+  # same-origin image. Cloud Run supplies PORT at runtime.
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - Dockerfile.public
+      - -t
+      - ${_IMAGE}
+      - .
+images:
+  - ${_IMAGE}
+options:
+  logging: CLOUD_LOGGING_ONLY
