@@ -1936,6 +1936,51 @@ class AppLocalizationsEn extends AppLocalizations {
   String get splitAmountLabel => 'Amount';
 
   @override
+  String get splitCurrencyLabel => 'Currency (ISO code)';
+
+  @override
+  String get splitPaidByLabel => 'Paid by';
+
+  @override
+  String get splitSplitMethodLabel => 'Split method';
+
+  @override
+  String get splitEqualOption => 'Equal shares';
+
+  @override
+  String get splitCustomOption => 'Custom shares';
+
+  @override
+  String splitShareFor(Object name) {
+    return 'Share for $name';
+  }
+
+  @override
+  String get splitSharesMustMatch => 'Shares must add up to the total amount.';
+
+  @override
+  String get splitArchiveAction => 'Archive group';
+
+  @override
+  String get splitArchiveConfirm =>
+      'Archive this group? It will become read-only.';
+
+  @override
+  String get splitArchived => 'Archived';
+
+  @override
+  String get splitSettleAnyAction => 'Record payment';
+
+  @override
+  String get splitSettlementToLabel => 'Paying to';
+
+  @override
+  String get splitNoteLabel => 'Note (optional)';
+
+  @override
+  String get splitInvalidAmount => 'Enter a valid positive amount.';
+
+  @override
   String get profileSplitDetail => 'Split bills and settle up with others';
 
   @override

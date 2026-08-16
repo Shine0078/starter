@@ -229,7 +229,7 @@ features them.
 **Named once, clearly later-phase**
 
 - Gamification (achievements, streaks, challenges, levels)
-- Family mode, shared budgets, expense splitting
+- Family-wide budgets remain later; shared expense groups, custom shares, settlements, and archive are implemented (mobile/API)
 - Travel mode with FX
 - Business mode (tax categories, mileage, invoices)
 - Smart natural-language search

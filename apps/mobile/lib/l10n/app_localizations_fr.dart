@@ -1960,6 +1960,52 @@ class AppLocalizationsFr extends AppLocalizations {
   String get splitAmountLabel => 'Montant';
 
   @override
+  String get splitCurrencyLabel => 'Devise (code ISO)';
+
+  @override
+  String get splitPaidByLabel => 'Payé par';
+
+  @override
+  String get splitSplitMethodLabel => 'Répartition';
+
+  @override
+  String get splitEqualOption => 'Parts égales';
+
+  @override
+  String get splitCustomOption => 'Parts personnalisées';
+
+  @override
+  String splitShareFor(Object name) {
+    return 'Part de $name';
+  }
+
+  @override
+  String get splitSharesMustMatch =>
+      'Les parts doivent égaler le montant total.';
+
+  @override
+  String get splitArchiveAction => 'Archiver le groupe';
+
+  @override
+  String get splitArchiveConfirm =>
+      'Archiver ce groupe ? Il deviendra en lecture seule.';
+
+  @override
+  String get splitArchived => 'Archivé';
+
+  @override
+  String get splitSettleAnyAction => 'Enregistrer un paiement';
+
+  @override
+  String get splitSettlementToLabel => 'Paiement à';
+
+  @override
+  String get splitNoteLabel => 'Note (facultative)';
+
+  @override
+  String get splitInvalidAmount => 'Saisissez un montant positif valide.';
+
+  @override
   String get profileSplitDetail =>
       'Partagez les factures et réglez vos comptes';
 

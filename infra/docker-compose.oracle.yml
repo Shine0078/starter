@@ -1,0 +1,88 @@
+name: finverse-oracle
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-finverse}
+    volumes:
+      - finverse_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [finverse]
+
+  migrate:
+    build:
+      context: ..
+      dockerfile: Dockerfile.public
+    restart: "no"
+    env_file: [.env.oracle]
+    environment:
+      NODE_ENV: production
+      STORE: postgres
+      MIGRATE_ON_BOOT: "false"
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL to the schema-owner URL}
+      DATABASE_APP_URL: ${DATABASE_APP_URL:?set DATABASE_APP_URL to the restricted runtime URL}
+    command: ["node", "dist/infra/postgres/migrate.js"]
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [finverse]
+
+  api:
+    build:
+      context: ..
+      dockerfile: Dockerfile.public
+    restart: unless-stopped
+    env_file: [.env.oracle]
+    environment:
+      NODE_ENV: production
+      STORE: postgres
+      MIGRATE_ON_BOOT: "false"
+      # The runtime must never receive the schema-owner credential.
+      DATABASE_URL: ""
+      DATABASE_APP_URL: ${DATABASE_APP_URL:?set DATABASE_APP_URL to the restricted runtime URL}
+    expose: ["3000"]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/healthz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks: [finverse]
+
+  edge:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      PUBLIC_API_DOMAIN: ${PUBLIC_API_DOMAIN:?set PUBLIC_API_DOMAIN to your DNS hostname}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile.oracle:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+    networks: [finverse]
+
+networks:
+  finverse:
+    driver: bridge
+
+volumes:
+  finverse_postgres:
+  caddy_data:
+  caddy_config:

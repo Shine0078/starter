@@ -170,7 +170,7 @@ repository controls exist but production activation still needs an owner/provide
 
 **- [x] Property valuation support (manual, user-controlled valuations)**
 
-**- Family/shared budgets and expense splitting**
+**- [x] Family/shared budgets and expense splitting (groups, custom shares, settlements, archive)**
 
 **- Travel mode and foreign-exchange tools**
 

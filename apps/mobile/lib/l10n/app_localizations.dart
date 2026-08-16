@@ -3382,6 +3382,90 @@ abstract class AppLocalizations {
   /// **'Amount'**
   String get splitAmountLabel;
 
+  /// No description provided for @splitCurrencyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Currency (ISO code)'**
+  String get splitCurrencyLabel;
+
+  /// No description provided for @splitPaidByLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid by'**
+  String get splitPaidByLabel;
+
+  /// No description provided for @splitSplitMethodLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Split method'**
+  String get splitSplitMethodLabel;
+
+  /// No description provided for @splitEqualOption.
+  ///
+  /// In en, this message translates to:
+  /// **'Equal shares'**
+  String get splitEqualOption;
+
+  /// No description provided for @splitCustomOption.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom shares'**
+  String get splitCustomOption;
+
+  /// No description provided for @splitShareFor.
+  ///
+  /// In en, this message translates to:
+  /// **'Share for {name}'**
+  String splitShareFor(Object name);
+
+  /// No description provided for @splitSharesMustMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Shares must add up to the total amount.'**
+  String get splitSharesMustMatch;
+
+  /// No description provided for @splitArchiveAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive group'**
+  String get splitArchiveAction;
+
+  /// No description provided for @splitArchiveConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive this group? It will become read-only.'**
+  String get splitArchiveConfirm;
+
+  /// No description provided for @splitArchived.
+  ///
+  /// In en, this message translates to:
+  /// **'Archived'**
+  String get splitArchived;
+
+  /// No description provided for @splitSettleAnyAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Record payment'**
+  String get splitSettleAnyAction;
+
+  /// No description provided for @splitSettlementToLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Paying to'**
+  String get splitSettlementToLabel;
+
+  /// No description provided for @splitNoteLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Note (optional)'**
+  String get splitNoteLabel;
+
+  /// No description provided for @splitInvalidAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid positive amount.'**
+  String get splitInvalidAmount;
+
   /// No description provided for @profileSplitDetail.
   ///
   /// In en, this message translates to:

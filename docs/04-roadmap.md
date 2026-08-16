@@ -113,7 +113,7 @@ can answer the six questions listed in `MISSION.md` without hallucinating a numb
 
 - [ ] Second and third country (second aggregator proves the port abstraction)
 - [ ] Investment and crypto position tracking
-- [ ] Family mode, shared budgets, expense splitting
+- [x] Shared expense groups, custom shares, settlements, and archive; family-wide budgets remain later
 - [ ] Travel mode with FX
 - [ ] Business mode: tax categories, mileage, invoices
 - [ ] Web dashboard
