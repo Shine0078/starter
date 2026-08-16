@@ -83,10 +83,23 @@ export async function provisionAppRole(pg: Pool, appDatabaseUrl: string): Promis
           EXECUTE format('CREATE ROLE %I LOGIN', app_role);
         END IF;
 
-        EXECUTE format(
-          'ALTER ROLE %I LOGIN PASSWORD %L NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE',
-          app_role, app_pw
-        );
+        -- Neon grants the project owner enough authority to create a role and
+        -- set its password, but not enough authority to explicitly alter
+        -- superuser attributes. A newly-created role defaults to LOGIN=false,
+        -- NOSUPERUSER, NOBYPASSRLS, NOCREATEDB, and NOCREATEROLE; keep those
+        -- safe defaults and only enable the two properties the runtime needs.
+        EXECUTE format('ALTER ROLE %I LOGIN PASSWORD %L', app_role, app_pw);
+
+        IF EXISTS (
+          SELECT 1
+          FROM pg_roles
+          WHERE rolname = app_role
+            AND (rolsuper OR rolbypassrls OR rolcreatedb OR rolcreaterole)
+        ) THEN
+          RAISE EXCEPTION
+            'Runtime role % has unsafe PostgreSQL privileges; refusing to continue',
+            app_role;
+        END IF;
 
         EXECUTE format('GRANT CONNECT ON DATABASE %I TO %I', current_database(), app_role);
         EXECUTE format('GRANT USAGE ON SCHEMA public TO %I', app_role);
