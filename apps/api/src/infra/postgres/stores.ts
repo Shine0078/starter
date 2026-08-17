@@ -266,10 +266,10 @@ const TXN_COLUMNS = `
   raw_descriptor, normalized_descriptor, merchant,
   merchant_override, note, excluded_from_analytics,
   category_slug, category_source, category_confidence, is_recurring, recurring_override,
-  duplicate_reported, pending
+  duplicate_reported, pending, tags
 `;
 
-const TXN_INSERT_COLUMNS = 20;
+const TXN_INSERT_COLUMNS = 21;
 
 export class PostgresTransactionStore implements TransactionStore {
   constructor(private readonly pg: Pool) {}
@@ -312,6 +312,7 @@ export class PostgresTransactionStore implements TransactionStore {
     if (query.recurring !== undefined) where.push(`is_recurring = ${bind(query.recurring)}`);
     if (query.amountMin !== undefined) where.push(`ABS(amount) >= ${bind(query.amountMin)}`);
     if (query.amountMax !== undefined) where.push(`ABS(amount) <= ${bind(query.amountMax)}`);
+    if (query.tag) where.push(`${bind(query.tag.trim().toLowerCase())} = ANY(tags)`);
 
     // Tie-break on id so pagination is stable when many rows share a date.
     let sql = `SELECT ${TXN_COLUMNS} FROM transactions
@@ -384,6 +385,7 @@ export class PostgresTransactionStore implements TransactionStore {
             txn.recurringOverride ?? null,
             txn.duplicateReported ?? false,
             txn.pending,
+            txn.tags ?? [],
           );
         });
 
@@ -393,7 +395,7 @@ export class PostgresTransactionStore implements TransactionStore {
              raw_descriptor, normalized_descriptor, merchant,
              merchant_override, note, excluded_from_analytics,
              category_slug, category_source, category_confidence, is_recurring, recurring_override,
-             duplicate_reported, pending
+             duplicate_reported, pending, tags
            ) VALUES ${tuples.join(', ')}
            ON CONFLICT (user_id, account_id, provider_txn_id) DO UPDATE SET
              posted_at             = EXCLUDED.posted_at,
@@ -460,6 +462,7 @@ export class PostgresTransactionStore implements TransactionStore {
       recurringOverride: 'recurring_override',
       duplicateReported: 'duplicate_reported',
       pending: 'pending',
+      tags: 'tags',
     };
 
     const assignments: string[] = [];

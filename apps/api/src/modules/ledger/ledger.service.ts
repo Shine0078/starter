@@ -7,6 +7,7 @@ import { normalizeDescriptor } from '../../domain/categorization/normalize';
 import { isKnownCategory } from '../../domain/categories';
 import { detectSubscriptions } from '../../domain/insights/subscriptions';
 import { interpretTransactionSearch } from '../../domain/transactions/natural-search';
+import { normalizeTransactionTags } from '../../domain/transactions/tags';
 import { FinanceEventBus } from '../../infra/events/finance-event-bus';
 import type { Account, CategorizationRule, RawTransaction, Transaction } from '../../domain/types';
 import {
@@ -214,6 +215,28 @@ export class LedgerService {
 
   listTransactions(userId: string, query: TransactionQuery): Promise<Transaction[]> {
     return this.transactions.list(userId, query);
+  }
+
+  async updateTransactionTags(
+    userId: string,
+    transactionId: string,
+    rawTags: unknown,
+  ): Promise<Transaction> {
+    let tags: string[];
+    try {
+      tags = normalizeTransactionTags(rawTags);
+    } catch (error) {
+      throw new BadRequestException(error instanceof Error ? error.message : 'Invalid tags');
+    }
+    const updated = await this.transactions.update(userId, transactionId, { tags });
+    if (!updated) throw new NotFoundException(`No transaction ${transactionId}`);
+    this.events.publish({
+      type: 'TransactionUpdated',
+      userId,
+      at: this.clock.now().toISOString(),
+      updated: 1,
+    });
+    return updated;
   }
 
   listNetWorthHistory(userId: string, limit = 365) {

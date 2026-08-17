@@ -402,6 +402,7 @@ class Transaction {
     this.recurringOverride,
     this.duplicateReported = false,
     this.excludedFromAnalytics = false,
+    this.tags = const [],
   });
 
   factory Transaction.fromJson(Map<String, dynamic> json) => Transaction(
@@ -424,6 +425,8 @@ class Transaction {
         merchantOverride: json['merchantOverride'] as String?,
         note: json['note'] as String?,
         excludedFromAnalytics: json['excludedFromAnalytics'] as bool? ?? false,
+        tags: (json['tags'] as List<dynamic>?)?.whereType<String>().toList() ??
+            const [],
       );
 
   final String id;
@@ -445,6 +448,7 @@ class Transaction {
   final String? merchantOverride;
   final String? note;
   final bool excludedFromAnalytics;
+  final List<String> tags;
 
   String get displayName => merchantOverride ?? merchant ?? rawDescriptor;
 
@@ -1693,7 +1697,8 @@ class SplitGroup {
 }
 
 class SplitMember {
-  SplitMember({required this.userId, required this.role, this.email, this.joinedAt});
+  SplitMember(
+      {required this.userId, required this.role, this.email, this.joinedAt});
 
   factory SplitMember.fromJson(Map<String, dynamic> json) => SplitMember(
         userId: json['userId'] as String,
@@ -1709,9 +1714,14 @@ class SplitMember {
 }
 
 class SplitParticipant {
-  SplitParticipant({required this.userId, required this.amount, this.email, this.amountFormatted});
+  SplitParticipant(
+      {required this.userId,
+      required this.amount,
+      this.email,
+      this.amountFormatted});
 
-  factory SplitParticipant.fromJson(Map<String, dynamic> json) => SplitParticipant(
+  factory SplitParticipant.fromJson(Map<String, dynamic> json) =>
+      SplitParticipant(
         userId: json['userId'] as String,
         amount: (json['amount'] as num?)?.toInt() ?? 0,
         email: json['email'] as String?,
@@ -1779,7 +1789,8 @@ class SplitSettlement {
     this.createdAt,
   });
 
-  factory SplitSettlement.fromJson(Map<String, dynamic> json) => SplitSettlement(
+  factory SplitSettlement.fromJson(Map<String, dynamic> json) =>
+      SplitSettlement(
         id: json['id'] as String,
         fromUserId: json['fromUserId'] as String,
         toUserId: json['toUserId'] as String,
@@ -1803,7 +1814,11 @@ class SplitSettlement {
 }
 
 class SplitBalance {
-  SplitBalance({required this.userId, required this.netAmount, this.email, this.netFormatted});
+  SplitBalance(
+      {required this.userId,
+      required this.netAmount,
+      this.email,
+      this.netFormatted});
 
   factory SplitBalance.fromJson(Map<String, dynamic> json) => SplitBalance(
         userId: json['userId'] as String,
@@ -1819,9 +1834,14 @@ class SplitBalance {
 }
 
 class SplitSuggestion {
-  SplitSuggestion({required this.fromUserId, required this.toUserId, required this.amount, this.amountFormatted});
+  SplitSuggestion(
+      {required this.fromUserId,
+      required this.toUserId,
+      required this.amount,
+      this.amountFormatted});
 
-  factory SplitSuggestion.fromJson(Map<String, dynamic> json) => SplitSuggestion(
+  factory SplitSuggestion.fromJson(Map<String, dynamic> json) =>
+      SplitSuggestion(
         fromUserId: json['fromUserId'] as String,
         toUserId: json['toUserId'] as String,
         amount: (json['amount'] as num?)?.toInt() ?? 0,
@@ -1844,7 +1864,8 @@ class SplitGroupDetail {
     required this.suggestions,
   });
 
-  factory SplitGroupDetail.fromJson(Map<String, dynamic> json) => SplitGroupDetail(
+  factory SplitGroupDetail.fromJson(Map<String, dynamic> json) =>
+      SplitGroupDetail(
         group: SplitGroup.fromJson(json['group'] as Map<String, dynamic>),
         members: (json['members'] as List<dynamic>? ?? const [])
             .whereType<Map<String, dynamic>>()

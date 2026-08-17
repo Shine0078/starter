@@ -169,6 +169,10 @@ export class InMemoryTransactionStore implements TransactionStore {
     if (query.amountMax !== undefined) {
       rows = rows.filter((t) => Math.abs(t.amount) <= query.amountMax!);
     }
+    if (query.tag) {
+      const wanted = query.tag.trim().toLowerCase();
+      rows = rows.filter((t) => t.tags?.some((tag) => tag === wanted) ?? false);
+    }
 
     rows.sort((a, b) => b.postedAt.localeCompare(a.postedAt) || b.id.localeCompare(a.id));
     return query.limit ? rows.slice(0, query.limit) : rows;
@@ -209,6 +213,7 @@ export class InMemoryTransactionStore implements TransactionStore {
               categoryConfidence: existing.categoryConfidence,
               recurringOverride: existing.recurringOverride,
               duplicateReported: existing.duplicateReported,
+              tags: existing.tags,
               isRecurring: existing.recurringOverride ?? txn.isRecurring,
             }
           : {
@@ -216,6 +221,7 @@ export class InMemoryTransactionStore implements TransactionStore {
               id: existing.id,
               recurringOverride: existing.recurringOverride,
               duplicateReported: existing.duplicateReported,
+              tags: existing.tags,
               isRecurring: existing.recurringOverride ?? txn.isRecurring,
             };
         updated += 1;

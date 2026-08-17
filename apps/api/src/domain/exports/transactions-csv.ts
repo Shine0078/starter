@@ -31,6 +31,7 @@ export function transactionsToCsv(transactions: readonly Transaction[]): string 
     'recurring',
     'duplicate_reported',
     'pending',
+    'tags',
   ];
   const rows = transactions.map((transaction) =>
     [
@@ -51,6 +52,7 @@ export function transactionsToCsv(transactions: readonly Transaction[]): string 
       transaction.isRecurring,
       transaction.duplicateReported ?? false,
       transaction.pending,
+      transaction.tags?.join('|'),
     ]
       .map(cell)
       .join(','),

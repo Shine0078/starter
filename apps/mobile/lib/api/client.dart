@@ -1204,6 +1204,22 @@ class ApiClient implements BackgroundSyncClient {
         .toList();
   }
 
+  Future<Transaction> updateTransactionTags(
+    String transactionId,
+    List<String> tags,
+  ) async {
+    final path = '/transactions/$transactionId/tags';
+    final body = <String, dynamic>{'tags': tags};
+    try {
+      final json = await _send('PATCH', path, body) as Map<String, dynamic>;
+      return Transaction.fromJson(json['transaction'] as Map<String, dynamic>);
+    } on TimeoutException {
+      return _queueOfflineMutation('PATCH', path, body);
+    } on http.ClientException {
+      return _queueOfflineMutation('PATCH', path, body);
+    }
+  }
+
   Future<Budget> createBudget(String categorySlug, int limitMinorUnits) async {
     final json = await _send('POST', '/budgets', {
       'categorySlug': categorySlug,

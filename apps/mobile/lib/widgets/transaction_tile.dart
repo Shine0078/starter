@@ -49,9 +49,8 @@ class TransactionTile extends StatelessWidget {
       contentPadding: EdgeInsets.zero,
       leading: CircleAvatar(
         radius: 20,
-        backgroundColor:
-            (isOutflow ? theme.colorScheme.onSurface : fin.income)
-                .withValues(alpha: 0.12),
+        backgroundColor: (isOutflow ? theme.colorScheme.onSurface : fin.income)
+            .withValues(alpha: 0.12),
         child: Text(
           _initial(transaction.displayName),
           style: theme.textTheme.titleSmall?.copyWith(
@@ -90,6 +89,10 @@ class TransactionTile extends StatelessWidget {
           if (transaction.isRecurring) ...[
             const SizedBox(width: 6),
             Icon(Icons.autorenew, size: 12, color: theme.colorScheme.outline),
+          ],
+          if (transaction.tags.isNotEmpty) ...[
+            const SizedBox(width: 6),
+            _badge(theme, '#${transaction.tags.first}'),
           ],
         ],
       ),

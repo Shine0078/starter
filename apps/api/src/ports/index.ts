@@ -63,6 +63,8 @@ export interface TransactionQuery {
   /** Inclusive absolute amount bounds in minor units. */
   amountMin?: number;
   amountMax?: number;
+  /** Exact user-owned label, case-insensitive after normalization. */
+  tag?: string;
   /** Stable keyset cursor: return rows strictly older than this transaction. */
   before?: { postedAt: string; id: string };
   limit?: number;

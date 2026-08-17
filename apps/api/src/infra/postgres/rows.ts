@@ -78,6 +78,7 @@ export interface TransactionRow {
   recurring_override: boolean | null;
   duplicate_reported: boolean;
   pending: boolean;
+  tags?: string[];
 }
 
 export function toTransaction(row: TransactionRow): Transaction {
@@ -101,6 +102,7 @@ export function toTransaction(row: TransactionRow): Transaction {
     ...(row.recurring_override === null ? {} : { recurringOverride: row.recurring_override }),
     ...(row.duplicate_reported ? { duplicateReported: true } : {}),
     pending: row.pending,
+    ...(row.tags && row.tags.length > 0 ? { tags: [...row.tags] } : {}),
   };
 }
 

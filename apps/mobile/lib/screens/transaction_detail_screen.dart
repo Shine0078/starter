@@ -32,6 +32,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
   late bool _isRecurring;
   late bool? _recurringOverride;
   late bool _duplicateReported;
+  late List<String> _tags;
   ReceiptRecord? _receipt;
   var _saving = false;
   final _receiptPhotoRecognizer = ReceiptPhotoRecognizer();
@@ -47,6 +48,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
     _isRecurring = widget.transaction.isRecurring;
     _recurringOverride = widget.transaction.recurringOverride;
     _duplicateReported = widget.transaction.duplicateReported;
+    _tags = [...widget.transaction.tags];
     _loadCategories();
     _loadReceipt();
   }
@@ -156,6 +158,64 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
               _merchantOverride = value;
             }
           });
+        }
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(friendlyErrorMessage(error))));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _editTags() async {
+    final controller = TextEditingController(text: _tags.join(', '));
+    final value = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Organize with tags'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLength: 800,
+          decoration: const InputDecoration(
+            hintText: 'e.g. reimbursable, vacation, review',
+            helperText: 'Separate labels with commas',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (value == null || !mounted) return;
+    final next = value
+        .split(',')
+        .map((tag) => tag.trim().toLowerCase())
+        .where((tag) => tag.isNotEmpty)
+        .toSet()
+        .toList();
+    final previous = _tags;
+    setState(() {
+      _tags = next;
+      _saving = true;
+    });
+    try {
+      final updated = await widget.api.updateTransactionTags(
+        widget.transaction.id,
+        next,
+      );
+      if (mounted) setState(() => _tags = updated.tags);
+    } catch (error) {
+      if (mounted) {
+        if (error is! OfflineMutationQueuedException) {
+          setState(() => _tags = previous);
         }
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(friendlyErrorMessage(error))));
@@ -556,6 +616,17 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                       : _note),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: _saving ? null : () => _editText(note: true),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.sell_outlined),
+                  title: Text(_tags.isEmpty
+                      ? 'Add tags'
+                      : _tags.map((tag) => '#$tag').join('  ')),
+                  subtitle: const Text(
+                    'Use labels like reimbursable, travel, or review to find this later',
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: _saving ? null : _editTags,
                 ),
                 if (_category != 'transfer')
                   ListTile(

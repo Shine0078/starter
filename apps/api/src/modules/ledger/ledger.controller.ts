@@ -225,6 +225,7 @@ export class LedgerController {
     @Query('recurring') recurring?: string,
     @Query('minAmount') minAmount?: string,
     @Query('maxAmount') maxAmount?: string,
+    @Query('tag') tag?: string,
   ) {
     const cursor = decodeCursor(before);
     const pageSize = parseLimit(limit);
@@ -250,6 +251,7 @@ export class LedgerController {
       recurring: parseOptionalBoolean(recurring, 'recurring') ?? interpreted?.query.recurring,
       amountMin: parsedMinAmount ?? interpreted?.query.amountMin,
       amountMax: parsedMaxAmount ?? interpreted?.query.amountMax,
+      tag: tag?.trim().toLowerCase() || undefined,
       range: parsedFrom && parsedTo
         ? { start: parsedFrom, end: parsedTo }
         : interpreted?.query.range,
@@ -341,6 +343,17 @@ export class LedgerController {
   ) {
     const transaction = await this.ledger.updatePreferences(userId, id, body);
     return { transaction: present(transaction) };
+  }
+
+  @Patch('transactions/:id/tags')
+  async updateTransactionTags(
+    @CurrentUser() userId: string,
+    @Param('id') id: string,
+    @Body() body: { tags?: unknown },
+  ) {
+    return {
+      transaction: present(await this.ledger.updateTransactionTags(userId, id, body.tags)),
+    };
   }
 }
 

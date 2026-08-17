@@ -93,6 +93,10 @@ export interface Transaction {
   duplicateReported?: boolean;
   /** Pending transactions can change amount or disappear entirely. */
   pending: boolean;
+  /** User-owned labels. They are an additional organization axis, never a
+   * replacement for the provider category. Tags are normalized to lower-case
+   * and deduplicated at the API boundary. */
+  tags?: string[];
 }
 
 export interface CategorizationRule {
