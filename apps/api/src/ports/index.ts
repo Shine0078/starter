@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Ports: the interfaces the domain needs the outside world to satisfy.
  *
  * The domain declares these; `infra/` implements them. Today the only
@@ -31,6 +31,7 @@ import type {
 import type { Reconciliation } from '../domain/reconciliation/types';
 import type { SavedView } from '../domain/transactions/saved-view';
 import type { ScheduledTransaction } from '../domain/scheduled/schedule';
+import type { FxRate } from '../domain/fx/rates';
 
 export const ACCOUNT_STORE = 'ACCOUNT_STORE';
 export const TRANSACTION_STORE = 'TRANSACTION_STORE';
@@ -44,6 +45,7 @@ export const SAVED_VIEW_STORE = 'SAVED_VIEW_STORE';
 export const IMPORT_BATCH_STORE = 'IMPORT_BATCH_STORE';
 export const SCHEDULE_STORE = 'SCHEDULE_STORE';
 export const RULE_APPLICATION_STORE = 'RULE_APPLICATION_STORE';
+export const FX_RATE_STORE = 'FX_RATE_STORE';
 export const AGGREGATOR = 'AGGREGATOR';
 export const CLOCK = 'CLOCK';
 
@@ -132,7 +134,7 @@ export interface NotificationStore {
 
 /**
  * Shared expenses between FINVERSE users. Unlike every other store, the
- * visibility boundary is group membership, not a `user_id` column — each
+ * visibility boundary is group membership, not a `user_id` column â€” each
  * method's `userId` is the acting member, and row-level security does the
  * enforcement on Postgres.
  */
@@ -162,7 +164,7 @@ export interface ReconciliationStore {
   list(userId: string, accountId?: string): Promise<Reconciliation[]>;
   get(userId: string, id: string): Promise<Reconciliation | null>;
   /**
-   * Replaces any live assertion for the same account and statement date — a
+   * Replaces any live assertion for the same account and statement date â€” a
    * second observation of one closing date is a correction, not a second fact.
    */
   create(userId: string, reconciliation: Reconciliation): Promise<Reconciliation>;
@@ -253,7 +255,7 @@ export interface RuleApplication {
  * Bulk recategorizations and their undo.
  *
  * The prior category of every changed row is stored, because a revert needs to
- * know what each row was *before* — that is not recoverable from the rule.
+ * know what each row was *before* â€” that is not recoverable from the rule.
  */
 export interface RuleApplicationStore {
   list(userId: string): Promise<RuleApplication[]>;
@@ -265,6 +267,13 @@ export interface RuleApplicationStore {
   ): Promise<RuleApplication>;
   /** Restores prior categories. Null when unknown or already reverted. */
   revert(userId: string, id: string, at: string): Promise<number | null>;
+}
+
+/** User-recorded exchange rates. One per pair per day; a repeat is a correction. */
+export interface FxRateStore {
+  list(userId: string): Promise<FxRate[]>;
+  upsert(userId: string, rate: FxRate): Promise<FxRate>;
+  remove(userId: string, id: string): Promise<boolean>;
 }
 
 export interface RuleStore {

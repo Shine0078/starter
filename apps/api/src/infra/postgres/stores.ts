@@ -38,6 +38,7 @@ import type {
 import type { Reconciliation } from '../../domain/reconciliation/types';
 import type { SavedView } from '../../domain/transactions/saved-view';
 import type { ScheduledTransaction } from '../../domain/scheduled/schedule';
+import type { FxRate } from '../../domain/fx/rates';
 import {
   DuplicateViewNameError,
   type ImportBatch,
@@ -53,6 +54,7 @@ import {
   type RuleApplication,
   type RuleApplicationChange,
   type RuleApplicationStore,
+  type FxRateStore,
   type SplitStore,
   type TransactionQuery,
   type TransactionStore,
@@ -1748,6 +1750,91 @@ export class PostgresRuleApplicationStore implements RuleApplicationStore {
       );
 
       return restored.rowCount ?? 0;
+    });
+  }
+}
+
+// ------------------------------------------------------------- fx rates
+
+interface FxRateRow {
+  id: string;
+  base: string;
+  quote: string;
+  rate: number;
+  as_of: string;
+  source: string;
+  note: string | null;
+  created_at: Date;
+}
+
+const FX_RATE_COLUMNS = `id, base, quote, rate, as_of, source, note, created_at`;
+
+function toFxRate(row: FxRateRow): FxRate {
+  return {
+    id: row.id,
+    base: row.base,
+    quote: row.quote,
+    rate: row.rate,
+    // DATE comes back as YYYY-MM-DD; see the parser in pool.ts.
+    asOf: row.as_of,
+    source: row.source as FxRate['source'],
+    note: row.note,
+    createdAt: row.created_at.toISOString(),
+  };
+}
+
+export class PostgresFxRateStore implements FxRateStore {
+  constructor(private readonly pg: Pool) {}
+
+  async list(userId: string): Promise<FxRate[]> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const { rows } = await client.query<FxRateRow>(
+        `SELECT ${FX_RATE_COLUMNS} FROM fx_rates
+         WHERE user_id = $1 ORDER BY as_of DESC, base`,
+        [userId],
+      );
+      return rows.map(toFxRate);
+    });
+  }
+
+  async upsert(userId: string, rate: FxRate): Promise<FxRate> {
+    return withUserScope(this.pg, userId, async (client) => {
+      await ensureUser(client, userId);
+
+      // A second rate for the same pair and day is a correction, not a second
+      // truth. Keeping both would make the lookup depend on insertion order.
+      const { rows } = await client.query<FxRateRow>(
+        `INSERT INTO fx_rates (id, user_id, base, quote, rate, as_of, source, note, created_at)
+         VALUES ($1, $2, upper($3), upper($4), $5, $6, $7, $8, $9)
+         ON CONFLICT (user_id, base, quote, as_of) DO UPDATE SET
+           rate   = EXCLUDED.rate,
+           source = EXCLUDED.source,
+           note   = EXCLUDED.note
+         RETURNING ${FX_RATE_COLUMNS}`,
+        [
+          rate.id,
+          userId,
+          rate.base,
+          rate.quote,
+          rate.rate,
+          rate.asOf,
+          rate.source,
+          rate.note,
+          rate.createdAt,
+        ],
+      );
+
+      return toFxRate(rows[0]!);
+    });
+  }
+
+  async remove(userId: string, id: string): Promise<boolean> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const result = await client.query('DELETE FROM fx_rates WHERE user_id = $1 AND id = $2', [
+        userId,
+        id,
+      ]);
+      return (result.rowCount ?? 0) > 0;
     });
   }
 }

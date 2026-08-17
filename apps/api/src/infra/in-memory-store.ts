@@ -31,6 +31,7 @@ import type {
 import type { Reconciliation } from '../domain/reconciliation/types';
 import { normalizeViewName, type SavedView } from '../domain/transactions/saved-view';
 import type { ScheduledTransaction } from '../domain/scheduled/schedule';
+import type { FxRate } from '../domain/fx/rates';
 import {
   DuplicateViewNameError,
   type ImportBatch,
@@ -46,6 +47,7 @@ import {
   type RuleApplication,
   type RuleApplicationChange,
   type RuleApplicationStore,
+  type FxRateStore,
   type SplitStore,
   type TransactionQuery,
   type TransactionStore,
@@ -842,5 +844,45 @@ export class InMemoryRuleApplicationStore implements RuleApplicationStore {
 
     rows[index] = { ...rows[index]!, revertedAt: at };
     return restored;
+  }
+}
+
+/** Exchange rates. One per pair per day, matching the unique index in 028. */
+export class InMemoryFxRateStore implements FxRateStore {
+  private readonly byUser = new Map<string, FxRate[]>();
+
+  async list(userId: string): Promise<FxRate[]> {
+    return [...bucket(this.byUser, userId)]
+      .sort((a, b) => b.asOf.localeCompare(a.asOf) || a.base.localeCompare(b.base))
+      .map((r) => ({ ...r }));
+  }
+
+  async upsert(userId: string, rate: FxRate): Promise<FxRate> {
+    const rows = bucket(this.byUser, userId);
+    const base = rate.base.toUpperCase();
+    const quote = rate.quote.toUpperCase();
+
+    // A second rate for the same pair and day is a correction, not a second
+    // truth; leaving both would make the lookup depend on insertion order.
+    const existing = rows.findIndex(
+      (r) =>
+        r.base.toUpperCase() === base &&
+        r.quote.toUpperCase() === quote &&
+        r.asOf === rate.asOf,
+    );
+
+    const stored = { ...rate, base, quote };
+    if (existing >= 0) rows[existing] = { ...stored, id: rows[existing]!.id };
+    else rows.push(stored);
+
+    return { ...(existing >= 0 ? rows[existing]! : stored) };
+  }
+
+  async remove(userId: string, id: string): Promise<boolean> {
+    const rows = bucket(this.byUser, userId);
+    const index = rows.findIndex((r) => r.id === id);
+    if (index < 0) return false;
+    rows.splice(index, 1);
+    return true;
   }
 }
