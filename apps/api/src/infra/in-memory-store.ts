@@ -1,4 +1,4 @@
-/**
+﻿/**
  * In-memory implementations of the store ports.
  *
  * These are not a toy: they are the reference implementation that defines the
@@ -32,6 +32,8 @@ import type { Reconciliation } from '../domain/reconciliation/types';
 import { normalizeViewName, type SavedView } from '../domain/transactions/saved-view';
 import {
   DuplicateViewNameError,
+  type ImportBatch,
+  type ImportBatchStore,
   type AccountStore,
   type BudgetStore,
   type GoalStore,
@@ -187,7 +189,7 @@ export class InMemoryTransactionStore implements TransactionStore {
     return bucket(this.byUser, userId).find((t) => t.id === id) ?? null;
   }
 
-  /** Idempotent on (accountId, providerTxnId) — mirrors the unique index. */
+  /** Idempotent on (accountId, providerTxnId) â€” mirrors the unique index. */
   async upsertMany(
     userId: string,
     transactions: readonly Transaction[],
@@ -259,6 +261,19 @@ export class InMemoryTransactionStore implements TransactionStore {
     let removed = 0;
     for (let index = rows.length - 1; index >= 0; index -= 1) {
       if (!ids.has(rows[index]!.providerTxnId)) continue;
+      rows.splice(index, 1);
+      removed += 1;
+    }
+    return removed;
+  }
+
+  async removeByImportBatch(userId: string, importBatchId: string): Promise<number> {
+    const rows = bucket(this.byUser, userId);
+    let removed = 0;
+    for (let index = rows.length - 1; index >= 0; index -= 1) {
+      // Only rows carrying this batch id. A provider-synced transaction has
+      // none, so an undo can never reach one.
+      if (rows[index]!.importBatchId !== importBatchId) continue;
       rows.splice(index, 1);
       removed += 1;
     }
@@ -409,7 +424,7 @@ export class InMemoryNotificationStore implements NotificationStore {
 export class InMemoryRuleStore implements RuleStore {
   private readonly byUser = new Map<string, CategorizationRule[]>();
 
-  /** Priority order, ties broken by id — the same ordering the Postgres
+  /** Priority order, ties broken by id â€” the same ordering the Postgres
    *  adapter's index gives. Returning insertion order here would make rule
    *  precedence depend on which store happened to be running. */
   async list(userId: string): Promise<CategorizationRule[]> {
@@ -624,7 +639,7 @@ export class InMemoryReconciliationStore implements ReconciliationStore {
  * Named transaction filters.
  *
  * Name uniqueness is case-insensitive, matching the functional unique index in
- * 024 — otherwise a user could hold "Coffee" and "coffee" in memory but not in
+ * 024 â€” otherwise a user could hold "Coffee" and "coffee" in memory but not in
  * PostgreSQL, and the contract suite would be the only thing to notice.
  */
 export class InMemorySavedViewStore implements SavedViewStore {
@@ -659,5 +674,54 @@ export class InMemorySavedViewStore implements SavedViewStore {
     if (index < 0) return false;
     rows.splice(index, 1);
     return true;
+  }
+}
+
+/**
+ * Manual import batches.
+ *
+ * Holds its own reference to the transaction store because a revert has to
+ * remove rows, and routing that through the ports keeps the in-memory adapter
+ * honest about the same cascade PostgreSQL performs in one statement.
+ */
+export class InMemoryImportBatchStore implements ImportBatchStore {
+  constructor(private readonly transactions: InMemoryTransactionStore) {}
+
+  private readonly byUser = new Map<string, ImportBatch[]>();
+
+  async list(userId: string): Promise<ImportBatch[]> {
+    return [...bucket(this.byUser, userId)]
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .map((b) => ({ ...b }));
+  }
+
+  async get(userId: string, id: string): Promise<ImportBatch | null> {
+    const found = bucket(this.byUser, userId).find((b) => b.id === id);
+    return found ? { ...found } : null;
+  }
+
+  async commit(
+    userId: string,
+    batch: ImportBatch,
+    transactions: readonly Transaction[],
+  ): Promise<ImportBatch> {
+    await this.transactions.upsertMany(userId, transactions);
+    bucket(this.byUser, userId).push({ ...batch });
+    return { ...batch };
+  }
+
+  async revert(userId: string, id: string, at: string): Promise<number | null> {
+    const rows = bucket(this.byUser, userId);
+    const index = rows.findIndex((b) => b.id === id);
+    if (index < 0) return null;
+
+    const batch = rows[index]!;
+    // Already undone. Reverting twice would report a second removal that never
+    // happened.
+    if (batch.status === 'reverted') return null;
+
+    const removed = await this.transactions.removeByImportBatch(userId, id);
+    rows[index] = { ...batch, status: 'reverted', revertedAt: at };
+    return removed;
   }
 }

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Postgres implementations of the four store ports.
  *
  * Every method takes `userId` and every statement filters on it. That is not
@@ -10,7 +10,7 @@
  * runs inside `withUserScope`, which opens a transaction and pins
  * `finverse.user_id`; the row-level security policies compare every row against
  * it. A statement that loses its `WHERE user_id = $1` now returns nothing
- * instead of everything. The explicit predicates stay — two independent controls
+ * instead of everything. The explicit predicates stay â€” two independent controls
  * are the point, and dropping the visible one would make these queries look like
  * they leak to anyone reading them.
  */
@@ -39,6 +39,8 @@ import type { Reconciliation } from '../../domain/reconciliation/types';
 import type { SavedView } from '../../domain/transactions/saved-view';
 import {
   DuplicateViewNameError,
+  type ImportBatch,
+  type ImportBatchStore,
   type AccountStore,
   type BudgetStore,
   type GoalStore,
@@ -271,10 +273,10 @@ const TXN_COLUMNS = `
   raw_descriptor, normalized_descriptor, merchant,
   merchant_override, note, excluded_from_analytics,
   category_slug, category_source, category_confidence, is_recurring, recurring_override,
-  duplicate_reported, pending, tags
+  duplicate_reported, pending, tags, import_batch_id
 `;
 
-const TXN_INSERT_COLUMNS = 21;
+const TXN_INSERT_COLUMNS = 22;
 
 export class PostgresTransactionStore implements TransactionStore {
   constructor(private readonly pg: Pool) {}
@@ -391,6 +393,7 @@ export class PostgresTransactionStore implements TransactionStore {
             txn.duplicateReported ?? false,
             txn.pending,
             txn.tags ?? [],
+            txn.importBatchId ?? null,
           );
         });
 
@@ -400,7 +403,7 @@ export class PostgresTransactionStore implements TransactionStore {
              raw_descriptor, normalized_descriptor, merchant,
              merchant_override, note, excluded_from_analytics,
              category_slug, category_source, category_confidence, is_recurring, recurring_override,
-             duplicate_reported, pending, tags
+             duplicate_reported, pending, tags, import_batch_id
            ) VALUES ${tuples.join(', ')}
            ON CONFLICT (user_id, account_id, provider_txn_id) DO UPDATE SET
              posted_at             = EXCLUDED.posted_at,
@@ -430,6 +433,10 @@ export class PostgresTransactionStore implements TransactionStore {
                ELSE EXCLUDED.category_confidence END,
              recurring_override = transactions.recurring_override,
              duplicate_reported = transactions.duplicate_reported,
+             -- Provenance is set once, at insert. A later provider sync that
+             -- happens to collide must not claim a hand-imported row, or
+             -- reverting the import would delete a transaction the bank sent.
+             import_batch_id = transactions.import_batch_id,
              updated_at = now()
            RETURNING (xmax = 0) AS inserted`,
           values,
@@ -481,7 +488,7 @@ export class PostgresTransactionStore implements TransactionStore {
     }
 
     return withUserScope(this.pg, userId, async (client) => {
-      // Nothing to change — return the row as it stands rather than emitting
+      // Nothing to change â€” return the row as it stands rather than emitting
       // `SET updated_at = now()` on its own.
       if (assignments.length === 0) return fetchTransaction(client, userId, id);
 
@@ -502,6 +509,19 @@ export class PostgresTransactionStore implements TransactionStore {
       const result = await client.query(
         'DELETE FROM transactions WHERE user_id = $1 AND provider_txn_id = ANY($2::text[])',
         [userId, providerTxnIds],
+      );
+      return result.rowCount ?? 0;
+    });
+  }
+
+  async removeByImportBatch(userId: string, importBatchId: string): Promise<number> {
+    return withUserScope(this.pg, userId, async (client) => {
+      // `import_batch_id = $2` and nothing else. Scoping an undo by date range
+      // or account would sweep up provider-synced rows that happen to fall in
+      // the same window.
+      const result = await client.query(
+        'DELETE FROM transactions WHERE user_id = $1 AND import_batch_id = $2',
+        [userId, importBatchId],
       );
       return result.rowCount ?? 0;
     });
@@ -1227,7 +1247,7 @@ export class PostgresSavedViewStore implements SavedViewStore {
           // `created_at` is written explicitly rather than left to the column
           // default. The service takes it from the injected clock, so letting
           // now() win here would make the adapter override a value the caller
-          // deliberately supplied — and would be untestable under a fixed clock.
+          // deliberately supplied â€” and would be untestable under a fixed clock.
           `INSERT INTO saved_views (
              id, user_id, name, search, category_slug, category_kind, account_id,
              tag, date_from, date_to, amount_min, amount_max, pending, recurring,
@@ -1276,6 +1296,163 @@ export class PostgresSavedViewStore implements SavedViewStore {
         [userId, id],
       );
       return (result.rowCount ?? 0) > 0;
+    });
+  }
+}
+
+// -------------------------------------------------------- import batches
+
+interface ImportBatchRow {
+  id: string;
+  account_id: string;
+  filename: string;
+  status: string;
+  rows_total: number;
+  rows_imported: number;
+  rows_duplicate: number;
+  rows_invalid: number;
+  created_at: Date;
+  reverted_at: Date | null;
+}
+
+const IMPORT_BATCH_COLUMNS = `
+  id, account_id, filename, status, rows_total, rows_imported,
+  rows_duplicate, rows_invalid, created_at, reverted_at
+`;
+
+function toImportBatch(row: ImportBatchRow): ImportBatch {
+  return {
+    id: row.id,
+    accountId: row.account_id,
+    filename: row.filename,
+    status: row.status as ImportBatch['status'],
+    rowsTotal: row.rows_total,
+    rowsImported: row.rows_imported,
+    rowsDuplicate: row.rows_duplicate,
+    rowsInvalid: row.rows_invalid,
+    createdAt: row.created_at.toISOString(),
+    revertedAt: row.reverted_at ? row.reverted_at.toISOString() : null,
+  };
+}
+
+export class PostgresImportBatchStore implements ImportBatchStore {
+  constructor(private readonly pg: Pool) {}
+
+  async list(userId: string): Promise<ImportBatch[]> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const { rows } = await client.query<ImportBatchRow>(
+        `SELECT ${IMPORT_BATCH_COLUMNS} FROM import_batches
+         WHERE user_id = $1 ORDER BY created_at DESC`,
+        [userId],
+      );
+      return rows.map(toImportBatch);
+    });
+  }
+
+  async get(userId: string, id: string): Promise<ImportBatch | null> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const { rows } = await client.query<ImportBatchRow>(
+        `SELECT ${IMPORT_BATCH_COLUMNS} FROM import_batches WHERE user_id = $1 AND id = $2`,
+        [userId, id],
+      );
+      return rows[0] ? toImportBatch(rows[0]) : null;
+    });
+  }
+
+  /**
+   * Batch row and transactions in one transaction.
+   *
+   * withUserScope already opens one, so a failure partway through inserting
+   * rolls back the batch record too. A committed batch that names transactions
+   * which were never inserted would offer a revert that removes nothing.
+   */
+  async commit(
+    userId: string,
+    batch: ImportBatch,
+    transactions: readonly Transaction[],
+  ): Promise<ImportBatch> {
+    return withUserScope(this.pg, userId, async (client) => {
+      await ensureUser(client, userId);
+
+      const { rows } = await client.query<ImportBatchRow>(
+        `INSERT INTO import_batches (
+           id, user_id, account_id, filename, status,
+           rows_total, rows_imported, rows_duplicate, rows_invalid, created_at
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+         RETURNING ${IMPORT_BATCH_COLUMNS}`,
+        [
+          batch.id,
+          userId,
+          batch.accountId,
+          batch.filename,
+          batch.status,
+          batch.rowsTotal,
+          batch.rowsImported,
+          batch.rowsDuplicate,
+          batch.rowsInvalid,
+          batch.createdAt,
+        ],
+      );
+
+      for (const chunked of chunk(transactions, 500)) {
+        const values: unknown[] = [];
+        const tuples: string[] = [];
+
+        chunked.forEach((txn, index) => {
+          tuples.push(placeholders(12, index));
+          values.push(
+            txn.id,
+            userId,
+            txn.accountId,
+            txn.providerTxnId,
+            txn.postedAt,
+            txn.amount,
+            txn.currency,
+            txn.rawDescriptor,
+            txn.normalizedDescriptor,
+            txn.categorySlug,
+            txn.categoryConfidence,
+            batch.id,
+          );
+        });
+
+        // ON CONFLICT DO NOTHING rather than an upsert: the review step already
+        // decided these are new. If one collides anyway, the existing row is
+        // authoritative and must not be overwritten by a file.
+        await client.query(
+          `INSERT INTO transactions (
+             id, user_id, account_id, provider_txn_id, posted_at, amount, currency,
+             raw_descriptor, normalized_descriptor, category_slug, category_confidence,
+             import_batch_id
+           ) VALUES ${tuples.join(', ')}
+           ON CONFLICT (user_id, account_id, provider_txn_id) DO NOTHING`,
+          values,
+        );
+      }
+
+      return toImportBatch(rows[0]!);
+    });
+  }
+
+  async revert(userId: string, id: string, at: string): Promise<number | null> {
+    return withUserScope(this.pg, userId, async (client) => {
+      // Marking first, conditionally, makes the undo idempotent: a second
+      // request updates no row and returns null rather than reporting a
+      // removal that never happened.
+      const marked = await client.query(
+        `UPDATE import_batches SET status = 'reverted', reverted_at = $3
+         WHERE user_id = $1 AND id = $2 AND status = 'committed'`,
+        [userId, id, at],
+      );
+
+      if ((marked.rowCount ?? 0) === 0) return null;
+
+      const removed = await client.query(
+        'DELETE FROM transactions WHERE user_id = $1 AND import_batch_id = $2',
+        [userId, id],
+      );
+
+      return removed.rowCount ?? 0;
     });
   }
 }

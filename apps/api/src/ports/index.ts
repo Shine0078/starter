@@ -40,6 +40,7 @@ export const NOTIFICATION_STORE = 'NOTIFICATION_STORE';
 export const SPLIT_STORE = 'SPLIT_STORE';
 export const RECONCILIATION_STORE = 'RECONCILIATION_STORE';
 export const SAVED_VIEW_STORE = 'SAVED_VIEW_STORE';
+export const IMPORT_BATCH_STORE = 'IMPORT_BATCH_STORE';
 export const AGGREGATOR = 'AGGREGATOR';
 export const CLOCK = 'CLOCK';
 
@@ -90,6 +91,13 @@ export interface TransactionStore {
   ): Promise<{ inserted: number; updated: number }>;
   update(userId: string, id: string, patch: Partial<Transaction>): Promise<Transaction | null>;
   removeByProviderIds(userId: string, providerTxnIds: readonly string[]): Promise<number>;
+  /**
+   * Removes every row carrying this import batch id, returning the count.
+   *
+   * Scoped to the batch rather than to a date range or an account, so undoing
+   * an import cannot take a provider-synced transaction with it.
+   */
+  removeByImportBatch(userId: string, importBatchId: string): Promise<number>;
 }
 
 export interface BudgetStore {
@@ -172,6 +180,40 @@ export class DuplicateViewNameError extends Error {
     super(`A view called "${name}" already exists.`);
     this.name = 'DuplicateViewNameError';
   }
+}
+
+export interface ImportBatch {
+  id: string;
+  accountId: string;
+  filename: string;
+  status: 'committed' | 'reverted';
+  rowsTotal: number;
+  rowsImported: number;
+  rowsDuplicate: number;
+  rowsInvalid: number;
+  createdAt: string;
+  revertedAt: string | null;
+}
+
+/**
+ * Manual imports, and the undo behind them.
+ *
+ * `revert` is the reason this store exists: it removes only the transactions
+ * carrying this batch id, so it can never touch a row that came from a provider
+ * sync. The batch row survives, marked reverted, because the history of what
+ * was imported and undone is itself worth keeping.
+ */
+export interface ImportBatchStore {
+  list(userId: string): Promise<ImportBatch[]>;
+  get(userId: string, id: string): Promise<ImportBatch | null>;
+  /** Records the batch and inserts its transactions in one transaction. */
+  commit(
+    userId: string,
+    batch: ImportBatch,
+    transactions: readonly Transaction[],
+  ): Promise<ImportBatch>;
+  /** Returns how many transactions were removed, or null when already reverted. */
+  revert(userId: string, id: string, at: string): Promise<number | null>;
 }
 
 export interface RuleStore {

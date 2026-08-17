@@ -79,6 +79,7 @@ export interface TransactionRow {
   duplicate_reported: boolean;
   pending: boolean;
   tags?: string[];
+  import_batch_id?: string | null;
 }
 
 export function toTransaction(row: TransactionRow): Transaction {
@@ -103,6 +104,9 @@ export function toTransaction(row: TransactionRow): Transaction {
     ...(row.duplicate_reported ? { duplicateReported: true } : {}),
     pending: row.pending,
     ...(row.tags && row.tags.length > 0 ? { tags: [...row.tags] } : {}),
+    // Absent for provider-synced rows, which is the distinction that makes
+    // reverting an import safe.
+    ...(row.import_batch_id ? { importBatchId: row.import_batch_id } : {}),
   };
 }
 

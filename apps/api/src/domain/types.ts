@@ -97,6 +97,10 @@ export interface Transaction {
    * replacement for the provider category. Tags are normalized to lower-case
    * and deduplicated at the API boundary. */
   tags?: string[];
+  /** Set only on rows a user imported from a file. Provider-synced rows have
+   * none, which is what makes reverting an import safe: it can never remove a
+   * transaction the bank supplied. */
+  importBatchId?: string;
 }
 
 export interface CategorizationRule {
