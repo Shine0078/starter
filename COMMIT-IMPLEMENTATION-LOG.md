@@ -326,17 +326,19 @@ artifact) is self-described because a commit cannot contain its own final hash.
 | 301 | `65d99e7` | feat: add portable transaction tags | 15 files changed, 281 insertions(+), 19 deletions(-) | Extends a product capability or technical surface named by the commit. | No per-commit command is embedded in Git metadata; not inferred. | See FINVERSE-RESEARCH-INTEGRATION.md; independently authored FINVERSE history. |
 | 302 | `ccb6183` | docs: record six-project research integration | 2 files changed, 676 insertions(+) | Records architecture, operations, product intent, or handover evidence. | No per-commit command is embedded in Git metadata; not inferred. | See FINVERSE-RESEARCH-INTEGRATION.md; independently authored FINVERSE history. |
 | 303 | `ca696f7` | docs: add complete implementation history log | 1 file changed, 341 insertions(+) | Records architecture, operations, product intent, or handover evidence. | No per-commit command is embedded in Git metadata; not inferred. | See FINVERSE-RESEARCH-INTEGRATION.md; independently authored FINVERSE history. |
-| 304 | `self` | docs: include the log artifact entry | this file | Makes the documentation artifact itself visible in the handover history. | The commit hash is intentionally self-referential and cannot be known before Git writes the tree. | See FINVERSE-RESEARCH-INTEGRATION.md; no reference source copied. |
+| 304 | `01d279f` | docs: include log artifact entry | 1 file changed, 6 insertions(+), 3 deletions(-) | Makes the documentation artifact itself visible in the handover history. | No per-commit command is embedded in Git metadata; not inferred. | See FINVERSE-RESEARCH-INTEGRATION.md; no reference source copied. |
+| 305 | `self` | docs: record final verification gates | this file | Records the database-backed quality gate after the final implementation. | The commit hash is intentionally self-referential and cannot be known before Git writes the tree. | See FINVERSE-RESEARCH-INTEGRATION.md; no reference source copied. |
 
 ## Final quality gates at handoff
 
 - API typecheck: passed.
-- API suite: **506 passed, 6 skipped** (the skips require TEST_DATABASE_URL).
+- API suite: **506 passed, 6 skipped** in the fast in-memory run (the skips require
+  TEST_DATABASE_URL); embedded PostgreSQL contract/SQL/RLS run: **626 passed**.
 - Transaction tag slice: **4 dedicated tests passed**.
 - Flutter analyzer: **No issues found**.
 - Flutter suite: **102 tests passed**.
 - Flutter web release build: passed at the prior production verification gate.
-- Git history at generation: 303 real commits plus this log update; no placeholder
+- Git history at generation: 304 real commits plus this log update; no placeholder
   commits were manufactured.
 
 The next commit that adds or changes this log should regenerate the table from
