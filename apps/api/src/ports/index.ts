@@ -29,6 +29,7 @@ import type {
   SplitSettlement,
 } from '../domain/split/types';
 import type { Reconciliation } from '../domain/reconciliation/types';
+import type { SavedView } from '../domain/transactions/saved-view';
 
 export const ACCOUNT_STORE = 'ACCOUNT_STORE';
 export const TRANSACTION_STORE = 'TRANSACTION_STORE';
@@ -38,6 +39,7 @@ export const GOAL_STORE = 'GOAL_STORE';
 export const NOTIFICATION_STORE = 'NOTIFICATION_STORE';
 export const SPLIT_STORE = 'SPLIT_STORE';
 export const RECONCILIATION_STORE = 'RECONCILIATION_STORE';
+export const SAVED_VIEW_STORE = 'SAVED_VIEW_STORE';
 export const AGGREGATOR = 'AGGREGATOR';
 export const CLOCK = 'CLOCK';
 
@@ -154,6 +156,22 @@ export interface ReconciliationStore {
    */
   create(userId: string, reconciliation: Reconciliation): Promise<Reconciliation>;
   archive(userId: string, id: string, at: string): Promise<boolean>;
+}
+
+/** Named transaction filters. Names are unique per user, case-insensitively. */
+export interface SavedViewStore {
+  list(userId: string): Promise<SavedView[]>;
+  get(userId: string, id: string): Promise<SavedView | null>;
+  /** Rejects a duplicate name; the unique index is the arbiter, not a prior read. */
+  create(userId: string, view: SavedView): Promise<SavedView>;
+  remove(userId: string, id: string): Promise<boolean>;
+}
+
+export class DuplicateViewNameError extends Error {
+  constructor(name: string) {
+    super(`A view called "${name}" already exists.`);
+    this.name = 'DuplicateViewNameError';
+  }
 }
 
 export interface RuleStore {

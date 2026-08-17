@@ -22,7 +22,10 @@ import type {
   RuleStore,
   TransactionStore,
   ReconciliationStore,
+  SavedViewStore,
 } from '../src/ports';
+import { DuplicateViewNameError } from '../src/ports';
+import type { SavedView } from '../src/domain/transactions/saved-view';
 
 export interface StoreSet {
   accounts: AccountStore;
@@ -32,6 +35,7 @@ export interface StoreSet {
   notifications: NotificationStore;
   rules: RuleStore;
   reconciliations: ReconciliationStore;
+  savedViews: SavedViewStore;
   /** Wipe all data between tests. */
   reset(): Promise<void>;
   /** Release connections, if any. */
@@ -691,6 +695,133 @@ export function runStoreContract(name: string, create: () => Promise<StoreSet>):
         expect(
           await stores.reconciliations.archive(OTHER, row.id, '2026-08-05T00:00:00.000Z'),
         ).toBe(false);
+      });
+    });
+
+    describe('saved views', () => {
+      const view = (overrides: Partial<SavedView> = {}): SavedView => ({
+        id: `view-${Math.random().toString(36).slice(2)}`,
+        name: 'Coffee spending',
+        filter: { categorySlug: 'coffee', amountMin: 100 },
+        createdAt: '2026-08-01T10:00:00.000Z',
+        ...overrides,
+      });
+
+      it('round-trips the filter exactly', async () => {
+        const row = view({
+          filter: {
+            search: 'blue bottle',
+            categorySlug: 'coffee',
+            categoryKind: 'expense',
+            accountId: 'acc_credit',
+            tag: 'work',
+            dateFrom: '2026-01-01',
+            dateTo: '2026-12-31',
+            amountMin: 100,
+            amountMax: 50_000,
+            pending: false,
+            recurring: true,
+          },
+        });
+
+        await stores.savedViews.create(USER, row);
+        expect(await stores.savedViews.get(USER, row.id)).toEqual(row);
+      });
+
+      it('omits absent filter fields rather than storing nulls', async () => {
+        // An explicit `undefined` key would round-trip differently from an
+        // absent one and make equality checks on the filter unreliable.
+        const row = view({ filter: { tag: 'work' } });
+        await stores.savedViews.create(USER, row);
+
+        const found = await stores.savedViews.get(USER, row.id);
+        expect(found?.filter).toEqual({ tag: 'work' });
+        expect(Object.keys(found?.filter ?? {})).toEqual(['tag']);
+      });
+
+      it('keeps a false constraint rather than dropping it', async () => {
+        // `pending: false` means "settled only" and is not the same as absent.
+        const row = view({ filter: { pending: false, recurring: false } });
+        await stores.savedViews.create(USER, row);
+
+        expect((await stores.savedViews.get(USER, row.id))?.filter).toEqual({
+          pending: false,
+          recurring: false,
+        });
+      });
+
+      it('keeps amounts as numbers, not strings', async () => {
+        const row = view({ filter: { amountMin: 100, amountMax: 999_999 } });
+        await stores.savedViews.create(USER, row);
+
+        const found = await stores.savedViews.get(USER, row.id);
+        expect(typeof found?.filter.amountMin).toBe('number');
+        expect(found?.filter.amountMax).toBe(999_999);
+      });
+
+      it('does not shift filter dates across a timezone boundary', async () => {
+        const row = view({ filter: { dateFrom: '2026-01-01', dateTo: '2026-12-31' } });
+        await stores.savedViews.create(USER, row);
+
+        const found = await stores.savedViews.get(USER, row.id);
+        expect(found?.filter.dateFrom).toBe('2026-01-01');
+        expect(found?.filter.dateTo).toBe('2026-12-31');
+      });
+
+      it('rejects a duplicate name case-insensitively', async () => {
+        // Two views called Coffee and coffee are a mistake about to be repeated.
+        await stores.savedViews.create(USER, view({ name: 'Coffee' }));
+
+        await expect(
+          stores.savedViews.create(USER, view({ name: 'coffee' })),
+        ).rejects.toBeInstanceOf(DuplicateViewNameError);
+      });
+
+      it('lets a different user reuse a name', async () => {
+        await stores.savedViews.create(USER, view({ name: 'Coffee' }));
+        await expect(
+          stores.savedViews.create(OTHER, view({ name: 'Coffee' })),
+        ).resolves.toBeTruthy();
+      });
+
+      it('lists alphabetically', async () => {
+        await stores.savedViews.create(USER, view({ name: 'Zebra' }));
+        await stores.savedViews.create(USER, view({ name: 'Apple' }));
+        await stores.savedViews.create(USER, view({ name: 'Mango' }));
+
+        expect((await stores.savedViews.list(USER)).map((v) => v.name)).toEqual([
+          'Apple',
+          'Mango',
+          'Zebra',
+        ]);
+      });
+
+      it('removes', async () => {
+        const row = view();
+        await stores.savedViews.create(USER, row);
+
+        expect(await stores.savedViews.remove(USER, row.id)).toBe(true);
+        expect(await stores.savedViews.remove(USER, row.id)).toBe(false);
+        expect(await stores.savedViews.list(USER)).toHaveLength(0);
+      });
+
+      it('frees the name once removed', async () => {
+        const row = view({ name: 'Coffee' });
+        await stores.savedViews.create(USER, row);
+        await stores.savedViews.remove(USER, row.id);
+
+        await expect(
+          stores.savedViews.create(USER, view({ name: 'Coffee' })),
+        ).resolves.toBeTruthy();
+      });
+
+      it('keeps users apart', async () => {
+        const row = view();
+        await stores.savedViews.create(USER, row);
+
+        expect(await stores.savedViews.list(OTHER)).toHaveLength(0);
+        expect(await stores.savedViews.get(OTHER, row.id)).toBeNull();
+        expect(await stores.savedViews.remove(OTHER, row.id)).toBe(false);
       });
     });
   });

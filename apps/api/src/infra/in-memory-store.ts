@@ -29,16 +29,19 @@ import type {
   SplitSettlement,
 } from '../domain/split/types';
 import type { Reconciliation } from '../domain/reconciliation/types';
-import type {
-  AccountStore,
-  BudgetStore,
-  GoalStore,
-  NotificationStore,
-  ReconciliationStore,
-  RuleStore,
-  SplitStore,
-  TransactionQuery,
-  TransactionStore,
+import { normalizeViewName, type SavedView } from '../domain/transactions/saved-view';
+import {
+  DuplicateViewNameError,
+  type AccountStore,
+  type BudgetStore,
+  type GoalStore,
+  type NotificationStore,
+  type ReconciliationStore,
+  type RuleStore,
+  type SavedViewStore,
+  type SplitStore,
+  type TransactionQuery,
+  type TransactionStore,
 } from '../ports';
 
 function bucket<T>(map: Map<string, T[]>, userId: string): T[] {
@@ -613,6 +616,48 @@ export class InMemoryReconciliationStore implements ReconciliationStore {
     const index = rows.findIndex((r) => r.id === id && r.archivedAt === null);
     if (index < 0) return false;
     rows[index] = { ...rows[index]!, archivedAt: at };
+    return true;
+  }
+}
+
+/**
+ * Named transaction filters.
+ *
+ * Name uniqueness is case-insensitive, matching the functional unique index in
+ * 024 — otherwise a user could hold "Coffee" and "coffee" in memory but not in
+ * PostgreSQL, and the contract suite would be the only thing to notice.
+ */
+export class InMemorySavedViewStore implements SavedViewStore {
+  private readonly byUser = new Map<string, SavedView[]>();
+
+  async list(userId: string): Promise<SavedView[]> {
+    return [...bucket(this.byUser, userId)]
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((v) => ({ ...v, filter: { ...v.filter } }));
+  }
+
+  async get(userId: string, id: string): Promise<SavedView | null> {
+    const found = bucket(this.byUser, userId).find((v) => v.id === id);
+    return found ? { ...found, filter: { ...found.filter } } : null;
+  }
+
+  async create(userId: string, view: SavedView): Promise<SavedView> {
+    const rows = bucket(this.byUser, userId);
+    const wanted = normalizeViewName(view.name).toLowerCase();
+
+    if (rows.some((v) => normalizeViewName(v.name).toLowerCase() === wanted)) {
+      throw new DuplicateViewNameError(view.name);
+    }
+
+    rows.push({ ...view, filter: { ...view.filter } });
+    return { ...view, filter: { ...view.filter } };
+  }
+
+  async remove(userId: string, id: string): Promise<boolean> {
+    const rows = bucket(this.byUser, userId);
+    const index = rows.findIndex((v) => v.id === id);
+    if (index < 0) return false;
+    rows.splice(index, 1);
     return true;
   }
 }

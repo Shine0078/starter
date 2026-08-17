@@ -12,6 +12,7 @@ import {
   InMemoryRuleStore,
   InMemorySplitStore,
   InMemoryReconciliationStore,
+  InMemorySavedViewStore,
   InMemoryTransactionStore,
 } from '../infra/in-memory-store';
 import { MockAggregator } from '../infra/mock-aggregator';
@@ -24,6 +25,7 @@ import {
   PostgresRuleStore,
   PostgresSplitStore,
   PostgresReconciliationStore,
+  PostgresSavedViewStore,
   PostgresTransactionStore,
 } from '../infra/postgres/stores';
 import { Argon2PasswordHasher } from '../infra/auth/argon2-hasher';
@@ -111,6 +113,7 @@ import {
   RULE_STORE,
   SPLIT_STORE,
   RECONCILIATION_STORE,
+  SAVED_VIEW_STORE,
   TRANSACTION_STORE,
 } from '../ports';
 import {
@@ -197,6 +200,7 @@ function storeProviders(): Provider[] {
       { provide: NOTIFICATION_STORE, useValue: notifications },
       { provide: SPLIT_STORE, useValue: splits },
       { provide: RECONCILIATION_STORE, useValue: new InMemoryReconciliationStore() },
+      { provide: SAVED_VIEW_STORE, useValue: new InMemorySavedViewStore() },
       { provide: BANK_LINK_STORE, useValue: bankLinks },
       { provide: BANK_WEBHOOK_STORE, useValue: bankWebhooks },
       { provide: USER_STORE, useValue: users },
@@ -238,6 +242,7 @@ function storeProviders(): Provider[] {
     { provide: NOTIFICATION_STORE, useFactory: () => new PostgresNotificationStore(pool) },
     { provide: SPLIT_STORE, useFactory: () => new PostgresSplitStore(pool) },
     { provide: RECONCILIATION_STORE, useFactory: () => new PostgresReconciliationStore(pool) },
+    { provide: SAVED_VIEW_STORE, useFactory: () => new PostgresSavedViewStore(pool) },
     { provide: BANK_LINK_STORE, useFactory: () => new PostgresBankLinkStore(pool) },
     { provide: BANK_WEBHOOK_STORE, useFactory: () => new PostgresBankWebhookStore(pool) },
     { provide: USER_STORE, useFactory: () => new PostgresUserStore(pool) },
@@ -393,6 +398,7 @@ function storeProviders(): Provider[] {
     NOTIFICATION_STORE,
     SPLIT_STORE,
     RECONCILIATION_STORE,
+    SAVED_VIEW_STORE,
     BANK_LINK_STORE,
     BANK_PROVIDER,
     BANK_ACCOUNT_REVOKER,

@@ -36,16 +36,19 @@ import type {
   SplitSettlement,
 } from '../../domain/split/types';
 import type { Reconciliation } from '../../domain/reconciliation/types';
-import type {
-  AccountStore,
-  BudgetStore,
-  GoalStore,
-  NotificationStore,
-  ReconciliationStore,
-  RuleStore,
-  SplitStore,
-  TransactionQuery,
-  TransactionStore,
+import type { SavedView } from '../../domain/transactions/saved-view';
+import {
+  DuplicateViewNameError,
+  type AccountStore,
+  type BudgetStore,
+  type GoalStore,
+  type NotificationStore,
+  type ReconciliationStore,
+  type RuleStore,
+  type SavedViewStore,
+  type SplitStore,
+  type TransactionQuery,
+  type TransactionStore,
 } from '../../ports';
 import { withUserScope } from './pool';
 import {
@@ -1137,6 +1140,140 @@ export class PostgresReconciliationStore implements ReconciliationStore {
         `UPDATE account_reconciliations SET archived_at = $3
          WHERE user_id = $1 AND id = $2 AND archived_at IS NULL`,
         [userId, id, at],
+      );
+      return (result.rowCount ?? 0) > 0;
+    });
+  }
+}
+
+// ------------------------------------------------------------ saved views
+
+interface SavedViewRow {
+  id: string;
+  name: string;
+  search: string | null;
+  category_slug: string | null;
+  category_kind: string | null;
+  account_id: string | null;
+  tag: string | null;
+  date_from: string | null;
+  date_to: string | null;
+  amount_min: number | null;
+  amount_max: number | null;
+  pending: boolean | null;
+  recurring: boolean | null;
+  created_at: Date;
+}
+
+const SAVED_VIEW_COLUMNS = `
+  id, name, search, category_slug, category_kind, account_id, tag,
+  date_from, date_to, amount_min, amount_max, pending, recurring, created_at
+`;
+
+function toSavedView(row: SavedViewRow): SavedView {
+  // Null columns become absent keys rather than explicit undefined values, so a
+  // saved view round-trips to exactly the filter object it was created from.
+  const filter: Record<string, unknown> = {};
+  if (row.search !== null) filter.search = row.search;
+  if (row.category_slug !== null) filter.categorySlug = row.category_slug;
+  if (row.category_kind !== null) filter.categoryKind = row.category_kind;
+  if (row.account_id !== null) filter.accountId = row.account_id;
+  if (row.tag !== null) filter.tag = row.tag;
+  if (row.date_from !== null) filter.dateFrom = row.date_from;
+  if (row.date_to !== null) filter.dateTo = row.date_to;
+  if (row.amount_min !== null) filter.amountMin = row.amount_min;
+  if (row.amount_max !== null) filter.amountMax = row.amount_max;
+  if (row.pending !== null) filter.pending = row.pending;
+  if (row.recurring !== null) filter.recurring = row.recurring;
+
+  return {
+    id: row.id,
+    name: row.name,
+    filter: filter as SavedView['filter'],
+    createdAt: row.created_at.toISOString(),
+  };
+}
+
+export class PostgresSavedViewStore implements SavedViewStore {
+  constructor(private readonly pg: Pool) {}
+
+  async list(userId: string): Promise<SavedView[]> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const { rows } = await client.query<SavedViewRow>(
+        `SELECT ${SAVED_VIEW_COLUMNS} FROM saved_views
+         WHERE user_id = $1 ORDER BY name`,
+        [userId],
+      );
+      return rows.map(toSavedView);
+    });
+  }
+
+  async get(userId: string, id: string): Promise<SavedView | null> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const { rows } = await client.query<SavedViewRow>(
+        `SELECT ${SAVED_VIEW_COLUMNS} FROM saved_views WHERE user_id = $1 AND id = $2`,
+        [userId, id],
+      );
+      return rows[0] ? toSavedView(rows[0]) : null;
+    });
+  }
+
+  async create(userId: string, view: SavedView): Promise<SavedView> {
+    return withUserScope(this.pg, userId, async (client) => {
+      await ensureUser(client, userId);
+
+      try {
+        const { rows } = await client.query<SavedViewRow>(
+          // `created_at` is written explicitly rather than left to the column
+          // default. The service takes it from the injected clock, so letting
+          // now() win here would make the adapter override a value the caller
+          // deliberately supplied — and would be untestable under a fixed clock.
+          `INSERT INTO saved_views (
+             id, user_id, name, search, category_slug, category_kind, account_id,
+             tag, date_from, date_to, amount_min, amount_max, pending, recurring,
+             created_at
+           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+           RETURNING ${SAVED_VIEW_COLUMNS}`,
+          [
+            view.id,
+            userId,
+            view.name,
+            view.filter.search ?? null,
+            view.filter.categorySlug ?? null,
+            view.filter.categoryKind ?? null,
+            view.filter.accountId ?? null,
+            view.filter.tag ?? null,
+            view.filter.dateFrom ?? null,
+            view.filter.dateTo ?? null,
+            view.filter.amountMin ?? null,
+            view.filter.amountMax ?? null,
+            view.filter.pending ?? null,
+            view.filter.recurring ?? null,
+            view.createdAt,
+          ],
+        );
+        return toSavedView(rows[0]!);
+      } catch (error) {
+        // The functional unique index is the arbiter. A read-then-write check
+        // would let two concurrent requests both pass.
+        if (
+          typeof error === 'object' &&
+          error !== null &&
+          'code' in error &&
+          (error as { code?: string }).code === '23505'
+        ) {
+          throw new DuplicateViewNameError(view.name);
+        }
+        throw error;
+      }
+    });
+  }
+
+  async remove(userId: string, id: string): Promise<boolean> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const result = await client.query(
+        'DELETE FROM saved_views WHERE user_id = $1 AND id = $2',
+        [userId, id],
       );
       return (result.rowCount ?? 0) > 0;
     });

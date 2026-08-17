@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+﻿import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import {
   InMemoryAuthActionTokenStore,
@@ -10,6 +10,7 @@ import {
   InMemoryGoalStore,
   InMemoryNotificationStore,
   InMemoryReconciliationStore,
+  InMemorySavedViewStore,
   InMemoryRuleStore,
   InMemoryTransactionStore,
 } from '../src/infra/in-memory-store';
@@ -20,6 +21,7 @@ import {
   PostgresGoalStore,
   PostgresNotificationStore,
   PostgresReconciliationStore,
+  PostgresSavedViewStore,
   PostgresRuleStore,
   PostgresTransactionStore,
 } from '../src/infra/postgres/stores';
@@ -83,6 +85,7 @@ runStoreContract('in-memory', async (): Promise<StoreSet> => {
   let goals = new InMemoryGoalStore();
   let notifications = new InMemoryNotificationStore();
   let reconciliations = new InMemoryReconciliationStore();
+  let savedViews = new InMemorySavedViewStore();
 
   const set: StoreSet = {
     get accounts() {
@@ -106,6 +109,9 @@ runStoreContract('in-memory', async (): Promise<StoreSet> => {
     get reconciliations() {
       return reconciliations;
     },
+    get savedViews() {
+      return savedViews;
+    },
     async reset() {
       accounts = new InMemoryAccountStore();
       transactions = new InMemoryTransactionStore();
@@ -114,6 +120,7 @@ runStoreContract('in-memory', async (): Promise<StoreSet> => {
       goals = new InMemoryGoalStore();
       notifications = new InMemoryNotificationStore();
       reconciliations = new InMemoryReconciliationStore();
+      savedViews = new InMemorySavedViewStore();
     },
     async teardown() {},
   };
@@ -299,10 +306,11 @@ if (TEST_DATABASE_URL) {
       goals: new PostgresGoalStore(app),
       notifications: new PostgresNotificationStore(app),
       reconciliations: new PostgresReconciliationStore(app),
+      savedViews: new PostgresSavedViewStore(app),
       async reset() {
         // Deleting the users cascades to everything else, which also proves
         // the FK cascade that account deletion depends on actually works.
-        // Cascades run as referential integrity checks, which bypass RLS —
+        // Cascades run as referential integrity checks, which bypass RLS â€”
         // otherwise this would silently clear nothing.
         await owner.query('DELETE FROM users');
       },
@@ -313,8 +321,8 @@ if (TEST_DATABASE_URL) {
     };
   });
   runAuthStoreContract('postgres', async (): Promise<AuthStoreSet> => {
-    // Identity carries no policies — login and lockout counting have to read
-    // these tables before there is a user to scope to — but the runtime role
+    // Identity carries no policies â€” login and lockout counting have to read
+    // these tables before there is a user to scope to â€” but the runtime role
     // still has to hold the right grants, so it is used here too.
     const { owner, app, close } = await startPgHarness(TEST_DATABASE_URL);
 
@@ -338,6 +346,6 @@ if (TEST_DATABASE_URL) {
   });
 } else {
   describe('store contract: postgres', () => {
-    it.skip('needs TEST_DATABASE_URL — run `npm run test:db`', () => {});
+    it.skip('needs TEST_DATABASE_URL â€” run `npm run test:db`', () => {});
   });
 }
