@@ -5,6 +5,152 @@
 // string and never re-derives it, so currency formatting stays consistent
 // across platforms and never drifts from the server's view (ADR-0003).
 
+/// A recorded claim about what an account actually held on a date, alongside
+/// what FINVERSE derived. Evidence, not a correction — recording one never
+/// edits the ledger.
+class Reconciliation {
+  const Reconciliation({
+    required this.id,
+    required this.accountId,
+    required this.accountName,
+    required this.statementDate,
+    required this.observedBalance,
+    required this.computedBalance,
+    required this.difference,
+    required this.observedFormatted,
+    required this.computedFormatted,
+    required this.differenceFormatted,
+    required this.status,
+    required this.source,
+    required this.createdAt,
+    this.note,
+    this.archivedAt,
+  });
+
+  factory Reconciliation.fromJson(Map<String, dynamic> json) => Reconciliation(
+        id: json['id'] as String,
+        accountId: json['accountId'] as String,
+        accountName: json['accountName'] as String? ?? '',
+        statementDate: json['statementDate'] as String,
+        observedBalance: json['observedBalance'] as int,
+        computedBalance: json['computedBalance'] as int,
+        difference: json['difference'] as int,
+        observedFormatted: json['observedFormatted'] as String? ?? '',
+        computedFormatted: json['computedFormatted'] as String? ?? '',
+        differenceFormatted: json['differenceFormatted'] as String? ?? '',
+        status: json['status'] as String? ?? 'unbalanced',
+        source: json['source'] as String? ?? 'statement',
+        createdAt: json['createdAt'] as String? ?? '',
+        note: json['note'] as String?,
+        archivedAt: json['archivedAt'] as String?,
+      );
+
+  final String id;
+  final String accountId;
+  final String accountName;
+  final String statementDate;
+  final int observedBalance;
+  final int computedBalance;
+  final int difference;
+  final String observedFormatted;
+  final String computedFormatted;
+  final String differenceFormatted;
+  final String status;
+  final String source;
+  final String createdAt;
+  final String? note;
+  final String? archivedAt;
+
+  bool get balanced => difference == 0;
+  bool get withdrawn => archivedAt != null;
+}
+
+/// What a comparison would say, without recording it.
+class ReconciliationPreview {
+  const ReconciliationPreview({
+    required this.computedBalance,
+    required this.difference,
+    required this.status,
+    required this.explanation,
+    required this.transactionsConsidered,
+    required this.computedFormatted,
+    required this.differenceFormatted,
+    required this.accountName,
+    required this.currency,
+  });
+
+  factory ReconciliationPreview.fromJson(Map<String, dynamic> json) =>
+      ReconciliationPreview(
+        computedBalance: json['computedBalance'] as int,
+        difference: json['difference'] as int,
+        status: json['status'] as String? ?? 'unbalanced',
+        explanation: json['explanation'] as String? ?? '',
+        transactionsConsidered: json['transactionsConsidered'] as int? ?? 0,
+        computedFormatted: json['computedFormatted'] as String? ?? '',
+        differenceFormatted: json['differenceFormatted'] as String? ?? '',
+        accountName: json['accountName'] as String? ?? '',
+        currency: json['currency'] as String? ?? 'USD',
+      );
+
+  final int computedBalance;
+  final int difference;
+  final String status;
+
+  /// Plain-language reading of the number, supplied by the API so the phone and
+  /// any future client cannot describe the same figure differently.
+  final String explanation;
+  final int transactionsConsidered;
+  final String computedFormatted;
+  final String differenceFormatted;
+  final String accountName;
+  final String currency;
+
+  bool get balanced => difference == 0;
+}
+
+/// Per-account reconciliation state for the "what needs checking" view.
+class ReconciliationSummary {
+  const ReconciliationSummary({
+    required this.accountId,
+    required this.accountName,
+    required this.currency,
+    required this.currentBalance,
+    required this.currentBalanceFormatted,
+    required this.overdue,
+    this.lastStatementDate,
+    this.lastDifference,
+    this.lastDifferenceFormatted,
+    this.daysSinceReconciled,
+  });
+
+  factory ReconciliationSummary.fromJson(Map<String, dynamic> json) =>
+      ReconciliationSummary(
+        accountId: json['accountId'] as String,
+        accountName: json['accountName'] as String,
+        currency: json['currency'] as String? ?? 'USD',
+        currentBalance: json['currentBalance'] as int,
+        currentBalanceFormatted: json['currentBalanceFormatted'] as String? ?? '',
+        overdue: json['overdue'] as bool? ?? false,
+        lastStatementDate: json['lastStatementDate'] as String?,
+        lastDifference: json['lastDifference'] as int?,
+        lastDifferenceFormatted: json['lastDifferenceFormatted'] as String?,
+        daysSinceReconciled: json['daysSinceReconciled'] as int?,
+      );
+
+  final String accountId;
+  final String accountName;
+  final String currency;
+  final int currentBalance;
+  final String currentBalanceFormatted;
+  final bool overdue;
+  final String? lastStatementDate;
+  final int? lastDifference;
+  final String? lastDifferenceFormatted;
+  final int? daysSinceReconciled;
+
+  bool get neverReconciled => lastStatementDate == null;
+}
+
 /// The signed-in user. Never carries a password hash — the API does not send one.
 class PublicUser {
   const PublicUser({

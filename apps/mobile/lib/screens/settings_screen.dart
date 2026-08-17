@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -14,6 +14,7 @@ import '../api/platform/file_share.dart';
 import '../l10n/app_localizations.dart';
 import '../models/models.dart';
 import 'bank_connections_screen.dart';
+import 'reconciliation_screen.dart';
 import 'help_support_screen.dart';
 import 'notifications_screen.dart';
 import 'plan_screen.dart';
@@ -503,7 +504,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 : Icons.cancel_outlined),
                             title: Text(entry.kind.replaceAll('_', ' ')),
                             subtitle: Text(
-                              '${entry.granted ? 'Granted' : 'Withdrawn'} • ${_date(entry.createdAt)}\n${entry.policyVersion}',
+                              '${entry.granted ? 'Granted' : 'Withdrawn'} â€¢ ${_date(entry.createdAt)}\n${entry.policyVersion}',
                             ),
                           ))
                       .toList(),
@@ -870,6 +871,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 )),
               ),
               ListTile(
+                leading: const Icon(Icons.rule_outlined),
+                title: const Text('Balance checks'),
+                subtitle: const Text('Compare an account against a statement'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => ReconciliationScreen(api: widget.api),
+                )),
+              ),
+              ListTile(
                 leading: const Icon(Icons.subscriptions_outlined),
                 title: const Text('Subscriptions'),
                 trailing: const Icon(Icons.chevron_right),
@@ -880,7 +890,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ListTile(
                 leading: const Icon(Icons.workspace_premium_outlined),
                 title: const Text('Your plan'),
-                subtitle: Text(_plan?.planName ?? 'Loading…'),
+                subtitle: Text(_plan?.planName ?? 'Loadingâ€¦'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () async {
                   await Navigator.of(context).push(MaterialPageRoute(
@@ -951,7 +961,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 !_mfa!.available
                     ? 'Not configured on this server'
                     : _mfa!.enabled
-                        ? 'Enabled • ${_mfa!.recoveryCodesRemaining} recovery codes remaining'
+                        ? 'Enabled â€¢ ${_mfa!.recoveryCodesRemaining} recovery codes remaining'
                         : 'Require a one-time code when signing in',
               ),
               trailing: _mfaBusy

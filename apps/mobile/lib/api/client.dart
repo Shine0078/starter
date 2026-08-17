@@ -1233,6 +1233,62 @@ class ApiClient implements BackgroundSyncClient {
     await _send('DELETE', '/budgets/$budgetId');
   }
 
+  // ------------------------------------------------------- reconciliation
+
+  Future<List<ReconciliationSummary>> reconciliationSummary() async {
+    final json = await _get('/reconciliations/summary') as Map<String, dynamic>;
+    return (json['accounts'] as List<dynamic>)
+        .map((e) => ReconciliationSummary.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<List<Reconciliation>> reconciliations({String? accountId}) async {
+    final query = accountId == null ? '' : '?account=${Uri.encodeQueryComponent(accountId)}';
+    final json = await _get('/reconciliations$query') as Map<String, dynamic>;
+    return (json['reconciliations'] as List<dynamic>)
+        .map((e) => Reconciliation.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Derives the balance without recording anything, so the user can see the
+  /// comparison before committing to an assertion.
+  Future<ReconciliationPreview> previewReconciliation({
+    required String accountId,
+    required String statementDate,
+    required int observedBalance,
+  }) async {
+    final json = await _get(
+      '/reconciliations/preview'
+      '?account=${Uri.encodeQueryComponent(accountId)}'
+      '&statementDate=${Uri.encodeQueryComponent(statementDate)}'
+      '&observedBalance=$observedBalance',
+    ) as Map<String, dynamic>;
+    return ReconciliationPreview.fromJson(json);
+  }
+
+  Future<Reconciliation> recordReconciliation({
+    required String accountId,
+    required String statementDate,
+    required int observedBalance,
+    String source = 'statement',
+    String? note,
+  }) async {
+    final json = await _send('POST', '/reconciliations', {
+      'accountId': accountId,
+      'statementDate': statementDate,
+      // Minor units. Never a decimal — see ADR-0003.
+      'observedBalance': observedBalance,
+      'source': source,
+      if (note != null && note.isNotEmpty) 'note': note,
+    }) as Map<String, dynamic>;
+    return Reconciliation.fromJson(json);
+  }
+
+  /// Withdraws an assertion. The server archives rather than deletes it.
+  Future<void> withdrawReconciliation(String id) async {
+    await _send('DELETE', '/reconciliations/${Uri.encodeComponent(id)}');
+  }
+
   Future<List<GoalProgress>> goals() async {
     final json = await _get('/goals') as Map<String, dynamic>;
     return (json['goals'] as List<dynamic>)
