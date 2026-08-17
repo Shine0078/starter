@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+﻿import { randomBytes } from 'node:crypto';
 import { Global, Logger, Module, type Provider } from '@nestjs/common';
 
 import { loadConfig } from '../config';
@@ -11,6 +11,7 @@ import {
   InMemoryNotificationStore,
   InMemoryRuleStore,
   InMemorySplitStore,
+  InMemoryReconciliationStore,
   InMemoryTransactionStore,
 } from '../infra/in-memory-store';
 import { MockAggregator } from '../infra/mock-aggregator';
@@ -22,6 +23,7 @@ import {
   PostgresNotificationStore,
   PostgresRuleStore,
   PostgresSplitStore,
+  PostgresReconciliationStore,
   PostgresTransactionStore,
 } from '../infra/postgres/stores';
 import { Argon2PasswordHasher } from '../infra/auth/argon2-hasher';
@@ -108,6 +110,7 @@ import {
   NOTIFICATION_STORE,
   RULE_STORE,
   SPLIT_STORE,
+  RECONCILIATION_STORE,
   TRANSACTION_STORE,
 } from '../ports';
 import {
@@ -136,7 +139,7 @@ import {
  * Composition root. The only file that decides which adapter satisfies which
  * port (ADR-0002).
  *
- * Swapping persistence is this function and nothing else — no domain code, no
+ * Swapping persistence is this function and nothing else â€” no domain code, no
  * controller, and no service knows which of the two is running.
  */
 function storeProviders(): Provider[] {
@@ -144,7 +147,7 @@ function storeProviders(): Provider[] {
   const logger = new Logger('CoreModule');
 
   if (config.store === 'memory') {
-    logger.warn('Using the in-memory store — all data is lost on restart. Set DATABASE_URL to persist.');
+    logger.warn('Using the in-memory store â€” all data is lost on restart. Set DATABASE_URL to persist.');
     const accounts = new InMemoryAccountStore();
     const transactions = new InMemoryTransactionStore();
     const budgets = new InMemoryBudgetStore();
@@ -193,6 +196,7 @@ function storeProviders(): Provider[] {
       { provide: GOAL_STORE, useValue: goals },
       { provide: NOTIFICATION_STORE, useValue: notifications },
       { provide: SPLIT_STORE, useValue: splits },
+      { provide: RECONCILIATION_STORE, useValue: new InMemoryReconciliationStore() },
       { provide: BANK_LINK_STORE, useValue: bankLinks },
       { provide: BANK_WEBHOOK_STORE, useValue: bankWebhooks },
       { provide: USER_STORE, useValue: users },
@@ -218,7 +222,7 @@ function storeProviders(): Provider[] {
   // anything: a superuser bypasses every one of them, and says nothing.
   if (!config.appDatabaseUrl) {
     logger.warn(
-      'DATABASE_APP_URL is not set — serving requests as the schema owner. ' +
+      'DATABASE_APP_URL is not set â€” serving requests as the schema owner. ' +
         'Row-level security does not apply to a superuser, so user isolation ' +
         'rests on application code alone.',
     );
@@ -233,6 +237,7 @@ function storeProviders(): Provider[] {
     { provide: GOAL_STORE, useFactory: () => new PostgresGoalStore(pool) },
     { provide: NOTIFICATION_STORE, useFactory: () => new PostgresNotificationStore(pool) },
     { provide: SPLIT_STORE, useFactory: () => new PostgresSplitStore(pool) },
+    { provide: RECONCILIATION_STORE, useFactory: () => new PostgresReconciliationStore(pool) },
     { provide: BANK_LINK_STORE, useFactory: () => new PostgresBankLinkStore(pool) },
     { provide: BANK_WEBHOOK_STORE, useFactory: () => new PostgresBankWebhookStore(pool) },
     { provide: USER_STORE, useFactory: () => new PostgresUserStore(pool) },
@@ -387,6 +392,7 @@ function storeProviders(): Provider[] {
     GOAL_STORE,
     NOTIFICATION_STORE,
     SPLIT_STORE,
+    RECONCILIATION_STORE,
     BANK_LINK_STORE,
     BANK_PROVIDER,
     BANK_ACCOUNT_REVOKER,

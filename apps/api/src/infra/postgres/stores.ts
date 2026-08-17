@@ -35,11 +35,13 @@ import type {
   SplitGroupMember,
   SplitSettlement,
 } from '../../domain/split/types';
+import type { Reconciliation } from '../../domain/reconciliation/types';
 import type {
   AccountStore,
   BudgetStore,
   GoalStore,
   NotificationStore,
+  ReconciliationStore,
   RuleStore,
   SplitStore,
   TransactionQuery,
@@ -1018,6 +1020,125 @@ export class PostgresSplitStore implements SplitStore {
         ],
       );
       return settlement;
+    });
+  }
+}
+
+// -------------------------------------------------------- reconciliations
+
+interface ReconciliationRow {
+  id: string;
+  account_id: string;
+  statement_date: string;
+  observed_balance: number;
+  currency: string;
+  computed_balance: number;
+  difference: number;
+  source: string;
+  note: string | null;
+  created_at: Date;
+  archived_at: Date | null;
+}
+
+const RECONCILIATION_COLUMNS = `
+  id, account_id, statement_date, observed_balance, currency,
+  computed_balance, difference, source, note, created_at, archived_at
+`;
+
+function toReconciliation(row: ReconciliationRow): Reconciliation {
+  return {
+    id: row.id,
+    accountId: row.account_id,
+    // `statement_date` is a DATE, returned as a YYYY-MM-DD string by the
+    // parser registered in pool.ts. Left as a string on purpose.
+    statementDate: row.statement_date,
+    observedBalance: row.observed_balance,
+    currency: row.currency,
+    computedBalance: row.computed_balance,
+    difference: row.difference,
+    source: row.source as Reconciliation['source'],
+    note: row.note,
+    createdAt: row.created_at.toISOString(),
+    archivedAt: row.archived_at ? row.archived_at.toISOString() : null,
+  };
+}
+
+export class PostgresReconciliationStore implements ReconciliationStore {
+  constructor(private readonly pg: Pool) {}
+
+  async list(userId: string, accountId?: string): Promise<Reconciliation[]> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const { rows } = await client.query<ReconciliationRow>(
+        `SELECT ${RECONCILIATION_COLUMNS} FROM account_reconciliations
+         WHERE user_id = $1 AND ($2::text IS NULL OR account_id = $2)
+         ORDER BY statement_date DESC, created_at DESC`,
+        [userId, accountId ?? null],
+      );
+      return rows.map(toReconciliation);
+    });
+  }
+
+  async get(userId: string, id: string): Promise<Reconciliation | null> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const { rows } = await client.query<ReconciliationRow>(
+        `SELECT ${RECONCILIATION_COLUMNS} FROM account_reconciliations
+         WHERE user_id = $1 AND id = $2`,
+        [userId, id],
+      );
+      return rows[0] ? toReconciliation(rows[0]) : null;
+    });
+  }
+
+  async create(userId: string, reconciliation: Reconciliation): Promise<Reconciliation> {
+    return withUserScope(this.pg, userId, async (client) => {
+      await ensureUser(client, userId);
+
+      // Supersede rather than conflict. The partial unique index only covers
+      // live rows, so archiving the previous assertion for this closing date
+      // both keeps the history and frees the index for the new one. Doing it in
+      // the same transaction means there is never a moment with two live rows.
+      await client.query(
+        `UPDATE account_reconciliations
+         SET archived_at = $4
+         WHERE user_id = $1 AND account_id = $2 AND statement_date = $3
+           AND archived_at IS NULL`,
+        [userId, reconciliation.accountId, reconciliation.statementDate, reconciliation.createdAt],
+      );
+
+      const { rows } = await client.query<ReconciliationRow>(
+        `INSERT INTO account_reconciliations (
+           id, user_id, account_id, statement_date, observed_balance, currency,
+           computed_balance, difference, source, note, created_at, archived_at
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+         RETURNING ${RECONCILIATION_COLUMNS}`,
+        [
+          reconciliation.id,
+          userId,
+          reconciliation.accountId,
+          reconciliation.statementDate,
+          reconciliation.observedBalance,
+          reconciliation.currency,
+          reconciliation.computedBalance,
+          reconciliation.difference,
+          reconciliation.source,
+          reconciliation.note,
+          reconciliation.createdAt,
+          reconciliation.archivedAt,
+        ],
+      );
+
+      return toReconciliation(rows[0]!);
+    });
+  }
+
+  async archive(userId: string, id: string, at: string): Promise<boolean> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const result = await client.query(
+        `UPDATE account_reconciliations SET archived_at = $3
+         WHERE user_id = $1 AND id = $2 AND archived_at IS NULL`,
+        [userId, id, at],
+      );
+      return (result.rowCount ?? 0) > 0;
     });
   }
 }

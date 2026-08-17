@@ -28,11 +28,13 @@ import type {
   SplitGroupMember,
   SplitSettlement,
 } from '../domain/split/types';
+import type { Reconciliation } from '../domain/reconciliation/types';
 import type {
   AccountStore,
   BudgetStore,
   GoalStore,
   NotificationStore,
+  ReconciliationStore,
   RuleStore,
   SplitStore,
   TransactionQuery,
@@ -551,5 +553,66 @@ export class InMemorySplitStore implements SplitStore {
         settlementRows.filter((s) => s.fromUserId !== userId && s.toUserId !== userId),
       );
     }
+  }
+}
+
+/**
+ * Balance assertions kept per user.
+ *
+ * Mirrors the partial unique index in 023: only a *live* assertion collides, so
+ * archiving one frees its date to be asserted again.
+ */
+export class InMemoryReconciliationStore implements ReconciliationStore {
+  private readonly byUser = new Map<string, Reconciliation[]>();
+
+  private rows(userId: string): Reconciliation[] {
+    const existing = this.byUser.get(userId);
+    if (existing) return existing;
+    const fresh: Reconciliation[] = [];
+    this.byUser.set(userId, fresh);
+    return fresh;
+  }
+
+  async list(userId: string, accountId?: string): Promise<Reconciliation[]> {
+    return this.rows(userId)
+      .filter((r) => (accountId ? r.accountId === accountId : true))
+      .sort(
+        (a, b) =>
+          b.statementDate.localeCompare(a.statementDate) || b.createdAt.localeCompare(a.createdAt),
+      )
+      .map((r) => ({ ...r }));
+  }
+
+  async get(userId: string, id: string): Promise<Reconciliation | null> {
+    const found = this.rows(userId).find((r) => r.id === id);
+    return found ? { ...found } : null;
+  }
+
+  async create(userId: string, reconciliation: Reconciliation): Promise<Reconciliation> {
+    const rows = this.rows(userId);
+
+    // A second observation of the same closing date is a correction, not a
+    // second fact. Archive the previous one so history keeps both, but only the
+    // newest is live.
+    const superseded = rows.findIndex(
+      (r) =>
+        r.accountId === reconciliation.accountId &&
+        r.statementDate === reconciliation.statementDate &&
+        r.archivedAt === null,
+    );
+    if (superseded >= 0) {
+      rows[superseded] = { ...rows[superseded]!, archivedAt: reconciliation.createdAt };
+    }
+
+    rows.push({ ...reconciliation });
+    return { ...reconciliation };
+  }
+
+  async archive(userId: string, id: string, at: string): Promise<boolean> {
+    const rows = this.rows(userId);
+    const index = rows.findIndex((r) => r.id === id && r.archivedAt === null);
+    if (index < 0) return false;
+    rows[index] = { ...rows[index]!, archivedAt: at };
+    return true;
   }
 }

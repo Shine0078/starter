@@ -28,6 +28,7 @@ import type {
   SplitGroupMember,
   SplitSettlement,
 } from '../domain/split/types';
+import type { Reconciliation } from '../domain/reconciliation/types';
 
 export const ACCOUNT_STORE = 'ACCOUNT_STORE';
 export const TRANSACTION_STORE = 'TRANSACTION_STORE';
@@ -36,6 +37,7 @@ export const RULE_STORE = 'RULE_STORE';
 export const GOAL_STORE = 'GOAL_STORE';
 export const NOTIFICATION_STORE = 'NOTIFICATION_STORE';
 export const SPLIT_STORE = 'SPLIT_STORE';
+export const RECONCILIATION_STORE = 'RECONCILIATION_STORE';
 export const AGGREGATOR = 'AGGREGATOR';
 export const CLOCK = 'CLOCK';
 
@@ -136,6 +138,22 @@ export interface SplitStore {
   addExpense(userId: string, expense: SplitExpense): Promise<SplitExpense>;
   listSettlements(userId: string, groupId: string): Promise<SplitSettlement[]>;
   addSettlement(userId: string, settlement: SplitSettlement): Promise<SplitSettlement>;
+}
+
+/**
+ * Balance assertions. Append-and-archive only: there is deliberately no
+ * `update`, because editing an observation after the fact would make the audit
+ * trail say something the user never claimed.
+ */
+export interface ReconciliationStore {
+  list(userId: string, accountId?: string): Promise<Reconciliation[]>;
+  get(userId: string, id: string): Promise<Reconciliation | null>;
+  /**
+   * Replaces any live assertion for the same account and statement date — a
+   * second observation of one closing date is a correction, not a second fact.
+   */
+  create(userId: string, reconciliation: Reconciliation): Promise<Reconciliation>;
+  archive(userId: string, id: string, at: string): Promise<boolean>;
 }
 
 export interface RuleStore {

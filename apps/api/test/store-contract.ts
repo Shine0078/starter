@@ -1,9 +1,9 @@
-/**
+﻿/**
  * One suite, run against every implementation of the store ports.
  *
  * The point of ADR-0002 is that the domain cannot tell which adapter it is
  * talking to. That only holds if the adapters actually behave identically, and
- * the differences that matter here are the quiet ones — a date shifted by a
+ * the differences that matter here are the quiet ones â€” a date shifted by a
  * timezone, a bigint returned as a string, a user's correction reverted on
  * re-sync. None of those throw. They just make the numbers wrong.
  *
@@ -13,6 +13,7 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 
 import type { Transaction } from '../src/domain/types';
+import type { Reconciliation } from '../src/domain/reconciliation/types';
 import type {
   AccountStore,
   BudgetStore,
@@ -20,6 +21,7 @@ import type {
   NotificationStore,
   RuleStore,
   TransactionStore,
+  ReconciliationStore,
 } from '../src/ports';
 
 export interface StoreSet {
@@ -29,6 +31,7 @@ export interface StoreSet {
   goals: GoalStore;
   notifications: NotificationStore;
   rules: RuleStore;
+  reconciliations: ReconciliationStore;
   /** Wipe all data between tests. */
   reset(): Promise<void>;
   /** Release connections, if any. */
@@ -85,7 +88,7 @@ export function runStoreContract(name: string, create: () => Promise<StoreSet>):
     beforeEach(async () => {
       stores ??= await create();
       await stores.reset();
-      // Accounts first — transactions reference them.
+      // Accounts first â€” transactions reference them.
       await stores.accounts.upsertMany(USER, [ACCOUNT, CREDIT]);
     });
 
@@ -239,7 +242,7 @@ export function runStoreContract(name: string, create: () => Promise<StoreSet>):
       });
 
       it('still updates the amount of a user-corrected transaction', async () => {
-        // Preserving the category must not freeze the whole row — the bank is
+        // Preserving the category must not freeze the whole row â€” the bank is
         // still authoritative about how much was spent.
         const row = txn({ providerTxnId: 'p1', amount: -1_000 });
         await stores.transactions.upsertMany(USER, [row]);
@@ -516,6 +519,178 @@ export function runStoreContract(name: string, create: () => Promise<StoreSet>):
       it('keeps notification rows isolated', async () => {
         await stores.notifications.upsert(USER, notification);
         expect(await stores.notifications.list(OTHER)).toHaveLength(0);
+      });
+    });
+
+    describe('reconciliations', () => {
+      /**
+       * `difference` is always derived, never passed in.
+       *
+       * The schema enforces `difference = observed - computed`, and an earlier
+       * version of this helper let a caller override one balance while leaving
+       * the difference at its default — producing fixtures the database
+       * correctly rejected. Deriving it here makes that mistake unrepresentable.
+       */
+      const assertion = (overrides: Partial<Reconciliation> = {}): Reconciliation => {
+        const row = {
+          id: `rec-${Math.random().toString(36).slice(2)}`,
+          accountId: 'acc_checking',
+          statementDate: '2026-07-31',
+          observedBalance: 384_512,
+          currency: 'USD',
+          computedBalance: 384_512,
+          source: 'statement' as const,
+          note: null,
+          createdAt: '2026-08-01T10:00:00.000Z',
+          archivedAt: null,
+          ...overrides,
+        };
+
+        return { ...row, difference: row.observedBalance - row.computedBalance };
+      };
+
+      it('round-trips every field', async () => {
+        const row = assertion({ note: 'Checked against the July PDF' });
+        await stores.reconciliations.create(USER, row);
+        expect(await stores.reconciliations.get(USER, row.id)).toEqual(row);
+      });
+
+      it('keeps amounts as numbers, not strings', async () => {
+        const row = assertion({ observedBalance: 400_000, computedBalance: 384_512 });
+        await stores.reconciliations.create(USER, row);
+        const found = await stores.reconciliations.get(USER, row.id);
+
+        expect(typeof found?.observedBalance).toBe('number');
+        expect(typeof found?.difference).toBe('number');
+        expect(found?.difference).toBe(15_488);
+      });
+
+      it('preserves a negative difference', async () => {
+        const row = assertion({ observedBalance: 380_000, computedBalance: 384_512 });
+        await stores.reconciliations.create(USER, row);
+        expect((await stores.reconciliations.get(USER, row.id))?.difference).toBe(-4_512);
+      });
+
+      it('does not shift the statement date across a timezone boundary', async () => {
+        for (const date of ['2026-01-01', '2026-08-01', '2026-12-31']) {
+          const row = assertion({ statementDate: date });
+          await stores.reconciliations.create(USER, row);
+          expect((await stores.reconciliations.get(USER, row.id))?.statementDate).toBe(date);
+        }
+      });
+
+      it('supersedes a previous assertion for the same closing date', async () => {
+        // A second observation of one date is a correction, not a second fact.
+        const first = assertion({ observedBalance: 100, computedBalance: 100 });
+        const second = assertion({
+          observedBalance: 200,
+          computedBalance: 200,
+          createdAt: '2026-08-02T10:00:00.000Z',
+        });
+
+        await stores.reconciliations.create(USER, first);
+        await stores.reconciliations.create(USER, second);
+
+        const all = await stores.reconciliations.list(USER);
+        const live = all.filter((r) => r.archivedAt === null);
+
+        expect(all).toHaveLength(2);
+        expect(live).toHaveLength(1);
+        expect(live[0]?.observedBalance).toBe(200);
+      });
+
+      it('allows a different date on the same account', async () => {
+        await stores.reconciliations.create(USER, assertion({ statementDate: '2026-06-30' }));
+        await stores.reconciliations.create(USER, assertion({ statementDate: '2026-07-31' }));
+
+        const live = (await stores.reconciliations.list(USER)).filter((r) => r.archivedAt === null);
+        expect(live).toHaveLength(2);
+      });
+
+      it('allows the same date on a different account', async () => {
+        await stores.reconciliations.create(USER, assertion({ accountId: 'acc_checking' }));
+        await stores.reconciliations.create(
+          USER,
+          assertion({
+            accountId: 'acc_credit',
+            observedBalance: -142_300,
+            computedBalance: -142_300,
+          }),
+        );
+
+        const live = (await stores.reconciliations.list(USER)).filter((r) => r.archivedAt === null);
+        expect(live).toHaveLength(2);
+      });
+
+      it('filters by account', async () => {
+        await stores.reconciliations.create(USER, assertion({ accountId: 'acc_checking' }));
+        await stores.reconciliations.create(
+          USER,
+          assertion({ accountId: 'acc_credit', observedBalance: -1, computedBalance: -1 }),
+        );
+
+        const forCard = await stores.reconciliations.list(USER, 'acc_credit');
+        expect(forCard).toHaveLength(1);
+        expect(forCard[0]?.accountId).toBe('acc_credit');
+      });
+
+      it('lists newest statement date first', async () => {
+        await stores.reconciliations.create(USER, assertion({ statementDate: '2026-05-31' }));
+        await stores.reconciliations.create(USER, assertion({ statementDate: '2026-07-31' }));
+        await stores.reconciliations.create(USER, assertion({ statementDate: '2026-06-30' }));
+
+        expect((await stores.reconciliations.list(USER)).map((r) => r.statementDate)).toEqual([
+          '2026-07-31',
+          '2026-06-30',
+          '2026-05-31',
+        ]);
+      });
+
+      it('archives rather than deletes', async () => {
+        // An audit trail you can erase is not one.
+        const row = assertion();
+        await stores.reconciliations.create(USER, row);
+
+        expect(
+          await stores.reconciliations.archive(USER, row.id, '2026-08-05T00:00:00.000Z'),
+        ).toBe(true);
+
+        const found = await stores.reconciliations.get(USER, row.id);
+        expect(found).not.toBeNull();
+        expect(found?.archivedAt).toBe('2026-08-05T00:00:00.000Z');
+      });
+
+      it('will not archive twice', async () => {
+        const row = assertion();
+        await stores.reconciliations.create(USER, row);
+        await stores.reconciliations.archive(USER, row.id, '2026-08-05T00:00:00.000Z');
+        expect(
+          await stores.reconciliations.archive(USER, row.id, '2026-08-06T00:00:00.000Z'),
+        ).toBe(false);
+      });
+
+      it('frees the closing date once archived', async () => {
+        const first = assertion();
+        await stores.reconciliations.create(USER, first);
+        await stores.reconciliations.archive(USER, first.id, '2026-08-05T00:00:00.000Z');
+
+        await expect(
+          stores.reconciliations.create(
+            USER,
+            assertion({ observedBalance: 999, computedBalance: 999 }),
+          ),
+        ).resolves.toBeTruthy();
+      });
+
+      it('keeps users apart', async () => {
+        const row = assertion();
+        await stores.reconciliations.create(USER, row);
+
+        expect(await stores.reconciliations.list(OTHER)).toHaveLength(0);
+        expect(await stores.reconciliations.get(OTHER, row.id)).toBeNull();
+        expect(
+          await stores.reconciliations.archive(OTHER, row.id, '2026-08-05T00:00:00.000Z'),
+        ).toBe(false);
       });
     });
   });
