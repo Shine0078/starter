@@ -4,6 +4,7 @@ import { formatMoney, money } from '../../domain/money';
 import type { Transaction } from '../../domain/types';
 import { CurrentUser } from '../auth/auth.guard';
 import { SavedViewsService, type CreateSavedViewInput } from './saved-views.service';
+import { ViewReportService } from './view-report.service';
 
 function present(txn: Transaction) {
   return { ...txn, amountFormatted: formatMoney(money(txn.amount, txn.currency)) };
@@ -11,7 +12,10 @@ function present(txn: Transaction) {
 
 @Controller('transaction-views')
 export class SavedViewsController {
-  constructor(private readonly views: SavedViewsService) {}
+  constructor(
+    private readonly views: SavedViewsService,
+    private readonly reports: ViewReportService,
+  ) {}
 
   @Get()
   async list(@CurrentUser() userId: string) {
@@ -43,6 +47,19 @@ export class SavedViewsController {
       count: result.transactions.length,
       transactions: result.transactions.map(present),
     };
+  }
+
+  /**
+   * A report over the view: totals, a chart series, the same numbers as a
+   * table, and a sentence a screen reader can announce instead of the chart.
+   */
+  @Get(':id/report')
+  report(
+    @CurrentUser() userId: string,
+    @Param('id') id: string,
+    @Query('currency') currency = 'USD',
+  ) {
+    return this.reports.byView(userId, id, currency);
   }
 
   @Delete(':id')
