@@ -1,4 +1,4 @@
-import {
+﻿import {
   Controller,
   Get,
   Header,
@@ -27,6 +27,7 @@ import { LedgerModule } from './modules/ledger/ledger.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PrivacyModule } from './modules/privacy/privacy.module';
 import { ReceiptsModule } from './modules/receipts/receipts.module';
+import { ReconciliationModule } from './modules/reconciliation/reconciliation.module';
 import { SplitModule } from './modules/split/split.module';
 import { PushModule } from './modules/push/push.module';
 import { WebAuthnModule } from './modules/webauthn/webauthn.module';
@@ -39,7 +40,7 @@ const appConfig = loadConfig();
 class MetaController {
   /**
    * Liveness *and* readiness. When running on Postgres it actually round-trips
-   * a query rather than reporting "ok" because the process is up — a health
+   * a query rather than reporting "ok" because the process is up â€” a health
    * check that cannot fail tells you nothing, and an API that has lost its
    * database should not be receiving traffic.
    *
@@ -65,7 +66,7 @@ class MetaController {
 
     try {
       // The runtime pool, not the owner's. Readiness is about the connection
-      // that actually serves requests — the owner's could be fine while the
+      // that actually serves requests â€” the owner's could be fine while the
       // application role's password is stale and every request fails.
       await getAppPool(config.appDatabaseUrl).query('SELECT 1');
       return { status: 'ok', ...base, database: 'reachable' };
@@ -166,6 +167,7 @@ class MetaController {
     InsightsModule,
     PrivacyModule,
     ReceiptsModule,
+    ReconciliationModule,
     SplitModule,
     PushModule,
     WebAuthnModule,
