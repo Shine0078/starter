@@ -329,17 +329,42 @@ artifact) is self-described because a commit cannot contain its own final hash.
 | 304 | `01d279f` | docs: include log artifact entry | 1 file changed, 6 insertions(+), 3 deletions(-) | Makes the documentation artifact itself visible in the handover history. | No per-commit command is embedded in Git metadata; not inferred. | See FINVERSE-RESEARCH-INTEGRATION.md; no reference source copied. |
 | 305 | `self` | docs: record final verification gates | this file | Records the database-backed quality gate after the final implementation. | The commit hash is intentionally self-referential and cannot be known before Git writes the tree. | See FINVERSE-RESEARCH-INTEGRATION.md; no reference source copied. |
 
+| 306 | `3137f94` | feat(reconciliation): derive historical balances and compare assertions | 3 files changed, 475 insertions(+) | Pure balance-as-of derivation and difference arithmetic. Excludes pending rows because the provider's `current` balance never included them, and refuses cross-currency comparison rather than inventing a rate. | `vitest run test/reconciliation.spec.ts`: 29 passed. `tsc --noEmit`: clean. | GnuCash reconciliation invariants; Sure/Maybe valuation entries. Concept only, no source copied. |
+| 307 | `85175bf` | feat(reconciliation): persist balance assertions with row-level security | 7 files changed, 455 insertions(+), 8 deletions(-) | Migration 023 plus both store adapters behind one port, exercised by the shared contract suite. `computed_balance` is frozen at assertion time; the partial unique index makes a same-date observation a correction rather than a contradicting second fact. | `npm run test:db`: 681 passed. The arithmetic CHECK rejected inconsistent test fixtures, which were then made unrepresentable. | GnuCash split/reconciliation invariants; existing FINVERSE RLS and port conventions. |
+| 308 | `c85e824` | feat(reconciliation): expose preview, record, summary and withdraw endpoints | 5 files changed, 738 insertions(+), 3 deletions(-) | Side-effect-free preview separate from recording; the summary treats a never-checked account as overdue; withdrawal archives rather than deletes. | `npm run test:db`: 697 passed, including 16 new API tests. `npm run build`: clean. Two isolation tests were rewritten after passing for the wrong reason — see below. | Fava's traceability principle: a number leads back to the entries behind it. |
+| 309 | `7c5c3f1` | feat(mobile): add the balance-check screen | 5 files changed, 967 insertions(+), 4 deletions(-) | Preview-then-record flow, future statement dates unpickable rather than rejected after the fact, withdrawn checks kept visible and labelled. | `flutter analyze`: clean. `flutter test`: 108 passed. | ezBookkeeping's shared mobile/desktop validation; Sure's semantic design tokens. |
+
+### Correction recorded during this slice
+
+Two cross-user tests in `reconciliation-api.spec.ts` initially expected a 404
+when one user passed another user's account id. They failed, and the cause was
+the test rather than the code: the mock aggregator seeds **every** user with the
+same account ids, so the id resolved to the caller's own identically-named
+account and proved nothing about isolation. They now assert on the rows — a
+write scoped to the caller, invisible to the other user — and use a fabricated
+id for the not-found path.
+
+Recorded because a test that passes for the wrong reason is more dangerous than
+a missing one: it reports coverage that does not exist.
+
 ## Final quality gates at handoff
 
-- API typecheck: passed.
-- API suite: **506 passed, 6 skipped** in the fast in-memory run (the skips require
-  TEST_DATABASE_URL); embedded PostgreSQL contract/SQL/RLS run: **626 passed**.
-- Transaction tag slice: **4 dedicated tests passed**.
-- Flutter analyzer: **No issues found**.
-- Flutter suite: **102 tests passed**.
-- Flutter web release build: passed at the prior production verification gate.
-- Git history at generation: 304 real commits plus this log update; no placeholder
-  commits were manufactured.
+Re-measured on 2026-08-17 after the reconciliation slice. Every figure below was
+produced by running the command beside it on this workstation.
+
+| Gate | Command | Result |
+|---|---|---|
+| API typecheck | `tsc --noEmit` | clean |
+| API build | `npm run build` | clean |
+| API suite, in-memory | `npm test` | **510 passed, 6 skipped** (the skips require `TEST_DATABASE_URL`) |
+| API suite, real PostgreSQL | `npm run test:db` | **697 passed** |
+| Flutter analyzer | `flutter analyze` | No issues found |
+| Flutter suite | `flutter test` | **108 passed** |
+| Git history | `git rev-list --count HEAD` | **309 commits**, no manufactured placeholders |
+
+An earlier version of this section claimed 506 / 626 / 102 / 304. Those were
+accurate when written and stale by the time they were read; the figures above
+replace them.
 
 The next commit that adds or changes this log should regenerate the table from
 `git log --reverse --shortstat` and keep this note rather than claiming a

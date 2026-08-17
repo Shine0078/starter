@@ -214,7 +214,38 @@ The first vertical slice is now in the product rather than only on the roadmap:
 
 This deliberately starts with a small, reversible organization feature. Saved
 views can now be built on the same query contract without adding a second copy
-of filtering logic; reconciliation and staged import remain the next slices.
+of filtering logic.
+
+### Slice 2 — account reconciliation assertions
+
+The GnuCash/Sure/Maybe lesson applied: reconciliation is *evidence*, never a
+correction.
+
+- `023_account_reconciliations.sql` stores the observed balance, the balance
+  FINVERSE derived for that date, and the difference between them, under RLS.
+- Historical balances are reconstructed rather than stored. The provider gives
+  one balance — the balance now — so `computeBalanceAsOf` unwinds settled
+  transactions posted since. Pending rows are excluded because the provider's
+  `current` balance never included them.
+- `computed_balance` is frozen at assertion time. Recomputing it on read would
+  silently rewrite history as later transactions arrive, and the record exists
+  to say what we believed *then*.
+- There is no tolerance band. Within one currency the arithmetic is exact, so a
+  one-cent gap is a real one-cent gap; a "close enough" threshold would hide the
+  small systematic errors that are hardest to find later. Reconciling across
+  currencies is refused rather than converted at an invented rate.
+- A second observation of the same closing date supersedes the first — a
+  correction, not a contradicting second fact. Withdrawal archives rather than
+  deletes: an audit trail you can erase is not one.
+- `GET /api/reconciliations/preview` is side-effect-free, so a user sees the
+  comparison before committing. The Flutter screen follows the same
+  preview-then-record shape and never alters the ledger.
+
+Explicitly **not** adopted from the references: GnuCash's balancing-entry
+insertion. Writing an adjusting transaction to force agreement destroys the
+discrepancy the user needed to investigate.
+
+Staged import review remains the next slice.
 
 ## Integration sequence
 
@@ -222,8 +253,9 @@ of filtering logic; reconciliation and staged import remain the next slices.
    chart/table pairs as the product shell.
 2. Add transaction tags and saved views with user isolation, export inclusion,
    and mobile management.
-3. Add account reconciliation assertions with observed balance/date/source,
-   calculated difference, history, and undo/archive semantics.
+3. ~~Add account reconciliation assertions with observed balance/date/source,
+   calculated difference, history, and undo/archive semantics.~~ **Done** — see
+   the slice notes above.
 4. Add CSV/OFX import review: upload, map, validate, duplicate confidence,
    preview, atomic commit, provenance, and reversible rollback.
 5. Add scheduled manual transaction templates and explicit reminders.
@@ -253,13 +285,19 @@ review before enabling an external provider.
 
 ## Verification record
 
-At audit time, the available FINVERSE gates were:
+Re-measured after the reconciliation slice (2026-08-17):
 
-- `flutter analyze`: clean;
-- full Flutter test suite: 102 tests passed;
-- Flutter web release build: passed;
-- API test suite: maintained in `apps/api/test` and exercised by CI;
-- current Git history: 300 commits, all with file-backed subjects.
+| Gate | Result |
+|---|---|
+| API tests, in-memory | 510 passed, 6 skipped |
+| API tests, real PostgreSQL | 697 passed |
+| `tsc --noEmit` and `npm run build` | clean |
+| `flutter analyze` | clean |
+| Flutter test suite | 108 passed |
+
+An earlier version of this section recorded 102 Flutter tests and referred to
+the API suite only as "exercised by CI". Both counts above were produced by
+running the suites on this workstation.
 
 Reference projects were not falsely marked as built because their required
 toolchains/dependencies were not installed in the download directory. The
