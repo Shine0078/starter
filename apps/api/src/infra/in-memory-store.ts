@@ -30,6 +30,7 @@ import type {
 } from '../domain/split/types';
 import type { Reconciliation } from '../domain/reconciliation/types';
 import { normalizeViewName, type SavedView } from '../domain/transactions/saved-view';
+import type { ScheduledTransaction } from '../domain/scheduled/schedule';
 import {
   DuplicateViewNameError,
   type ImportBatch,
@@ -41,6 +42,7 @@ import {
   type ReconciliationStore,
   type RuleStore,
   type SavedViewStore,
+  type ScheduleStore,
   type SplitStore,
   type TransactionQuery,
   type TransactionStore,
@@ -723,5 +725,52 @@ export class InMemoryImportBatchStore implements ImportBatchStore {
     const removed = await this.transactions.removeByImportBatch(userId, id);
     rows[index] = { ...batch, status: 'reverted', revertedAt: at };
     return removed;
+  }
+}
+
+/** Declared obligations, archived rather than deleted. */
+export class InMemoryScheduleStore implements ScheduleStore {
+  private readonly byUser = new Map<string, ScheduledTransaction[]>();
+
+  async list(userId: string, includeArchived = false): Promise<ScheduledTransaction[]> {
+    return bucket(this.byUser, userId)
+      .filter((s) => includeArchived || s.archivedAt === null)
+      .sort((a, b) => a.startDate.localeCompare(b.startDate) || a.name.localeCompare(b.name))
+      .map((s) => ({ ...s }));
+  }
+
+  async get(userId: string, id: string): Promise<ScheduledTransaction | null> {
+    const found = bucket(this.byUser, userId).find((s) => s.id === id);
+    return found ? { ...found } : null;
+  }
+
+  async create(
+    userId: string,
+    schedule: ScheduledTransaction,
+  ): Promise<ScheduledTransaction> {
+    bucket(this.byUser, userId).push({ ...schedule });
+    return { ...schedule };
+  }
+
+  async update(
+    userId: string,
+    id: string,
+    patch: Partial<ScheduledTransaction>,
+  ): Promise<ScheduledTransaction | null> {
+    const rows = bucket(this.byUser, userId);
+    const index = rows.findIndex((s) => s.id === id);
+    if (index < 0) return null;
+    // `id` is never patchable: rewriting it would orphan anything referencing it.
+    const next = { ...rows[index]!, ...patch, id };
+    rows[index] = next;
+    return { ...next };
+  }
+
+  async archive(userId: string, id: string, at: string): Promise<boolean> {
+    const rows = bucket(this.byUser, userId);
+    const index = rows.findIndex((s) => s.id === id && s.archivedAt === null);
+    if (index < 0) return false;
+    rows[index] = { ...rows[index]!, archivedAt: at };
+    return true;
   }
 }

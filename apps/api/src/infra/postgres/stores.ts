@@ -37,6 +37,7 @@ import type {
 } from '../../domain/split/types';
 import type { Reconciliation } from '../../domain/reconciliation/types';
 import type { SavedView } from '../../domain/transactions/saved-view';
+import type { ScheduledTransaction } from '../../domain/scheduled/schedule';
 import {
   DuplicateViewNameError,
   type ImportBatch,
@@ -48,6 +49,7 @@ import {
   type ReconciliationStore,
   type RuleStore,
   type SavedViewStore,
+  type ScheduleStore,
   type SplitStore,
   type TransactionQuery,
   type TransactionStore,
@@ -1453,6 +1455,153 @@ export class PostgresImportBatchStore implements ImportBatchStore {
       );
 
       return removed.rowCount ?? 0;
+    });
+  }
+}
+
+// --------------------------------------------------- scheduled transactions
+
+interface ScheduleRow {
+  id: string;
+  account_id: string;
+  name: string;
+  amount: number;
+  currency: string;
+  category_slug: string;
+  cadence: string;
+  start_date: string;
+  end_date: string | null;
+  reminder_days: number;
+  archived_at: Date | null;
+}
+
+const SCHEDULE_COLUMNS = `
+  id, account_id, name, amount, currency, category_slug,
+  cadence, start_date, end_date, reminder_days, archived_at
+`;
+
+function toSchedule(row: ScheduleRow): ScheduledTransaction {
+  return {
+    id: row.id,
+    accountId: row.account_id,
+    name: row.name,
+    amount: row.amount,
+    currency: row.currency,
+    categorySlug: row.category_slug,
+    cadence: row.cadence as ScheduledTransaction['cadence'],
+    // DATE columns come back as YYYY-MM-DD strings; see the parser in pool.ts.
+    startDate: row.start_date,
+    endDate: row.end_date,
+    reminderDays: row.reminder_days,
+    archivedAt: row.archived_at ? row.archived_at.toISOString() : null,
+  };
+}
+
+export class PostgresScheduleStore implements ScheduleStore {
+  constructor(private readonly pg: Pool) {}
+
+  async list(userId: string, includeArchived = false): Promise<ScheduledTransaction[]> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const { rows } = await client.query<ScheduleRow>(
+        `SELECT ${SCHEDULE_COLUMNS} FROM scheduled_transactions
+         WHERE user_id = $1 AND ($2::boolean OR archived_at IS NULL)
+         ORDER BY start_date, name`,
+        [userId, includeArchived],
+      );
+      return rows.map(toSchedule);
+    });
+  }
+
+  async get(userId: string, id: string): Promise<ScheduledTransaction | null> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const { rows } = await client.query<ScheduleRow>(
+        `SELECT ${SCHEDULE_COLUMNS} FROM scheduled_transactions
+         WHERE user_id = $1 AND id = $2`,
+        [userId, id],
+      );
+      return rows[0] ? toSchedule(rows[0]) : null;
+    });
+  }
+
+  async create(
+    userId: string,
+    schedule: ScheduledTransaction,
+  ): Promise<ScheduledTransaction> {
+    return withUserScope(this.pg, userId, async (client) => {
+      await ensureUser(client, userId);
+
+      const { rows } = await client.query<ScheduleRow>(
+        `INSERT INTO scheduled_transactions (
+           id, user_id, account_id, name, amount, currency, category_slug,
+           cadence, start_date, end_date, reminder_days, archived_at
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+         RETURNING ${SCHEDULE_COLUMNS}`,
+        [
+          schedule.id,
+          userId,
+          schedule.accountId,
+          schedule.name,
+          schedule.amount,
+          schedule.currency,
+          schedule.categorySlug,
+          schedule.cadence,
+          schedule.startDate,
+          schedule.endDate,
+          schedule.reminderDays,
+          schedule.archivedAt,
+        ],
+      );
+
+      return toSchedule(rows[0]!);
+    });
+  }
+
+  async update(
+    userId: string,
+    id: string,
+    patch: Partial<ScheduledTransaction>,
+  ): Promise<ScheduledTransaction | null> {
+    const COLUMN_OF: Partial<Record<keyof ScheduledTransaction, string>> = {
+      name: 'name',
+      amount: 'amount',
+      currency: 'currency',
+      categorySlug: 'category_slug',
+      cadence: 'cadence',
+      startDate: 'start_date',
+      endDate: 'end_date',
+      reminderDays: 'reminder_days',
+    };
+
+    const assignments: string[] = [];
+    const values: unknown[] = [userId, id];
+
+    for (const [key, column] of Object.entries(COLUMN_OF)) {
+      if (!(key in patch)) continue;
+      values.push(patch[key as keyof ScheduledTransaction] ?? null);
+      assignments.push(`${column} = $${values.length}`);
+    }
+
+    if (assignments.length === 0) return this.get(userId, id);
+
+    return withUserScope(this.pg, userId, async (client) => {
+      const { rows } = await client.query<ScheduleRow>(
+        `UPDATE scheduled_transactions SET ${assignments.join(', ')}
+         WHERE user_id = $1 AND id = $2
+         RETURNING ${SCHEDULE_COLUMNS}`,
+        values,
+      );
+      return rows[0] ? toSchedule(rows[0]) : null;
+    });
+  }
+
+  async archive(userId: string, id: string, at: string): Promise<boolean> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const result = await client.query(
+        `UPDATE scheduled_transactions SET archived_at = $3
+         WHERE user_id = $1 AND id = $2 AND archived_at IS NULL`,
+        [userId, id, at],
+      );
+      return (result.rowCount ?? 0) > 0;
     });
   }
 }

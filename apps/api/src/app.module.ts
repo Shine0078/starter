@@ -29,6 +29,7 @@ import { PrivacyModule } from './modules/privacy/privacy.module';
 import { ReceiptsModule } from './modules/receipts/receipts.module';
 import { ImportsModule } from './modules/imports/imports.module';
 import { ReconciliationModule } from './modules/reconciliation/reconciliation.module';
+import { ScheduledModule } from './modules/scheduled/scheduled.module';
 import { SplitModule } from './modules/split/split.module';
 import { PushModule } from './modules/push/push.module';
 import { WebAuthnModule } from './modules/webauthn/webauthn.module';
@@ -170,6 +171,7 @@ class MetaController {
     ImportsModule,
     ReceiptsModule,
     ReconciliationModule,
+    ScheduledModule,
     SplitModule,
     PushModule,
     WebAuthnModule,

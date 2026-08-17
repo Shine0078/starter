@@ -30,6 +30,7 @@ import type {
 } from '../domain/split/types';
 import type { Reconciliation } from '../domain/reconciliation/types';
 import type { SavedView } from '../domain/transactions/saved-view';
+import type { ScheduledTransaction } from '../domain/scheduled/schedule';
 
 export const ACCOUNT_STORE = 'ACCOUNT_STORE';
 export const TRANSACTION_STORE = 'TRANSACTION_STORE';
@@ -41,6 +42,7 @@ export const SPLIT_STORE = 'SPLIT_STORE';
 export const RECONCILIATION_STORE = 'RECONCILIATION_STORE';
 export const SAVED_VIEW_STORE = 'SAVED_VIEW_STORE';
 export const IMPORT_BATCH_STORE = 'IMPORT_BATCH_STORE';
+export const SCHEDULE_STORE = 'SCHEDULE_STORE';
 export const AGGREGATOR = 'AGGREGATOR';
 export const CLOCK = 'CLOCK';
 
@@ -214,6 +216,19 @@ export interface ImportBatchStore {
   ): Promise<ImportBatch>;
   /** Returns how many transactions were removed, or null when already reverted. */
   revert(userId: string, id: string, at: string): Promise<number | null>;
+}
+
+/** Declared obligations. Archived rather than deleted, so history survives. */
+export interface ScheduleStore {
+  list(userId: string, includeArchived?: boolean): Promise<ScheduledTransaction[]>;
+  get(userId: string, id: string): Promise<ScheduledTransaction | null>;
+  create(userId: string, schedule: ScheduledTransaction): Promise<ScheduledTransaction>;
+  update(
+    userId: string,
+    id: string,
+    patch: Partial<ScheduledTransaction>,
+  ): Promise<ScheduledTransaction | null>;
+  archive(userId: string, id: string, at: string): Promise<boolean>;
 }
 
 export interface RuleStore {
