@@ -280,7 +280,65 @@ Maybe's upload → map → clean → confirm → revert workflow, adapted.
 Explicitly **not** adopted: an import that merges silently on the grounds that
 duplicate detection is good enough. It never is, and the failure is invisible.
 
-Scheduled manual templates remain the next slice.
+### Slice 5 — scheduled obligations
+
+Firefly III's recurring templates and Maybe's scheduled jobs, with the
+distinction the blueprint insisted on: a schedule is what the user *committed
+to*, kept separate from the recurrence the subscription engine *detects* from
+history. Conflating them means either a detection error invents a commitment
+nobody made, or a real commitment vanishes the month a charge is missed.
+
+It is also a separate table from `transactions`, not a flag on one. A commitment
+is about the future; a transaction is a fact about the past. Storing a future
+obligation as a transaction row would put money that has not moved into every
+balance, budget and cash-flow total — there is a test asserting that creating a
+schedule writes no transaction.
+
+Monthly and longer cadences advance in calendar months anchored to the start
+day, with the clamp applied to the derived date rather than carried forward. A
+bill due on the 31st therefore falls on the 28th in February and returns to the
+31st in March, instead of migrating permanently.
+
+### Slice 6 — dated FX rates
+
+The blueprint said to add these "only when source/provider provenance is
+available". A user-supplied rate with a date and a stated source satisfies that,
+so the long-standing refusal to combine currencies is now conditional rather
+than absolute.
+
+- The most recent rate **on or before** the conversion date is used, never a
+  later one — a future rate would restate yesterday's net worth overnight.
+- A direct rate beats a newer inverse one, because the direct figure is what the
+  user recorded and inverting introduces error.
+- A currency with no rate is **excluded and named**. `incomplete` and `missing`
+  are part of the response contract, because a total that quietly omits an
+  account looks finished and is not.
+
+Still **not** adopted: any automatic rate feed. That needs a provider agreement,
+and an unattributed rate is exactly what this design refuses.
+
+### Slice 7 — rule dry-runs and reversible bulk apply
+
+Firefly III's most valuable rule-engine property: seeing what a rule would do
+before it does it. The preview separates *matched*, *will change*, *already
+correct* and *protected by user choice* — a rule that changes nothing because it
+is already satisfied and one that changes nothing because the pattern is a typo
+look identical without those counts.
+
+A category the user set by hand is never overruled. Migration 027 records the
+previous category, source and confidence of every changed row, because an undo
+needs to know what each row was before and that is not recoverable from the rule.
+
+### Slice 8 — reporting over a saved view
+
+Reuses the same query path as the live transaction list and the same
+`summarizePeriod` as every other total. A report that recomputed its own figures
+would eventually disagree with the dashboard and the user could not tell which
+was right; a test asserts a view and the equivalent live query return the same
+rows.
+
+Fava's traceability, made concrete: every chart ships with the identical numbers
+as a table and one sentence a screen reader can announce instead of it.
 
 ## Integration sequence
 
@@ -296,11 +354,20 @@ Scheduled manual templates remain the next slice.
    preview, atomic commit, provenance, and reversible rollback.~~ **Done for
    CSV** — see the slice notes above. OFX/QIF adapters can now be added behind
    the same review contract without touching the commit or revert paths.
-5. Add scheduled manual transaction templates and explicit reminders.
-6. Add dated FX rates and investment holdings only when source/provider
-   provenance is available.
-7. Add advanced rule dry-runs and reversible bulk operations.
-8. Add shareable web reporting filters that reuse the existing API calculations.
+5. ~~Add scheduled manual transaction templates and explicit reminders.~~ **Done.**
+6. ~~Add dated FX rates and investment holdings only when source/provider
+   provenance is available.~~ **Done for FX rates.** Investment holdings remain
+   out: positions need a price feed, and this design refuses an unattributed price
+   for the same reason it refuses an unattributed rate.
+7. ~~Add advanced rule dry-runs and reversible bulk operations.~~ **Done.**
+8. ~~Add shareable web reporting filters that reuse the existing API
+   calculations.~~ **Done** — API-side. A web UI to surface them is product work,
+   not integration work.
+
+**The integration sequence is complete.** What remains from the research is
+deliberately excluded rather than pending: investment holdings (needs a price
+feed), an automatic FX feed (needs a provider), and a full double-entry rewrite
+(explicitly rejected below).
 
 Every slice must pass: pure money logic, no implicit currency mixing, no
 provider-fact destruction, user/membership isolation in both stores, RLS and
@@ -327,11 +394,11 @@ Re-measured after the reconciliation slice (2026-08-17):
 
 | Gate | Result |
 |---|---|
-| API tests, real PostgreSQL | 832 passed |
+| API tests, real PostgreSQL | 970 passed |
 | `tsc --noEmit` and `npm run build` | clean |
 | `flutter analyze` | clean |
 | Flutter test suite | 108 passed |
-| Git history | 315 commits |
+| Git history | 320 commits |
 
 An earlier version of this section recorded 102 Flutter tests and referred to
 the API suite only as "exercised by CI". Both counts above were produced by

@@ -354,20 +354,34 @@ a missing one: it reports coverage that does not exist.
 | 314 | `e236942` | feat(imports): classify every row before anything enters the ledger | 2 files changed, 536 insertions(+) | Each row becomes import, duplicate or invalid with a reason; nothing is silently discarded. Duplicate scoring tolerates a reformatted descriptor. | `vitest run test/import-review.spec.ts`: 30 passed. | Maybe's staged import; GnuCash's confidence-ranked matching. |
 | 315 | `6fa349c` | feat(imports): stage, commit and reverse a CSV import | 12 files changed, 987 insertions(+), 11 deletions(-) | Migration 025 adds import provenance so a revert deletes by batch id and can never remove a provider-synced row. Reverting is idempotent; the batch survives marked reverted. | `npm run test:db`: 832 passed, including 14 API tests. `npm run build`: clean. | Maybe's reversible import jobs. |
 
+| 316 | `9a3ecdb`  | docs(research): record the saved-view and CSV import slices | 2 files changed | Marks slices 2 and 4 implemented and records the non-adoption of silent merge-on-import. | Figures re-measured by running the suites. | — |
+| 317 | `18b093d` | feat(schedules): add declared recurring obligations | 12 files changed, 1368 insertions(+) | Migration 026 plus both adapters and the API. A schedule is a commitment about the future, kept out of `transactions` so it cannot enter any balance or budget total. | `vitest`: 35 domain + 20 API tests. `npm run test:db`: 887 passed. | Firefly III recurring templates; Maybe/Sure scheduled jobs. |
+| 318 | `2220648` | feat(rules): preview a rule before applying it, and undo it afterwards | 11 files changed, 1109 insertions(+), 3 deletions(-) | Migration 027 records the before-state of every changed row so a bulk apply is reversible. User-set categories are never overruled. | `vitest`: 17 domain + 13 API tests. `npm run test:db`: 917 passed. | Firefly III rule engine dry-run. |
+| 319 | `d9f449c` | feat(fx): combine currencies against dated, sourced rates | 12 files changed, 1104 insertions(+), 4 deletions(-) | Migration 028. Conversion only against a rate with a date and a source; a currency without one is named, never assumed 1:1. | `vitest`: 29 domain + 11 API tests. `npm run test:db`: 957 passed. | ezBookkeeping FX provider provenance. |
+| 320 | `f6f6df2` | feat(views): report over a saved view, with the numbers behind the chart | 4 files changed, 430 insertions(+), 3 deletions(-) | Reuses the live query path and `summarizePeriod`; ships chart, table and a spoken summary together. | `vitest`: 13 API tests. `npm run test:db`: 970 passed. `npm run build`: clean. | Fava's traceability and accessible report equivalents. |
+
+## Integration sequence complete
+
+All eight slices of the blueprint in `FINVERSE-RESEARCH-INTEGRATION.md` are
+implemented. What remains from the research is excluded on purpose rather than
+outstanding: investment holdings need a price feed, an automatic FX feed needs a
+provider agreement, and a full double-entry rewrite was rejected before it was
+started. Each is recorded there with its reason.
+
 ## Final quality gates at handoff
 
-Re-measured on 2026-08-17 after the reconciliation, saved-view and CSV import
-slices. Every figure below was produced by running the command beside it on this
-workstation.
+Re-measured on 2026-08-17 after the reconciliation, saved-view, CSV import,
+schedule, rule dry-run, FX and view-report slices. Every figure below was
+produced by running the command beside it on this workstation.
 
 | Gate | Command | Result |
 |---|---|---|
 | API typecheck | `tsc --noEmit` | clean |
 | API build | `npm run build` | clean |
-| API suite, real PostgreSQL | `npm run test:db` | **832 passed** |
+| API suite, real PostgreSQL | `npm run test:db` | **970 passed** |
 | Flutter analyzer | `flutter analyze` | No issues found |
 | Flutter suite | `flutter test` | **108 passed** |
-| Git history | `git rev-list --count HEAD` | **315 commits**, no manufactured placeholders |
+| Git history | `git rev-list --count HEAD` | **320 commits**, no manufactured placeholders |
 
 Earlier versions of this section claimed 506 / 626 / 102 / 304, then
 510 / 697 / 108 / 309. Each was accurate when written and stale by the time it
