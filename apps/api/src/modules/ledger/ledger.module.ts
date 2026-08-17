@@ -2,12 +2,14 @@ import { Module } from '@nestjs/common';
 
 import { LedgerController } from './ledger.controller';
 import { LedgerService } from './ledger.service';
+import { RuleApplyController } from './rule-apply.controller';
+import { RuleApplyService } from './rule-apply.service';
 import { SavedViewsController } from './saved-views.controller';
 import { SavedViewsService } from './saved-views.service';
 
 @Module({
-  controllers: [LedgerController, SavedViewsController],
-  providers: [LedgerService, SavedViewsService],
-  exports: [LedgerService, SavedViewsService],
+  controllers: [LedgerController, SavedViewsController, RuleApplyController],
+  providers: [LedgerService, SavedViewsService, RuleApplyService],
+  exports: [LedgerService, SavedViewsService, RuleApplyService],
 })
 export class LedgerModule {}

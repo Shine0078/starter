@@ -15,6 +15,7 @@ import {
   InMemorySavedViewStore,
   InMemoryImportBatchStore,
   InMemoryScheduleStore,
+  InMemoryRuleApplicationStore,
   InMemoryTransactionStore,
 } from '../infra/in-memory-store';
 import { MockAggregator } from '../infra/mock-aggregator';
@@ -30,6 +31,7 @@ import {
   PostgresSavedViewStore,
   PostgresImportBatchStore,
   PostgresScheduleStore,
+  PostgresRuleApplicationStore,
   PostgresTransactionStore,
 } from '../infra/postgres/stores';
 import { Argon2PasswordHasher } from '../infra/auth/argon2-hasher';
@@ -120,6 +122,7 @@ import {
   SAVED_VIEW_STORE,
   IMPORT_BATCH_STORE,
   SCHEDULE_STORE,
+  RULE_APPLICATION_STORE,
   TRANSACTION_STORE,
 } from '../ports';
 import {
@@ -209,6 +212,7 @@ function storeProviders(): Provider[] {
       { provide: SAVED_VIEW_STORE, useValue: new InMemorySavedViewStore() },
       { provide: IMPORT_BATCH_STORE, useValue: new InMemoryImportBatchStore(transactions) },
       { provide: SCHEDULE_STORE, useValue: new InMemoryScheduleStore() },
+      { provide: RULE_APPLICATION_STORE, useValue: new InMemoryRuleApplicationStore(transactions) },
       { provide: BANK_LINK_STORE, useValue: bankLinks },
       { provide: BANK_WEBHOOK_STORE, useValue: bankWebhooks },
       { provide: USER_STORE, useValue: users },
@@ -253,6 +257,7 @@ function storeProviders(): Provider[] {
     { provide: SAVED_VIEW_STORE, useFactory: () => new PostgresSavedViewStore(pool) },
     { provide: IMPORT_BATCH_STORE, useFactory: () => new PostgresImportBatchStore(pool) },
     { provide: SCHEDULE_STORE, useFactory: () => new PostgresScheduleStore(pool) },
+    { provide: RULE_APPLICATION_STORE, useFactory: () => new PostgresRuleApplicationStore(pool) },
     { provide: BANK_LINK_STORE, useFactory: () => new PostgresBankLinkStore(pool) },
     { provide: BANK_WEBHOOK_STORE, useFactory: () => new PostgresBankWebhookStore(pool) },
     { provide: USER_STORE, useFactory: () => new PostgresUserStore(pool) },
@@ -411,6 +416,7 @@ function storeProviders(): Provider[] {
     SAVED_VIEW_STORE,
     IMPORT_BATCH_STORE,
     SCHEDULE_STORE,
+    RULE_APPLICATION_STORE,
     BANK_LINK_STORE,
     BANK_PROVIDER,
     BANK_ACCOUNT_REVOKER,

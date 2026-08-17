@@ -43,6 +43,7 @@ export const RECONCILIATION_STORE = 'RECONCILIATION_STORE';
 export const SAVED_VIEW_STORE = 'SAVED_VIEW_STORE';
 export const IMPORT_BATCH_STORE = 'IMPORT_BATCH_STORE';
 export const SCHEDULE_STORE = 'SCHEDULE_STORE';
+export const RULE_APPLICATION_STORE = 'RULE_APPLICATION_STORE';
 export const AGGREGATOR = 'AGGREGATOR';
 export const CLOCK = 'CLOCK';
 
@@ -229,6 +230,41 @@ export interface ScheduleStore {
     patch: Partial<ScheduledTransaction>,
   ): Promise<ScheduledTransaction | null>;
   archive(userId: string, id: string, at: string): Promise<boolean>;
+}
+
+export interface RuleApplicationChange {
+  transactionId: string;
+  previousCategorySlug: string;
+  previousCategorySource: Transaction['categorySource'];
+  previousConfidence: number;
+}
+
+export interface RuleApplication {
+  id: string;
+  pattern: string;
+  matchType: CategorizationRule['matchType'];
+  categorySlug: string;
+  rowsChanged: number;
+  createdAt: string;
+  revertedAt: string | null;
+}
+
+/**
+ * Bulk recategorizations and their undo.
+ *
+ * The prior category of every changed row is stored, because a revert needs to
+ * know what each row was *before* — that is not recoverable from the rule.
+ */
+export interface RuleApplicationStore {
+  list(userId: string): Promise<RuleApplication[]>;
+  /** Applies the changes and records the before-state in one transaction. */
+  apply(
+    userId: string,
+    application: RuleApplication,
+    changes: readonly RuleApplicationChange[],
+  ): Promise<RuleApplication>;
+  /** Restores prior categories. Null when unknown or already reverted. */
+  revert(userId: string, id: string, at: string): Promise<number | null>;
 }
 
 export interface RuleStore {

@@ -50,6 +50,9 @@ import {
   type RuleStore,
   type SavedViewStore,
   type ScheduleStore,
+  type RuleApplication,
+  type RuleApplicationChange,
+  type RuleApplicationStore,
   type SplitStore,
   type TransactionQuery,
   type TransactionStore,
@@ -1602,6 +1605,149 @@ export class PostgresScheduleStore implements ScheduleStore {
         [userId, id, at],
       );
       return (result.rowCount ?? 0) > 0;
+    });
+  }
+}
+
+// ------------------------------------------------------ rule applications
+
+interface RuleApplicationRow {
+  id: string;
+  pattern: string;
+  match_type: string;
+  category_slug: string;
+  rows_changed: number;
+  created_at: Date;
+  reverted_at: Date | null;
+}
+
+const RULE_APPLICATION_COLUMNS = `
+  id, pattern, match_type, category_slug, rows_changed, created_at, reverted_at
+`;
+
+function toRuleApplication(row: RuleApplicationRow): RuleApplication {
+  return {
+    id: row.id,
+    pattern: row.pattern,
+    matchType: row.match_type as RuleApplication['matchType'],
+    categorySlug: row.category_slug,
+    rowsChanged: row.rows_changed,
+    createdAt: row.created_at.toISOString(),
+    revertedAt: row.reverted_at ? row.reverted_at.toISOString() : null,
+  };
+}
+
+export class PostgresRuleApplicationStore implements RuleApplicationStore {
+  constructor(private readonly pg: Pool) {}
+
+  async list(userId: string): Promise<RuleApplication[]> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const { rows } = await client.query<RuleApplicationRow>(
+        `SELECT ${RULE_APPLICATION_COLUMNS} FROM rule_applications
+         WHERE user_id = $1 ORDER BY created_at DESC`,
+        [userId],
+      );
+      return rows.map(toRuleApplication);
+    });
+  }
+
+  /**
+   * Records the before-state and applies the change in one transaction.
+   *
+   * withUserScope already opens one, so a failure partway through rolls back
+   * both. An application recorded without its changes, or changes without the
+   * record, would leave an undo that restores the wrong thing.
+   */
+  async apply(
+    userId: string,
+    application: RuleApplication,
+    changes: readonly RuleApplicationChange[],
+  ): Promise<RuleApplication> {
+    return withUserScope(this.pg, userId, async (client) => {
+      await ensureUser(client, userId);
+
+      const { rows } = await client.query<RuleApplicationRow>(
+        `INSERT INTO rule_applications (
+           id, user_id, pattern, match_type, category_slug, rows_changed, created_at
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING ${RULE_APPLICATION_COLUMNS}`,
+        [
+          application.id,
+          userId,
+          application.pattern,
+          application.matchType,
+          application.categorySlug,
+          application.rowsChanged,
+          application.createdAt,
+        ],
+      );
+
+      for (const chunked of chunk(changes, 500)) {
+        const values: unknown[] = [];
+        const tuples: string[] = [];
+
+        chunked.forEach((change, index) => {
+          tuples.push(placeholders(6, index));
+          values.push(
+            application.id,
+            userId,
+            change.transactionId,
+            change.previousCategorySlug,
+            change.previousCategorySource,
+            change.previousConfidence,
+          );
+        });
+
+        await client.query(
+          `INSERT INTO rule_application_changes (
+             application_id, user_id, transaction_id,
+             previous_category_slug, previous_category_source, previous_confidence
+           ) VALUES ${tuples.join(', ')}`,
+          values,
+        );
+
+        const ids = chunked.map((c) => c.transactionId);
+        await client.query(
+          `UPDATE transactions
+           SET category_slug = $3, category_source = 'user_rule',
+               category_confidence = 1, updated_at = now()
+           WHERE user_id = $1 AND id = ANY($2::text[])`,
+          [userId, ids, application.categorySlug],
+        );
+      }
+
+      return toRuleApplication(rows[0]!);
+    });
+  }
+
+  async revert(userId: string, id: string, at: string): Promise<number | null> {
+    return withUserScope(this.pg, userId, async (client) => {
+      // Mark first, conditionally, so a second revert changes nothing and
+      // reports null rather than claiming a restoration that never happened.
+      const marked = await client.query(
+        `UPDATE rule_applications SET reverted_at = $3
+         WHERE user_id = $1 AND id = $2 AND reverted_at IS NULL`,
+        [userId, id, at],
+      );
+
+      if ((marked.rowCount ?? 0) === 0) return null;
+
+      // One statement restores every row from its recorded before-state. Rows
+      // deleted since the apply are gone from the change table by cascade, so
+      // they cannot be counted as restored.
+      const restored = await client.query(
+        `UPDATE transactions AS t
+         SET category_slug = c.previous_category_slug,
+             category_source = c.previous_category_source,
+             category_confidence = c.previous_confidence,
+             updated_at = now()
+         FROM rule_application_changes AS c
+         WHERE c.user_id = $1 AND c.application_id = $2
+           AND t.user_id = c.user_id AND t.id = c.transaction_id`,
+        [userId, id],
+      );
+
+      return restored.rowCount ?? 0;
     });
   }
 }

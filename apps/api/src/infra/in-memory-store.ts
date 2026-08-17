@@ -43,6 +43,9 @@ import {
   type RuleStore,
   type SavedViewStore,
   type ScheduleStore,
+  type RuleApplication,
+  type RuleApplicationChange,
+  type RuleApplicationStore,
   type SplitStore,
   type TransactionQuery,
   type TransactionStore,
@@ -772,5 +775,72 @@ export class InMemoryScheduleStore implements ScheduleStore {
     if (index < 0) return false;
     rows[index] = { ...rows[index]!, archivedAt: at };
     return true;
+  }
+}
+
+/**
+ * Bulk recategorizations and their undo.
+ *
+ * Holds the transaction store so a revert can restore prior categories through
+ * the same port PostgreSQL uses, keeping both adapters honest about the effect.
+ */
+export class InMemoryRuleApplicationStore implements RuleApplicationStore {
+  constructor(private readonly transactions: InMemoryTransactionStore) {}
+
+  private readonly byUser = new Map<string, RuleApplication[]>();
+  private readonly changesByApplication = new Map<string, RuleApplicationChange[]>();
+
+  async list(userId: string): Promise<RuleApplication[]> {
+    return [...bucket(this.byUser, userId)]
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .map((a) => ({ ...a }));
+  }
+
+  async apply(
+    userId: string,
+    application: RuleApplication,
+    changes: readonly RuleApplicationChange[],
+  ): Promise<RuleApplication> {
+    for (const change of changes) {
+      await this.transactions.update(userId, change.transactionId, {
+        categorySlug: application.categorySlug,
+        categorySource: 'user_rule',
+        categoryConfidence: 1,
+      });
+    }
+
+    bucket(this.byUser, userId).push({ ...application });
+    this.changesByApplication.set(
+      `${userId}:${application.id}`,
+      changes.map((c) => ({ ...c })),
+    );
+
+    return { ...application };
+  }
+
+  async revert(userId: string, id: string, at: string): Promise<number | null> {
+    const rows = bucket(this.byUser, userId);
+    const index = rows.findIndex((a) => a.id === id);
+    if (index < 0) return null;
+    // Already undone; reverting twice would report a restoration that did not
+    // happen.
+    if (rows[index]!.revertedAt !== null) return null;
+
+    const changes = this.changesByApplication.get(`${userId}:${id}`) ?? [];
+    let restored = 0;
+
+    for (const change of changes) {
+      const updated = await this.transactions.update(userId, change.transactionId, {
+        categorySlug: change.previousCategorySlug,
+        categorySource: change.previousCategorySource,
+        categoryConfidence: change.previousConfidence,
+      });
+      // A row deleted since the apply cannot be restored, and counting it would
+      // overstate what the undo achieved.
+      if (updated) restored += 1;
+    }
+
+    rows[index] = { ...rows[index]!, revertedAt: at };
+    return restored;
   }
 }
