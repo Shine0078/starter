@@ -245,19 +245,57 @@ Explicitly **not** adopted from the references: GnuCash's balancing-entry
 insertion. Writing an adjusting transaction to force agreement destroys the
 discrepancy the user needed to investigate.
 
-Staged import review remains the next slice.
+### Slice 3 — saved transaction views
+
+Completes the organization axis begun with tags. A view is a named
+`TransactionQuery` and nothing more, so applying one routes through the same
+store method the live list uses; there is no second filtering implementation for
+a saved view to drift away from. The filter persists as explicit columns rather
+than a JSON blob, because a blob accepts keys the query layer silently ignores —
+a saved view could stop meaning what the user set without anything failing.
+
+### Slice 4 — staged CSV import review
+
+Maybe's upload → map → clean → confirm → revert workflow, adapted.
+
+- **Nothing enters the ledger unseen.** `POST /api/imports/preview` parses,
+  infers a mapping, and classifies every row as import, duplicate, or invalid
+  with a reason, writing nothing.
+- **No row is silently dropped.** An unreadable row appears in the preview with
+  its real line number. Discarding rows from a bank export is how money goes
+  missing without anyone noticing.
+- **Ambiguity is reported, not guessed.** `03/04/2026` is 3 April or 4 March;
+  the order is inferred only when a value above 12 proves it, and otherwise the
+  review must confirm. Amounts that cannot be read return null rather than zero.
+- **Three amount conventions**, because banks disagree: a signed column, a
+  debit/credit pair, and a positive amount with a direction column.
+- **Duplicate detection** requires an exact amount match, then scores date
+  proximity and descriptor similarity. It deliberately does not require an exact
+  descriptor: banks reformat those between a CSV export and the provider feed,
+  so an exact rule would let every re-import duplicate the ledger.
+- **Reversible.** `025_import_batches.sql` adds a nullable `import_batch_id` to
+  the transaction. A revert deletes by batch id, so it can never remove a
+  provider-synced row, and the batch survives marked reverted.
+
+Explicitly **not** adopted: an import that merges silently on the grounds that
+duplicate detection is good enough. It never is, and the failure is invisible.
+
+Scheduled manual templates remain the next slice.
 
 ## Integration sequence
 
 1. Keep the current responsive dashboard, semantic theme system, and accessible
    chart/table pairs as the product shell.
-2. Add transaction tags and saved views with user isolation, export inclusion,
-   and mobile management.
+2. ~~Add transaction tags and saved views with user isolation, export inclusion,
+   and mobile management.~~ **Done** — tags and saved views both landed; mobile
+   management exists for tags, and saved views are API-only so far.
 3. ~~Add account reconciliation assertions with observed balance/date/source,
    calculated difference, history, and undo/archive semantics.~~ **Done** — see
    the slice notes above.
-4. Add CSV/OFX import review: upload, map, validate, duplicate confidence,
-   preview, atomic commit, provenance, and reversible rollback.
+4. ~~Add CSV/OFX import review: upload, map, validate, duplicate confidence,
+   preview, atomic commit, provenance, and reversible rollback.~~ **Done for
+   CSV** — see the slice notes above. OFX/QIF adapters can now be added behind
+   the same review contract without touching the commit or revert paths.
 5. Add scheduled manual transaction templates and explicit reminders.
 6. Add dated FX rates and investment holdings only when source/provider
    provenance is available.
@@ -289,11 +327,11 @@ Re-measured after the reconciliation slice (2026-08-17):
 
 | Gate | Result |
 |---|---|
-| API tests, in-memory | 510 passed, 6 skipped |
-| API tests, real PostgreSQL | 697 passed |
+| API tests, real PostgreSQL | 832 passed |
 | `tsc --noEmit` and `npm run build` | clean |
 | `flutter analyze` | clean |
 | Flutter test suite | 108 passed |
+| Git history | 315 commits |
 
 An earlier version of this section recorded 102 Flutter tests and referred to
 the API suite only as "exercised by CI". Both counts above were produced by

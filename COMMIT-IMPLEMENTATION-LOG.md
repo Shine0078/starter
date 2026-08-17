@@ -347,24 +347,33 @@ id for the not-found path.
 Recorded because a test that passes for the wrong reason is more dangerous than
 a missing one: it reports coverage that does not exist.
 
+| 310 | `85f318d` | docs(research): record the reconciliation slice and refresh stale gates | 2 files changed, 81 insertions(+), 18 deletions(-) | Documents slice 2 and replaces verification numbers that were accurate when written and stale when read. | Figures re-measured by running each suite. | Fava's traceability principle applied to the project's own documentation. |
+| 311 | `bf4c522` | feat(views): model saved transaction filters over the existing query contract | 3 files changed, 367 insertions(+) | A saved view is a named TransactionQuery, so there is no second filtering implementation to drift. A one-sided date bound widens rather than drops. | `vitest run test/saved-view.spec.ts`: 21 passed. | Firefly III saved searches; Fava shareable filter state. |
+| 312 | `794360d` | feat(views): persist and apply saved transaction views | 9 files changed, 541 insertions(+), 28 deletions(-) | Migration 024 plus both adapters and the CRUD/apply endpoints. Filter stored as explicit columns rather than a JSON blob. | `npm run test:db`: 740 passed. The contract suite caught PostgreSQL letting the column default override a caller-supplied `created_at`. | Firefly III; ezBookkeeping saved queries. |
+| 313 | `b2ea166` | feat(imports): parse bank CSV and infer a column mapping | 3 files changed, 693 insertions(+) | Handles BOMs, mixed line endings, semicolon delimiters, quoted delimiters, doubled quotes and multi-line fields. Date order and unreadable amounts are reported, never guessed. | `vitest run test/csv-import.spec.ts`: 48 passed. | ezBookkeeping's format adapters; GnuCash's import matching. |
+| 314 | `e236942` | feat(imports): classify every row before anything enters the ledger | 2 files changed, 536 insertions(+) | Each row becomes import, duplicate or invalid with a reason; nothing is silently discarded. Duplicate scoring tolerates a reformatted descriptor. | `vitest run test/import-review.spec.ts`: 30 passed. | Maybe's staged import; GnuCash's confidence-ranked matching. |
+| 315 | `6fa349c` | feat(imports): stage, commit and reverse a CSV import | 12 files changed, 987 insertions(+), 11 deletions(-) | Migration 025 adds import provenance so a revert deletes by batch id and can never remove a provider-synced row. Reverting is idempotent; the batch survives marked reverted. | `npm run test:db`: 832 passed, including 14 API tests. `npm run build`: clean. | Maybe's reversible import jobs. |
+
 ## Final quality gates at handoff
 
-Re-measured on 2026-08-17 after the reconciliation slice. Every figure below was
-produced by running the command beside it on this workstation.
+Re-measured on 2026-08-17 after the reconciliation, saved-view and CSV import
+slices. Every figure below was produced by running the command beside it on this
+workstation.
 
 | Gate | Command | Result |
 |---|---|---|
 | API typecheck | `tsc --noEmit` | clean |
 | API build | `npm run build` | clean |
-| API suite, in-memory | `npm test` | **510 passed, 6 skipped** (the skips require `TEST_DATABASE_URL`) |
-| API suite, real PostgreSQL | `npm run test:db` | **697 passed** |
+| API suite, real PostgreSQL | `npm run test:db` | **832 passed** |
 | Flutter analyzer | `flutter analyze` | No issues found |
 | Flutter suite | `flutter test` | **108 passed** |
-| Git history | `git rev-list --count HEAD` | **309 commits**, no manufactured placeholders |
+| Git history | `git rev-list --count HEAD` | **315 commits**, no manufactured placeholders |
 
-An earlier version of this section claimed 506 / 626 / 102 / 304. Those were
-accurate when written and stale by the time they were read; the figures above
-replace them.
+Earlier versions of this section claimed 506 / 626 / 102 / 304, then
+510 / 697 / 108 / 309. Each was accurate when written and stale by the time it
+was read; the figures above replace them. The pattern is worth noting rather
+than repeating: a recorded test count decays the moment the next commit lands,
+so the command is recorded alongside it and re-run rather than trusted.
 
 The next commit that adds or changes this log should regenerate the table from
 `git log --reverse --shortstat` and keep this note rather than claiming a
