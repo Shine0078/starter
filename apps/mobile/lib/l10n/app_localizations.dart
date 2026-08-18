@@ -3562,6 +3562,102 @@ abstract class AppLocalizations {
   /// **'Use color'**
   String get settingsThemeColorApply;
 
+  /// No description provided for @loginUsePasskey.
+  ///
+  /// In en, this message translates to:
+  /// **'Use a passkey'**
+  String get loginUsePasskey;
+
+  /// No description provided for @loginPasskeyUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Passkeys are not available on this device yet. Use the FINVERSE web app or sign in with your password.'**
+  String get loginPasskeyUnavailable;
+
+  /// No description provided for @loginPasskeyCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Passkey sign-in was cancelled.'**
+  String get loginPasskeyCancelled;
+
+  /// No description provided for @loginPasskeyFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'This passkey could not be verified.'**
+  String get loginPasskeyFailed;
+
+  /// No description provided for @settingsPasskeysTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Passkeys'**
+  String get settingsPasskeysTitle;
+
+  /// No description provided for @settingsPasskeysUnavailableServer.
+  ///
+  /// In en, this message translates to:
+  /// **'Not configured on this server'**
+  String get settingsPasskeysUnavailableServer;
+
+  /// No description provided for @settingsPasskeysUnavailableDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Available in the FINVERSE web app'**
+  String get settingsPasskeysUnavailableDevice;
+
+  /// No description provided for @settingsPasskeysEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No passkeys on this account'**
+  String get settingsPasskeysEmpty;
+
+  /// No description provided for @settingsPasskeysAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add passkey'**
+  String get settingsPasskeysAdd;
+
+  /// No description provided for @settingsPasskeysRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get settingsPasskeysRemove;
+
+  /// No description provided for @settingsPasskeysAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Passkey added.'**
+  String get settingsPasskeysAdded;
+
+  /// No description provided for @settingsPasskeysRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Passkey removed.'**
+  String get settingsPasskeysRemoved;
+
+  /// No description provided for @settingsPasskeysPasswordTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm your password'**
+  String get settingsPasskeysPasswordTitle;
+
+  /// No description provided for @settingsPasskeysPasswordDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Adding or removing a passkey requires your current password.'**
+  String get settingsPasskeysPasswordDetail;
+
+  /// No description provided for @settingsPasskeysMfaLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Authenticator or recovery code'**
+  String get settingsPasskeysMfaLabel;
+
+  /// No description provided for @settingsPasskeysContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get settingsPasskeysContinue;
+
   /// No description provided for @settingsDarkModeTitle.
   ///
   /// In en, this message translates to:

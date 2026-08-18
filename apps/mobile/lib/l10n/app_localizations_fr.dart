@@ -2057,6 +2057,61 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settingsThemeColorApply => 'Utiliser la couleur';
 
   @override
+  String get loginUsePasskey => 'Utiliser une clé d’accès';
+
+  @override
+  String get loginPasskeyUnavailable =>
+      'Les clés d’accès ne sont pas encore disponibles sur cet appareil. Utilisez l’application web FINVERSE ou connectez-vous avec votre mot de passe.';
+
+  @override
+  String get loginPasskeyCancelled =>
+      'La connexion par clé d’accès a été annulée.';
+
+  @override
+  String get loginPasskeyFailed =>
+      'Cette clé d’accès n’a pas pu être vérifiée.';
+
+  @override
+  String get settingsPasskeysTitle => 'Clés d’accès';
+
+  @override
+  String get settingsPasskeysUnavailableServer =>
+      'Non configuré sur ce serveur';
+
+  @override
+  String get settingsPasskeysUnavailableDevice =>
+      'Disponible dans l’application web FINVERSE';
+
+  @override
+  String get settingsPasskeysEmpty => 'Aucune clé d’accès sur ce compte';
+
+  @override
+  String get settingsPasskeysAdd => 'Ajouter une clé d’accès';
+
+  @override
+  String get settingsPasskeysRemove => 'Supprimer';
+
+  @override
+  String get settingsPasskeysAdded => 'Clé d’accès ajoutée.';
+
+  @override
+  String get settingsPasskeysRemoved => 'Clé d’accès supprimée.';
+
+  @override
+  String get settingsPasskeysPasswordTitle => 'Confirmez votre mot de passe';
+
+  @override
+  String get settingsPasskeysPasswordDetail =>
+      'L’ajout ou la suppression d’une clé d’accès exige votre mot de passe actuel.';
+
+  @override
+  String get settingsPasskeysMfaLabel =>
+      'Code d’authentification ou de récupération';
+
+  @override
+  String get settingsPasskeysContinue => 'Continuer';
+
+  @override
   String get settingsDarkModeTitle => 'Mode sombre';
 
   @override

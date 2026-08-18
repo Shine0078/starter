@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../api/client.dart';
+import '../api/passkey_ceremony.dart';
 import '../api/session_store.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/app_localizations_en.dart';
@@ -22,10 +23,16 @@ AppLocalizations _localizations(BuildContext context) {
 /// app requires a 12-character minimum, which surprises people used to eight,
 /// and discovering it by failing is a poor first impression.
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({required this.api, required this.onSignedIn, super.key});
+  const LoginScreen({
+    required this.api,
+    required this.onSignedIn,
+    this.passkeyCeremony = const PasskeyCeremony(),
+    super.key,
+  });
 
   final ApiClient api;
   final VoidCallback onSignedIn;
+  final PasskeyCeremony passkeyCeremony;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -51,6 +58,58 @@ class _LoginScreenState extends State<LoginScreen> {
     _email.dispose();
     _password.dispose();
     super.dispose();
+  }
+
+  Future<void> _signInWithPasskey() async {
+    final l10n = _localizations(context);
+    if (!widget.passkeyCeremony.isSupported) {
+      setState(() => _error = l10n.loginPasskeyUnavailable);
+      return;
+    }
+
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final available = await widget.api.passkeysAvailable();
+      if (!available) {
+        if (!mounted) return;
+        setState(() => _error = l10n.loginPasskeyUnavailable);
+        return;
+      }
+      final email = _email.text.trim();
+      final options = await widget.api.passkeyLoginOptions(
+        email: email.isEmpty ? null : email,
+      );
+      final assertion = await widget.passkeyCeremony.authenticate(options);
+      await widget.api.passkeyLoginVerify(
+        assertion.id,
+        ceremonyId: options['ceremonyId'] as String,
+        clientDataJson: assertion.clientDataJson,
+        authenticatorData: assertion.authenticatorData,
+        signature: assertion.signature,
+      );
+      if (!mounted) return;
+      widget.onSignedIn();
+    } on PasskeyCeremonyException catch (error) {
+      if (!mounted) return;
+      setState(() => _error = error.cancelled
+          ? l10n.loginPasskeyCancelled
+          : error.message);
+    } on AuthException catch (error) {
+      if (!mounted) return;
+      setState(() => _error = error.displayMessage);
+    } on SessionStoreUnavailableException {
+      if (!mounted) return;
+      setState(() => _error = l10n.loginSessionPersistenceFailed);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _error = l10n.loginPasskeyFailed);
+      debugPrint('Passkey sign-in failed: $error');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<void> _submit() async {
@@ -518,11 +577,21 @@ class _LoginScreenState extends State<LoginScreen> {
                                       : l10n.signInAction,
                             ),
                     ),
-                    if (!_registering && !_recovering)
+                    if (!_registering && !_recovering) ...[
+                      const SizedBox(height: 10),
+                      OutlinedButton.icon(
+                        onPressed: _busy ? null : _signInWithPasskey,
+                        icon: const Icon(Icons.key_outlined),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        label: Text(l10n.loginUsePasskey),
+                      ),
                       TextButton(
                         onPressed: _busy ? null : _resetPassword,
                         child: Text(l10n.loginForgotPassword),
                       ),
+                    ],
                     const SizedBox(height: 8),
                     TextButton(
                       onPressed: _busy ? null : _toggleRegistration,

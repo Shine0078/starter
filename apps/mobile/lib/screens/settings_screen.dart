@@ -10,6 +10,7 @@ import '../app_locale.dart';
 import '../app_theme.dart';
 import '../api/client.dart';
 import '../api/app_lock.dart';
+import '../api/passkey_ceremony.dart';
 import '../api/platform/file_share.dart';
 import '../l10n/app_localizations.dart';
 import '../models/models.dart';
@@ -28,6 +29,7 @@ class SettingsScreen extends StatefulWidget {
     required this.onDeleteAccount,
     required this.onSignedOutEverywhere,
     this.appLockController,
+    this.passkeyCeremony = const PasskeyCeremony(),
     super.key,
   });
 
@@ -37,6 +39,7 @@ class SettingsScreen extends StatefulWidget {
   final Future<void> Function() onDeleteAccount;
   final Future<void> Function() onSignedOutEverywhere;
   final AppLockController? appLockController;
+  final PasskeyCeremony passkeyCeremony;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -48,12 +51,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   PrivacyDashboard? _privacy;
   MfaStatus? _mfa;
   PlanSummary? _plan;
+  bool _passkeysAvailable = false;
+  List<Map<String, dynamic>> _passkeys = const [];
   String? _error;
   var _loading = true;
   var _exporting = false;
   var _reporting = false;
   var _appLockBusy = false;
   var _mfaBusy = false;
+  var _passkeyBusy = false;
 
   @override
   void initState() {
@@ -119,13 +125,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
         widget.api.sessions(),
         widget.api.privacyDashboard(),
         widget.api.mfaStatus(),
+        widget.api.passkeysAvailable(),
       ]);
+      final passkeysAvailable = results[4] as bool;
+      final passkeys = passkeysAvailable
+          ? await widget.api.passkeyCredentials()
+          : const <Map<String, dynamic>>[];
       if (!mounted) return;
       setState(() {
         _user = results[0] as PublicUser;
         _sessions = results[1] as List<AppSession>;
         _privacy = results[2] as PrivacyDashboard;
         _mfa = results[3] as MfaStatus;
+        _passkeysAvailable = passkeysAvailable;
+        _passkeys = passkeys;
         _loading = false;
       });
     } catch (error) {
@@ -135,6 +148,184 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _loading = false;
       });
     }
+  }
+
+
+  Future<List<String>?> _askPasskeyStepUp() async {
+    final l10n = AppLocalizations.of(context);
+    var password = '';
+    var mfaCode = '';
+    final submitted = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.settingsPasskeysPasswordTitle),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(l10n.settingsPasskeysPasswordDetail),
+            const SizedBox(height: 12),
+            TextField(
+              onChanged: (value) => password = value,
+              obscureText: true,
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: l10n.passwordLabel,
+                border: const OutlineInputBorder(),
+              ),
+            ),
+            if (_mfa?.enabled == true) ...[
+              const SizedBox(height: 12),
+              TextField(
+                onChanged: (value) => mfaCode = value,
+                decoration: InputDecoration(
+                  labelText: l10n.settingsPasskeysMfaLabel,
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.commonCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(l10n.settingsPasskeysContinue),
+          ),
+        ],
+      ),
+    );
+    if (submitted != true || password.isEmpty) return null;
+    return [password, mfaCode.trim()];
+  }
+
+  Future<void> _addPasskey() async {
+    if (_passkeyBusy) return;
+    final l10n = AppLocalizations.of(context);
+    if (!widget.passkeyCeremony.isSupported) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.settingsPasskeysUnavailableDevice)),
+      );
+      return;
+    }
+    final stepUp = await _askPasskeyStepUp();
+    if (stepUp == null || !mounted) return;
+    setState(() => _passkeyBusy = true);
+    try {
+      final options = await widget.api.passkeyRegisterOptions(
+        password: stepUp[0],
+        mfaCode: stepUp[1].isEmpty ? null : stepUp[1],
+      );
+      final attestation = await widget.passkeyCeremony.register(options);
+      await widget.api.passkeyRegisterVerify(
+        attestation.id,
+        ceremonyId: options['ceremonyId'] as String,
+        password: stepUp[0],
+        mfaCode: stepUp[1].isEmpty ? null : stepUp[1],
+        clientDataJson: attestation.clientDataJson,
+        attestationObject: attestation.attestationObject,
+      );
+      await _load();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.settingsPasskeysAdded)),
+      );
+    } on PasskeyCeremonyException catch (error) {
+      if (!mounted || error.cancelled) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.message)));
+    } on AuthException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.displayMessage)));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(friendlyErrorMessage(error))));
+    } finally {
+      if (mounted) setState(() => _passkeyBusy = false);
+    }
+  }
+
+  Future<void> _removePasskey(String credentialId) async {
+    if (_passkeyBusy) return;
+    final l10n = AppLocalizations.of(context);
+    final stepUp = await _askPasskeyStepUp();
+    if (stepUp == null || !mounted) return;
+    setState(() => _passkeyBusy = true);
+    try {
+      await widget.api.passkeyRemove(
+        credentialId,
+        password: stepUp[0],
+        mfaCode: stepUp[1].isEmpty ? null : stepUp[1],
+      );
+      await _load();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.settingsPasskeysRemoved)),
+      );
+    } on AuthException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.displayMessage)));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(friendlyErrorMessage(error))));
+    } finally {
+      if (mounted) setState(() => _passkeyBusy = false);
+    }
+  }
+
+  Widget _passkeysCard(AppLocalizations l10n) {
+    final supported = widget.passkeyCeremony.isSupported;
+    return Card(
+      child: Column(
+        children: [
+          ListTile(
+            leading: const Icon(Icons.key_outlined),
+            title: Text(l10n.settingsPasskeysTitle),
+            subtitle: Text(
+              !_passkeysAvailable
+                  ? l10n.settingsPasskeysUnavailableServer
+                  : !supported
+                      ? l10n.settingsPasskeysUnavailableDevice
+                      : _passkeys.isEmpty
+                          ? l10n.settingsPasskeysEmpty
+                          : _passkeys.length.toString(),
+            ),
+            trailing: _passkeyBusy
+                ? const SizedBox.square(
+                    dimension: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : TextButton(
+                    onPressed: !_passkeysAvailable || !supported
+                        ? null
+                        : _addPasskey,
+                    child: Text(l10n.settingsPasskeysAdd),
+                  ),
+          ),
+          ..._passkeys.map((row) {
+            final id = row['credentialId'] as String? ?? '';
+            final createdAt = row['createdAt'] as String?;
+            return ListTile(
+              title: Text(id.length <= 18 ? id : '${id.substring(0, 16)}...'),
+              subtitle: createdAt == null ? null : Text(_date(createdAt)),
+              trailing: IconButton(
+                tooltip: l10n.settingsPasskeysRemove,
+                onPressed: _passkeyBusy || id.isEmpty
+                    ? null
+                    : () => _removePasskey(id),
+                icon: const Icon(Icons.delete_outline),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
   }
 
   Future<void> _configureMfa() async {
@@ -952,6 +1143,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
         const SizedBox(height: 20),
         _heading('PRIVACY & ACCESS'),
+        _passkeysCard(l10n),
         if (_mfa != null)
           Card(
             child: ListTile(

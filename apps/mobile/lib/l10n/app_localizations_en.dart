@@ -2030,6 +2030,58 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsThemeColorApply => 'Use color';
 
   @override
+  String get loginUsePasskey => 'Use a passkey';
+
+  @override
+  String get loginPasskeyUnavailable =>
+      'Passkeys are not available on this device yet. Use the FINVERSE web app or sign in with your password.';
+
+  @override
+  String get loginPasskeyCancelled => 'Passkey sign-in was cancelled.';
+
+  @override
+  String get loginPasskeyFailed => 'This passkey could not be verified.';
+
+  @override
+  String get settingsPasskeysTitle => 'Passkeys';
+
+  @override
+  String get settingsPasskeysUnavailableServer =>
+      'Not configured on this server';
+
+  @override
+  String get settingsPasskeysUnavailableDevice =>
+      'Available in the FINVERSE web app';
+
+  @override
+  String get settingsPasskeysEmpty => 'No passkeys on this account';
+
+  @override
+  String get settingsPasskeysAdd => 'Add passkey';
+
+  @override
+  String get settingsPasskeysRemove => 'Remove';
+
+  @override
+  String get settingsPasskeysAdded => 'Passkey added.';
+
+  @override
+  String get settingsPasskeysRemoved => 'Passkey removed.';
+
+  @override
+  String get settingsPasskeysPasswordTitle => 'Confirm your password';
+
+  @override
+  String get settingsPasskeysPasswordDetail =>
+      'Adding or removing a passkey requires your current password.';
+
+  @override
+  String get settingsPasskeysMfaLabel => 'Authenticator or recovery code';
+
+  @override
+  String get settingsPasskeysContinue => 'Continue';
+
+  @override
   String get settingsDarkModeTitle => 'Dark mode';
 
   @override
