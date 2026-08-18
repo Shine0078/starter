@@ -1,7 +1,7 @@
 # FINVERSE status - 2026-08-18 (verified)
 
 Canonical working branch: `codex/passkey-webauthn-p0`
-HEAD at write time: `436440f`
+HEAD at write time: `5273eec`
 Do not treat older handover prose as current. This file records only what was executed and observed.
 
 ## Passkey / WebAuthn (P0)
@@ -25,6 +25,7 @@ Proven locally in this session:
 
 - `npx vitest run test/config.spec.ts test/webauthn.spec.ts` - 41 passed (includes the origin allowlist)
 - Isolated `npx vitest run test/auth-api.spec.ts` - 70 passed
+- `npx vitest run test/webauthn.spec.ts` after step-up negatives — 16 passed (wrong password and MFA-required enroll)
 - Targeted Postgres `webauthn-postgres.spec.ts` + `rls.spec.ts` after migration 030 — 71 passed
 
 - Flutter passkey + rejected-offline tests - 4 passed
