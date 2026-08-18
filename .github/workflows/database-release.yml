@@ -21,6 +21,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: database-release-${{ inputs.environment }}
@@ -41,6 +42,7 @@ jobs:
           EXPECTED_CONFIRMATION: release ${{ inputs.environment }}
           ACTUAL_CONFIRMATION: ${{ inputs.confirmation }}
           CANDIDATE_SHA: ${{ inputs.sha }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           test "$ACTUAL_CONFIRMATION" = "$EXPECTED_CONFIRMATION"
           test -n "$DATABASE_URL"

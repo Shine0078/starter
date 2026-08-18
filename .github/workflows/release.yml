@@ -43,19 +43,19 @@ jobs:
             test "$RUN_CONCLUSION" = "success"
             test -n "$RUN_HEAD_SHA"
             case "$RUN_HEAD_BRANCH" in
-              main|master|v*) ;;
+              main|master) ;;
               *)
-                echo "Skipping release for branch $RUN_HEAD_BRANCH"
+                echo "Skipping automatic release for branch $RUN_HEAD_BRANCH"
                 exit 1
                 ;;
             esac
             SHA="$RUN_HEAD_SHA"
           else
             SHA="$MANUAL_SHA"
-            test "${#SHA}" -eq 40
-            CONCLUSION=$(gh api "repos/${REPO}/actions/runs?head_sha=${SHA}&status=completed&per_page=20" --jq '.workflow_runs | map(select(.name=="CI" and .conclusion=="success")) | length')
-            test "$CONCLUSION" -gt 0
           fi
+          test "${#SHA}" -eq 40
+          CONCLUSION=$(gh api "repos/${REPO}/actions/runs?head_sha=${SHA}&status=completed&per_page=30" --jq '.workflow_runs | map(select(.name=="CI" and .conclusion=="success" and .head_sha=="'"$SHA"'")) | length')
+          test "$CONCLUSION" -gt 0
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
           echo "Releasing verified SHA $SHA"
 
