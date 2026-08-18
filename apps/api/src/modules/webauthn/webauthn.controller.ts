@@ -33,6 +33,7 @@ export class WebAuthnController {
     return { available: this.webauthn.available };
   }
 
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('register/options')
   async registerOptions(
     @CurrentUser() userId: string,
@@ -49,6 +50,7 @@ export class WebAuthnController {
     return this.webauthn.registrationOptions(user);
   }
 
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('register/verify')
   async registerVerify(
     @CurrentUser() userId: string,
@@ -80,6 +82,7 @@ export class WebAuthnController {
     return { credentials: await this.webauthn.listCredentials(userId) };
   }
 
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Delete('credentials/:id')
   @HttpCode(204)
   async removeCredential(
