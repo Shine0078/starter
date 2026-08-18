@@ -205,6 +205,7 @@ class ApiClient implements BackgroundSyncClient {
   // a server-revoked refresh token.
   SessionTokens? _pendingSessionWrite;
   Future<bool>? _refreshFuture;
+  Future<int>? _replayFuture;
   _RefreshFailure _lastRefreshFailure = _RefreshFailure.none;
   final ValueNotifier<DateTime?> offlineCacheStatus = ValueNotifier(null);
 
@@ -239,6 +240,7 @@ class ApiClient implements BackgroundSyncClient {
     if (stored == null) {
       pendingMutationCount.value = 0;
     rejectedMutationCount.value = 0;
+    _rejectedMutations.clear();
       return false;
     }
 
@@ -474,6 +476,7 @@ class ApiClient implements BackgroundSyncClient {
     if (owner == null) {
       pendingMutationCount.value = 0;
     rejectedMutationCount.value = 0;
+    _rejectedMutations.clear();
       return;
     }
     try {
@@ -487,7 +490,13 @@ class ApiClient implements BackgroundSyncClient {
   /// Replays queued idempotent writes in order. Network failures leave the
   /// remaining rows intact; client errors are discarded because retrying them
   /// forever would hide a permanent validation or permission problem.
-  Future<int> replayOfflineMutations() async {
+  Future<int> replayOfflineMutations() {
+    return _replayFuture ??= _replayOfflineMutations().whenComplete(() {
+      _replayFuture = null;
+    });
+  }
+
+  Future<int> _replayOfflineMutations() async {
     final owner = _cacheOwner;
     if (owner == null) return 0;
     List<QueuedApiMutation> pending;
@@ -842,6 +851,7 @@ class ApiClient implements BackgroundSyncClient {
     }
     pendingMutationCount.value = 0;
     rejectedMutationCount.value = 0;
+    _rejectedMutations.clear();
     offlineCacheStatus.value = null;
     return serverConfirmed;
   }
@@ -882,6 +892,7 @@ class ApiClient implements BackgroundSyncClient {
     }
     pendingMutationCount.value = 0;
     rejectedMutationCount.value = 0;
+    _rejectedMutations.clear();
     offlineCacheStatus.value = null;
   }
 
@@ -1552,14 +1563,14 @@ class ApiClient implements BackgroundSyncClient {
     ) as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> passkeyLoginVerify(
+  Future<PublicUser> passkeyLoginVerify(
     String id, {
     required String ceremonyId,
     required String clientDataJson,
     required String authenticatorData,
     required String signature,
-  }) async {
-    return await _send('POST', '/webauthn/login/verify', {
+  }) {
+    return _authenticate('/webauthn/login/verify', {
       'id': id,
       'ceremonyId': ceremonyId,
       'response': {
@@ -1567,7 +1578,7 @@ class ApiClient implements BackgroundSyncClient {
         'authenticatorData': authenticatorData,
         'signature': signature,
       },
-    }) as Map<String, dynamic>;
+    });
   }
 
   Future<List<Map<String, dynamic>>> passkeyCredentials() async {
