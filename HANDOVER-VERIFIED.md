@@ -1,7 +1,7 @@
 # FINVERSE status - 2026-08-18 (verified)
 
 Canonical working branch: `codex/passkey-webauthn-p0`
-HEAD at write time: `5273eec`
+HEAD at write time: `af7f766`
 Do not treat older handover prose as current. This file records only what was executed and observed.
 
 ## Passkey / WebAuthn (P0)
@@ -63,12 +63,12 @@ A first full `npm run test:db` on this branch reached 926 passed / 70 skipped, t
 - Registration now requires the AT flag and `body.id` to match the attested credential id
 - Passkey enroll/remove routes are throttled at 10/min
 - Migration 030 drops unused `webauthn_challenges.failed_attempts` and grants EXECUTE on `finverse_webauthn_credential_owner` when `finverse_app` exists
+- Native association files now include AASA `webcredentials` and optional `/.well-known/assetlinks.json` (requires ANDROID_CERT_FINGERPRINTS). Repeated failed assertions on a known passkey now lock further passkey login without affecting password lockout.
 
 ## Still open (not claimed complete)
 
 - Native iOS/Android Credential Manager / ASAuthorization ceremony (web is wired; native is an honest stub)
 - Physical-device / Safari-Chrome passkey smoke
-- Passkey login still does not inherit password lockout (only `users.status !== 'active'`). Failed passkey events no longer increment the password lockout window.
 - External owner gates: production Plaid/Stripe, domains/TLS, SMTP, APNs/FCM, Apple/Android store signing, legal/privacy review, independent pentest, CI on this unpushed branch
 
 ## Owner actions required
