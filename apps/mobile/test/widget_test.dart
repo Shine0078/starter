@@ -892,6 +892,46 @@ void main() {
     expect(await cache.pendingMutations('user-1'), isEmpty);
   });
 
+  test('keeps rejected offline mutations visible and isolated by account', () async {
+    final store = InMemorySessionStore();
+    final cache = InMemoryOfflineCacheStore();
+    await store.write(const SessionTokens(
+      accessToken: 'access',
+      refreshToken: 'refresh',
+      refreshExpiresAt: '2026-09-08T00:00:00.000Z',
+      userId: 'user-1',
+    ));
+    await cache.enqueueMutation(
+      'user-2',
+      'PATCH',
+      '/transactions/txn-other',
+      '{"notes":"other-user"}',
+    );
+    var online = false;
+    final api = clientWith(
+      MockClient((request) async {
+        if (!online) throw http.ClientException('offline');
+        return http.Response('{"message":"validation failed"}', 422);
+      }),
+      store: store,
+      offlineCache: cache,
+    );
+    await api.restoreSession();
+
+    await expectLater(
+      api.updateTransactionPreferences('txn-1', note: 'queued'),
+      throwsA(isA<OfflineMutationQueuedException>()),
+    );
+    expect(api.pendingMutationCount.value, 1);
+    expect(await cache.pendingMutations('user-2'), hasLength(1));
+
+    online = true;
+    expect(await api.replayOfflineMutations(), 0);
+    expect(api.pendingMutationCount.value, 0);
+    expect(api.rejectedMutationCount.value, 1);
+    expect(await cache.pendingMutations('user-1'), isEmpty);
+    expect(await cache.pendingMutations('user-2'), hasLength(1));
+  });
   test('portable export confirms the password and attaches the active session',
       () async {
     final store = InMemorySessionStore();
@@ -1585,7 +1625,7 @@ void main() {
     }));
 
     expect(await api.passkeysAvailable(), isTrue);
-    final options = await api.passkeyRegisterOptions();
+    final options = await api.passkeyRegisterOptions(password: 'correct horse battery staple');
     expect(options['challenge'], 'abc');
     expect(sawRegisterOptions, isTrue);
 
