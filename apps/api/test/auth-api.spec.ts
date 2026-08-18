@@ -893,6 +893,11 @@ describe('auth API', () => {
         .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
         .send({ password: PASSWORD, confirmation: 'DELETE' })
         .expect(401);
+      await request(http)
+        .post('/api/bank-links/link-token')
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .send({ password: PASSWORD })
+        .expect(401);
     });
 
     it('exports portable user data after password confirmation without credential material', async () => {

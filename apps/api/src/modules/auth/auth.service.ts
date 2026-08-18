@@ -721,22 +721,11 @@ export class AuthService {
   async verifyBankLinkStepUp(
     userId: string,
     password: string,
+    mfaCode: string | undefined,
     context: RequestContext,
   ): Promise<void> {
-    const user = await this.users.findById(userId);
-    if (!user || user.status !== 'active') {
-      throw new UnauthorizedException('Session is no longer valid. Sign in again.');
-    }
-    const verified = await this.hasher.verify(user.passwordHash, password);
-    await this.record(
-      'bank_link_step_up',
-      verified,
-      user.id,
-      user.email,
-      context,
-      verified ? null : 'password re-verification failed',
-    );
-    if (!verified) throw new UnauthorizedException('Password is incorrect.');
+    const user = await this.requireRecentPassword(userId, password, mfaCode, context);
+    await this.record('bank_link_step_up', true, user.id, user.email, context, null);
   }
 
   /** Used by the guard. Verifies signature, then confirms the session still exists. */
