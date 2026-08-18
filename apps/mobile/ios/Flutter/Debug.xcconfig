@@ -1,5 +1,5 @@
 #include "Generated.xcconfig"
 
-# A valid placeholder keeps unsigned CI builds deterministic. Override this
-# with the deployed host when testing native iOS Plaid OAuth.
+// A valid placeholder keeps unsigned CI builds deterministic. Override this
+// with the deployed host when testing native iOS Plaid OAuth.
 PLAID_UNIVERSAL_LINK_DOMAIN = api.example.invalid
