@@ -307,7 +307,33 @@ describe('webauthn API', () => {
     return { tokens: response.body.tokens as { accessToken: string } };
   }
 
-  it('reports availability and requires a token for registration', async () => {
+    it('lets an unauthenticated client start and submit a passkey login ceremony', async () => {
+    const options = await request(http)
+      .post('/api/webauthn/login/options')
+      .send({})
+      .expect(200);
+    expect(options.body.challenge).toBeTruthy();
+    expect(options.body.userVerification).toBe('required');
+    expect(options.body.ceremonyId).toBeTruthy();
+
+    const verify = await request(http)
+      .post('/api/webauthn/login/verify')
+      .send({
+        id: 'not-a-real-credential',
+        ceremonyId: options.body.ceremonyId,
+        response: {
+          clientDataJSON: base64UrlEncode(Buffer.from('{}')),
+          authenticatorData: base64UrlEncode(Buffer.alloc(37)),
+          signature: base64UrlEncode(Buffer.alloc(64)),
+        },
+      });
+
+    // The ceremony is public, but a garbage assertion must fail closed
+    // without asking for a bearer token.
+    expect(verify.status).not.toBe(401);
+    expect(verify.status).toBeGreaterThanOrEqual(400);
+  });
+it('reports availability and requires a token for registration', async () => {
     const status = await request(http).get('/api/webauthn/status').expect(200);
     expect(status.body.available).toBe(true);
     await request(http).post('/api/webauthn/register/options').expect(401);

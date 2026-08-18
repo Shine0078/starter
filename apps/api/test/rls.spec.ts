@@ -220,6 +220,36 @@ if (!OWNER_URL) {
       expect(rows).toHaveLength(0);
     });
 
+    it('blocks unscoped WebAuthn credential lookup and requires a routing function', async () => {
+      const credentialId = `wa_${ALICE}`;
+      const raw = await app.query(
+        'SELECT user_id FROM webauthn_credentials WHERE credential_id = $1',
+        [credentialId],
+      );
+      expect(raw.rows).toHaveLength(0);
+
+      const routed = await app.query<{
+        user_id: string;
+        credential_id: string;
+        public_key_pem: string;
+        counter: number;
+      }>('SELECT * FROM finverse_webauthn_credential($1)', [credentialId]);
+
+      expect(routed.fields.map((field) => field.name)).toEqual([
+        'user_id',
+        'credential_id',
+        'public_key_pem',
+        'counter',
+      ]);
+      expect(routed.rows).toEqual([
+        {
+          user_id: ALICE,
+          credential_id: credentialId,
+          public_key_pem: '-----BEGIN PUBLIC KEY-----',
+          counter: 0,
+        },
+      ]);
+    });
     it('routes a provider Item through the narrow owner function without exposing the token', async () => {
       const result = await app.query(
         'SELECT * FROM finverse_link_owner($1)',
