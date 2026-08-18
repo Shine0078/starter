@@ -19,7 +19,6 @@ services:
     envVars:
       # Free Render is a preview only: it uses the development email adapter,
       # avoids SMTP restrictions, and must never receive real financial data.
-      # Change to production and fill every secret before accepting users.
       - key: NODE_ENV
         value: development
       - key: STORE
