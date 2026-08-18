@@ -1,4 +1,5 @@
 import {
+  allowedWebAuthnOrigins,
   authenticatorRpIdHash,
   base64UrlEncode,
   hashRpId,
@@ -36,7 +37,7 @@ export class Fido2Verifier implements WebAuthnVerifier {
     const clientData = verifyClientData(
       params.clientDataJson,
       params.expectedChallenge,
-      config.origin,
+      allowedWebAuthnOrigins(config),
       'webauthn.create',
     );
     if (!clientData) throw new Error('WebAuthn client data could not be verified.');
@@ -67,7 +68,7 @@ export class Fido2Verifier implements WebAuthnVerifier {
     const clientData = verifyClientData(
       params.clientDataJson,
       params.expectedChallenge,
-      config.origin,
+      allowedWebAuthnOrigins(config),
       'webauthn.get',
     );
     if (!clientData) throw new Error('WebAuthn client data could not be verified.');

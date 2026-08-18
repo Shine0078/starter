@@ -212,18 +212,18 @@ describe.sequential('production configuration', () => {
     expect(() => loadConfig()).toThrow(/WEBAUTHN_RP_ID and WEBAUTHN_ORIGIN/);
   });
 
-  it('requires HTTPS and a matching origin for passkeys in production', () => {
+  it('requires HTTPS and an RP-aligned origin for passkeys in production', () => {
     productionBase();
     process.env.WEBAUTHN_ENABLED = 'true';
-    process.env.WEBAUTHN_RP_ID = 'api.finverse.example';
-    process.env.WEBAUTHN_ORIGIN = 'http://api.finverse.example';
+    process.env.WEBAUTHN_RP_ID = 'finverse.example';
+    process.env.WEBAUTHN_ORIGIN = 'http://app.finverse.example';
     expect(() => loadConfig()).toThrow(/must use HTTPS/);
 
     productionBase();
     process.env.WEBAUTHN_ENABLED = 'true';
-    process.env.WEBAUTHN_RP_ID = 'api.finverse.example';
-    process.env.WEBAUTHN_ORIGIN = 'https://app.finverse.example';
-    expect(() => loadConfig()).toThrow(/WEBAUTHN_RP_ID must equal/);
+    process.env.WEBAUTHN_RP_ID = 'finverse.example';
+    process.env.WEBAUTHN_ORIGIN = 'https://evil.example';
+    expect(() => loadConfig()).toThrow(/must equal WEBAUTHN_RP_ID or be a subdomain/);
   });
 
   it('builds a valid passkey configuration when fully supplied', () => {
@@ -234,9 +234,36 @@ describe.sequential('production configuration', () => {
     process.env.WEBAUTHN_RP_NAME = 'FINVERSE';
     expect(loadConfig().webauthn).toEqual({
       rpId: 'api.finverse.example',
+      origins: ['https://api.finverse.example'],
       origin: 'https://api.finverse.example',
       rpName: 'FINVERSE',
     });
+  });
+
+  it('accepts a comma-separated origin allowlist under one RP ID', () => {
+    productionBase();
+    process.env.WEBAUTHN_ENABLED = 'true';
+    process.env.WEBAUTHN_RP_ID = 'finverse.example';
+    process.env.WEBAUTHN_ORIGIN =
+      'https://app.finverse.example, https://api.finverse.example, android:apk-key-hash:abcdefghijklmnopqrstuvwxyz0123456789_-ABCDE';
+    expect(loadConfig().webauthn).toEqual({
+      rpId: 'finverse.example',
+      origins: [
+        'https://app.finverse.example',
+        'https://api.finverse.example',
+        'android:apk-key-hash:abcdefghijklmnopqrstuvwxyz0123456789_-ABCDE',
+      ],
+      origin: 'https://app.finverse.example',
+      rpName: 'FINVERSE',
+    });
+  });
+
+  it('rejects an RP ID that includes a scheme or port', () => {
+    productionBase();
+    process.env.WEBAUTHN_ENABLED = 'true';
+    process.env.WEBAUTHN_RP_ID = 'https://finverse.example';
+    process.env.WEBAUTHN_ORIGIN = 'https://app.finverse.example';
+    expect(() => loadConfig()).toThrow(/hostname without a port/);
   });
 
   it('does not allow production to downgrade breached-password screening', () => {

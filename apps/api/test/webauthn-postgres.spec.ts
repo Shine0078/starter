@@ -25,6 +25,7 @@ import { OWNER_URL, startPgHarness, type PgHarness } from './pg-harness';
 
 const CONFIG = {
   rpId: 'api.finverse.test',
+  origins: ['https://api.finverse.test'],
   origin: 'https://api.finverse.test',
   rpName: 'FINVERSE Test',
 };

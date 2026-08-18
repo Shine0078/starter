@@ -34,6 +34,7 @@ process.env.THROTTLE_DISABLED = 'true';
 
 const CONFIG: WebAuthnConfig = {
   rpId: 'api.finverse.test',
+  origins: ['https://api.finverse.test'],
   origin: 'https://api.finverse.test',
   rpName: 'FINVERSE Test',
 };
@@ -304,6 +305,85 @@ describe('Fido2Verifier', () => {
         publicKeyPem: registration.publicKeyPem,
       }),
     ).rejects.toThrow(/invalid/i);
+  });
+
+  it('accepts any allowlisted origin while still rejecting others', async () => {
+    const { privateKey, publicKey } = generateKeyPairSync('ec', { namedCurve: 'P-256' });
+    const allowlisted = {
+      ...CONFIG,
+      origins: ['https://app.finverse.test', CONFIG.origin],
+      origin: 'https://app.finverse.test',
+    };
+    const verifier = new Fido2Verifier(allowlisted);
+    const key = publicKey.export({ type: 'spki', format: 'der' });
+    const point = key.subarray(key.length - 65);
+    const credentialId = Buffer.from('allowlist-credential-id');
+    const challenge = base64UrlEncode(Buffer.from('allowlist-reg'));
+    const clientData = Buffer.from(
+      JSON.stringify({
+        type: 'webauthn.create',
+        challenge,
+        origin: CONFIG.origin,
+      }),
+    );
+    const auth = registrationAuthData(
+      CONFIG.rpId,
+      credentialId,
+      coseEc2Key(point.subarray(1, 33), point.subarray(33, 65)),
+    );
+    const attestationObject = cborEncode(
+      new Map<string, unknown>([
+        ['fmt', 'none'],
+        ['attStmt', new Map<string, unknown>()],
+        ['authData', new Uint8Array(auth)],
+      ]),
+    );
+    const registration = await verifier.verifyRegistration({
+      clientDataJson: clientData,
+      attestationObject,
+      expectedChallenge: challenge,
+    });
+
+    const loginChallenge = base64UrlEncode(Buffer.from('allowlist-login'));
+    const loginClientData = Buffer.from(
+      JSON.stringify({
+        type: 'webauthn.get',
+        challenge: loginChallenge,
+        origin: 'https://app.finverse.test',
+      }),
+    );
+    const loginAuthData = authData(CONFIG.rpId, 9);
+    const signed = Buffer.concat([
+      loginAuthData,
+      createHash('sha256').update(loginClientData).digest(),
+    ]);
+    const login = await verifier.verifyAuthentication({
+      clientDataJson: loginClientData,
+      authenticatorData: loginAuthData,
+      signature: derSign(signed, privateKey),
+      expectedChallenge: loginChallenge,
+      credentialId: registration.credentialId,
+      publicKeyPem: registration.publicKeyPem,
+    });
+    expect(login.counter).toBe(9);
+
+    const evilClientData = Buffer.from(
+      JSON.stringify({
+        type: 'webauthn.get',
+        challenge: loginChallenge,
+        origin: 'https://evil.example',
+      }),
+    );
+    await expect(
+      verifier.verifyAuthentication({
+        clientDataJson: evilClientData,
+        authenticatorData: loginAuthData,
+        signature: derSign(signed, privateKey),
+        expectedChallenge: loginChallenge,
+        credentialId: registration.credentialId,
+        publicKeyPem: registration.publicKeyPem,
+      }),
+    ).rejects.toThrow(/client data/i);
   });
 
   it('fails closed when WebAuthn is not configured', async () => {
