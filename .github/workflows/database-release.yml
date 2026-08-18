@@ -76,6 +76,6 @@ jobs:
           {
             echo "## Database release"
             echo "- Environment: ${{ inputs.environment }}"
-            echo "- Commit: $GITHUB_SHA"
+            echo "- Commit: ${{ inputs.sha }}"
             echo "- Result: ${{ job.status }}"
           } >> "$GITHUB_STEP_SUMMARY"
