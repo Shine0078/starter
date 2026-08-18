@@ -1,3 +1,5 @@
+> **Historical.** Current verified status is in [`HANDOVER-VERIFIED.md`](HANDOVER-VERIFIED.md) on `codex/passkey-webauthn-p0`. Do not treat the counts or Render findings below as current.
+
 # FINVERSE — CURRENT HANDOVER (for the next agent)
 
 > ## 2026-08-18 — the blank screen is solved; the Render URL is the new blocker

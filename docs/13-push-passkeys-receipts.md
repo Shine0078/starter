@@ -28,16 +28,15 @@ this is a real technical requirement, not a shortcut:
 
 ```env
 WEBAUTHN_ENABLED=true
-WEBAUTHN_RP_ID=api.your-domain.example     # must equal the origin host
-WEBAUTHN_ORIGIN=https://api.your-domain.example
+WEBAUTHN_RP_ID=your-domain.example
+WEBAUTHN_ORIGIN=https://app.your-domain.example,https://api.your-domain.example
 WEBAUTHN_RP_NAME=FINVERSE
 ```
 
-Then, in the Flutter app, a native passkey button calls
-`passkeyRegisterOptions()` / `passkeyLoginOptions()` from `lib/api/client.dart`
-and hands the challenge to the platform authenticator (iOS `ASAuthorization` /
-Android Credential Manager). The mobile client methods are implemented and
-tested; the platform ceremony wiring is the remaining owner/device step.
+The Flutter login and settings screens now call those methods. The web/PWA build
+runs a real `navigator.credentials` ceremony. Native iOS/Android still report
+unsupported until Credential Manager / ASAuthorization and Digital Asset Links /
+`webcredentials` are configured.
 
 ## Remote push and background sync
 
