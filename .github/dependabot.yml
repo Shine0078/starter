@@ -12,3 +12,7 @@ updates:
     directory: /
     schedule:
       interval: weekly
+  - package-ecosystem: pub
+    directory: /apps/mobile
+    schedule:
+      interval: weekly
