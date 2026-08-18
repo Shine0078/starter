@@ -311,6 +311,7 @@ export class PostgresAuthEventStore implements AuthEventStore {
     const { rows } = await this.pg.query<{ created_at: Date }>(
       `SELECT created_at FROM auth_events
        WHERE succeeded = false
+         AND kind = 'login'
          AND lower(email_attempted) = lower($1)
          AND created_at >= $2
        ORDER BY created_at DESC`,

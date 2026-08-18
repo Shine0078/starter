@@ -185,6 +185,7 @@ export class InMemoryAuthEventStore implements AuthEventStore {
       .filter(
         (e) =>
           e.succeeded === false &&
+          e.kind === 'login' &&
           e.emailAttempted === email &&
           e.createdAt.getTime() >= since.getTime(),
       )
