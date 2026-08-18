@@ -137,6 +137,17 @@ class OfflineMutationQueuedException implements Exception {
       'Saved on this device. It will sync automatically when you are online.';
 }
 
+class OfflineMutationRejectedException implements Exception {
+  const OfflineMutationRejectedException(this.path, this.statusCode);
+
+  final String path;
+  final int statusCode;
+
+  @override
+  String toString() =>
+      'This change could not be saved and will not be retried automatically.';
+}
+
 /// Thin client over the FINVERSE API.
 ///
 /// It parses JSON into models but contains no financial business logic. The
@@ -200,6 +211,8 @@ class ApiClient implements BackgroundSyncClient {
   /// Number of idempotent writes waiting for connectivity. This is exposed so
   /// the shell can explain why an offline edit is still pending.
   final ValueNotifier<int> pendingMutationCount = ValueNotifier(0);
+  final ValueNotifier<int> rejectedMutationCount = ValueNotifier(0);
+  final List<OfflineMutationRejectedException> _rejectedMutations = [];
 
   /// Monotonically increasing revision for successful authenticated writes.
   ///
@@ -225,6 +238,7 @@ class ApiClient implements BackgroundSyncClient {
     final stored = _tokens;
     if (stored == null) {
       pendingMutationCount.value = 0;
+    rejectedMutationCount.value = 0;
       return false;
     }
 
@@ -459,6 +473,7 @@ class ApiClient implements BackgroundSyncClient {
     final owner = _cacheOwner;
     if (owner == null) {
       pendingMutationCount.value = 0;
+    rejectedMutationCount.value = 0;
       return;
     }
     try {
@@ -521,6 +536,11 @@ class ApiClient implements BackgroundSyncClient {
       if (response.statusCode >= 400 && response.statusCode < 500) {
         await offlineCache.removeMutation(
             owner, mutation.method, mutation.path);
+        _rejectedMutations.add(OfflineMutationRejectedException(
+          mutation.path,
+          response.statusCode,
+        ));
+        rejectedMutationCount.value = _rejectedMutations.length;
         continue;
       }
       // A server-side outage is transient. Keep this and all following rows.
@@ -821,6 +841,7 @@ class ApiClient implements BackgroundSyncClient {
       }
     }
     pendingMutationCount.value = 0;
+    rejectedMutationCount.value = 0;
     offlineCacheStatus.value = null;
     return serverConfirmed;
   }
@@ -860,6 +881,7 @@ class ApiClient implements BackgroundSyncClient {
       }
     }
     pendingMutationCount.value = 0;
+    rejectedMutationCount.value = 0;
     offlineCacheStatus.value = null;
   }
 

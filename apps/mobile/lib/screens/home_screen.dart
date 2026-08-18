@@ -80,22 +80,30 @@ class _HomeScreenState extends State<HomeScreen> {
         valueListenable: widget.api.offlineCacheStatus,
         builder: (context, cachedAt, _) => ValueListenableBuilder<int>(
           valueListenable: widget.api.pendingMutationCount,
-          builder: (context, pending, _) => Column(
+          builder: (context, pending, _) => ValueListenableBuilder<int>(
+            valueListenable: widget.api.rejectedMutationCount,
+            builder: (context, rejected, _) => Column(
             children: [
-              if (cachedAt != null || pending > 0)
+              if (cachedAt != null || pending > 0 || rejected > 0)
                 Material(
-                  color: Theme.of(context).colorScheme.tertiaryContainer,
+                  color: rejected > 0
+                      ? Theme.of(context).colorScheme.errorContainer
+                      : Theme.of(context).colorScheme.tertiaryContainer,
                   child: ListTile(
                     dense: true,
-                    leading: const Icon(Icons.cloud_off_outlined),
-                    title: Text(pending > 0
+                    leading: Icon(rejected > 0
+                        ? Icons.error_outline
+                        : Icons.cloud_off_outlined),
+                    title: Text(rejected > 0 || pending > 0
                         ? l10n.offlineBannerPending
                         : l10n.offlineBannerTitle),
-                    subtitle: Text(pending > 0
-                        ? l10n.offlineBannerPendingDetail(pending)
-                        : l10n.offlineBannerLastUpdated(DateFormat.yMMMd()
-                            .add_jm()
-                            .format(cachedAt!.toLocal()))),
+                    subtitle: Text(rejected > 0
+                        ? l10n.offlineBannerPendingDetail(rejected)
+                        : pending > 0
+                            ? l10n.offlineBannerPendingDetail(pending)
+                            : l10n.offlineBannerLastUpdated(DateFormat.yMMMd()
+                                .add_jm()
+                                .format(cachedAt!.toLocal()))),
                   ),
                 ),
               Expanded(
@@ -121,6 +129,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ],
+          ),
           ),
         ),
       );
