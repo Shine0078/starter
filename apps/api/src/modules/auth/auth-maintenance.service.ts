@@ -8,6 +8,10 @@ import {
 
 import { CLOCK, type ClockPort } from '../../ports';
 import {
+  WEBAUTHN_CHALLENGE_STORE,
+  type WebAuthnChallengeStore,
+} from '../../infra/webauthn/webauthn-challenge-stores';
+import {
   ACCOUNT_DELETION_STORE,
   SESSION_STORE,
   type AccountDeletionStore,
@@ -32,6 +36,7 @@ export class AuthMaintenanceService implements OnModuleInit, OnModuleDestroy {
   constructor(
     @Inject(ACCOUNT_DELETION_STORE) private readonly deletions: AccountDeletionStore,
     @Inject(SESSION_STORE) private readonly sessions: SessionStore,
+    @Inject(WEBAUTHN_CHALLENGE_STORE) private readonly webauthnChallenges: WebAuthnChallengeStore,
     @Inject(CLOCK) private readonly clock: ClockPort,
   ) {}
 
@@ -70,6 +75,11 @@ export class AuthMaintenanceService implements OnModuleInit, OnModuleDestroy {
         expiredSessions = await this.sessions.deleteExpired(now);
       } catch (error) {
         this.logger.warn(`Session maintenance failed: ${safeError(error)}`);
+      }
+      try {
+        await this.webauthnChallenges.deleteExpired(now);
+      } catch (error) {
+        this.logger.warn(`WebAuthn challenge maintenance failed: ${safeError(error)}`);
       }
 
       if (purgedAccounts > 0 || expiredSessions > 0) {

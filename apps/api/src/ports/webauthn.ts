@@ -11,6 +11,7 @@
 export const WEBAUTHN_VERIFIER = 'WEBAUTHN_VERIFIER';
 export const WEBAUTHN_CREDENTIAL_STORE = 'WEBAUTHN_CREDENTIAL_STORE';
 export const WEBAUTHN_CONFIG = 'WEBAUTHN_CONFIG';
+export const WEBAUTHN_CHALLENGE_STORE = 'WEBAUTHN_CHALLENGE_STORE';
 
 export interface WebAuthnVerifier {
   readonly configured: boolean;
@@ -56,6 +57,7 @@ export interface WebAuthnCredentialStore {
   findByCredentialId(
     credentialId: string,
   ): Promise<{ userId: string; credential: WebAuthnCredential } | null>;
+  /** Advances the sign counter only when the new value is strictly greater. */
   updateCounter(userId: string, credentialId: string, counter: number): Promise<void>;
   remove(userId: string, credentialId: string): Promise<boolean>;
   purgeUser(userId: string): Promise<void>;

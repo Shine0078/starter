@@ -14,6 +14,7 @@ function service(options?: {
   const maintenance = new AuthMaintenanceService(
     { purgeDue } as never,
     { deleteExpired } as never,
+    { deleteExpired: vi.fn(async () => 0) } as never,
     new FixedClock('2026-08-10'),
   );
   return { maintenance, purgeDue, deleteExpired };

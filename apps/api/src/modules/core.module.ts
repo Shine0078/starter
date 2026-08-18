@@ -1,4 +1,4 @@
-﻿import { randomBytes } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
 import { Global, Logger, Module, type Provider } from '@nestjs/common';
 
 import { loadConfig } from '../config';
@@ -87,6 +87,10 @@ import {
 } from '../infra/push/push-token-stores';
 import { Fido2Verifier } from '../infra/webauthn/fido2-verifier';
 import {
+  InMemoryWebAuthnChallengeStore,
+  PostgresWebAuthnChallengeStore,
+} from '../infra/webauthn/webauthn-challenge-stores';
+import {
   InMemoryWebAuthnCredentialStore,
   PostgresWebAuthnCredentialStore,
 } from '../infra/webauthn/webauthn-credential-stores';
@@ -146,6 +150,7 @@ import { CONSENT_STORE } from '../ports/privacy';
 import { RECEIPT_OCR_PROVIDER, RECEIPT_STORE } from '../ports/receipts';
 import { PUSH_PROVIDER, PUSH_TOKEN_STORE } from '../ports/push';
 import {
+  WEBAUTHN_CHALLENGE_STORE,
   WEBAUTHN_CREDENTIAL_STORE,
   WEBAUTHN_VERIFIER,
 } from '../ports/webauthn';
@@ -183,6 +188,7 @@ function storeProviders(): Provider[] {
     const receipts = new InMemoryReceiptStore();
     const pushTokens = new InMemoryPushTokenStore();
     const webauthnCredentials = new InMemoryWebAuthnCredentialStore();
+    const webauthnChallenges = new InMemoryWebAuthnChallengeStore();
     const deletions = new InMemoryAccountDeletionStore(
       users,
       sessions,
@@ -231,7 +237,8 @@ function storeProviders(): Provider[] {
       { provide: BILLING_EVENT_STORE, useValue: new InMemoryBillingEventStore() },
       { provide: RECEIPT_STORE, useValue: receipts },
       { provide: PUSH_TOKEN_STORE, useValue: pushTokens },
-      { provide: WEBAUTHN_CREDENTIAL_STORE, useValue: webauthnCredentials },
+            { provide: WEBAUTHN_CREDENTIAL_STORE, useValue: webauthnCredentials },
+      { provide: WEBAUTHN_CHALLENGE_STORE, useValue: webauthnChallenges },
     ];
   }
 
@@ -280,6 +287,10 @@ function storeProviders(): Provider[] {
     {
       provide: WEBAUTHN_CREDENTIAL_STORE,
       useFactory: () => new PostgresWebAuthnCredentialStore(pool),
+    },
+    {
+      provide: WEBAUTHN_CHALLENGE_STORE,
+      useFactory: () => new PostgresWebAuthnChallengeStore(pool),
     },
   ];
 }
@@ -450,6 +461,7 @@ function storeProviders(): Provider[] {
     PUSH_TOKEN_STORE,
     PUSH_PROVIDER,
     WEBAUTHN_CREDENTIAL_STORE,
+    WEBAUTHN_CHALLENGE_STORE,
     WEBAUTHN_VERIFIER,
   ],
 })
