@@ -386,5 +386,82 @@ if (!OWNER_URL) {
         .set('Authorization', `Bearer ${account.tokens.accessToken}`)
         .expect(400);
     });
+
+    it('issues a refreshable session and rejects disabled or cross-user passkeys', async () => {
+      const account = await registerAccount();
+      const other = await registerAccount();
+      const { privateKey, publicKey } = generateKeyPairSync('ec', { namedCurve: 'P-256' });
+      const options = await request(http)
+        .post('/api/webauthn/register/options')
+        .set('Authorization', `Bearer ${account.tokens.accessToken}`)
+        .send({ password: PASSWORD })
+        .expect(201);
+      const registration = buildRegistration(
+        options.body.challenge,
+        Buffer.from(`xuser-${account.userId}`),
+        publicKey,
+      );
+      await request(http)
+        .post('/api/webauthn/register/verify')
+        .set('Authorization', `Bearer ${account.tokens.accessToken}`)
+        .send({
+          id: registration.id,
+          ceremonyId: options.body.ceremonyId,
+          password: PASSWORD,
+          response: {
+            clientDataJSON: registration.clientDataJSON,
+            attestationObject: registration.attestationObject,
+          },
+        })
+        .expect(201);
+
+      const bound = await request(http)
+        .post('/api/webauthn/login/options')
+        .send({ email: other.email })
+        .expect(200);
+      await request(http)
+        .post('/api/webauthn/login/verify')
+        .send({
+          id: registration.id,
+          ceremonyId: bound.body.ceremonyId,
+          response: buildAssertion(bound.body.challenge, privateKey, 8),
+        })
+        .expect(401);
+
+      const login = await request(http).post('/api/webauthn/login/options').send({}).expect(200);
+      const first = buildAssertion(login.body.challenge, privateKey, 9);
+      const [a, b] = await Promise.all([
+        request(http).post('/api/webauthn/login/verify').send({
+          id: registration.id,
+          ceremonyId: login.body.ceremonyId,
+          response: first,
+        }),
+        request(http).post('/api/webauthn/login/verify').send({
+          id: registration.id,
+          ceremonyId: login.body.ceremonyId,
+          response: first,
+        }),
+      ]);
+      const statuses = [a.status, b.status].sort();
+      expect(statuses).toEqual([200, 401]);
+      const winner = a.status === 200 ? a : b;
+      const refreshed = await request(http)
+        .post('/api/auth/refresh')
+        .send({ refreshToken: winner.body.tokens.refreshToken })
+        .expect(200);
+      expect(refreshed.body.user.id).toBe(account.userId);
+      expect(refreshed.body.tokens.accessToken).toBeTruthy();
+
+      await harness.owner.query("UPDATE users SET status = 'locked' WHERE id = $1", [account.userId]);
+      const locked = await request(http).post('/api/webauthn/login/options').send({}).expect(200);
+      await request(http)
+        .post('/api/webauthn/login/verify')
+        .send({
+          id: registration.id,
+          ceremonyId: locked.body.ceremonyId,
+          response: buildAssertion(locked.body.challenge, privateKey, 10),
+        })
+        .expect(401);
+    });
   });
 }

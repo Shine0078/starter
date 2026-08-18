@@ -40,6 +40,13 @@ const PROTECTED_TABLES = [
   'push_tokens',
   'webauthn_credentials',
   'net_worth_snapshots',
+  'account_reconciliations',
+  'saved_views',
+  'import_batches',
+  'scheduled_transactions',
+  'rule_applications',
+  'rule_application_changes',
+  'fx_rates',
 ];
 
 /** Seeds one account and one transaction for a user, as the owner. */
@@ -130,6 +137,46 @@ async function seed(owner: Pool, userId: string, amount: number): Promise<void> 
        (user_id, recorded_on, currency, assets, debts, net_position)
      VALUES ($1, '2026-08-08', 'USD', 100000, 0, 100000)`,
     [userId],
+  );
+  await owner.query(
+    `INSERT INTO account_reconciliations
+       (id, user_id, account_id, statement_date, observed_balance, currency,
+        computed_balance, difference, source)
+     VALUES ($1, $2, $3, '2026-08-01', 100000, 'USD', 100000, 0, 'manual_count')`,
+    [`rec_${userId}`, userId, `acc_${userId}`],
+  );
+  await owner.query(
+    `INSERT INTO saved_views (id, user_id, name) VALUES ($1, $2, 'Default')`,
+    [`view_${userId}`, userId],
+  );
+  await owner.query(
+    `INSERT INTO import_batches
+       (id, user_id, account_id, filename, status, rows_total, rows_imported, rows_duplicate, rows_invalid)
+     VALUES ($1, $2, $3, 'export.csv', 'committed', 1, 1, 0, 0)`,
+    [`imp_${userId}`, userId, `acc_${userId}`],
+  );
+  await owner.query(
+    `INSERT INTO scheduled_transactions
+       (id, user_id, account_id, name, amount, currency, category_slug, cadence, start_date)
+     VALUES ($1, $2, $3, 'Rent', -180000, 'USD', 'housing', 'monthly', '2026-08-01')`,
+    [`sch_${userId}`, userId, `acc_${userId}`],
+  );
+  await owner.query(
+    `INSERT INTO rule_applications
+       (id, user_id, pattern, match_type, category_slug, rows_changed)
+     VALUES ($1, $2, 'rent', 'contains', 'housing', 1)`,
+    [`rapp_${userId}`, userId],
+  );
+  await owner.query(
+    `INSERT INTO rule_application_changes
+       (application_id, user_id, transaction_id, previous_category_slug, previous_category_source, previous_confidence)
+     VALUES ($1, $2, $3, 'uncategorized', 'rule', 1)`,
+    [`rapp_${userId}`, userId, `txn_${userId}`],
+  );
+  await owner.query(
+    `INSERT INTO fx_rates (id, user_id, base, quote, rate, as_of, source)
+     VALUES ($1, $2, 'USD', 'CAD', 1.35, '2026-08-01', 'manual')`,
+    [`fx_${userId}`, userId],
   );
 }
 
@@ -237,6 +284,34 @@ if (!OWNER_URL) {
 
       expect(routed.fields.map((field) => field.name)).toEqual(['user_id']);
       expect(routed.rows).toEqual([{ user_id: ALICE }]);
+    });
+    it('grants the runtime role execute on the narrow routing functions only', async () => {
+      const { role } = parseAppRole(harness.appUrl);
+      const { rows } = await owner.query<{
+        fn: string;
+        can_execute: boolean;
+      }>(`
+        SELECT proname AS fn,
+               has_function_privilege($1, oid, 'EXECUTE') AS can_execute
+          FROM pg_proc
+         WHERE pronamespace = 'public'::regnamespace
+           AND proname IN (
+             'finverse_link_owner',
+             'finverse_claim_bank_webhooks',
+             'finverse_is_split_member',
+             'finverse_subscription_owner',
+             'finverse_webauthn_credential_owner'
+           )
+         ORDER BY proname
+      `, [role]);
+      expect(rows.map((row) => row.fn)).toEqual([
+        'finverse_claim_bank_webhooks',
+        'finverse_is_split_member',
+        'finverse_link_owner',
+        'finverse_subscription_owner',
+        'finverse_webauthn_credential_owner',
+      ]);
+      expect(rows.every((row) => row.can_execute)).toBe(true);
     });
     it('routes a provider Item through the narrow owner function without exposing the token', async () => {
       const result = await app.query(
