@@ -26,10 +26,16 @@ Zero-cost distribution, no store account required:
 - **Source** — this repository.
 
 The web build and APK target the FINVERSE API at
-`https://finverse.onrender.com`. That service is provisioned by the one-click
-Render Blueprint below; until it is deployed the app UI loads but account
-creation and bank sync are unavailable. See
-[`docs/14-public-hosting-render.md`](docs/14-public-hosting-render.md).
+`https://finverse.onrender.com`.
+
+> **Status, verified 2026-08-18:** that hostname currently answers, but it is
+> **not running this API** — it serves an unrelated placeholder Express app
+> (`GET /` returns 200, `GET /healthz` returns 404). The PWA above therefore
+> renders correctly but **cannot create accounts or sync banks**. Redeploy the
+> service from the Render Blueprint below, and verify with `/healthz` returning
+> 200 rather than `/` returning 200 — the placeholder answers `/` too, which is
+> how this went unnoticed. See
+> [`docs/14-public-hosting-render.md`](docs/14-public-hosting-render.md).
 
 ## Quick start
 

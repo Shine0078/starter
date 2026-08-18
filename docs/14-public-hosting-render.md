@@ -11,6 +11,50 @@ FINVERSE on Render:
 This is different from a tunnel: the app does not depend on this workstation,
 Tailscale, a home router, or a phone being on the same network.
 
+
+## Current Deployment Status (verified 2026-08-18)
+
+**`https://finverse.onrender.com` is live but is not running this API.** It is
+serving an unrelated placeholder Express app:
+
+```text
+GET https://finverse.onrender.com/        -> 200  "You have requested the home route with GET"
+GET https://finverse.onrender.com/healthz -> 404  Cannot GET /healthz
+```
+
+Response headers show `x-powered-by: Express` with no NestJS routes and no
+`/api` surface. The first request took 31 s, which is the free-tier cold start,
+so the service is awake — it is running the wrong deploy.
+
+Consequence: the public PWA at `https://shine0078.github.io/starter/app/`
+renders correctly but **cannot authenticate**. A request to `/api/auth/login`
+from that origin fails, and the user sees "Couldn't reach the server. Check your
+connection."
+
+### Owner action
+
+Point the Render service at this repository's Blueprint (`render.yaml`, steps
+below), or delete the service and recreate it from the Blueprint.
+
+### Verify with `/healthz`, never with `/`
+
+The placeholder answers `GET /` with a 200, which is precisely why the
+misdeploy went unnoticed. A 200 on `/` proves only that *something* is running.
+
+Correct check — `/healthz` must return 200 with a JSON body naming the store:
+
+```bash
+curl -sS -w '\nhttp=%{http_code}\n' https://<service>.onrender.com/healthz
+```
+
+Then confirm the app shell and that the API is the same origin:
+
+```bash
+curl -sS -o /dev/null -w 'app=%{http_code}\n' https://<service>.onrender.com/app/
+```
+
+A 404 on `/healthz` means the wrong application is deployed, regardless of what
+`/` returns.
 ## Owner Steps
 
 1. Create a Render account and connect the GitHub repository.

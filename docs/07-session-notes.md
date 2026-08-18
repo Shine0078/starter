@@ -31,10 +31,10 @@ The 2026-08-15 takeover re-ran the complete suite on this workstation.
 
 | Check | Result |
 |---|---|
-| API tests, in-memory | 487 passed, 5 Postgres-only skips (2026-08-15) |
-| API tests, real Postgres | 596 passed, including the full RLS suite (2026-08-15) |
+| API tests, in-memory | 487 passed, 5 Postgres-only skips (2026-08-15; re-confirmed 2026-08-18) |
+| API tests, real Postgres | 596 passed, including the full RLS suite (2026-08-15; re-confirmed 2026-08-18) |
 | `tsc --noEmit`, `npm run build` | clean |
-| `flutter analyze`, `flutter test` | clean, 94 passed (2026-08-15) |
+| `flutter analyze`, `flutter test` | clean, 108 passed (2026-08-18; the 94 recorded on 2026-08-15 was stale) |
 | Plaid Sandbox credentials | live `link_token/create` verified against `sandbox.plaid.com` (2026-08-15) |
 | Web release bundle | `--no-web-resources-cdn --base-href=/app/` build serves `/app/`, deep routes, local CanvasKit, and the migration worker as 200/no-cache from the compiled API (2026-08-15) |
 | Android release build | 87.0 MB APK built with the intentional debug-signing fallback (2026-08-15) |

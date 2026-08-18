@@ -252,8 +252,10 @@ Worth fixing because they cause bad decisions later.
 | 9.1 | Security controls described in the present tense that do not exist | `03-security-privacy.md` — see §3.1 |
 | 9.2 | The deletion purge is described in operational detail as though it runs | `02-data-model.md` |
 | 9.3 | Unused Redis was provisioned despite zero application references | Fixed: shared rate limits and webhook jobs use PostgreSQL, and Redis was removed from the cheap-launch stack |
-| 9.4 | Test counts drift out of date and are then quoted as evidence — counts were stale at 455/564/79, re-measured 475/564/90 during localization work, and re-measured again at 487/596/94 on 2026-08-15 | fixed again in `07-session-notes.md`; the pattern will recur |
+| 9.4 | Test counts drift out of date and are then quoted as evidence — counts were stale at 455/564/79, re-measured 475/564/90 during localization work, and re-measured again at 487/596/94 on 2026-08-15, and the Flutter figure corrected again to 108 on 2026-08-18 | fixed again in `07-session-notes.md`; the pattern will recur |
 | 9.5 | `06-cheap-launch-path.md` describes a *personal beta*, not a sellable product. It is correct for what it is, and should say so at the top so it is not mistaken for a launch plan | `06-cheap-launch-path.md` |
+| 9.6 | A deployed URL was assumed to be this API because `GET /` returned 200. `finverse.onrender.com` was in fact serving an unrelated placeholder Express app, and the public PWA could not authenticate | Documented in `14-public-hosting-render.md`. Verify deployments with `/healthz`, never with `/` |
+| 9.7 | A blank Flutter web page was diagnosed through a browser tab that was never visible. A hidden tab does not run `requestAnimationFrame`, so an empty scene graph and zero canvases are expected, not evidence of a stall. The real cause was a base-href mismatch | Guarded by `src/infra/http/web-bundle.ts`. Check `document.hidden` before concluding a web app is not painting |
 
 ---
 

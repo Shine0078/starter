@@ -1,5 +1,92 @@
 # FINVERSE — CURRENT HANDOVER (for the next agent)
 
+> ## 2026-08-18 — the blank screen is solved; the Render URL is the new blocker
+>
+> Two findings, one good and one bad. Both were confirmed against the live
+> public URLs rather than inferred from code.
+>
+> ### The iPhone/web blank screen: RESOLVED, with the root cause named
+>
+> **Cause:** `apps/mobile/build/web` held a GitHub Pages build declaring
+> `<base href="/starter/app/">` while the API served it at `/app/`. `index.html`
+> returned 200 and every asset it then requested returned 404. The browser
+> painted white, and the server reported itself perfectly healthy — no
+> exception, no console error, nothing in the logs.
+>
+> It was blamed in turn on Flutter, on Safari, on a service worker, and on the
+> app shell's localization, before anyone compared the two strings.
+>
+> **Evidence it is fixed** — `https://shine0078.github.io/starter/app/` opened
+> in a *visible* browser tab (`document.hidden: false`):
+>
+> | Check | Result |
+> | --- | --- |
+> | Boot overlay | dismissed itself |
+> | Frames rendered in 1.5 s | 249 |
+> | Canvas | 1 — 440x956 CSS, 881x1913 backing store at DPR 2 |
+> | `<flt-scene>` | populated |
+> | Declared base href | `/starter/app/`, matching the Pages path |
+>
+> Onboarding paints correctly at 440x956 (iPhone 17 Pro Max CSS size).
+>
+> **A trap for the next agent, because it cost this one a long detour.** Earlier
+> diagnostics were run through a browser pane that was never visible. A hidden
+> tab does not run `requestAnimationFrame`, so CanvasKit never composites, so
+> the scene graph is legitimately empty and the canvas count is legitimately
+> zero. That is *not* evidence of a stall. **Always check `document.hidden`
+> before concluding a Flutter web app is not painting.** Reading those numbers
+> as a hang sent the investigation into the localization delegates and the app
+> shell, where there was no bug.
+>
+> **Guarded so it cannot recur silently:** `src/infra/http/web-bundle.ts`
+> compares the bundle's declared base href against its mount path at boot and
+> logs the exact rebuild command. It warns rather than refusing to start, since
+> a reverse proxy may legitimately rewrite the prefix. Seven tests in
+> `test/web-bundle.spec.ts` cover the real regression, slash-variant
+> equivalence, and an unsubstituted `$FLUTTER_BASE_HREF` reported as its own
+> distinct fault (different cause, different fix).
+>
+> ### `finverse.onrender.com` is serving a different application
+>
+> The service is live but is **not FINVERSE**:
+>
+> ```text
+> GET https://finverse.onrender.com/        -> 200  "You have requested the home route with GET"
+> GET https://finverse.onrender.com/healthz -> 404  Cannot GET /healthz
+> ```
+>
+> `x-powered-by: Express`, no NestJS routes, no `/api` surface. The first
+> request took 31 s (free-tier cold start), so the service is awake — it is
+> running the wrong deploy, most likely a leftover starter template.
+>
+> Consequence: **the public PWA renders but cannot authenticate.** A `fetch` to
+> `/api/auth/login` from the Pages origin fails outright. The user sees
+> "Couldn't reach the server. Check your connection."
+> (`apps/mobile/lib/api/client.dart:187`), which is honest but understates the
+> situation — the server answers, just as a different application.
+>
+> **Owner action:** point the Render service at this repository's Blueprint
+> (`render.yaml`, see `docs/14-public-hosting-render.md`), or delete the service
+> and redeploy. Verify with `/healthz` returning 200 and a JSON body, **not**
+> with `/` returning 200 — the placeholder answers `/` too, which is exactly why
+> this went unnoticed.
+>
+> ### Corrected measurement
+>
+> `flutter test` is **108 passed**, stable across three consecutive runs on a
+> clean tree. The **94** recorded in the 2026-08-15 block below is wrong. One
+> run during this session reported 93 immediately after `flutter analyze`
+> triggered a `pub get`; that figure was not reproducible and should not be
+> quoted. API counts re-confirmed unchanged: `npm test` **487 passed, 5
+> Postgres-only skips**; `npm run test:db` **596 passed**; `flutter analyze`
+> clean; API typecheck clean.
+>
+> ### Status
+>
+> The blank screen is closed. **Physical-iPhone verification is still open** and
+> is now blocked behind the Render fix, since there is no working API for a
+> phone to talk to. Everything in the external-blockers list is unchanged.
+
 > ## 2026-08-15 takeover audit — this supersedes stale statements below
 >
 > A fresh agent re-ran the complete verification suite against the actual
@@ -16,7 +103,7 @@
 > - `npm run build --workspace @finverse/api`: clean.
 > - `npm run load:smoke` (memory adapter): 250 requests, concurrency 10,
 >   **0 failures, p95 117.3 ms, p99 172.1 ms** (ceiling 750 ms).
-> - `flutter analyze`: clean; `flutter test`: **94 passed**.
+> - `flutter analyze`: clean; `flutter test`: **94 passed**. *(Superseded: 108. See the 2026-08-18 block.)*
 > - `flutter build web --release --no-web-resources-cdn --base-href=/app/`:
 >   built; served from the compiled API on an isolated port with `/app/`, a
 >   deep route (GET returns the shell, 200), bootstrap, local CanvasKit
@@ -41,7 +128,7 @@
 >   previously could fetch the renderer from gstatic even though the bootstrap
 >   pins local CanvasKit.
 > - Docs re-synced to reality: `07-session-notes.md`, `08-what-blocks-selling.md`,
->   `12-mission2-audit.md` now carry the 487/596/94 evidence and 2026-08-15
+>   `12-mission2-audit.md` now carry the 487/596/94 evidence *(the 94 is superseded by 108)* and 2026-08-15
 >   measurements.
 >
 > **Verified as still true:** production refuses the in-memory store and
@@ -225,7 +312,7 @@ Workspace: `C:\Users\samue\OneDrive\Desktop\starter` · Branch `main` · Latest 
 The only intentional uncommitted file is this handover note itself.
 
 Read this whole file before touching anything. It is the current, verified state as of the last session —
-not a promise, and the loading issue at the end is **unresolved and the top priority**.
+not a promise, and the loading issue at the end is **RESOLVED as of 2026-08-18** (base-href mismatch; see the top block).
 
 ---
 
@@ -271,7 +358,11 @@ issue until onboarding visibly renders on the phone.
 
 ---
 
-## 2. THE OPEN ISSUE — iPhone web app stuck on the loading splash (top priority)
+## 2. ~~THE OPEN ISSUE~~ — RESOLVED 2026-08-18: iPhone web app stuck on the loading splash
+
+> **Resolved.** Root cause was a base-href mismatch, not a caching, service-worker,
+> or Safari fault. The investigation recorded below pursued those and found nothing,
+> which is itself useful: it rules them out. See the 2026-08-18 block at the top.
 
 **Original symptom:** On the iPhone (Safari), opening the link showed forever:
 
