@@ -95,7 +95,7 @@ environment before they can be claimed.
 | 3.2.2 | **Email verification** | One-time hashed-token API, mobile confirmation, and SMTP adapter are complete | Real email provider credentials and deliverability setup remain |
 | 3.2.3 | **Password reset** | Enumeration-safe request, one-time reset, password policy, session revocation, mobile flow, and SMTP adapter are complete | Real email provider credentials remain |
 | 3.2.4 | **MFA / TOTP** | **Completed technically:** AES-256-GCM encrypted secrets, five-minute hashed login challenges, replay-resistant TOTP, ten one-time hashed recovery codes, audit events, account erasure, API/mobile enrollment and login UI | Configure and protect `MFA_ENCRYPTION_KEY`; validate enrollment/recovery on physical devices |
-| 3.2.5 | **Passkeys / WebAuthn, OAuth2 + PKCE** | Mission names both. Absent. Needs 1.4 | 2–3 weeks |
+| 3.2.5 | **Passkeys / WebAuthn, OAuth2 + PKCE** | Passkeys: API, RLS routing, web ceremony, and login/settings UI are implemented. Native iOS/Android ceremony, domain/TLS, and OAuth2 + PKCE remain | Native/device + domain |
 | 3.2.6 | **Step-up auth** for linking and export | **Completed:** deletion, portable export, and every new/update Plaid Link session re-verify the current password; bank-link attempts are rate-limited and added to the security activity trail | Hardware/production institution verification remains |
 | 3.2.7 | **Biometric app lock** | **Android implementation complete:** opt-in setting in secure storage, all financial UI hidden on app-switch/background, system authentication with device PIN fallback, sign-out escape path, widget tests, and APK compile. The iOS Dart path and checked-in native target are also wired for Keychain/Face ID | Verify enrollment/cancel/lockout behavior on physical Android and iOS; complete the Mac/Xcode build |
 | 3.2.8 | **Compromised-password screening** | **Completed technically:** production requires HIBP's padded k-anonymity range lookup, sends only a five-character SHA-1 prefix, caches bounded ranges, and fails closed when unavailable. The local blocklist remains a fast offline guard; development/test mode makes no external request | Verify the deployment can reach `api.pwnedpasswords.com` |
@@ -278,7 +278,7 @@ is pure calendar time.
 5. Secrets management and physical-device MFA acceptance (3.2.4, 3.2.10)
 6. Billing (§6) — only once there is something worth paying for
 
-**Blocked until §1 lands:** everything in §2, passkeys (needs the domain), the
+**Blocked until §1 lands:** everything in §2, production passkey domains/native ceremony, the
 free-form LLM assistant (needs a zero-retention contract), app store submission.
 
 ---
