@@ -128,7 +128,9 @@ jobs:
     # This is intentionally a compile-only job. Signing, App Store
     # provisioning, and physical-device smoke tests require the owner's Apple
     # account and remain release-gate work rather than pull-request secrets.
-    runs-on: macos-14
+    # workmanager_apple 0.9.10 references BGContinuedProcessingTask, which
+    # exists only in the iOS 26 SDK shipped on macos-26 runners.
+    runs-on: macos-26
     defaults:
       run:
         working-directory: apps/mobile
