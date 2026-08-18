@@ -49,6 +49,14 @@ const PROTECTED_TABLES = [
   'fx_rates',
 ];
 
+const MEMBERSHIP_SCOPED_TABLES = [
+  'split_groups',
+  'split_group_members',
+  'split_expenses',
+  'split_expense_participants',
+  'split_settlements',
+];
+
 /** Seeds one account and one transaction for a user, as the owner. */
 async function seed(owner: Pool, userId: string, amount: number): Promise<void> {
   await owner.query('INSERT INTO users (id) VALUES ($1) ON CONFLICT (id) DO NOTHING', [userId]);
@@ -226,7 +234,7 @@ if (!OWNER_URL) {
       expect(rows[0]?.user).toBe(parseAppRole(harness.appUrl).role);
     });
 
-    it.each(PROTECTED_TABLES)('%s has row security enabled and forced', async (table) => {
+    it.each([...PROTECTED_TABLES, ...MEMBERSHIP_SCOPED_TABLES])('%s has row security enabled and forced', async (table) => {
       const { rows } = await owner.query<{ enabled: boolean; forced: boolean }>(
         `SELECT relrowsecurity AS enabled, relforcerowsecurity AS forced
          FROM pg_class WHERE relname = $1 AND relkind = 'r'`,

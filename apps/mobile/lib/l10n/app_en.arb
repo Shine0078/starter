@@ -20,6 +20,12 @@
   "offlineBannerTitle": "Offline - showing saved data",
   "offlineBannerPending": "Offline changes pending",
   "offlineBannerPendingDetail": "{count, plural, =1{1 change saved on this device and will sync automatically when you are online.} other{{count} changes saved on this device and will sync automatically when you are online.}}",
+  "offlineBannerRejected": "Some offline changes were rejected",
+  "offlineBannerRejectedDetail": "{count, plural, =1{1 change could not be saved and will not retry automatically.} other{{count} changes could not be saved and will not retry automatically.}}",
+  "@offlineBannerRejectedDetail": {
+    "placeholders": {"count": {"type": "num"}}
+  },
+  "offlineBannerDismissRejected": "Dismiss",
   "offlineBannerLastUpdated": "Last updated {date}. Changes are read-only until you reconnect.",
   "settingsTitle": "Settings",
   "profileTitle": "Profile",

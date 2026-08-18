@@ -218,6 +218,24 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{1 change saved on this device and will sync automatically when you are online.} other{{count} changes saved on this device and will sync automatically when you are online.}}'**
   String offlineBannerPendingDetail(num count);
 
+  /// No description provided for @offlineBannerRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Some offline changes were rejected'**
+  String get offlineBannerRejected;
+
+  /// No description provided for @offlineBannerRejectedDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 change could not be saved and will not retry automatically.} other{{count} changes could not be saved and will not retry automatically.}}'**
+  String offlineBannerRejectedDetail(num count);
+
+  /// No description provided for @offlineBannerDismissRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss'**
+  String get offlineBannerDismissRejected;
+
   /// No description provided for @offlineBannerLastUpdated.
   ///
   /// In en, this message translates to:

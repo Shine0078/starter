@@ -94,16 +94,24 @@ class _HomeScreenState extends State<HomeScreen> {
                     leading: Icon(rejected > 0
                         ? Icons.error_outline
                         : Icons.cloud_off_outlined),
-                    title: Text(rejected > 0 || pending > 0
-                        ? l10n.offlineBannerPending
-                        : l10n.offlineBannerTitle),
+                    title: Text(rejected > 0
+                        ? l10n.offlineBannerRejected
+                        : pending > 0
+                            ? l10n.offlineBannerPending
+                            : l10n.offlineBannerTitle),
                     subtitle: Text(rejected > 0
-                        ? l10n.offlineBannerPendingDetail(rejected)
+                        ? l10n.offlineBannerRejectedDetail(rejected)
                         : pending > 0
                             ? l10n.offlineBannerPendingDetail(pending)
                             : l10n.offlineBannerLastUpdated(DateFormat.yMMMd()
                                 .add_jm()
                                 .format(cachedAt!.toLocal()))),
+                    trailing: rejected > 0
+                        ? TextButton(
+                            onPressed: widget.api.dismissRejectedMutations,
+                            child: Text(l10n.offlineBannerDismissRejected),
+                          )
+                        : null,
                   ),
                 ),
               Expanded(

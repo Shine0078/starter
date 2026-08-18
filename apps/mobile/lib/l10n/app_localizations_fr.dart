@@ -79,6 +79,26 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get offlineBannerRejected =>
+      'Certaines modifications hors ligne ont ete refusees';
+
+  @override
+  String offlineBannerRejectedDetail(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count modifications n ont pas pu etre enregistrees et ne seront pas relancees automatiquement.',
+      one:
+          '1 modification n a pas pu etre enregistree et ne sera pas relancee automatiquement.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get offlineBannerDismissRejected => 'Ignorer';
+
+  @override
   String offlineBannerLastUpdated(Object date) {
     return 'Dernière mise à jour : $date. Les changements sont en lecture seule jusqu\'à la reconnexion.';
   }

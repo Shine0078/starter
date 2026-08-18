@@ -227,6 +227,11 @@ class ApiClient implements BackgroundSyncClient {
   bool get usedOfflineCache => offlineCacheStatus.value != null;
   void resetOfflineStatus() => offlineCacheStatus.value = null;
 
+  void dismissRejectedMutations() {
+    _rejectedMutations.clear();
+    rejectedMutationCount.value = 0;
+  }
+
   /// Called when the session is gone for good, so the app can show sign-in.
   void Function()? onSessionExpired;
 

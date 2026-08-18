@@ -79,6 +79,24 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get offlineBannerRejected => 'Some offline changes were rejected';
+
+  @override
+  String offlineBannerRejectedDetail(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count changes could not be saved and will not retry automatically.',
+      one: '1 change could not be saved and will not retry automatically.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get offlineBannerDismissRejected => 'Dismiss';
+
+  @override
   String offlineBannerLastUpdated(Object date) {
     return 'Last updated $date. Changes are read-only until you reconnect.';
   }

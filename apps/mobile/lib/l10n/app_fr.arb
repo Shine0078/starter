@@ -20,6 +20,12 @@
   "offlineBannerTitle": "Hors ligne — données enregistrées",
   "offlineBannerPending": "Modifications hors ligne en attente",
   "offlineBannerPendingDetail": "{count, plural, =1{1 modification enregistrée sur cet appareil et synchronisée automatiquement à la reconnexion.} other{{count} modifications enregistrées sur cet appareil et synchronisées automatiquement à la reconnexion.}}",
+  "offlineBannerRejected": "Certaines modifications hors ligne ont ete refusees",
+  "offlineBannerRejectedDetail": "{count, plural, =1{1 modification n a pas pu etre enregistree et ne sera pas relancee automatiquement.} other{{count} modifications n ont pas pu etre enregistrees et ne seront pas relancees automatiquement.}}",
+  "@offlineBannerRejectedDetail": {
+    "placeholders": {"count": {"type": "num"}}
+  },
+  "offlineBannerDismissRejected": "Ignorer",
   "offlineBannerLastUpdated": "Dernière mise à jour : {date}. Les changements sont en lecture seule jusqu'à la reconnexion.",
   "settingsTitle": "Paramètres",
   "profileTitle": "Profil",
