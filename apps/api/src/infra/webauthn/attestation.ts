@@ -113,6 +113,9 @@ export function parseAttestationObject(
   if (rawAuthData === undefined) throw new Error('attestation: missing authData');
   const authData = toBytes(rawAuthData);
   if (authData.length < 37 + 18) throw new Error('attestation: authData too short');
+  if ((authData[32]! & 0x40) !== 0x40) {
+    throw new Error('attestation: attested credential data flag is unset');
+  }
 
   const credentialLength = authData.readUInt16BE(53);
   const credentialStart = 55;

@@ -121,6 +121,12 @@ export function userVerified(authenticatorData: Buffer): boolean {
   return (authenticatorData[32]! & 0x04) === 0x04;
 }
 
+/** True when attested credential data is present (registration). */
+export function attestedCredentialDataIncluded(authenticatorData: Buffer): boolean {
+  if (authenticatorData.length < 37) return false;
+  return (authenticatorData[32]! & 0x40) === 0x40;
+}
+
 /** 32-byte SHA-256 of the RP id, expected as the first authData field. */
 export function authenticatorRpIdHash(authenticatorData: Buffer): Buffer | null {
   if (authenticatorData.length < 32) return null;

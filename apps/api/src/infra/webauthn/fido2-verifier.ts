@@ -2,6 +2,7 @@ import {
   allowedWebAuthnOrigins,
   authenticatorRpIdHash,
   base64UrlEncode,
+  attestedCredentialDataIncluded,
   hashRpId,
   userPresent,
   userVerified,
@@ -42,8 +43,6 @@ export class Fido2Verifier implements WebAuthnVerifier {
     );
     if (!clientData) throw new Error('WebAuthn client data could not be verified.');
 
-    const parsed = parseAttestationObject(params.attestationObject);
-
     const authData = extractAuthData(params.attestationObject);
     const rpIdHash = authenticatorRpIdHash(authData);
     if (!rpIdHash || !rpIdHash.equals(hashRpId(config.rpId))) {
@@ -51,6 +50,10 @@ export class Fido2Verifier implements WebAuthnVerifier {
     }
     if (!userPresent(authData)) throw new Error('WebAuthn user presence was not confirmed.');
     if (!userVerified(authData)) throw new Error('WebAuthn user verification was not confirmed.');
+    if (!attestedCredentialDataIncluded(authData)) {
+      throw new Error('WebAuthn attestation is missing credential data.');
+    }
+    const parsed = parseAttestationObject(params.attestationObject);
 
     return { credentialId: base64UrlEncode(Buffer.from(parsed.credentialId)), publicKeyPem: parsed.publicKeyPem };
   }

@@ -603,6 +603,67 @@ it('reports availability and requires a token for registration', async () => {
       })
       .expect(401);
   });
+  it('rejects a registration whose id does not match the attested credential', async () => {
+    const { tokens } = await register();
+    const { publicKey } = generateKeyPairSync('ec', { namedCurve: 'P-256' });
+    const options = await request(http)
+      .post('/api/webauthn/register/options')
+      .set('Authorization', `Bearer ${tokens.accessToken}`)
+      .send({ password: 'correct horse battery staple' })
+      .expect(201);
+    const registration = buildRegistration(
+      options.body.challenge,
+      Buffer.from('attested-id'),
+      publicKey,
+    );
+    await request(http)
+      .post('/api/webauthn/register/verify')
+      .set('Authorization', `Bearer ${tokens.accessToken}`)
+      .send({
+        id: 'different-id',
+        ceremonyId: options.body.ceremonyId,
+        password: 'correct horse battery staple',
+        response: {
+          clientDataJSON: registration.clientDataJSON,
+          attestationObject: registration.attestationObject,
+        },
+      })
+      .expect(404);
+  });
+
+  it('rejects a registration whose attested credential flag is unset', async () => {
+    const { tokens } = await register();
+    const { publicKey } = generateKeyPairSync('ec', { namedCurve: 'P-256' });
+    const options = await request(http)
+      .post('/api/webauthn/register/options')
+      .set('Authorization', `Bearer ${tokens.accessToken}`)
+      .send({ password: 'correct horse battery staple' })
+      .expect(201);
+    const registration = buildRegistration(
+      options.body.challenge,
+      Buffer.from('no-at-flag'),
+      publicKey,
+    );
+    const attestation = base64UrlDecode(registration.attestationObject);
+    // Flip AT off while leaving the rest of the hand-built object intact.
+    const authDataStart = attestation.indexOf(hashRpId(CONFIG.rpId));
+    expect(authDataStart).toBeGreaterThanOrEqual(0);
+    attestation[authDataStart + 32] = 0x05;
+    await request(http)
+      .post('/api/webauthn/register/verify')
+      .set('Authorization', `Bearer ${tokens.accessToken}`)
+      .send({
+        id: registration.id,
+        ceremonyId: options.body.ceremonyId,
+        password: 'correct horse battery staple',
+        response: {
+          clientDataJSON: registration.clientDataJSON,
+          attestationObject: base64UrlEncode(attestation),
+        },
+      })
+      .expect(404);
+  });
+
   it('rejects a malformed registration response', async () => {
     const { tokens } = await register();
     await request(http)

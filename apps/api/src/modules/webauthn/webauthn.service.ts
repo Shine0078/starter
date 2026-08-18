@@ -115,11 +115,19 @@ export class WebAuthnService {
     if (!ceremony || ceremony.userId !== userId) {
       throw new NotFoundException('Start passkey setup again.');
     }
-    const verified = await this.verifier.verifyRegistration({
-      clientDataJson: base64UrlDecode(body.response.clientDataJSON),
-      attestationObject: base64UrlDecode(body.response.attestationObject),
-      expectedChallenge: ceremony.challenge,
-    });
+    let verified: { credentialId: string; publicKeyPem: string };
+    try {
+      verified = await this.verifier.verifyRegistration({
+        clientDataJson: base64UrlDecode(body.response.clientDataJSON),
+        attestationObject: base64UrlDecode(body.response.attestationObject),
+        expectedChallenge: ceremony.challenge,
+      });
+    } catch {
+      throw new NotFoundException('Start passkey setup again.');
+    }
+    if (verified.credentialId !== body.id) {
+      throw new NotFoundException('Start passkey setup again.');
+    }
     await this.credentials.register(
       userId,
       {
