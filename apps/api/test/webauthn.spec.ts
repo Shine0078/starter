@@ -665,6 +665,50 @@ it('reports availability and requires a token for registration', async () => {
       .expect(404);
   });
 
+  it('locks further passkey assertions after repeated failures on a known credential', async () => {
+    const account = await register();
+    const { privateKey, publicKey } = generateKeyPairSync('ec', { namedCurve: 'P-256' });
+    const options = await request(http)
+      .post('/api/webauthn/register/options')
+      .set('Authorization', `Bearer ${account.tokens.accessToken}`)
+      .send({ password: 'correct horse battery staple' })
+      .expect(201);
+    const registration = buildRegistration(options.body.challenge, Buffer.from(`lock-${account.email}`), publicKey);
+    await request(http)
+      .post('/api/webauthn/register/verify')
+      .set('Authorization', `Bearer ${account.tokens.accessToken}`)
+      .send({
+        id: registration.id,
+        ceremonyId: options.body.ceremonyId,
+        password: 'correct horse battery staple',
+        response: {
+          clientDataJSON: registration.clientDataJSON,
+          attestationObject: registration.attestationObject,
+        },
+      })
+      .expect(201);
+    for (let i = 0; i < 8; i += 1) {
+      const login = await request(http).post('/api/webauthn/login/options').send({}).expect(200);
+      await request(http)
+        .post('/api/webauthn/login/verify')
+        .send({
+          id: registration.id,
+          ceremonyId: login.body.ceremonyId,
+          response: buildAssertion(login.body.challenge, privateKey, i + 10, 0x01),
+        })
+        .expect(401);
+    }
+    const locked = await request(http).post('/api/webauthn/login/options').send({}).expect(200);
+    const blocked = await request(http)
+      .post('/api/webauthn/login/verify')
+      .send({
+        id: registration.id,
+        ceremonyId: locked.body.ceremonyId,
+        response: buildAssertion(locked.body.challenge, privateKey, 20),
+      });
+    expect(blocked.status).toBe(429);
+  });
+
   it('rejects passkey management with the wrong password', async () => {
     const { tokens } = await register();
     await request(http)

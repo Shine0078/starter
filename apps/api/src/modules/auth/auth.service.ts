@@ -283,8 +283,29 @@ export class AuthService {
   }
 
   /** Completes login after a verified WebAuthn assertion. */
+  async assertPasskeyNotLocked(email: string | null, context: RequestContext): Promise<void> {
+    if (!email) return;
+    const now = this.clock.now();
+    const failures = await this.events.recentFailures(
+      email,
+      new Date(now.getTime() - FAILURE_WINDOW_MS),
+      'passkey_login',
+    );
+    const lockout = evaluateLockout(failures, now);
+    if (!lockout.locked) return;
+    await this.record('passkey_login', false, null, email, context, 'locked out');
+    throw new HttpException(
+      {
+        message: 'Too many failed attempts. Try again later.',
+        retryAfterSeconds: lockout.retryAfterSeconds,
+      },
+      HttpStatus.TOO_MANY_REQUESTS,
+    );
+  }
+
   async loginWithVerifiedPasskey(userId: string, context: RequestContext): Promise<AuthResult> {
     const user = await this.users.findById(userId);
+    await this.assertPasskeyNotLocked(user?.email ?? null, context);
     if (!user || user.status !== 'active') {
       await this.record(
         'passkey_login',

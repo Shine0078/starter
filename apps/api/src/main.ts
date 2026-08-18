@@ -60,6 +60,7 @@ async function bootstrap(): Promise<void> {
       'healthz',
       { path: '.well-known/apple-app-site-association', method: RequestMethod.GET },
       { path: 'apple-app-site-association', method: RequestMethod.GET },
+      { path: '.well-known/assetlinks.json', method: RequestMethod.GET },
     ],
   });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));

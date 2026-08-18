@@ -78,7 +78,7 @@ export interface SessionStore {
 export interface AuthEventStore {
   record(event: AuthEvent): Promise<void>;
   /** Password-login failure timestamps for one address — feeds evaluateLockout. */
-  recentFailures(email: string, since: Date): Promise<Date[]>;
+  recentFailures(email: string, since: Date, kind?: 'login' | 'passkey_login'): Promise<Date[]>;
   listForUser(userId: string, limit: number): Promise<AuthEvent[]>;
 }
 

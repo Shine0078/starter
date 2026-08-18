@@ -308,6 +308,12 @@ export function runAuthStoreContract(name: string, create: () => Promise<AuthSto
           new Date(NOW.getTime() - 5 * 60_000),
         );
         expect(failures).toHaveLength(1);
+        const passkeyFailures = await stores.events.recentFailures(
+          'alice@example.com',
+          new Date(NOW.getTime() - 5 * 60_000),
+          'passkey_login',
+        );
+        expect(passkeyFailures).toHaveLength(1);
       });
 
       it('counts failures against an address with no account', async () => {

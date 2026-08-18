@@ -307,15 +307,15 @@ export class PostgresAuthEventStore implements AuthEventStore {
     );
   }
 
-  async recentFailures(email: string, since: Date): Promise<Date[]> {
+  async recentFailures(email: string, since: Date, kind: 'login' | 'passkey_login' = 'login'): Promise<Date[]> {
     const { rows } = await this.pg.query<{ created_at: Date }>(
       `SELECT created_at FROM auth_events
        WHERE succeeded = false
-         AND kind = 'login'
+         AND kind = $3
          AND lower(email_attempted) = lower($1)
          AND created_at >= $2
        ORDER BY created_at DESC`,
-      [email, since],
+      [email, since, kind],
     );
     return rows.map((r) => r.created_at);
   }

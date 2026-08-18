@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { appleAppSiteAssociation } from '../src/infra/http/apple-app-site-association';
 
 describe('Apple App Site Association', () => {
-  it('matches only the FINVERSE Plaid callback path', () => {
+  it('matches only the FINVERSE Plaid callback path and advertises webcredentials', () => {
     expect(
       appleAppSiteAssociation({
         appId: 'A1B2C3D4E5.com.finverse.finance',
@@ -17,6 +17,9 @@ describe('Apple App Site Association', () => {
             components: [{ '/': '/plaid/*' }],
           },
         ],
+      },
+      webcredentials: {
+        apps: ['A1B2C3D4E5.com.finverse.finance'],
       },
     });
   });

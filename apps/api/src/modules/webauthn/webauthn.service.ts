@@ -187,6 +187,9 @@ export class WebAuthnService {
     if (!ceremony) throw new UnauthorizedException(FAILED_LOGIN);
 
     const owned = await this.credentials.findByCredentialId(body.id);
+    const owner = owned ? await this.users.findById(owned.userId) : null;
+    const ownerEmail = owner?.email ?? ceremony.emailAttempted;
+    if (owned) await this.auth.assertPasskeyNotLocked(ownerEmail, context);
     if (!owned || (ceremony.userId && ceremony.userId !== owned.userId)) {
       await this.auth.recordAuthEvent(
         'passkey_login',
@@ -218,7 +221,7 @@ export class WebAuthnService {
         'passkey_login',
         false,
         owned.userId,
-        ceremony.emailAttempted,
+        ownerEmail,
         context,
         'assertion failed',
       );

@@ -36,6 +36,7 @@ import { PushModule } from './modules/push/push.module';
 import { WebAuthnModule } from './modules/webauthn/webauthn.module';
 import { httpMetrics, metricsTokenMatches } from './infra/http/metrics';
 import { appleAppSiteAssociation as buildAppleAppSiteAssociation } from './infra/http/apple-app-site-association';
+import { androidAssetLinks, parseAndroidAssetLinkConfig } from './infra/http/asset-links';
 
 const appConfig = loadConfig();
 
@@ -139,6 +140,17 @@ class MetaController {
   @Get('apple-app-site-association')
   appleAppSiteAssociationFallback() {
     return this.appleAppSiteAssociation();
+  }
+
+  @Public()
+  @Header('Content-Type', 'application/json')
+  @Get('.well-known/assetlinks.json')
+  assetLinks() {
+    const config = parseAndroidAssetLinkConfig();
+    if (!config) {
+      throw new ServiceUnavailableException('Android Digital Asset Links are not configured.');
+    }
+    return androidAssetLinks(config);
   }
 }
 
