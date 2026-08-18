@@ -1,7 +1,7 @@
 # FINVERSE status - 2026-08-18 (verified)
 
 Canonical working branch: `codex/passkey-webauthn-p0`
-HEAD at write time: `699a289`
+HEAD at write time: `95a67ca`
 Do not treat older handover prose as current. This file records only what was executed and observed.
 
 ## Passkey / WebAuthn (P0)
@@ -65,6 +65,7 @@ A first full `npm run test:db` on this branch reached 926 passed / 70 skipped, t
 - Migration 030 drops unused `webauthn_challenges.failed_attempts` and grants EXECUTE on `finverse_webauthn_credential_owner` when `finverse_app` exists
 - Passkey enroll now consumes MFA only on options; verify re-checks the password against the issued ceremony
 - Export, account deletion, and bank-link step-up require MFA when enabled; export and deletion are throttled at 5/min
+- Mobile export, deletion, and bank-link dialogs collect an authenticator code when MFA is enabled
 - Offline replay keeps 408/429 queued instead of treating them as permanent rejects
 - Native association files now include AASA `webcredentials` and optional `/.well-known/assetlinks.json` (requires ANDROID_CERT_FINGERPRINTS). Repeated failed assertions on a known passkey now lock further passkey login without affecting password lockout.
 
