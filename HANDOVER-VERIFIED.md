@@ -1,7 +1,7 @@
 # FINVERSE status - 2026-08-18 (verified)
 
 Canonical working branch: `codex/passkey-webauthn-p0`
-HEAD at write time: tip of `codex/passkey-webauthn-p0` after `07031ed`, `21a33d7`, the Postgres `/api/sync` refusal test, and this status update.
+HEAD at write time: tip of `codex/passkey-webauthn-p0` after the LinkKit 7 iOS compile fix and the production npm-audit CI gate.
 Do not treat older handover prose as current. This file records only what was executed and observed.
 
 ## Passkey / WebAuthn (P0)
@@ -57,6 +57,7 @@ A complete `npm run test:db` has **not** been re-run on `21a33d7`.
 - GitHub Actions used by CI/release are SHA-pinned; GHCR push requests provenance + SBOM
 - Image tags are digest-pinned from live registries
 - iOS CI now compiles on `macos-26` so the iOS 26 SDK can see `BGContinuedProcessingTask`
+- CI fails the API job on high/critical production npm advisories (`npm audit --omit=dev --audit-level=high`); local audit was clean at write time
 - Load-smoke no longer calls demo `/api/sync`; Postgres refuses that route and an empty authenticated account is enough for the restricted-role read path
 
 ## Mobile / offline
@@ -79,7 +80,7 @@ A complete `npm run test:db` has **not** been re-run on `21a33d7`.
 
 ## Still open (not claimed complete)
 
-- CI on `21a33d7` after the load-smoke and macos-26 patches (in progress after push)
+- CI on the latest SHA after the LinkKit 7 iOS compile fix (in progress after push). macos-26 cleared BGContinuedProcessingTask, then failed on stale Plaid success metadata until `f52fbc2`.
 - Native iOS/Android Credential Manager / ASAuthorization ceremony (web is wired; native is an honest stub)
 - Physical-device / Safari-Chrome passkey smoke
 - External owner gates: production Plaid/Stripe, domains/TLS, SMTP, APNs/FCM, Apple/Android store signing, legal/privacy review, independent pentest
