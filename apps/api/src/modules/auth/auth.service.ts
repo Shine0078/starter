@@ -329,6 +329,20 @@ export class AuthService {
     return this.record(kind, succeeded, userId, emailAttempted, context, detail);
   }
 
+  async notifyPasskeyChange(email: string, action: 'added' | 'removed'): Promise<void> {
+    const subject =
+      action === 'added' ? 'A passkey was added to your FINVERSE account' : 'A passkey was removed from your FINVERSE account';
+    const body =
+      action === 'added'
+        ? 'A new passkey was added to your FINVERSE account. If you did not do this, sign in and remove it immediately.'
+        : 'A passkey was removed from your FINVERSE account. If you did not do this, reset your password and review your sign-in methods.';
+    try {
+      await this.emailSender.sendSecurityNotice?.(email, subject, body);
+    } catch (error) {
+      this.logger.error(`Failed to send passkey ${action} notice`, error as Error);
+    }
+  }
+
   // ------------------------------------------------------ multi-factor auth
 
   async mfaStatus(userId: string): Promise<{ enabled: boolean; available: boolean; recoveryCodesRemaining: number }> {

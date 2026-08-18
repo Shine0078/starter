@@ -101,6 +101,7 @@ export interface AuthActionTokenStore {
 
 export interface EmailSender {
   sendAction(email: string, kind: AuthActionKind, token: string): Promise<void>;
+  sendSecurityNotice?(email: string, subject: string, body: string): Promise<void>;
 }
 
 export interface PasswordHasher {

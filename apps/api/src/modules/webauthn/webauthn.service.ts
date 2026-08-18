@@ -140,6 +140,7 @@ export class WebAuthnService {
       context,
       null,
     );
+    if (user?.email) await this.auth.notifyPasskeyChange(user.email, 'added');
     return { credentialId: verified.credentialId };
   }
 
@@ -243,6 +244,7 @@ export class WebAuthnService {
       context,
       removed ? null : 'unknown credential',
     );
+    if (removed && user?.email) await this.auth.notifyPasskeyChange(user.email, 'removed');
     return removed;
   }
 
