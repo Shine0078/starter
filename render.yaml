@@ -90,7 +90,7 @@ services:
         sync: false
 
 databases:
-  - name: finverse-db
+  - name: finverse-preview-db
     plan: free
     databaseName: finverse
     user: finverse
