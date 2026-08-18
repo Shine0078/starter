@@ -172,6 +172,7 @@ export class AuthController {
     return this.auth.listSessions(userId, sessionId);
   }
 
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @HttpCode(202)
   @Delete('account')
   deleteAccount(
@@ -179,7 +180,7 @@ export class AuthController {
     @Body() body: DeleteAccountDto,
     @ReqContext() context: RequestContext,
   ) {
-    return this.auth.requestAccountDeletion(userId, body.password, context);
+    return this.auth.requestAccountDeletion(userId, body.password, body.mfaCode, context);
   }
 
   @HttpCode(204)

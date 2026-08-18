@@ -865,6 +865,36 @@ describe('auth API', () => {
       expect(scenario.body.warnings).toHaveLength(2);
     });
 
+    it('requires an authenticator code to export or delete when MFA is enabled', async () => {
+      const alice = await register();
+      const enrollment = await request(http)
+        .post('/api/auth/mfa/enroll')
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .send({ password: PASSWORD })
+        .expect(201);
+      await request(http)
+        .post('/api/auth/mfa/enable')
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .send({ code: totpAt(enrollment.body.secret, new Date()).code })
+        .expect(200);
+      await request(http)
+        .post('/api/privacy/export')
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .send({ password: PASSWORD })
+        .expect(401);
+      const exported = await request(http)
+        .post('/api/privacy/export')
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .send({ password: PASSWORD, mfaCode: totpAt(enrollment.body.secret, new Date()).code })
+        .expect(200);
+      expect(exported.body.user.email).toBe(alice.email);
+      await request(http)
+        .delete('/api/auth/account')
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .send({ password: PASSWORD, confirmation: 'DELETE' })
+        .expect(401);
+    });
+
     it('exports portable user data after password confirmation without credential material', async () => {
       const alice = await register();
       await request(http)

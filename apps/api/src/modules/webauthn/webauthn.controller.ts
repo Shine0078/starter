@@ -57,7 +57,9 @@ export class WebAuthnController {
     @Body() body: RegistrationVerifyDto,
     @ReqContext() context: RequestContext,
   ) {
-    await this.auth.requireRecentPassword(userId, body.password, body.mfaCode, context);
+    await this.auth.requireRecentPassword(userId, body.password, body.mfaCode, context, {
+      requireMfa: false,
+    });
     return this.webauthn.registrationVerify(userId, body, context);
   }
 

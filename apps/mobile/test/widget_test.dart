@@ -924,6 +924,32 @@ void main() {
     expect(await cache.pendingMutations('user-1'), isEmpty);
   });
 
+  test('keeps throttled offline mutations queued instead of permanently rejecting them', () async {
+    final store = InMemorySessionStore();
+    final cache = InMemoryOfflineCacheStore();
+    await store.write(const SessionTokens(
+      accessToken: 'access',
+      refreshToken: 'refresh',
+      refreshExpiresAt: '2026-09-08T00:00:00.000Z',
+      userId: 'user-1',
+    ));
+    final api = clientWith(
+      MockClient((request) async => http.Response('{"message":"Too many requests"}', 429)),
+      store: store,
+      offlineCache: cache,
+    );
+    await api.restoreSession();
+    await cache.enqueueMutation(
+      'user-1',
+      'PATCH',
+      '/transactions/txn-1/preferences',
+      '{"notes":"keep"}',
+    );
+    expect(await api.replayOfflineMutations(), 0);
+    expect(api.rejectedMutationCount.value, 0);
+    expect(await cache.pendingMutations('user-1'), hasLength(1));
+  });
+
   test('keeps rejected offline mutations visible and isolated by account', () async {
     final store = InMemorySessionStore();
     final cache = InMemoryOfflineCacheStore();

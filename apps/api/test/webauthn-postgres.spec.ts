@@ -453,6 +453,20 @@ if (!OWNER_URL) {
       expect(refreshed.body.user.id).toBe(account.userId);
       expect(refreshed.body.tokens.accessToken).toBeTruthy();
 
+      const lockLogin = async (flags = 0x01) => {
+        const login = await request(http).post('/api/webauthn/login/options').send({}).expect(200);
+        return request(http).post('/api/webauthn/login/verify').send({
+          id: registration.id,
+          ceremonyId: login.body.ceremonyId,
+          response: buildAssertion(login.body.challenge, privateKey, Date.now() % 1000, flags),
+        });
+      };
+      for (let i = 0; i < 8; i += 1) {
+        await lockLogin(0x01).expect(401);
+      }
+      const blocked = await lockLogin(0x05);
+      expect(blocked.status).toBe(429);
+
       await harness.owner.query("UPDATE users SET status = 'locked' WHERE id = $1", [account.userId]);
       const locked = await request(http).post('/api/webauthn/login/options').send({}).expect(200);
       await request(http)

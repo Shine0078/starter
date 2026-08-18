@@ -42,7 +42,7 @@ import {
   type ConsentKind,
   type ConsentStore,
 } from '../../ports/privacy';
-import type { RequestContext } from '../auth/auth.service';
+import { AuthService, type RequestContext } from '../auth/auth.service';
 
 @Injectable()
 export class PrivacyService {
@@ -60,6 +60,7 @@ export class PrivacyService {
     @Inject(BANK_LINK_STORE) private readonly bankLinks: BankLinkStore,
     @Inject(CONSENT_STORE) private readonly consents: ConsentStore,
     @Inject(MFA_STORE) private readonly mfa: MfaStore,
+    private readonly auth: AuthService,
   ) {}
 
   async dashboard(userId: string) {
@@ -129,12 +130,14 @@ export class PrivacyService {
     return this.dashboard(userId);
   }
 
-  async exportData(userId: string, currentSessionId: string, password: string, context: RequestContext) {
-    const user = await this.users.findById(userId);
-    if (!user) throw new NotFoundException('Account not found.');
-    if (!(await this.passwords.verify(user.passwordHash, password))) {
-      throw new UnauthorizedException('Current password is incorrect.');
-    }
+  async exportData(
+    userId: string,
+    currentSessionId: string,
+    password: string,
+    mfaCode: string | undefined,
+    context: RequestContext,
+  ) {
+    const user = await this.auth.requireRecentPassword(userId, password, mfaCode, context);
 
     await this.authEvents.record({
       id: randomUUID(),

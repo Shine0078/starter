@@ -327,14 +327,16 @@ export class AuthService {
     password: string,
     mfaCode: string | undefined,
     context: RequestContext,
+    options: { requireMfa?: boolean } = {},
   ): Promise<User> {
     const user = await this.requirePassword(userId, password);
     const mfa = await this.mfa.get(user.id);
-    if (mfa?.enabledAt) {
+    if (mfa?.enabledAt && options.requireMfa !== false) {
       if (!mfaCode || !(await this.verifyMfaFactor(user.id, mfaCode, this.clock.now()))) {
         await this.record('passkey_step_up', false, user.id, user.email, context, 'second factor failed');
         throw new UnauthorizedException('Authenticator or recovery code is incorrect.');
       }
+      await this.record('passkey_step_up', true, user.id, user.email, context, null);
     }
     return user;
   }
@@ -446,24 +448,10 @@ export class AuthService {
   async requestAccountDeletion(
     userId: string,
     password: string,
+    mfaCode: string | undefined,
     context: RequestContext,
   ): Promise<{ purgeScheduledFor: string }> {
-    const user = await this.users.findById(userId);
-    if (!user || user.status !== 'active') {
-      throw new UnauthorizedException('Session is no longer valid. Sign in again.');
-    }
-
-    if (!(await this.hasher.verify(user.passwordHash, password))) {
-      await this.record(
-        'account_deletion_requested',
-        false,
-        user.id,
-        user.email,
-        context,
-        'password re-verification failed',
-      );
-      throw new UnauthorizedException('Password is incorrect.');
-    }
+    const user = await this.requireRecentPassword(userId, password, mfaCode, context);
 
     // Revoke provider Items before disabling the account. Deleting our local
     // row alone would leave a Plaid Item able to pull new financial data during

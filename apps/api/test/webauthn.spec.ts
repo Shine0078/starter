@@ -749,7 +749,26 @@ it('reports availability and requires a token for registration', async () => {
         mfaCode: totpAt(enrollment.body.secret, new Date()).code,
       })
       .expect(201);
-    expect(allowed.body.ceremonyId).toBeTruthy();
+    const { publicKey } = generateKeyPairSync('ec', { namedCurve: 'P-256' });
+    const registration = buildRegistration(
+      allowed.body.challenge,
+      Buffer.from('mfa-enroll'),
+      publicKey,
+    );
+    await request(http)
+      .post('/api/webauthn/register/verify')
+      .set('Authorization', `Bearer ${tokens.accessToken}`)
+      .send({
+        id: registration.id,
+        ceremonyId: allowed.body.ceremonyId,
+        password: 'correct horse battery staple',
+        mfaCode: totpAt(enrollment.body.secret, new Date()).code,
+        response: {
+          clientDataJSON: registration.clientDataJSON,
+          attestationObject: registration.attestationObject,
+        },
+      })
+      .expect(201);
   });
 
   it('rejects a malformed registration response', async () => {

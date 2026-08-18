@@ -78,6 +78,11 @@ export class DeleteAccountDto {
   @MaxLength(MAX_PASSWORD_LENGTH)
   password!: string;
 
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  mfaCode?: string;
+
   @Equals('DELETE', { message: 'Type DELETE to confirm permanent account deletion.' })
   confirmation!: string;
 }

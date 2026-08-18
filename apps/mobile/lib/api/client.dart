@@ -547,6 +547,9 @@ class ApiClient implements BackgroundSyncClient {
           _lastRefreshFailure == _RefreshFailure.unavailable) {
         break;
       }
+      if (response.statusCode == 408 || response.statusCode == 429) {
+        break;
+      }
       if (response.statusCode >= 400 && response.statusCode < 500) {
         await offlineCache.removeMutation(
             owner, mutation.method, mutation.path);
