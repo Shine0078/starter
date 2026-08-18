@@ -26,6 +26,7 @@ import {
   verifyAssertionSignature,
   verifyClientData,
 } from '../src/domain/webauthn/verify';
+import { totpAt } from '../src/domain/auth/totp';
 import { Fido2Verifier } from '../src/infra/webauthn/fido2-verifier';
 
 process.env.STORE = 'memory';
@@ -662,6 +663,49 @@ it('reports availability and requires a token for registration', async () => {
         },
       })
       .expect(404);
+  });
+
+  it('rejects passkey management with the wrong password', async () => {
+    const { tokens } = await register();
+    await request(http)
+      .post('/api/webauthn/register/options')
+      .set('Authorization', `Bearer ${tokens.accessToken}`)
+      .send({ password: 'this is not the password' })
+      .expect(401);
+    await request(http)
+      .delete('/api/webauthn/credentials/not-a-credential')
+      .set('Authorization', `Bearer ${tokens.accessToken}`)
+      .send({ password: 'this is not the password' })
+      .expect(401);
+  });
+
+  it('requires the authenticator code when MFA is enabled for passkey setup', async () => {
+    const { tokens } = await register();
+    const enrollment = await request(http)
+      .post('/api/auth/mfa/enroll')
+      .set('Authorization', `Bearer ${tokens.accessToken}`)
+      .send({ password: 'correct horse battery staple' })
+      .expect(201);
+    const code = totpAt(enrollment.body.secret, new Date()).code;
+    await request(http)
+      .post('/api/auth/mfa/enable')
+      .set('Authorization', `Bearer ${tokens.accessToken}`)
+      .send({ code })
+      .expect(200);
+    await request(http)
+      .post('/api/webauthn/register/options')
+      .set('Authorization', `Bearer ${tokens.accessToken}`)
+      .send({ password: 'correct horse battery staple' })
+      .expect(401);
+    const allowed = await request(http)
+      .post('/api/webauthn/register/options')
+      .set('Authorization', `Bearer ${tokens.accessToken}`)
+      .send({
+        password: 'correct horse battery staple',
+        mfaCode: totpAt(enrollment.body.secret, new Date()).code,
+      })
+      .expect(201);
+    expect(allowed.body.ceremonyId).toBeTruthy();
   });
 
   it('rejects a malformed registration response', async () => {

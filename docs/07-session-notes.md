@@ -1,3 +1,5 @@
+> **Historical counts.** Current verified FINVERSE status, including later test counts, is in [`HANDOVER-VERIFIED.md`](../HANDOVER-VERIFIED.md) on `codex/passkey-webauthn-p0`. Do not quote the 487/596 figures below as current.
+
 # Where the project stands
 
 Written for whoever picks this up next — including a fresh agent session with no

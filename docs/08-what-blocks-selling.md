@@ -1,3 +1,5 @@
+> **Historical.** Current verified status is in [`HANDOVER-VERIFIED.md`](../HANDOVER-VERIFIED.md). The 487/596/94 counts below are superseded.
+
 # What blocks selling this
 
 Everything standing between the current repository and charging a stranger money
