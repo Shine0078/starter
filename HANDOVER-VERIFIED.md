@@ -1,7 +1,7 @@
 # FINVERSE status - 2026-08-18 (verified)
 
 Canonical working branch: `codex/passkey-webauthn-p0`
-HEAD at write time: `24b1811`
+HEAD at write time: `a9edf3b`
 Do not treat older handover prose as current. This file records only what was executed and observed.
 
 ## Passkey / WebAuthn (P0)
@@ -25,6 +25,8 @@ Proven locally in this session:
 
 - `npx vitest run test/config.spec.ts test/webauthn.spec.ts` - 41 passed (includes the origin allowlist)
 - Isolated `npx vitest run test/auth-api.spec.ts` - 70 passed
+- Targeted Postgres `webauthn-postgres.spec.ts` + `rls.spec.ts` after migration 030 — 71 passed
+
 - Flutter passkey + rejected-offline tests - 4 passed
 - Targeted Dart analyze of the new ceremony/UI files - no issues
 
@@ -57,13 +59,15 @@ A first full `npm run test:db` on this branch reached 926 passed / 70 skipped, t
 - Concurrent replay is serialized
 - Login has Use a passkey; settings can list/add/remove passkeys after password (+ MFA) step-up
 
+- Registration now requires the AT flag and `body.id` to match the attested credential id
+- Passkey enroll/remove routes are throttled at 10/min
+
 ## Still open (not claimed complete)
 
 - Native iOS/Android Credential Manager / ASAuthorization ceremony (web is wired; native is an honest stub)
 - Physical-device / Safari-Chrome passkey smoke
 - Passkey login still does not inherit password lockout (only `users.status !== 'active'`). Failed passkey events no longer increment the password lockout window.
-- `webauthn_challenges.failed_attempts` is unused
-- EXECUTE grant for `finverse_webauthn_credential_owner` remains in `app-role.ts` / migrate provisioner, not in SQL 029
+- Migration 030 drops unused `webauthn_challenges.failed_attempts` and grants EXECUTE on `finverse_webauthn_credential_owner` when `finverse_app` exists
 - External owner gates: production Plaid/Stripe, domains/TLS, SMTP, APNs/FCM, Apple/Android store signing, legal/privacy review, independent pentest, CI on this unpushed branch
 
 ## Owner actions required
