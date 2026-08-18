@@ -33,6 +33,11 @@ process.env.STORE = 'memory';
 process.env.JWT_SECRET ??= 'test-secret-at-least-32-characters-long-for-hs256';
 process.env.THROTTLE_DISABLED = 'true';
 
+// MFA-enabled passkey enroll/remove needs the same cipher production uses.
+// Without it, /auth/mfa/enroll fails closed with 503 and the step-up tests
+// never reach WebAuthn.
+process.env.MFA_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString('base64');
+
 const CONFIG: WebAuthnConfig = {
   rpId: 'api.finverse.test',
   origins: ['https://api.finverse.test'],
