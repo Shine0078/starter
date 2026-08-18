@@ -1,6 +1,12 @@
+# PREVIEW / DEVELOPMENT ONLY.
+# This file is not a production blueprint. It uses NODE_ENV=development,
+# MIGRATE_ON_BOOT=true, a free plan, and sandbox bank credentials.
+# Production must use a separate service with NODE_ENV=production,
+# MIGRATE_ON_BOOT=false, DATABASE_APP_URL for the restricted role, and
+# reviewed secrets. Do not point this file at real-user traffic.
 services:
   - type: web
-    name: finverse
+    name: finverse-preview
     runtime: docker
     dockerfilePath: ./Dockerfile.public
     dockerContext: .
@@ -27,7 +33,7 @@ services:
         value: "3000"
       - key: DATABASE_URL
         fromDatabase:
-          name: finverse-db
+          name: finverse-preview-db
           property: connectionString
       # Set this after the database is created. Use the same host/database as
       # DATABASE_URL, but username finverse_app and a new strong password. The
@@ -89,3 +95,4 @@ databases:
     plan: free
     databaseName: finverse
     user: finverse
+
