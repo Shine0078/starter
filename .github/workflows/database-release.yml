@@ -48,8 +48,8 @@ jobs:
           test -n "$DATABASE_URL"
           test -n "$DATABASE_APP_URL"
           test "${#CANDIDATE_SHA}" -eq 40
-          CONCLUSION=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${CANDIDATE_SHA}&status=completed&per_page=20" --jq '.workflow_runs | map(select(.name=="CI" and .conclusion=="success")) | length')
-          test "$CONCLUSION" -gt 0
+          MATCH=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${CANDIDATE_SHA}&status=completed&per_page=30" --jq '.workflow_runs | map(select(.name=="CI" and .conclusion=="success" and .head_sha=="'"$CANDIDATE_SHA"'" and (.head_branch=="main" or .head_branch=="master") and .head_repository.full_name=="'"$GITHUB_REPOSITORY"'")) | length')
+          test "$MATCH" -gt 0
 
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:

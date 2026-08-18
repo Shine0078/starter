@@ -54,8 +54,8 @@ jobs:
             SHA="$MANUAL_SHA"
           fi
           test "${#SHA}" -eq 40
-          CONCLUSION=$(gh api "repos/${REPO}/actions/runs?head_sha=${SHA}&status=completed&per_page=30" --jq '.workflow_runs | map(select(.name=="CI" and .conclusion=="success" and .head_sha=="'"$SHA"'")) | length')
-          test "$CONCLUSION" -gt 0
+          MATCH=$(gh api "repos/${REPO}/actions/runs?head_sha=${SHA}&status=completed&per_page=30" --jq '.workflow_runs | map(select(.name=="CI" and .conclusion=="success" and .head_sha=="'"$SHA"'" and (.head_branch=="main" or .head_branch=="master") and .head_repository.full_name=="'"$REPO"'")) | length')
+          test "$MATCH" -gt 0
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
           echo "Releasing verified SHA $SHA"
 

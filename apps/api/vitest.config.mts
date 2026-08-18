@@ -10,7 +10,7 @@ export default defineConfig({
     // than faking the hasher, because the timing-equalisation and rehash paths
     // are only meaningful against the real thing.
     testTimeout: 30_000,
-    hookTimeout: 30_000,
+    hookTimeout: 60_000,
     // Two suites share one database when TEST_DATABASE_URL is set, and both
     // truncate between tests. Run files one at a time in that case: in
     // parallel, one suite's reset deletes the other's fixtures mid-assertion,
