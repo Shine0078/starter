@@ -1,7 +1,7 @@
 # FINVERSE status - 2026-08-18 (verified)
 
 Canonical working branch: `codex/passkey-webauthn-p0`
-HEAD at write time: `4feb081` plus the docs commit that records this run
+HEAD at write time: `24b1811`
 Do not treat older handover prose as current. This file records only what was executed and observed.
 
 ## Passkey / WebAuthn (P0)
@@ -61,7 +61,7 @@ A first full `npm run test:db` on this branch reached 926 passed / 70 skipped, t
 
 - Native iOS/Android Credential Manager / ASAuthorization ceremony (web is wired; native is an honest stub)
 - Physical-device / Safari-Chrome passkey smoke
-- Passkey login still does not inherit password lockout (only `users.status !== 'active'`)
+- Passkey login still does not inherit password lockout (only `users.status !== 'active'`). Failed passkey events no longer increment the password lockout window.
 - `webauthn_challenges.failed_attempts` is unused
 - EXECUTE grant for `finverse_webauthn_credential_owner` remains in `app-role.ts` / migrate provisioner, not in SQL 029
 - External owner gates: production Plaid/Stripe, domains/TLS, SMTP, APNs/FCM, Apple/Android store signing, legal/privacy review, independent pentest, CI on this unpushed branch
