@@ -392,7 +392,7 @@ class ApiClient implements BackgroundSyncClient {
         // keep the refresh credential for the next resume.
         if (response.statusCode == 401 &&
             _lastRefreshFailure == _RefreshFailure.unavailable) {
-          return _cachedOrThrow(
+          return await _cachedOrThrow(
             owner,
             path,
             ApiException(path, response.statusCode, response.body),
@@ -402,7 +402,7 @@ class ApiClient implements BackgroundSyncClient {
           throw PlanUpgradeRequiredException.maybeFrom(path, response) ??
               ApiException(path, response.statusCode, response.body);
         }
-        return _cachedOrThrow(owner, path,
+        return await _cachedOrThrow(owner, path,
             ApiException(path, response.statusCode, response.body));
       }
       if (owner != null && response.body.isNotEmpty && !_neverCache(path)) {
