@@ -207,5 +207,18 @@ export async function assertRestrictedRuntimeRole(pg: Pool): Promise<string> {
       `Runtime role ${row.current_user} is SUPERUSER or BYPASSRLS; refusing to serve requests.`,
     );
   }
+  const owned = await pg.query<{ count: string }>(`
+    SELECT count(*)::text AS count
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+     WHERE n.nspname = 'public'
+       AND c.relkind = 'r'
+       AND c.relowner = (SELECT oid FROM pg_roles WHERE rolname = current_user)
+  `);
+  if (Number(owned.rows[0]?.count ?? 0) > 0) {
+    throw new Error(
+      `Runtime role ${row.current_user} owns public tables; refusing to serve requests as the schema owner.`,
+    );
+  }
   return row.current_user;
 }

@@ -218,7 +218,7 @@ if (!OWNER_URL) {
       const { role } = parseAppRole(harness.appUrl);
       expect(await isRlsEnforcedFor(owner, role)).toBe(true);
       await expect(assertRestrictedRuntimeRole(app)).resolves.toBe(role);
-      await expect(assertRestrictedRuntimeRole(owner)).rejects.toThrow(/SUPERUSER or BYPASSRLS/i);
+      await expect(assertRestrictedRuntimeRole(owner)).rejects.toThrow(/SUPERUSER or BYPASSRLS|owns public tables/i);
     });
 
     it('connects as the runtime role, not the owner', async () => {
