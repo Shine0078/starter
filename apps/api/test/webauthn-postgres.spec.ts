@@ -453,30 +453,59 @@ if (!OWNER_URL) {
       expect(refreshed.body.user.id).toBe(account.userId);
       expect(refreshed.body.tokens.accessToken).toBeTruthy();
 
-      const lockLogin = async (flags = 0x01) => {
-        const login = await request(http).post('/api/webauthn/login/options').send({}).expect(200);
-        return request(http).post('/api/webauthn/login/verify').send({
-          id: registration.id,
-          ceremonyId: login.body.ceremonyId,
-          response: buildAssertion(login.body.challenge, privateKey, Date.now() % 1000, flags),
-        });
-      };
-      for (let i = 0; i < 8; i += 1) {
-        await lockLogin(0x01).expect(401);
-      }
-      const blocked = await lockLogin(0x05);
-      expect(blocked.status).toBe(429);
-
-      await harness.owner.query("UPDATE users SET status = 'locked' WHERE id = $1", [account.userId]);
-      const locked = await request(http).post('/api/webauthn/login/options').send({}).expect(200);
+      const otherOptions = await request(http)
+        .post('/api/webauthn/register/options')
+        .set('Authorization', `Bearer ${other.tokens.accessToken}`)
+        .send({ password: PASSWORD })
+        .expect(201);
+      const otherReg = buildRegistration(
+        otherOptions.body.challenge,
+        Buffer.from(`locked-${other.userId}`),
+        publicKey,
+      );
+      await request(http)
+        .post('/api/webauthn/register/verify')
+        .set('Authorization', `Bearer ${other.tokens.accessToken}`)
+        .send({
+          id: otherReg.id,
+          ceremonyId: otherOptions.body.ceremonyId,
+          password: PASSWORD,
+          response: {
+            clientDataJSON: otherReg.clientDataJSON,
+            attestationObject: otherReg.attestationObject,
+          },
+        })
+        .expect(201);
+      await harness.owner.query('UPDATE users SET status = \'locked\' WHERE id = $1', [other.userId]);
+      const disabled = await request(http).post('/api/webauthn/login/options').send({}).expect(200);
       await request(http)
         .post('/api/webauthn/login/verify')
         .send({
-          id: registration.id,
-          ceremonyId: locked.body.ceremonyId,
-          response: buildAssertion(locked.body.challenge, privateKey, 10),
+          id: otherReg.id,
+          ceremonyId: disabled.body.ceremonyId,
+          response: buildAssertion(disabled.body.challenge, privateKey, 10),
         })
         .expect(401);
+      for (let i = 0; i < 8; i += 1) {
+        const login = await request(http).post('/api/webauthn/login/options').send({}).expect(200);
+        await request(http)
+          .post('/api/webauthn/login/verify')
+          .send({
+            id: registration.id,
+            ceremonyId: login.body.ceremonyId,
+            response: buildAssertion(login.body.challenge, privateKey, i + 20, 0x01),
+          })
+          .expect(401);
+      }
+      const lockedOptions = await request(http).post('/api/webauthn/login/options').send({}).expect(200);
+      const blocked = await request(http)
+        .post('/api/webauthn/login/verify')
+        .send({
+          id: registration.id,
+          ceremonyId: lockedOptions.body.ceremonyId,
+          response: buildAssertion(lockedOptions.body.challenge, privateKey, 30),
+        });
+      expect(blocked.status).toBe(429);
     });
   });
 }
