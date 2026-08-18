@@ -39,7 +39,16 @@ export class InMemoryWebAuthnCredentialStore implements WebAuthnCredentialStore 
   async updateCounter(userId: string, credentialId: string, counter: number): Promise<void> {
     const rows = this.bucket(userId);
     const index = rows.findIndex((row) => row.credentialId === credentialId);
-    if (index >= 0) rows[index] = { ...rows[index]!, counter, lastUsedAt: new Date().toISOString() };
+    const current = index >= 0 ? rows[index] : undefined;
+    if (!current) throw new Error('WebAuthn sign counter could not be advanced.');
+    if (!(current.counter < counter || (current.counter === 0 && counter === 0))) {
+      throw new Error('WebAuthn sign counter could not be advanced.');
+    }
+    rows[index] = {
+      ...current,
+      counter: current.counter === 0 && counter === 0 ? current.counter : counter,
+      lastUsedAt: new Date().toISOString(),
+    };
   }
 
   async remove(userId: string, credentialId: string): Promise<boolean> {
@@ -113,22 +122,36 @@ export class PostgresWebAuthnCredentialStore implements WebAuthnCredentialStore 
   async findByCredentialId(
     credentialId: string,
   ): Promise<{ userId: string; credential: WebAuthnCredential } | null> {
-    const { rows } = await this.pg.query<CredentialRow>(
-      `SELECT ${COLUMNS} FROM webauthn_credentials WHERE credential_id = $1`,
+    const { rows } = await this.pg.query<{ user_id: string }>(
+      'SELECT user_id FROM finverse_webauthn_credential_owner($1)',
       [credentialId],
     );
-    if (!rows[0]) return null;
-    return { userId: rows[0].user_id, credential: toCredential(rows[0]) };
+    const userId = rows[0]?.user_id;
+    if (!userId) return null;
+    const credential = await this.get(userId, credentialId);
+    if (!credential) return null;
+    return { userId, credential };
   }
 
   async updateCounter(userId: string, credentialId: string, counter: number): Promise<void> {
-    await withUserScope(this.pg, userId, async (client) => {
-      await client.query(
-        `UPDATE webauthn_credentials SET counter = $3, last_used_at = now()
-         WHERE user_id = $1 AND credential_id = $2`,
+    const updated = await withUserScope(this.pg, userId, async (client) => {
+      const result = await client.query(
+        `UPDATE webauthn_credentials
+            SET counter = CASE
+                  WHEN counter = 0 AND $3 = 0 THEN counter
+                  ELSE $3
+                END,
+                last_used_at = now()
+          WHERE user_id = $1
+            AND credential_id = $2
+            AND (counter < $3 OR (counter = 0 AND $3 = 0))`,
         [userId, credentialId, counter],
       );
+      return (result.rowCount ?? 0) === 1;
     });
+    if (!updated) {
+      throw new Error('WebAuthn sign counter could not be advanced.');
+    }
   }
 
   async remove(userId: string, credentialId: string): Promise<boolean> {
@@ -142,6 +165,8 @@ export class PostgresWebAuthnCredentialStore implements WebAuthnCredentialStore 
   }
 
   async purgeUser(userId: string): Promise<void> {
-    await this.pg.query('DELETE FROM webauthn_credentials WHERE user_id = $1', [userId]);
+    await withUserScope(this.pg, userId, async (client) => {
+      await client.query('DELETE FROM webauthn_credentials WHERE user_id = $1', [userId]);
+    });
   }
 }

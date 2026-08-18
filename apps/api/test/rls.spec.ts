@@ -228,27 +228,13 @@ if (!OWNER_URL) {
       );
       expect(raw.rows).toHaveLength(0);
 
-      const routed = await app.query<{
-        user_id: string;
-        credential_id: string;
-        public_key_pem: string;
-        counter: number;
-      }>('SELECT * FROM finverse_webauthn_credential($1)', [credentialId]);
+      const routed = await app.query<{ user_id: string }>(
+        'SELECT * FROM finverse_webauthn_credential_owner($1)',
+        [credentialId],
+      );
 
-      expect(routed.fields.map((field) => field.name)).toEqual([
-        'user_id',
-        'credential_id',
-        'public_key_pem',
-        'counter',
-      ]);
-      expect(routed.rows).toEqual([
-        {
-          user_id: ALICE,
-          credential_id: credentialId,
-          public_key_pem: '-----BEGIN PUBLIC KEY-----',
-          counter: 0,
-        },
-      ]);
+      expect(routed.fields.map((field) => field.name)).toEqual(['user_id']);
+      expect(routed.rows).toEqual([{ user_id: ALICE }]);
     });
     it('routes a provider Item through the narrow owner function without exposing the token', async () => {
       const result = await app.query(

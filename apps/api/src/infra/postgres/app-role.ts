@@ -132,6 +132,18 @@ export async function provisionAppRole(pg: Pool, appDatabaseUrl: string): Promis
             app_role
           );
         END IF;
+        IF to_regprocedure('public.finverse_subscription_owner(text)') IS NOT NULL THEN
+          EXECUTE format(
+            'GRANT EXECUTE ON FUNCTION public.finverse_subscription_owner(text) TO %I',
+            app_role
+          );
+        END IF;
+        IF to_regprocedure('public.finverse_webauthn_credential_owner(text)') IS NOT NULL THEN
+          EXECUTE format(
+            'GRANT EXECUTE ON FUNCTION public.finverse_webauthn_credential_owner(text) TO %I',
+            app_role
+          );
+        END IF;
 
         -- Tables added by a later migration are covered without anyone having to
         -- remember to come back here.
