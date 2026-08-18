@@ -226,6 +226,16 @@ if (!OWNER_URL) {
       };
     }
 
+    it('refuses the in-memory sample ledger on Postgres', async () => {
+      const account = await registerAccount();
+      const blocked = await request(http)
+        .post('/api/sync')
+        .set('Authorization', `Bearer ${account.tokens.accessToken}`)
+        .send({});
+      expect(blocked.status).toBe(400);
+      expect(String(blocked.body.message ?? blocked.body.error ?? '')).toMatch(/Connect a bank account/i);
+    });
+
     it('completes unauthenticated passkey login under forced RLS', async () => {
       const { role } = parseAppRole(harness.appUrl);
       const { rows: who } = await harness.app.query<{ user: string }>('SELECT current_user AS user');
