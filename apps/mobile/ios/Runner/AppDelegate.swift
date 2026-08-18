@@ -104,9 +104,9 @@ import LinkKit
         self?.deliverPlaidResult([
           "status": "success",
           "publicToken": success.publicToken,
-          "institutionId": success.metadata.institution?.id,
-          "institutionName": success.metadata.institution?.name,
-          "linkSessionId": success.metadata.linkSessionId,
+          "institutionId": success.metadata.institution.id,
+          "institutionName": success.metadata.institution.name,
+          "linkSessionId": success.metadata.linkSessionID,
         ])
       },
       onExit: { [weak self] exit in
