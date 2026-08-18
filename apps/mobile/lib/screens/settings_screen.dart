@@ -574,6 +574,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _exportData() async {
     final password = TextEditingController();
+    final mfaCode = TextEditingController();
     final submitted = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -597,6 +598,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 border: OutlineInputBorder(),
               ),
             ),
+            if (_mfa?.enabled == true) ...[
+              const SizedBox(height: 12),
+              TextField(
+                controller: mfaCode,
+                decoration: const InputDecoration(
+                  labelText: 'Authenticator or recovery code',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
           ],
         ),
         actions: [
@@ -612,12 +623,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
     final currentPassword = password.text;
+    final currentMfa = mfaCode.text.trim();
     password.dispose();
+    mfaCode.dispose();
     if (submitted != true) return;
 
     setState(() => _exporting = true);
     try {
-      final json = await widget.api.exportData(currentPassword);
+      final json = await widget.api.exportData(
+        currentPassword,
+        mfaCode: currentMfa.isEmpty ? null : currentMfa,
+      );
       final stamp = DateFormat('yyyyMMdd-HHmmss').format(DateTime.now());
       await shareGeneratedFile(
         bytes: Uint8List.fromList(utf8.encode(json)),

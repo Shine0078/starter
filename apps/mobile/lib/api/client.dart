@@ -906,11 +906,15 @@ class ApiClient implements BackgroundSyncClient {
 
   /// Schedules irreversible erasure after a 30-day recovery window.
   /// Credentials are cleared only after the server accepts the request.
-  Future<DateTime> requestAccountDeletion(String password) async {
+  Future<DateTime> requestAccountDeletion(String password, {String? mfaCode}) async {
     final response = await _perform(
       'DELETE',
       '/auth/account',
-      {'password': password, 'confirmation': 'DELETE'},
+      {
+        'password': password,
+        'confirmation': 'DELETE',
+        if (mfaCode != null && mfaCode.isNotEmpty) 'mfaCode': mfaCode,
+      },
       true,
     );
     final decoded = response.body.isEmpty
@@ -928,11 +932,14 @@ class ApiClient implements BackgroundSyncClient {
     return scheduledFor;
   }
 
-  Future<String> exportData(String password) async {
+  Future<String> exportData(String password, {String? mfaCode}) async {
     final response = await _perform(
       'POST',
       '/privacy/export',
-      {'password': password},
+      {
+        'password': password,
+        if (mfaCode != null && mfaCode.isNotEmpty) 'mfaCode': mfaCode,
+      },
       true,
     );
     if (response.statusCode >= 400) {
@@ -1438,6 +1445,7 @@ class ApiClient implements BackgroundSyncClient {
 
   Future<String> createBankLinkToken({
     required String password,
+    String? mfaCode,
     String? linkId,
     String platform = 'android',
   }) async {
@@ -1448,6 +1456,7 @@ class ApiClient implements BackgroundSyncClient {
         'password': password,
         'platform': platform,
         if (linkId != null) 'linkId': linkId,
+        if (mfaCode != null && mfaCode.isNotEmpty) 'mfaCode': mfaCode,
       },
     ) as Map<String, dynamic>;
     return json['token'] as String;
