@@ -1488,20 +1488,33 @@ class ApiClient implements BackgroundSyncClient {
     return json['available'] == true;
   }
 
-  Future<Map<String, dynamic>> passkeyRegisterOptions() async {
+  Future<Map<String, dynamic>> passkeyRegisterOptions({
+    required String password,
+    String? mfaCode,
+  }) async {
     return await _send(
       'POST',
       '/webauthn/register/options',
+      {
+        'password': password,
+        if (mfaCode != null && mfaCode.isNotEmpty) 'mfaCode': mfaCode,
+      },
     ) as Map<String, dynamic>;
   }
 
   Future<Map<String, dynamic>> passkeyRegisterVerify(
-    String id,
-    String clientDataJson,
-    String attestationObject,
-  ) async {
+    String id, {
+    required String ceremonyId,
+    required String password,
+    String? mfaCode,
+    required String clientDataJson,
+    required String attestationObject,
+  }) async {
     return await _send('POST', '/webauthn/register/verify', {
       'id': id,
+      'ceremonyId': ceremonyId,
+      'password': password,
+      if (mfaCode != null && mfaCode.isNotEmpty) 'mfaCode': mfaCode,
       'response': {
         'clientDataJSON': clientDataJson,
         'attestationObject': attestationObject,
@@ -1519,14 +1532,14 @@ class ApiClient implements BackgroundSyncClient {
 
   Future<Map<String, dynamic>> passkeyLoginVerify(
     String id, {
-    String? email,
+    required String ceremonyId,
     required String clientDataJson,
     required String authenticatorData,
     required String signature,
   }) async {
     return await _send('POST', '/webauthn/login/verify', {
       'id': id,
-      if (email != null && email.isNotEmpty) 'email': email,
+      'ceremonyId': ceremonyId,
       'response': {
         'clientDataJSON': clientDataJson,
         'authenticatorData': authenticatorData,
@@ -1542,13 +1555,20 @@ class ApiClient implements BackgroundSyncClient {
         .toList();
   }
 
-  Future<void> passkeyRemove(String credentialId) async {
+  Future<void> passkeyRemove(
+    String credentialId, {
+    required String password,
+    String? mfaCode,
+  }) async {
     await _send(
       'DELETE',
       '/webauthn/credentials/${Uri.encodeComponent(credentialId)}',
+      {
+        'password': password,
+        if (mfaCode != null && mfaCode.isNotEmpty) 'mfaCode': mfaCode,
+      },
     );
   }
-
   Future<NotificationPreferences> notificationPreferences() async {
     final json =
         await _get('/notifications/preferences') as Map<String, dynamic>;
@@ -1838,3 +1858,4 @@ class PlanUpgradeRequiredException implements Exception {
   @override
   String toString() => message;
 }
+

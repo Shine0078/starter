@@ -22,6 +22,7 @@ import {
   base64UrlEncode,
   hashRpId,
   userPresent,
+  userVerified,
   verifyAssertionSignature,
   verifyClientData,
 } from '../src/domain/webauthn/verify';
@@ -96,7 +97,7 @@ function authData(rpId: string, counter = 1, flags = 0x05): Buffer {
 function registrationAuthData(rpId: string, credentialId: Buffer, coseKey: Buffer): Buffer {
   const base = Buffer.concat([
     hashRpId(rpId),
-    Buffer.from([0x41]),
+    Buffer.from([0x45]),
     Buffer.alloc(4),
     Buffer.alloc(16),
   ]);
@@ -106,6 +107,58 @@ function registrationAuthData(rpId: string, credentialId: Buffer, coseKey: Buffe
 }
 
 /** COSE EC2 key for P-256 with the given x/y coordinates. */
+function cosePoint(publicKey: KeyObject): { x: Buffer; y: Buffer } {
+  const key = publicKey.export({ type: 'spki', format: 'der' });
+  const point = key.subarray(key.length - 65);
+  return { x: point.subarray(1, 33), y: point.subarray(33, 65) };
+}
+
+function buildRegistration(
+  challenge: string,
+  credentialId: Buffer,
+  publicKey: KeyObject,
+): { id: string; clientDataJSON: string; attestationObject: string } {
+  const { x, y } = cosePoint(publicKey);
+  const auth = registrationAuthData(CONFIG.rpId, credentialId, coseEc2Key(x, y));
+  const clientData = Buffer.from(
+    JSON.stringify({ type: 'webauthn.create', challenge, origin: CONFIG.origin }),
+  );
+  const attestationObject = cborEncode(
+    new Map<string, unknown>([
+      ['fmt', 'none'],
+      ['attStmt', new Map<string, unknown>()],
+      ['authData', new Uint8Array(auth)],
+    ]),
+  );
+  return {
+    id: base64UrlEncode(credentialId),
+    clientDataJSON: base64UrlEncode(clientData),
+    attestationObject: base64UrlEncode(attestationObject),
+  };
+}
+
+function buildAssertion(
+  challenge: string,
+  privateKey: KeyObject,
+  counter = 1,
+  flags = 0x05,
+  origin = CONFIG.origin,
+  rpId = CONFIG.rpId,
+): { clientDataJSON: string; authenticatorData: string; signature: string } {
+  const clientData = Buffer.from(
+    JSON.stringify({ type: 'webauthn.get', challenge, origin }),
+  );
+  const authenticator = authData(rpId, counter, flags);
+  const signature = derSign(
+    Buffer.concat([authenticator, createHash('sha256').update(clientData).digest()]),
+    privateKey,
+  );
+  return {
+    clientDataJSON: base64UrlEncode(clientData),
+    authenticatorData: base64UrlEncode(authenticator),
+    signature: base64UrlEncode(signature),
+  };
+}
 function coseEc2Key(x: Buffer, y: Buffer): Buffer {
   const map = new Map<number, unknown>([
     [1, 2],
@@ -174,9 +227,12 @@ describe('webauthn verify core', () => {
     ).toBe(false);
   });
 
-  it('reports the user-presence flag and rp id hash', () => {
+  it('reports the user-presence and user-verified flags and rp id hash', () => {
     expect(userPresent(authData(CONFIG.rpId, 1, 0x05))).toBe(true);
+    expect(userPresent(authData(CONFIG.rpId, 1, 0x01))).toBe(true);
     expect(userPresent(authData(CONFIG.rpId, 1, 0x04))).toBe(false);
+    expect(userVerified(authData(CONFIG.rpId, 1, 0x05))).toBe(true);
+    expect(userVerified(authData(CONFIG.rpId, 1, 0x01))).toBe(false);
     expect(authenticatorRpIdHash(authData(CONFIG.rpId))?.equals(hashRpId(CONFIG.rpId))).toBe(true);
   });
 });
@@ -304,7 +360,7 @@ describe('webauthn API', () => {
       acceptedPrivacyNotice: true,
       privacyVersion: 'privacy-test-v1',
     });
-    return { tokens: response.body.tokens as { accessToken: string } };
+    return { email, tokens: response.body.tokens as { accessToken: string } };
   }
 
     it('lets an unauthenticated client start and submit a passkey login ceremony', async () => {
@@ -328,10 +384,11 @@ describe('webauthn API', () => {
         },
       });
 
-    // The ceremony is public, but a garbage assertion must fail closed
-    // without asking for a bearer token.
-    expect(verify.status).not.toBe(401);
-    expect(verify.status).toBeGreaterThanOrEqual(400);
+    // The ceremony is public. A garbage assertion still fails closed, but
+    // must not look like a missing-bearer rejection from AuthGuard.
+    expect(verify.status).toBe(401);
+    expect(JSON.stringify(verify.body)).not.toMatch(/Missing bearer token/i);
+    expect(verify.body.message).toBe('This passkey could not be verified.');
   });
 it('reports availability and requires a token for registration', async () => {
     const status = await request(http).get('/api/webauthn/status').expect(200);
@@ -344,22 +401,142 @@ it('reports availability and requires a token for registration', async () => {
     const response = await request(http)
       .post('/api/webauthn/register/options')
       .set('Authorization', `Bearer ${tokens.accessToken}`)
+      .send({ password: 'correct horse battery staple' })
       .expect(201);
     expect(response.body.challenge).toBeTruthy();
     expect(response.body.rp.id).toBe(CONFIG.rpId);
   });
 
+  it('registers a passkey after step-up and issues a normal session on login', async () => {
+    const account = await register();
+    const { privateKey, publicKey } = generateKeyPairSync('ec', { namedCurve: 'P-256' });
+    const credentialId = Buffer.from(`cred-${account.email}`);
+
+    const options = await request(http)
+      .post('/api/webauthn/register/options')
+      .set('Authorization', `Bearer ${account.tokens.accessToken}`)
+      .send({ password: 'correct horse battery staple' })
+      .expect(201);
+    expect(options.body.userVerification ?? options.body.authenticatorSelection.userVerification).toBeTruthy();
+    expect(options.body.allowCredentials).toBeUndefined();
+
+    const registration = buildRegistration(options.body.challenge, credentialId, publicKey);
+    await request(http)
+      .post('/api/webauthn/register/verify')
+      .set('Authorization', `Bearer ${account.tokens.accessToken}`)
+      .send({
+        id: registration.id,
+        ceremonyId: options.body.ceremonyId,
+        password: 'correct horse battery staple',
+        response: {
+          clientDataJSON: registration.clientDataJSON,
+          attestationObject: registration.attestationObject,
+        },
+      })
+      .expect(201);
+
+    const known = await request(http).post('/api/webauthn/login/options').send({ email: account.email }).expect(200);
+    const unknown = await request(http).post('/api/webauthn/login/options').send({ email: 'nobody@example.com' }).expect(200);
+    expect(known.body.allowCredentials).toBeUndefined();
+    expect(unknown.body.allowCredentials).toBeUndefined();
+    expect(Object.keys(known.body).sort()).toEqual(Object.keys(unknown.body).sort());
+
+    const assertion = buildAssertion(known.body.challenge, privateKey, 2);
+    const verified = await request(http)
+      .post('/api/webauthn/login/verify')
+      .send({
+        id: registration.id,
+        ceremonyId: known.body.ceremonyId,
+        response: assertion,
+      })
+      .expect(200);
+    expect(verified.body.user.email).toBe(account.email);
+    expect(verified.body.tokens.accessToken).toBeTruthy();
+    expect(verified.body.tokens.refreshToken).toBeTruthy();
+
+    const me = await request(http)
+      .get('/api/auth/me')
+      .set('Authorization', `Bearer ${verified.body.tokens.accessToken}`)
+      .expect(200);
+    expect(me.body.email).toBe(account.email);
+
+    const replay = await request(http)
+      .post('/api/webauthn/login/verify')
+      .send({
+        id: registration.id,
+        ceremonyId: known.body.ceremonyId,
+        response: assertion,
+      })
+      .expect(401);
+    expect(replay.body.message).toBe('This passkey could not be verified.');
+
+    await request(http)
+      .post('/api/webauthn/register/options')
+      .set('Authorization', `Bearer ${verified.body.tokens.accessToken}`)
+      .expect(400);
+  });
+
+  it('rejects a missing-UV assertion and a wrong origin', async () => {
+    const account = await register();
+    const { privateKey, publicKey } = generateKeyPairSync('ec', { namedCurve: 'P-256' });
+    const credentialId = Buffer.from(`uv-${account.email}`);
+    const options = await request(http)
+      .post('/api/webauthn/register/options')
+      .set('Authorization', `Bearer ${account.tokens.accessToken}`)
+      .send({ password: 'correct horse battery staple' })
+      .expect(201);
+    const registration = buildRegistration(options.body.challenge, credentialId, publicKey);
+    await request(http)
+      .post('/api/webauthn/register/verify')
+      .set('Authorization', `Bearer ${account.tokens.accessToken}`)
+      .send({
+        id: registration.id,
+        ceremonyId: options.body.ceremonyId,
+        password: 'correct horse battery staple',
+        response: {
+          clientDataJSON: registration.clientDataJSON,
+          attestationObject: registration.attestationObject,
+        },
+      })
+      .expect(201);
+
+    const login = await request(http).post('/api/webauthn/login/options').send({}).expect(200);
+    const missingUv = buildAssertion(login.body.challenge, privateKey, 3, 0x01);
+    const rejected = await request(http)
+      .post('/api/webauthn/login/verify')
+      .send({
+        id: registration.id,
+        ceremonyId: login.body.ceremonyId,
+        response: missingUv,
+      })
+      .expect(401);
+    expect(rejected.body.message).toBe('This passkey could not be verified.');
+
+    const second = await request(http).post('/api/webauthn/login/options').send({}).expect(200);
+    const wrongOrigin = buildAssertion(second.body.challenge, privateKey, 4, 0x05, 'https://evil.example');
+    await request(http)
+      .post('/api/webauthn/login/verify')
+      .send({
+        id: registration.id,
+        ceremonyId: second.body.ceremonyId,
+        response: wrongOrigin,
+      })
+      .expect(401);
+  });
   it('rejects a malformed registration response', async () => {
     const { tokens } = await register();
     await request(http)
       .post('/api/webauthn/register/options')
       .set('Authorization', `Bearer ${tokens.accessToken}`)
+      .send({ password: 'correct horse battery staple' })
       .expect(201);
     await request(http)
       .post('/api/webauthn/register/verify')
       .set('Authorization', `Bearer ${tokens.accessToken}`)
       .send({
         id: 'cred',
+        ceremonyId: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        password: 'correct horse battery staple',
         response: { clientDataJSON: 'not-base64!!', attestationObject: 'x' },
       })
       .expect(400);

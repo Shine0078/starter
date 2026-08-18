@@ -108,6 +108,12 @@ export function userPresent(authenticatorData: Buffer): boolean {
   return (authenticatorData[32]! & 0x01) === 0x01;
 }
 
+/** True when the authenticator's user-verified flag is set. */
+export function userVerified(authenticatorData: Buffer): boolean {
+  if (authenticatorData.length < 37) return false;
+  return (authenticatorData[32]! & 0x04) === 0x04;
+}
+
 /** 32-byte SHA-256 of the RP id, expected as the first authData field. */
 export function authenticatorRpIdHash(authenticatorData: Buffer): Buffer | null {
   if (authenticatorData.length < 32) return null;

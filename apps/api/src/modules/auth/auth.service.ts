@@ -282,6 +282,53 @@ export class AuthService {
     return { user: toPublicUser(user), tokens: await this.issueSession(user, null, context) };
   }
 
+  /** Completes login after a verified WebAuthn assertion. */
+  async loginWithVerifiedPasskey(userId: string, context: RequestContext): Promise<AuthResult> {
+    const user = await this.users.findById(userId);
+    if (!user || user.status !== 'active') {
+      await this.record(
+        'passkey_login',
+        false,
+        userId,
+        user?.email ?? null,
+        context,
+        user ? `status=${user.status}` : 'missing user',
+      );
+      throw new UnauthorizedException('This passkey could not be verified.');
+    }
+    await this.record('passkey_login', true, user.id, user.email, context, null);
+    await this.record('login', true, user.id, user.email, context, 'passkey');
+    return { user: toPublicUser(user), tokens: await this.issueSession(user, null, context) };
+  }
+
+  async requireRecentPassword(
+    userId: string,
+    password: string,
+    mfaCode: string | undefined,
+    context: RequestContext,
+  ): Promise<User> {
+    const user = await this.requirePassword(userId, password);
+    const mfa = await this.mfa.get(user.id);
+    if (mfa?.enabledAt) {
+      if (!mfaCode || !(await this.verifyMfaFactor(user.id, mfaCode, this.clock.now()))) {
+        await this.record('passkey_step_up', false, user.id, user.email, context, 'second factor failed');
+        throw new UnauthorizedException('Authenticator or recovery code is incorrect.');
+      }
+    }
+    return user;
+  }
+
+  recordAuthEvent(
+    kind: AuthEventKind,
+    succeeded: boolean,
+    userId: string | null,
+    emailAttempted: string | null,
+    context: RequestContext,
+    detail: string | null,
+  ): Promise<void> {
+    return this.record(kind, succeeded, userId, emailAttempted, context, detail);
+  }
+
   // ------------------------------------------------------ multi-factor auth
 
   async mfaStatus(userId: string): Promise<{ enabled: boolean; available: boolean; recoveryCodesRemaining: number }> {

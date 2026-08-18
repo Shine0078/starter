@@ -3,6 +3,7 @@ import {
   base64UrlEncode,
   hashRpId,
   userPresent,
+  userVerified,
   verifyAssertionSignature,
   verifyClientData,
 } from '../../domain/webauthn/verify';
@@ -48,6 +49,7 @@ export class Fido2Verifier implements WebAuthnVerifier {
       throw new Error('WebAuthn authenticator is bound to a different origin.');
     }
     if (!userPresent(authData)) throw new Error('WebAuthn user presence was not confirmed.');
+    if (!userVerified(authData)) throw new Error('WebAuthn user verification was not confirmed.');
 
     return { credentialId: base64UrlEncode(Buffer.from(parsed.credentialId)), publicKeyPem: parsed.publicKeyPem };
   }
@@ -76,6 +78,9 @@ export class Fido2Verifier implements WebAuthnVerifier {
     }
     if (!userPresent(params.authenticatorData)) {
       throw new Error('WebAuthn user presence was not confirmed.');
+    }
+    if (!userVerified(params.authenticatorData)) {
+      throw new Error('WebAuthn user verification was not confirmed.');
     }
 
     const valid = verifyAssertionSignature({
