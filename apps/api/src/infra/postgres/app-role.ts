@@ -180,3 +180,32 @@ export async function isRlsEnforcedFor(pg: Pool, role: string): Promise<boolean>
   );
   return rows[0]?.enforced ?? false;
 }
+
+/**
+ * Production must actually be connected as the restricted runtime role.
+ * DATABASE_APP_URL being set is not enough if the credentials still resolve
+ * to a superuser or BYPASSRLS identity.
+ */
+export async function assertRestrictedRuntimeRole(pg: Pool): Promise<string> {
+  const { rows } = await pg.query<{
+    current_user: string;
+    rolsuper: boolean;
+    rolbypassrls: boolean;
+  }>(`
+    SELECT current_user,
+           rolsuper,
+           rolbypassrls
+      FROM pg_roles
+     WHERE rolname = current_user
+  `);
+  const row = rows[0];
+  if (!row) {
+    throw new Error('Could not determine the PostgreSQL runtime role.');
+  }
+  if (row.rolsuper || row.rolbypassrls) {
+    throw new Error(
+      `Runtime role ${row.current_user} is SUPERUSER or BYPASSRLS; refusing to serve requests.`,
+    );
+  }
+  return row.current_user;
+}

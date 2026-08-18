@@ -15,7 +15,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { Pool } from 'pg';
 
-import { isRlsEnforcedFor, parseAppRole } from '../src/infra/postgres/app-role';
+import { assertRestrictedRuntimeRole, isRlsEnforcedFor, parseAppRole } from '../src/infra/postgres/app-role';
 import { closePool, withUserScope } from '../src/infra/postgres/pool';
 import { OWNER_URL, startPgHarness, type PgHarness } from './pg-harness';
 
@@ -170,6 +170,8 @@ if (!OWNER_URL) {
     it('the runtime role is not a superuser and does not hold BYPASSRLS', async () => {
       const { role } = parseAppRole(harness.appUrl);
       expect(await isRlsEnforcedFor(owner, role)).toBe(true);
+      await expect(assertRestrictedRuntimeRole(app)).resolves.toBe(role);
+      await expect(assertRestrictedRuntimeRole(owner)).rejects.toThrow(/SUPERUSER or BYPASSRLS/i);
     });
 
     it('connects as the runtime role, not the owner', async () => {

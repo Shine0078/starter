@@ -113,6 +113,12 @@ describe.sequential('production configuration', () => {
     expect(() => loadConfig()).toThrow(/DATABASE_APP_URL/);
   });
 
+  it('refuses a production runtime URL that reuses the owner role', () => {
+    productionBase();
+    process.env.DATABASE_URL = 'postgresql://finverse:secret@db.example/finverse';
+    process.env.DATABASE_APP_URL = 'postgresql://finverse:secret@db.example/finverse';
+    expect(() => loadConfig()).toThrow(/different role/);
+  });
   it('refuses migrations during multi-instance startup', () => {
     productionBase();
     process.env.MIGRATE_ON_BOOT = 'true';

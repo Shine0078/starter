@@ -467,6 +467,19 @@ function buildConfig(): AppConfig {
         'Production requires DATABASE_APP_URL for the least-privileged RLS runtime role.',
       );
     }
+    if (databaseUrl) {
+      try {
+        const ownerUser = decodeURIComponent(new URL(databaseUrl).username);
+        const appUser = decodeURIComponent(new URL(appDatabaseUrl).username);
+        if (ownerUser && appUser && ownerUser === appUser) {
+          throw new Error(
+            'Production DATABASE_APP_URL must use a different role than DATABASE_URL.',
+          );
+        }
+      } catch (error) {
+        if (error instanceof Error && /must use a different role/.test(error.message)) throw error;
+      }
+    }
     if (migrateOnBoot) {
       throw new Error(
         'Production requires MIGRATE_ON_BOOT=false; run migrations as a separate release step.',
