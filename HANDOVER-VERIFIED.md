@@ -1,7 +1,7 @@
 # FINVERSE status - 2026-08-18 (verified)
 
 Canonical working branch: `codex/passkey-webauthn-p0`
-HEAD at write time: tip of `codex/passkey-webauthn-p0` after the LinkKit 7 iOS compile fix and the production npm-audit CI gate.
+HEAD at write time: `1e6db33` on `codex/passkey-webauthn-p0`.
 Do not treat older handover prose as current. This file records only what was executed and observed.
 
 ## Passkey / WebAuthn (P0)
@@ -21,6 +21,13 @@ Implemented and proven on this branch:
 - `WEBAUTHN_ORIGIN` is a comma-separated exact-origin allowlist under one RP ID (HTTPS hosts must equal the RP ID or be a subdomain; `android:apk-key-hash` is accepted)
 - Login and settings now call the passkey client. Web uses `navigator.credentials`. Native builds report unsupported instead of inventing a hardware ceremony.
 
+GitHub Actions on `1e6db33` ([run 32158579991](https://github.com/Shine0078/starter/actions/runs/32158579991)) succeeded:
+
+- API typecheck, in-memory tests, Postgres tests, migrations, backup drill, load-smoke, API build, and deployable image
+- Production `npm audit --omit=dev --audit-level=high`
+- Flutter analyze, Flutter tests, Android release APK, and PWA `/app/` compile
+- Unsigned iOS compile on macos-26 after the LinkKit 7 metadata fix and 7.1 pin
+
 Proven locally after the CI-red fixes on this turn:
 
 - `npx vitest run test/webauthn.spec.ts` - 17 passed, including MFA-enabled enroll after setting `MFA_ENCRYPTION_KEY`
@@ -28,14 +35,6 @@ Proven locally after the CI-red fixes on this turn:
 - `flutter analyze` - no issues
 - `flutter test test/widget_test.dart` - 63 passed, including 408/429 staying queued
 
-Observed on GitHub Actions for `97d3c24` ([run 32156076602](https://github.com/Shine0078/starter/actions/runs/32156076602)):
-
-- In-memory API tests passed after the MFA cipher fixture (the previous 503 is gone)
-- Flutter analysis, Flutter tests, Android APK, and web/PWA compile succeeded
-- Authenticated PostgreSQL load smoke failed because it still called demo `POST /api/sync`, which Postgres correctly rejects with 400
-- Unsigned iOS compile failed because `workmanager_apple` references `BGContinuedProcessingTask` and macos-14 does not ship that SDK
-
-Those two remaining CI failures are patched on this branch as `07031ed` and `21a33d7` and were not yet re-run at write time.
 
 Earlier on this branch, still valid unless contradicted above:
 
@@ -46,7 +45,7 @@ Earlier on this branch, still valid unless contradicted above:
 - `flutter build web --release --no-web-resources-cdn --base-href=/app/` - succeeded earlier
 - `flutter build apk --release --dart-define=API_BASE_URL=https://api.example.invalid` - succeeded earlier
 
-A complete `npm run test:db` has **not** been re-run on `21a33d7`.
+A complete local `npm run test:db` has **not** been re-run on `1e6db33`. CI on that SHA ran the equivalent Postgres service-container suite, migrations, backup drill, and load-smoke successfully.
 
 ## Release / production invariants
 
@@ -80,7 +79,6 @@ A complete `npm run test:db` has **not** been re-run on `21a33d7`.
 
 ## Still open (not claimed complete)
 
-- CI on the latest SHA after the LinkKit 7 iOS compile fix (in progress after push). macos-26 cleared BGContinuedProcessingTask, then failed on stale Plaid success metadata until `f52fbc2`.
 - Native iOS/Android Credential Manager / ASAuthorization ceremony (web is wired; native is an honest stub)
 - Physical-device / Safari-Chrome passkey smoke
 - External owner gates: production Plaid/Stripe, domains/TLS, SMTP, APNs/FCM, Apple/Android store signing, legal/privacy review, independent pentest
@@ -89,6 +87,6 @@ A complete `npm run test:db` has **not** been re-run on `21a33d7`.
 ## Owner actions required
 
 1. Keep working on `codex/passkey-webauthn-p0`. `main` is still `1a4a9f4`.
-2. Wait for CI on the pushed SHA. Dispatch release/database-release only after that SHA is merged to main and the same-repo main/master CI is green.
+2. CI is green on `1e6db33` for this branch. Dispatch release/database-release only after that SHA is merged to main and the same-repo main/master CI is green.
 3. Provision production with a restricted `DATABASE_APP_URL` role that does not own public tables.
 4. Provide production provider credentials and signing accounts before calling the system production-ready.
