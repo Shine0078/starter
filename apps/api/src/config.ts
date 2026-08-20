@@ -222,6 +222,20 @@ function legalDocument(
     throw new Error(`${urlName} must use HTTPS.`);
   }
 
+  const host = parsed.hostname.toLowerCase();
+  if (
+    host === 'example.com' ||
+    host.endsWith('.example.com') ||
+    host === 'example.org' ||
+    host.endsWith('.example.org') ||
+    host === 'example.net' ||
+    host.endsWith('.example.net')
+  ) {
+    throw new Error(
+      `${urlName} must not use a placeholder example.com host. Production registration requires reviewed legal documents.`,
+    );
+  }
+
   return { version, url: parsed.toString() };
 }
 

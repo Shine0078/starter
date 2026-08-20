@@ -173,6 +173,12 @@ describe.sequential('production configuration', () => {
     expect(() => loadConfig()).toThrow(/LEGAL_TERMS_URL must use HTTPS/);
   });
 
+  it('refuses placeholder example.com legal URLs', () => {
+    productionBase();
+    process.env.LEGAL_TERMS_URL = 'https://example.com/finverse-terms';
+    expect(() => loadConfig()).toThrow(/placeholder example.com host/);
+  });
+
   it('refuses to run production Plaid credentials against Sandbox', () => {
     productionBase();
     process.env.PLAID_CLIENT_ID = 'client-id';
