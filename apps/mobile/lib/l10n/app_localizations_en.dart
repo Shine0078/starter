@@ -97,6 +97,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get offlineBannerDismissRejected => 'Dismiss';
 
   @override
+  String get offlineBannerReviewRejected => 'Review';
+
+  @override
+  String get offlineConflictTitle => 'Offline changes';
+
+  @override
+  String get offlineConflictEmpty => 'There are no rejected offline changes.';
+
+  @override
+  String get offlineConflictPendingTitle => 'Waiting to sync';
+
+  @override
+  String get offlineConflictRejectedTitle => 'Needs attention';
+
+  @override
+  String get offlineConflictDismissOne => 'Dismiss';
+
+  @override
+  String get offlineConflictRetry => 'Retry sync';
+
+  @override
+  String offlineConflictStatus(int code) {
+    return 'HTTP $code';
+  }
+
+  @override
   String offlineBannerLastUpdated(Object date) {
     return 'Last updated $date. Changes are read-only until you reconnect.';
   }

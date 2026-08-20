@@ -26,6 +26,17 @@
     "placeholders": {"count": {"type": "num"}}
   },
   "offlineBannerDismissRejected": "Ignorer",
+  "offlineBannerReviewRejected": "Examiner",
+  "offlineConflictTitle": "Modifications hors ligne",
+  "offlineConflictEmpty": "Aucune modification hors ligne n'a ete refusee.",
+  "offlineConflictPendingTitle": "En attente de synchronisation",
+  "offlineConflictRejectedTitle": "A traiter",
+  "offlineConflictDismissOne": "Ignorer",
+  "offlineConflictRetry": "Reessayer",
+  "offlineConflictStatus": "HTTP {code}",
+  "@offlineConflictStatus": {
+    "placeholders": {"code": {"type": "int"}}
+  },
   "offlineBannerLastUpdated": "Dernière mise à jour : {date}. Les changements sont en lecture seule jusqu'à la reconnexion.",
   "settingsTitle": "Paramètres",
   "profileTitle": "Profil",

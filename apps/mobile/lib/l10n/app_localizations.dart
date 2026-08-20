@@ -236,6 +236,54 @@ abstract class AppLocalizations {
   /// **'Dismiss'**
   String get offlineBannerDismissRejected;
 
+  /// No description provided for @offlineBannerReviewRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Review'**
+  String get offlineBannerReviewRejected;
+
+  /// No description provided for @offlineConflictTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline changes'**
+  String get offlineConflictTitle;
+
+  /// No description provided for @offlineConflictEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'There are no rejected offline changes.'**
+  String get offlineConflictEmpty;
+
+  /// No description provided for @offlineConflictPendingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting to sync'**
+  String get offlineConflictPendingTitle;
+
+  /// No description provided for @offlineConflictRejectedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs attention'**
+  String get offlineConflictRejectedTitle;
+
+  /// No description provided for @offlineConflictDismissOne.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss'**
+  String get offlineConflictDismissOne;
+
+  /// No description provided for @offlineConflictRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry sync'**
+  String get offlineConflictRetry;
+
+  /// No description provided for @offlineConflictStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'HTTP {code}'**
+  String offlineConflictStatus(int code);
+
   /// No description provided for @offlineBannerLastUpdated.
   ///
   /// In en, this message translates to:

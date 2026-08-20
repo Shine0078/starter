@@ -11,6 +11,7 @@ import 'budgets_screen.dart';
 import 'notifications_screen.dart';
 import 'planning_screen.dart';
 import 'settings_screen.dart';
+import 'offline_conflict_screen.dart';
 import 'split_screen.dart';
 import 'subscriptions_screen.dart';
 
@@ -78,6 +79,15 @@ class ProfileScreen extends StatelessWidget {
                   onSignedOutEverywhere: onSignOut,
                 ),
               ),
+            ),
+          ),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.sync_problem_outlined),
+              title: Text(l10n.offlineConflictTitle),
+              subtitle: Text(l10n.offlineBannerRejected),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _open(context, OfflineConflictScreen(api: api)),
             ),
           ),
           const SizedBox(height: 12),

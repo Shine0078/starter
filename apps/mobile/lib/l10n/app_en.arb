@@ -26,6 +26,17 @@
     "placeholders": {"count": {"type": "num"}}
   },
   "offlineBannerDismissRejected": "Dismiss",
+  "offlineBannerReviewRejected": "Review",
+  "offlineConflictTitle": "Offline changes",
+  "offlineConflictEmpty": "There are no rejected offline changes.",
+  "offlineConflictPendingTitle": "Waiting to sync",
+  "offlineConflictRejectedTitle": "Needs attention",
+  "offlineConflictDismissOne": "Dismiss",
+  "offlineConflictRetry": "Retry sync",
+  "offlineConflictStatus": "HTTP {code}",
+  "@offlineConflictStatus": {
+    "placeholders": {"code": {"type": "int"}}
+  },
   "offlineBannerLastUpdated": "Last updated {date}. Changes are read-only until you reconnect.",
   "settingsTitle": "Settings",
   "profileTitle": "Profile",

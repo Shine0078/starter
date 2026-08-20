@@ -22,6 +22,7 @@ import 'package:finverse/l10n/app_localizations.dart';
 import 'package:finverse/main.dart';
 import 'package:finverse/models/models.dart';
 import 'package:finverse/screens/home_screen.dart';
+import 'package:finverse/screens/offline_conflict_screen.dart';
 import 'package:finverse/screens/bank_connections_screen.dart';
 import 'package:finverse/screens/dashboard_screen.dart';
 import 'package:finverse/screens/help_support_screen.dart';
@@ -989,6 +990,50 @@ void main() {
     expect(api.rejectedMutationCount.value, 1);
     expect(await cache.pendingMutations('user-1'), isEmpty);
     expect(await cache.pendingMutations('user-2'), hasLength(1));
+    expect(api.rejectedMutations.single.reason, contains('no longer valid'));
+  });
+
+  testWidgets('opens the offline conflict center from the rejected banner',
+      (tester) async {
+    final store = InMemorySessionStore();
+    final cache = InMemoryOfflineCacheStore();
+    await store.write(const SessionTokens(
+      accessToken: 'access',
+      refreshToken: 'refresh',
+      refreshExpiresAt: '2026-09-08T00:00:00.000Z',
+      userId: 'user-1',
+    ));
+    var online = false;
+    final api = clientWith(
+      MockClient((request) async {
+        if (!online) throw http.ClientException('offline');
+        return http.Response('{"message":"validation failed"}', 422);
+      }),
+      store: store,
+      offlineCache: cache,
+    );
+    await api.restoreSession();
+    await expectLater(
+      api.updateTransactionPreferences('txn-1', note: 'queued'),
+      throwsA(isA<OfflineMutationQueuedException>()),
+    );
+    online = true;
+    expect(await api.replayOfflineMutations(), 0);
+
+    await tester.pumpWidget(MaterialApp(
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        AppLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: OfflineConflictScreen(api: api),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Offline changes'), findsOneWidget);
+    expect(find.text('/transactions/txn-1/preferences'), findsOneWidget);
+    expect(find.textContaining('no longer valid'), findsOneWidget);
   });
   test('portable export confirms the password and attaches the active session',
       () async {
