@@ -35,9 +35,6 @@ WEBAUTHN_ORIGIN=https://app.your-domain.example,https://api.your-domain.example
 WEBAUTHN_RP_NAME=FINVERSE
 ```
 
-The Flutter login and settings screens now call those methods. The web/PWA build
-runs a real `navigator.credentials` ceremony. Native iOS/Android still report
-unsupported until Credential Manager / ASAuthorization and Digital Asset Links /
 `webcredentials` are configured.
 
 ## Remote push and background sync
