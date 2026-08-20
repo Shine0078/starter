@@ -1,7 +1,7 @@
 # FINVERSE status - 2026-08-20 (verified)
 
 Canonical working branch: `codex/passkey-webauthn-p0`
-HEAD at write time: `22fe3e8` on `codex/passkey-webauthn-p0`. PR #1 is open against protected `main`.
+HEAD at write time: `main` is `eebfd1d` (merge of PR #1). Working branch `codex/passkey-webauthn-p0` is `ddf43ce`.
 Do not treat older handover prose as current. This file records only what was executed and observed.
 
 ## Canonical deployment
@@ -44,7 +44,7 @@ Live Cloud Run readiness returned service `finverse-api`, store `postgres`, data
 
 ## P0 remaining
 
-- Merge this branch to `main` through a PR and wait for green main CI
+- Main CI on `eebfd1d` (in progress after PR #1 merge)
 - Redeploy Cloud Run so `/api/version` exists and GIT_SHA is present
 - Replace placeholder legal URLs before real users
 - Set live `WEBAUTHN_*` RP/domain values
@@ -66,12 +66,12 @@ Live Cloud Run readiness returned service `finverse-api`, store `postgres`, data
 
 ## External owner/provider blockers
 
-1. Merge/PR approval onto protected `main`
-2. Cloud Run redeploy with GIT_SHA and reviewed legal documents
+1. Cloud Run redeploy from `eebfd1d` with GIT_SHA so /api/version exists
+2. Replace example.com legal URLs before real users
 3. Domain/TLS and WebAuthn RP configuration
 4. Physical device passkey smoke
 5. Provider production credentials and store signing
 
 ## Exact next action
 
-Open a PR from `codex/passkey-webauthn-p0` into `main`. After that SHA is green on `main`, redeploy Cloud Run from it and replace the example.com legal URLs before collecting real-user data.
+PR #1 is merged. After main CI is green on `eebfd1d`, redeploy Cloud Run from that SHA (`GIT_SHA=eebfd1d...`) and replace the example.com legal URLs before collecting real-user data.
