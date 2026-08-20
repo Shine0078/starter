@@ -134,7 +134,7 @@ jobs:
             *) echo "API_BASE_URL must be an https origin." >&2; exit 1 ;;
           esac
           flutter build apk --release --dart-define=API_BASE_URL="$API_BASE_URL"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: finverse-android-${{ needs.gate.outputs.sha }}
           path: apps/mobile/build/app/outputs/flutter-apk/app-release.apk
@@ -157,7 +157,7 @@ jobs:
       - name: Build same-origin web bundle
         working-directory: apps/mobile
         run: flutter build web --release --no-web-resources-cdn --base-href=/app/
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: finverse-web-${{ needs.gate.outputs.sha }}
           path: apps/mobile/build/web
