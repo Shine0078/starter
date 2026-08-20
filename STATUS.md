@@ -57,6 +57,14 @@ Later this session:
 - Flutter CI reports outdated packages
 - Daily spending heatmap on analytics
 
+CI follow-up:
+
+- Dropped unsupported iOS `residentKeyPreference`
+- Pinned Trivy scanner to v0.74.0
+- Production readiness fails closed if the runtime DB role is unrestricted
+- Optional Sentry DSN now sends redacted crash reports
+- Category spending drills into matching transactions
+
 ## P0 remaining
 
 - Redeploy Cloud Run from a CI-green SHA with `GIT_SHA`
