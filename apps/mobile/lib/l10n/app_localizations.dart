@@ -1220,6 +1220,18 @@ abstract class AppLocalizations {
   /// **'Repeatable income and bills only. Everyday spending is not predicted.'**
   String get planningForecastDetail;
 
+  /// No description provided for @planningForecastBaseline.
+  ///
+  /// In en, this message translates to:
+  /// **'Baseline: known recurring income and bills stay covered in this window. This is not a prediction of everyday spending.'**
+  String get planningForecastBaseline;
+
+  /// No description provided for @planningForecastRiskBand.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Risk band: 1 day falls below zero if only known recurring cash flow continues. Everyday spending is not predicted.} other{Risk band: {count} days fall below zero if only known recurring cash flow continues. Everyday spending is not predicted.}}'**
+  String planningForecastRiskBand(num count);
+
   /// No description provided for @planningToday.
   ///
   /// In en, this message translates to:

@@ -309,6 +309,11 @@
   "planningOpenCalendar": "Open financial calendar",
   "planningConservativeForecast": "Conservative forecast",
   "planningForecastDetail": "Repeatable income and bills only. Everyday spending is not predicted.",
+  "planningForecastBaseline": "Baseline: known recurring income and bills stay covered in this window. This is not a prediction of everyday spending.",
+  "planningForecastRiskBand": "{count, plural, =1{Risk band: 1 day falls below zero if only known recurring cash flow continues. Everyday spending is not predicted.} other{Risk band: {count} days fall below zero if only known recurring cash flow continues. Everyday spending is not predicted.}}",
+  "@planningForecastRiskBand": {
+    "placeholders": {"count": {"type": "num"}}
+  },
   "planningToday": "Today",
   "planningEnd": "End",
   "planningForecastSemantics": "Cash flow forecast from {start} to {end}. {detail}",

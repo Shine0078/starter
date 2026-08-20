@@ -698,6 +698,23 @@ class AppLocalizationsFr extends AppLocalizations {
       'Uniquement les revenus et factures répétitifs. Les dépenses quotidiennes ne sont pas prédites.';
 
   @override
+  String get planningForecastBaseline =>
+      'Base: les revenus et factures recurrents connus restent couverts sur cette periode. Ce n\'est pas une prediction des depenses quotidiennes.';
+
+  @override
+  String planningForecastRiskBand(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Zone de risque: $count jours passent sous zero si seuls les flux recurrents connus continuent. Les depenses quotidiennes ne sont pas predites.',
+      one:
+          'Zone de risque: 1 jour passe sous zero si seuls les flux recurrents connus continuent. Les depenses quotidiennes ne sont pas predites.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get planningToday => 'Aujourd’hui';
 
   @override

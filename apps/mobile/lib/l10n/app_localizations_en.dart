@@ -688,6 +688,23 @@ class AppLocalizationsEn extends AppLocalizations {
       'Repeatable income and bills only. Everyday spending is not predicted.';
 
   @override
+  String get planningForecastBaseline =>
+      'Baseline: known recurring income and bills stay covered in this window. This is not a prediction of everyday spending.';
+
+  @override
+  String planningForecastRiskBand(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Risk band: $count days fall below zero if only known recurring cash flow continues. Everyday spending is not predicted.',
+      one:
+          'Risk band: 1 day falls below zero if only known recurring cash flow continues. Everyday spending is not predicted.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get planningToday => 'Today';
 
   @override
