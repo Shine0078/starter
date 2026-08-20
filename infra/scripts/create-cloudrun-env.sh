@@ -100,4 +100,4 @@ NODE
 unset FINVERSE_OWNER_URL FINVERSE_APP_PASSWORD FINVERSE_JWT_SECRET FINVERSE_MFA_KEY FINVERSE_BANK_KEY
 unset FINVERSE_SMTP_HOST FINVERSE_SMTP_PORT FINVERSE_SMTP_SECURE FINVERSE_SMTP_USER FINVERSE_SMTP_PASSWORD FINVERSE_EMAIL_FROM
 echo "Created ${OUT_FILE} with mode 600. It contains secrets; never commit or paste it."
-echo "Set LEGAL_TERMS_VERSION, LEGAL_TERMS_URL, LEGAL_PRIVACY_VERSION, and LEGAL_PRIVACY_URL to reviewed HTTPS documents before collecting real-user data. Placeholder example.com hosts are refused."
+echo "Set LEGAL_* to the same-origin technical-beta documents at /api/legal/terms/technical-beta-v1 and /api/legal/privacy/technical-beta-v1 before collecting tester data. Placeholder example.com hosts are refused. Replace those documents with counsel-reviewed Terms/Privacy before a commercial launch."
