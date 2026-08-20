@@ -35,6 +35,7 @@ import 'package:finverse/widgets/health_score_card.dart';
 import 'package:finverse/widgets/net_position_card.dart';
 import 'package:finverse/widgets/spending_chart.dart';
 import 'package:finverse/widgets/trend_chart.dart';
+import 'package:finverse/widgets/spending_heatmap.dart';
 
 /// An in-memory session store keeps these tests off the platform keystore,
 /// which has no implementation in the widget-test host.
@@ -668,6 +669,48 @@ void main() {
     expect(
       find.bySemanticsLabel(
           'Cash flow: 160 of 200 points. Income is above expenses.'),
+      findsOneWidget,
+    );
+    semantics.dispose();
+  });
+
+  testWidgets('spending heatmap exposes daily intensity semantics',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: SpendingHeatmap(points: const [
+          AnalyticsTrendPoint(
+            date: '2026-08-02',
+            income: 0,
+            incomeFormatted: r'$0.00',
+            expenses: 5000,
+            expensesFormatted: r'$50.00',
+            refunds: 0,
+            refundsFormatted: r'$0.00',
+            net: -5000,
+            netFormatted: r'-$50.00',
+          ),
+          AnalyticsTrendPoint(
+            date: '2026-08-03',
+            income: 0,
+            incomeFormatted: r'$0.00',
+            expenses: 8000,
+            expensesFormatted: r'$80.00',
+            refunds: 0,
+            refundsFormatted: r'$0.00',
+            net: -8000,
+            netFormatted: r'-$80.00',
+          ),
+        ]),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Daily spending'), findsOneWidget);
+    expect(
+      find.bySemanticsLabel(
+        r'Daily spending heatmap across 2 days. 2 days had spending. Highest spending $80.00 on 2026-08-03.',
+      ),
       findsOneWidget,
     );
     semantics.dispose();

@@ -7,6 +7,7 @@ import '../models/models.dart';
 import '../widgets/health_score_card.dart';
 import '../widgets/spending_chart.dart';
 import '../widgets/trend_chart.dart';
+import '../widgets/spending_heatmap.dart';
 import 'planning_screen.dart';
 
 /// A dedicated, explainable analytics view. The dashboard stays a quick
@@ -220,6 +221,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           const SizedBox(height: 20),
           if (analytics.trend.isNotEmpty) ...[
             TrendChart(points: analytics.trend),
+            const SizedBox(height: 20),
+            SpendingHeatmap(points: analytics.trend),
             const SizedBox(height: 20),
           ],
           if (categories.isNotEmpty) ...[

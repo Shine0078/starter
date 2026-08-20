@@ -48,6 +48,13 @@ GitHub Pages and `finverse.onrender.com` are not the current API.
 - Offline conflict-center UI
 - Privacy-preserving local crash log
 
+Later this session:
+
+- Optional HTTPS `SENTRY_DSN`
+- Trivy now scans `Dockerfile.public`
+- Flutter CI reports outdated packages
+- Daily spending heatmap on analytics
+
 ## P0 remaining
 
 - Redeploy Cloud Run from a CI-green SHA with `GIT_SHA`
