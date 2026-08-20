@@ -1,11 +1,9 @@
 # FINVERSE — Adversarial Engineering Handover 1
 
-**File:** `handover_1.md`  
-**Project root:** `C:\Users\samue\OneDrive\Desktop\starter`  
-**Prepared:** 2026-08-18  
-**Purpose:** Canonical engineering handover, adversarial review, remediation plan, and validation gates.
-
-> Treat this file as the current engineering source of truth until it is deliberately superseded by a newer handover. Do not trust older completion claims without re-verifying them against the repository and tests.
+**File:** `handover_1.md`
+**Project root:** `C:\Users\samue\OneDrive\Desktop\starter`
+**Prepared:** 2026-08-18
+**Status:** Historical. Current verified state is [`STATUS.md`](STATUS.md). Do not treat the passkey defects below as current without re-checking the repository and tests.
 
 ## 1. Executive assessment
 

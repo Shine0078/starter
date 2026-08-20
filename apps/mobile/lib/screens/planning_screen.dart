@@ -252,6 +252,13 @@ class _ForecastCard extends StatelessWidget {
                     value: forecast.endingBalanceFormatted),
               ],
             ),
+            const SizedBox(height: 12),
+            Text(
+              low == 0
+                  ? 'Baseline: known recurring income and bills stay covered in this window. This is not a prediction of everyday spending.'
+                  : 'Risk band: $low day${low == 1 ? '' : 's'} fall below zero if only known recurring cash flow continues. Everyday spending is not predicted.',
+              style: theme.textTheme.bodySmall,
+            ),
             const SizedBox(height: 16),
             Semantics(
               label: AppLocalizations.of(context).planningForecastSemantics(
