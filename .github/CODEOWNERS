@@ -1,0 +1,12 @@
+# Security-sensitive paths. This is a single-owner repository; CODEOWNERS
+# documents who must review changes even when GitHub cannot yet enforce a
+# second reviewer.
+.github/ @Shine0078
+apps/api/src/modules/auth/ @Shine0078
+apps/api/src/modules/webauthn/ @Shine0078
+apps/api/migrations/ @Shine0078
+apps/api/src/infra/postgres/ @Shine0078
+infra/ @Shine0078
+Dockerfile @Shine0078
+Dockerfile.public @Shine0078
+cloudbuild.yaml @Shine0078

@@ -14,28 +14,19 @@ insights, and account lifecycle controls. Production Plaid access,
 hosting, legal review, store approval, and billing remain external launch gates
 ([selling audit](docs/08-what-blocks-selling.md)).
 
-## Public builds
+## Public technical beta
 
-Zero-cost distribution, no store account required:
+Canonical same-origin deployment is Google Cloud Run + Neon:
 
-- **Web / PWA** — <https://shine0078.github.io/starter/app/> (installable from
-  Safari on iPhone via **Share → Add to Home Screen**, and from Chrome/Edge on
-  Android and desktop).
-- **Android APK** — the latest release-signed APK is at
-  <https://github.com/Shine0078/starter/releases/latest>.
+- **Web / PWA** — <https://finverse-d6vqs5iu7q-uc.a.run.app/app/>
+- **Readiness** — <https://finverse-d6vqs5iu7q-uc.a.run.app/api/readiness>
+- **Identity** — <https://finverse-d6vqs5iu7q-uc.a.run.app/api/version>
 - **Source** — this repository.
 
-The web build and APK target the FINVERSE API at
-`https://finverse.onrender.com`.
-
-> **Status, verified 2026-08-18:** that hostname currently answers, but it is
-> **not running this API** — it serves an unrelated placeholder Express app
-> (`GET /` returns 200, `GET /healthz` returns 404). The PWA above therefore
-> renders correctly but **cannot create accounts or sync banks**. Redeploy the
-> service from the Render Blueprint below, and verify with `/healthz` returning
-> 200 rather than `/` returning 200 — the placeholder answers `/` too, which is
-> how this went unnoticed. See
-> [`docs/14-public-hosting-render.md`](docs/14-public-hosting-render.md).
+GitHub Pages and `finverse.onrender.com` are **not** the current API. Render still
+serves an unrelated Express placeholder (`/healthz` is 404). Release Android
+builds now receive `API_BASE_URL=https://finverse-d6vqs5iu7q-uc.a.run.app`.
+See [`docs/17-public-hosting-google-cloud-run.md`](docs/17-public-hosting-google-cloud-run.md).
 
 ## Quick start
 
@@ -43,17 +34,11 @@ The web build and APK target the FINVERSE API at
 npm install
 ```
 
-## Public Hosting
+## Preview hosting
 
-The repository includes a Render Blueprint that deploys the API and Flutter PWA
-as one public HTTPS service backed by managed PostgreSQL. It does not require
-VPN, Tailscale, or this computer to remain online:
-
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Shine0078/starter)
-
-Before accepting real users, fill the required production secrets, reviewed
-legal URLs, SMTP credentials, and Plaid production credentials in Render. See
-[`docs/14-public-hosting-render.md`](docs/14-public-hosting-render.md).
+`render.yaml` remains a **preview-only** blueprint (`finverse-preview`). It is not
+the canonical technical-beta. Use Cloud Run + Neon for the public API and PWA.
+Historical Render notes live in [`docs/14-public-hosting-render.md`](docs/14-public-hosting-render.md).
 
 Run the whole pipeline in-process and watch it work — no server, no database:
 

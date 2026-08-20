@@ -27,14 +27,15 @@ jobs:
         run: |
           if [ -z "$PRODUCTION_HEALTH_URL" ]; then
             echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "healthy=true" >> "$GITHUB_OUTPUT"
-            echo "PRODUCTION_HEALTH_URL is not configured; uptime monitoring is dormant." >> "$GITHUB_STEP_SUMMARY"
-            exit 0
+            echo "healthy=false" >> "$GITHUB_OUTPUT"
+            echo "NOT CONFIGURED: PRODUCTION_HEALTH_URL is missing. Green uptime requires an actual FINVERSE probe." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
           fi
 
           echo "configured=true" >> "$GITHUB_OUTPUT"
           for attempt in 1 2 3; do
-            if curl --fail --silent --show-error --max-time 15 "$PRODUCTION_HEALTH_URL" > /dev/null; then
+            body="$(curl --fail --silent --show-error --max-time 15 "$PRODUCTION_HEALTH_URL" || true)"
+            if echo "$body" | grep -F '"service":"finverse-api"' >/dev/null; then
               echo "healthy=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
@@ -43,7 +44,7 @@ jobs:
           echo "healthy=false" >> "$GITHUB_OUTPUT"
 
       - name: Open or resolve uptime incident
-        if: steps.probe.outputs.configured == 'true'
+        if: always() && steps.probe.outputs.configured == 'true'
         shell: bash
         env:
           HEALTHY: ${{ steps.probe.outputs.healthy }}
