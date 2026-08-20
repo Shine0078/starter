@@ -1113,6 +1113,37 @@ void main() {
     expect(find.text('/transactions/txn-1/preferences'), findsOneWidget);
     expect(find.textContaining('no longer valid'), findsOneWidget);
   });
+
+  testWidgets('spending heatmap survives 200% text scaling', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(400, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(MaterialApp(
+      home: MediaQuery(
+        data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+        child: Scaffold(
+          body: SingleChildScrollView(
+            child: SpendingHeatmap(points: const [
+              AnalyticsTrendPoint(
+                date: '2026-08-02',
+                income: 0,
+                incomeFormatted: r'$0.00',
+                expenses: 5000,
+                expensesFormatted: r'$50.00',
+                refunds: 0,
+                refundsFormatted: r'$0.00',
+                net: -5000,
+                netFormatted: r'-$50.00',
+              ),
+            ]),
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Daily spending'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   test('portable export confirms the password and attaches the active session',
       () async {
     final store = InMemorySessionStore();
