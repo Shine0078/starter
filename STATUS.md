@@ -14,6 +14,8 @@ Protected default branch: `main`
 - `main` / `origin/main`: `eebfd1d` (merge of PR #1)
 - Local follow-up commits on the working branch are not released until their own CI is green.
 
+Open PR: https://github.com/Shine0078/starter/pull/16
+
 ## Canonical deployment
 
 Google Cloud Run + Neon, same-origin PWA:
