@@ -125,6 +125,7 @@ class MetaController {
       store: config.store,
       sha: config.releaseSha,
       schema: await bundledSchemaVersion(),
+      crashReporting: config.crashReporting.enabled,
       time: new Date().toISOString(),
     };
   }

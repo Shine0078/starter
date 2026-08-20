@@ -69,6 +69,8 @@ CI follow-up 2:
 - Public Cloud Run image scan is reported without failing CI on Flutter toolchain CVEs
 - Dashboard cards can be hidden locally without deleting data
 
+- Leave-one-out evaluation for the user-correction categorizer
+
 ## P0 remaining
 
 - Redeploy Cloud Run from a CI-green SHA with `GIT_SHA`
