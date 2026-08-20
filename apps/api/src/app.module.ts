@@ -4,12 +4,16 @@
   Header,
   Module,
   Req,
+  Res,
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import type { Request } from 'express';
+import type { Response } from 'express';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 import { loadConfig } from './config';
 import { CATEGORIES } from './domain/categories';
@@ -41,6 +45,12 @@ import { bundledSchemaVersion } from './infra/postgres/schema-identity';
 import { assertRestrictedRuntimeRole } from './infra/postgres/app-role';
 
 const appConfig = loadConfig();
+
+function sendLegalDocument(response: Response, filename: string) {
+  const html = readFileSync(join(__dirname, '..', 'public', 'legal', filename), 'utf8');
+  response.setHeader('cache-control', 'no-store');
+  response.send(html);
+}
 
 @Controller()
 class MetaController {
@@ -142,6 +152,20 @@ class MetaController {
   legal() {
     const { legal } = loadConfig();
     return legal;
+  }
+
+  @Public()
+  @Header('Content-Type', 'text/html; charset=utf-8')
+  @Get('legal/terms/technical-beta-v1')
+  technicalBetaTerms(@Res() response: Response) {
+    return sendLegalDocument(response, 'terms-technical-beta-v1.html');
+  }
+
+  @Public()
+  @Header('Content-Type', 'text/html; charset=utf-8')
+  @Get('legal/privacy/technical-beta-v1')
+  technicalBetaPrivacy(@Res() response: Response) {
+    return sendLegalDocument(response, 'privacy-technical-beta-v1.html');
   }
 
   /**

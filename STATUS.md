@@ -94,4 +94,4 @@ CI follow-up 2:
 
 ## Exact next action
 
-Replace live `LEGAL_*` values with reviewed HTTPS documents, then deploy `a21b374` to Cloud Run with `GIT_SHA=a21b374...`.
+Set live `LEGAL_*` to the same-origin technical-beta documents (`/api/legal/terms/technical-beta-v1` and `/api/legal/privacy/technical-beta-v1`), then deploy a CI-green SHA to Cloud Run with `GIT_SHA` set. Replace those documents with counsel-reviewed Terms/Privacy before a commercial launch.
