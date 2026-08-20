@@ -57,10 +57,10 @@ bash infra/scripts/create-cloudrun-env.sh ~/finverse-cloudrun.env.yaml
 bash infra/scripts/deploy-cloud-run.sh ~/finverse-cloudrun.env.yaml
 ```
 
-The helper starts with temporary `example.com` legal links. Replace those four
-values with the reviewed documents before enabling registration or accepting
-customers. It defaults to Gmail SMTP (`smtp.gmail.com:587`), but accepts any
-SMTP provider at the prompts.
+The helper no longer writes legal URLs. Set all four `LEGAL_*` values to
+reviewed HTTPS documents before collecting real-user data. Placeholder
+`example.com` hosts are refused at boot. It defaults to Gmail SMTP
+(`smtp.gmail.com:587`), but accepts any SMTP provider at the prompts.
 
 The script builds `Dockerfile.public` with Cloud Build, executes the Postgres
 migrations as a one-shot Cloud Run Job, deploys the service with unauthenticated
