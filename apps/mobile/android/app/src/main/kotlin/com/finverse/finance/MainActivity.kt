@@ -33,6 +33,8 @@ class MainActivity : FlutterFragmentActivity() {
             .setMethodCallHandler(::handlePlaidCall)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, RECEIPT_VISION_CHANNEL)
             .setMethodCallHandler(::handleReceiptVisionCall)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, PASSKEY_CHANNEL)
+            .setMethodCallHandler(PasskeyChannel(this))
     }
 
     private fun handlePlaidCall(call: MethodCall, result: MethodChannel.Result) {
@@ -133,6 +135,7 @@ class MainActivity : FlutterFragmentActivity() {
     companion object {
         private const val PLAID_CHANNEL = "com.finverse.finance/plaid_link"
         private const val RECEIPT_VISION_CHANNEL = "com.finverse.finance/receipt_vision"
+        private const val PASSKEY_CHANNEL = "com.finverse.finance/passkeys"
         private const val MAX_RECEIPT_TEXT = 8000
     }
 }

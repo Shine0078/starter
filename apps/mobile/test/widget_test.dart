@@ -1655,13 +1655,13 @@ void main() {
     );
   });
 
-  testWidgets('explains that native builds cannot complete a passkey ceremony',
+  testWidgets('explains that an unsupported passkey ceremony cannot sign in',
       (tester) async {
     final api = clientWith(MockClient((request) async {
       if (request.url.path.endsWith('/webauthn/status')) {
         return http.Response('{"available":true}', 200);
       }
-      fail('native stub must not start a ceremony');
+      fail('unsupported ceremony must not start a request');
     }));
 
     await tester.pumpWidget(MaterialApp(
@@ -1672,7 +1672,11 @@ void main() {
         AppLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
-      home: LoginScreen(api: api, onSignedIn: () => fail('must not sign in')),
+      home: LoginScreen(
+        api: api,
+        passkeyCeremony: FakePasskeyCeremony(supported: false),
+        onSignedIn: () => fail('must not sign in'),
+      ),
     ));
     await tester.tap(find.text('Use a passkey'));
     await tester.pumpAndSettle();
