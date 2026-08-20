@@ -1,5 +1,7 @@
 # FINVERSE — CONTINUE PROJECT FROM CURRENT HANDOFF TO PRODUCTION-READY STATE
 
+> **Historical.** Current verified status is [`STATUS.md`](STATUS.md). This file is a prior agent brief, not the live source of truth.
+
 You are taking ownership of an existing financial-management application called **FINVERSE**.
 
 Another agent, **ChatGPT Terra 5.6**, completed a significant portion of the project. The status report below is a **handoff, not guaranteed truth**.

@@ -97,12 +97,66 @@ class AppLocalizationsEn extends AppLocalizations {
   String get offlineBannerDismissRejected => 'Dismiss';
 
   @override
+  String get offlineBannerReviewRejected => 'Review';
+
+  @override
+  String get offlineConflictTitle => 'Offline changes';
+
+  @override
+  String get offlineConflictEmpty => 'There are no rejected offline changes.';
+
+  @override
+  String get offlineConflictPendingTitle => 'Waiting to sync';
+
+  @override
+  String get offlineConflictRejectedTitle => 'Needs attention';
+
+  @override
+  String get offlineConflictDismissOne => 'Dismiss';
+
+  @override
+  String get offlineConflictRetry => 'Retry sync';
+
+  @override
+  String offlineConflictStatus(int code) {
+    return 'HTTP $code';
+  }
+
+  @override
   String offlineBannerLastUpdated(Object date) {
     return 'Last updated $date. Changes are read-only until you reconnect.';
   }
 
   @override
   String get settingsTitle => 'Settings';
+
+  @override
+  String get dashboardCardsTitle => 'Dashboard cards';
+
+  @override
+  String get dashboardCardsDetail =>
+      'Choose which existing metrics stay on Home. Hidden cards are not deleted.';
+
+  @override
+  String get dashboardCardNetWorth => 'Net worth history';
+
+  @override
+  String get dashboardCardMonthlySummary => 'This month';
+
+  @override
+  String get dashboardCardSpending => 'Spending by category';
+
+  @override
+  String get dashboardCardHealth => 'Financial health';
+
+  @override
+  String get dashboardCardBudgets => 'Budgets';
+
+  @override
+  String get dashboardCardInsights => 'Explainable insights';
+
+  @override
+  String get dashboardCardTransactions => 'Recent transactions';
 
   @override
   String get profileTitle => 'Profile';
@@ -660,6 +714,23 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get planningForecastDetail =>
       'Repeatable income and bills only. Everyday spending is not predicted.';
+
+  @override
+  String get planningForecastBaseline =>
+      'Baseline: known recurring income and bills stay covered in this window. This is not a prediction of everyday spending.';
+
+  @override
+  String planningForecastRiskBand(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Risk band: $count days fall below zero if only known recurring cash flow continues. Everyday spending is not predicted.',
+      one:
+          'Risk band: 1 day falls below zero if only known recurring cash flow continues. Everyday spending is not predicted.',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get planningToday => 'Today';

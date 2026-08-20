@@ -90,10 +90,6 @@ const values = {
   SMTP_USER: process.env.FINVERSE_SMTP_USER,
   SMTP_PASSWORD: process.env.FINVERSE_SMTP_PASSWORD,
   EMAIL_FROM: process.env.FINVERSE_EMAIL_FROM,
-  LEGAL_TERMS_VERSION: 'v1',
-  LEGAL_TERMS_URL: 'https://example.com/finverse-terms',
-  LEGAL_PRIVACY_VERSION: 'v1',
-  LEGAL_PRIVACY_URL: 'https://example.com/finverse-privacy',
 };
 for (const [key, value] of Object.entries(values)) {
   if (value === undefined) throw new Error(`Missing generated value for ${key}`);
@@ -104,4 +100,4 @@ NODE
 unset FINVERSE_OWNER_URL FINVERSE_APP_PASSWORD FINVERSE_JWT_SECRET FINVERSE_MFA_KEY FINVERSE_BANK_KEY
 unset FINVERSE_SMTP_HOST FINVERSE_SMTP_PORT FINVERSE_SMTP_SECURE FINVERSE_SMTP_USER FINVERSE_SMTP_PASSWORD FINVERSE_EMAIL_FROM
 echo "Created ${OUT_FILE} with mode 600. It contains secrets; never commit or paste it."
-echo "The script uses temporary example legal URLs. Replace all four LEGAL_* values before selling."
+echo "Set LEGAL_TERMS_VERSION, LEGAL_TERMS_URL, LEGAL_PRIVACY_VERSION, and LEGAL_PRIVACY_URL to reviewed HTTPS documents before collecting real-user data. Placeholder example.com hosts are refused."

@@ -18,6 +18,7 @@ import { checkWebBundleBaseHref } from './infra/http/web-bundle';
 import { assertRestrictedRuntimeRole, parseAppRole, provisionAppRole } from './infra/postgres/app-role';
 import { closePool, getAppPool, getPool } from './infra/postgres/pool';
 import { runMigrations } from './infra/postgres/migrate';
+import { reportCrash } from './infra/observability/crash-reporter';
 
 const config = loadConfig();
 const PORT = config.port;
@@ -164,5 +165,12 @@ async function bootstrap(): Promise<void> {
     logger.warn('No web build found — run `flutter build web` to serve the app at /app/.');
   }
 }
+
+process.on('uncaughtException', (error) => {
+  void reportCrash(config.crashReporting, error, 'uncaughtException');
+});
+process.on('unhandledRejection', (reason) => {
+  void reportCrash(config.crashReporting, reason, 'unhandledRejection');
+});
 
 void bootstrap();

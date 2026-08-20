@@ -236,6 +236,54 @@ abstract class AppLocalizations {
   /// **'Dismiss'**
   String get offlineBannerDismissRejected;
 
+  /// No description provided for @offlineBannerReviewRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Review'**
+  String get offlineBannerReviewRejected;
+
+  /// No description provided for @offlineConflictTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline changes'**
+  String get offlineConflictTitle;
+
+  /// No description provided for @offlineConflictEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'There are no rejected offline changes.'**
+  String get offlineConflictEmpty;
+
+  /// No description provided for @offlineConflictPendingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting to sync'**
+  String get offlineConflictPendingTitle;
+
+  /// No description provided for @offlineConflictRejectedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs attention'**
+  String get offlineConflictRejectedTitle;
+
+  /// No description provided for @offlineConflictDismissOne.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss'**
+  String get offlineConflictDismissOne;
+
+  /// No description provided for @offlineConflictRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry sync'**
+  String get offlineConflictRetry;
+
+  /// No description provided for @offlineConflictStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'HTTP {code}'**
+  String offlineConflictStatus(int code);
+
   /// No description provided for @offlineBannerLastUpdated.
   ///
   /// In en, this message translates to:
@@ -247,6 +295,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Settings'**
   String get settingsTitle;
+
+  /// No description provided for @dashboardCardsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Dashboard cards'**
+  String get dashboardCardsTitle;
+
+  /// No description provided for @dashboardCardsDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose which existing metrics stay on Home. Hidden cards are not deleted.'**
+  String get dashboardCardsDetail;
+
+  /// No description provided for @dashboardCardNetWorth.
+  ///
+  /// In en, this message translates to:
+  /// **'Net worth history'**
+  String get dashboardCardNetWorth;
+
+  /// No description provided for @dashboardCardMonthlySummary.
+  ///
+  /// In en, this message translates to:
+  /// **'This month'**
+  String get dashboardCardMonthlySummary;
+
+  /// No description provided for @dashboardCardSpending.
+  ///
+  /// In en, this message translates to:
+  /// **'Spending by category'**
+  String get dashboardCardSpending;
+
+  /// No description provided for @dashboardCardHealth.
+  ///
+  /// In en, this message translates to:
+  /// **'Financial health'**
+  String get dashboardCardHealth;
+
+  /// No description provided for @dashboardCardBudgets.
+  ///
+  /// In en, this message translates to:
+  /// **'Budgets'**
+  String get dashboardCardBudgets;
+
+  /// No description provided for @dashboardCardInsights.
+  ///
+  /// In en, this message translates to:
+  /// **'Explainable insights'**
+  String get dashboardCardInsights;
+
+  /// No description provided for @dashboardCardTransactions.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent transactions'**
+  String get dashboardCardTransactions;
 
   /// No description provided for @profileTitle.
   ///
@@ -1171,6 +1273,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Repeatable income and bills only. Everyday spending is not predicted.'**
   String get planningForecastDetail;
+
+  /// No description provided for @planningForecastBaseline.
+  ///
+  /// In en, this message translates to:
+  /// **'Baseline: known recurring income and bills stay covered in this window. This is not a prediction of everyday spending.'**
+  String get planningForecastBaseline;
+
+  /// No description provided for @planningForecastRiskBand.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Risk band: 1 day falls below zero if only known recurring cash flow continues. Everyday spending is not predicted.} other{Risk band: {count} days fall below zero if only known recurring cash flow continues. Everyday spending is not predicted.}}'**
+  String planningForecastRiskBand(num count);
 
   /// No description provided for @planningToday.
   ///

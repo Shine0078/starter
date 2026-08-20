@@ -37,6 +37,8 @@ import { WebAuthnModule } from './modules/webauthn/webauthn.module';
 import { httpMetrics, metricsTokenMatches } from './infra/http/metrics';
 import { appleAppSiteAssociation as buildAppleAppSiteAssociation } from './infra/http/apple-app-site-association';
 import { androidAssetLinks, parseAndroidAssetLinkConfig } from './infra/http/asset-links';
+import { bundledSchemaVersion } from './infra/postgres/schema-identity';
+import { assertRestrictedRuntimeRole } from './infra/postgres/app-role';
 
 const appConfig = loadConfig();
 
@@ -74,9 +76,30 @@ class MetaController {
       // The runtime pool, not the owner's. Readiness is about the connection
       // that actually serves requests â€” the owner's could be fine while the
       // application role's password is stale and every request fails.
-      await getAppPool(config.appDatabaseUrl).query('SELECT 1');
-      return { status: 'ok', ...base, database: 'reachable' };
+      const pool = getAppPool(config.appDatabaseUrl);
+      await pool.query('SELECT 1');
+      let runtimeRole: string | undefined;
+      try {
+        runtimeRole = await assertRestrictedRuntimeRole(pool);
+      } catch {
+        runtimeRole = undefined;
+      }
+      if (config.isProduction && !runtimeRole) {
+        throw new ServiceUnavailableException({
+          status: 'degraded',
+          ...base,
+          database: 'reachable',
+          runtimeRole: 'unrestricted',
+        });
+      }
+      return {
+        status: 'ok',
+        ...base,
+        database: 'reachable',
+        ...(runtimeRole ? { runtimeRole } : {}),
+      };
     } catch (error) {
+      if (error instanceof ServiceUnavailableException) throw error;
       throw new ServiceUnavailableException({
         status: 'degraded',
         ...base,
@@ -94,13 +117,14 @@ class MetaController {
   /** Public identity so a 200 from the wrong process cannot hide as FINVERSE. */
   @Public()
   @Get('version')
-  version() {
+  async version() {
     const config = loadConfig();
     return {
       service: 'finverse-api',
       environment: config.isProduction ? 'production' : 'development',
       store: config.store,
       sha: config.releaseSha,
+      schema: await bundledSchemaVersion(),
       time: new Date().toISOString(),
     };
   }

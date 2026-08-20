@@ -138,14 +138,25 @@ class OfflineMutationQueuedException implements Exception {
 }
 
 class OfflineMutationRejectedException implements Exception {
-  const OfflineMutationRejectedException(this.path, this.statusCode);
+  const OfflineMutationRejectedException(
+    this.path,
+    this.statusCode, {
+    this.method = 'PATCH',
+    this.reason,
+    this.enqueuedAt,
+  });
 
   final String path;
   final int statusCode;
+  final String method;
+  final String? reason;
+  final DateTime? enqueuedAt;
 
   @override
   String toString() =>
-      'This change could not be saved and will not be retried automatically.';
+      reason == null || reason!.isEmpty
+          ? 'This change could not be saved and will not be retried automatically.'
+          : reason!;
 }
 
 /// Thin client over the FINVERSE API.
@@ -230,6 +241,14 @@ class ApiClient implements BackgroundSyncClient {
   void dismissRejectedMutations() {
     _rejectedMutations.clear();
     rejectedMutationCount.value = 0;
+  }
+
+  List<OfflineMutationRejectedException> get rejectedMutations =>
+      List.unmodifiable(_rejectedMutations);
+
+  void dismissRejectedMutation(OfflineMutationRejectedException mutation) {
+    _rejectedMutations.remove(mutation);
+    rejectedMutationCount.value = _rejectedMutations.length;
   }
 
   /// Called when the session is gone for good, so the app can show sign-in.
@@ -448,6 +467,8 @@ class ApiClient implements BackgroundSyncClient {
 
   bool _neverCache(String path) => path.startsWith('/auth/');
 
+  String? get sessionUserId => _cacheOwner;
+
   String? get _cacheOwner {
     if (_tokens?.userId != null) return _tokens!.userId;
     final token = _tokens?.accessToken;
@@ -556,6 +577,9 @@ class ApiClient implements BackgroundSyncClient {
         _rejectedMutations.add(OfflineMutationRejectedException(
           mutation.path,
           response.statusCode,
+          method: mutation.method,
+          reason: _offlineRejectionReason(response.statusCode),
+          enqueuedAt: mutation.enqueuedAt,
         ));
         rejectedMutationCount.value = _rejectedMutations.length;
         continue;
@@ -578,6 +602,23 @@ class ApiClient implements BackgroundSyncClient {
     offlineCacheStatus.value ??= DateTime.now().toUtc();
     await _refreshPendingMutationCount();
     throw OfflineMutationQueuedException(path);
+  }
+
+  String _offlineRejectionReason(int statusCode) {
+    switch (statusCode) {
+      case 409:
+      case 412:
+        return 'This change conflicted with a newer server version and was not overwritten.';
+      case 403:
+        return 'This change is not allowed for the current account.';
+      case 404:
+        return 'The original record is no longer available.';
+      case 422:
+      case 400:
+        return 'The server rejected this change because it is no longer valid.';
+      default:
+        return 'This change could not be saved and will not be retried automatically.';
+    }
   }
 
   // ------------------------------------------------------------------ auth
@@ -1908,4 +1949,3 @@ class PlanUpgradeRequiredException implements Exception {
   @override
   String toString() => message;
 }
-

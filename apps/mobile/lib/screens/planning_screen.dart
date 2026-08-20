@@ -252,6 +252,13 @@ class _ForecastCard extends StatelessWidget {
                     value: forecast.endingBalanceFormatted),
               ],
             ),
+            const SizedBox(height: 12),
+            Text(
+              low == 0
+                  ? AppLocalizations.of(context).planningForecastBaseline
+                  : AppLocalizations.of(context).planningForecastRiskBand(low),
+              style: theme.textTheme.bodySmall,
+            ),
             const SizedBox(height: 16),
             Semantics(
               label: AppLocalizations.of(context).planningForecastSemantics(

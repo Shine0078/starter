@@ -6,7 +6,7 @@ automated.
 [`MISSION.md`](MISSION.md) is the product brief. [`docs/`](docs/) turns it into
 a plan. This README tells you how to run what exists.
 
-**Status: launch engineering in progress.** Verified 2026-08-18 work lives on `codex/passkey-webauthn-p0` and is recorded in [`HANDOVER-VERIFIED.md`](HANDOVER-VERIFIED.md). The API and Android app include
+**Status: launch engineering in progress.** Current verified state is [`STATUS.md`](STATUS.md). Historical investigation lives in [`HANDOVER-VERIFIED.md`](HANDOVER-VERIFIED.md) and older handover files. The API and Android app include
 TOTP multi-factor authentication, device app lock, real
 Plaid Sandbox Link, encrypted token storage, incremental sync, budgets, goals,
 evidence-based bill, subscription, duplicate-charge, and unusual-spending alerts,

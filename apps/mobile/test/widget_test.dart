@@ -18,10 +18,12 @@ import 'package:finverse/api/offline_cache.dart';
 import 'package:finverse/api/passkey_ceremony.dart';
 import 'package:finverse/api/session_store.dart';
 import 'package:finverse/app_theme.dart';
+import 'package:finverse/dashboard_layout.dart';
 import 'package:finverse/l10n/app_localizations.dart';
 import 'package:finverse/main.dart';
 import 'package:finverse/models/models.dart';
 import 'package:finverse/screens/home_screen.dart';
+import 'package:finverse/screens/offline_conflict_screen.dart';
 import 'package:finverse/screens/bank_connections_screen.dart';
 import 'package:finverse/screens/dashboard_screen.dart';
 import 'package:finverse/screens/help_support_screen.dart';
@@ -34,6 +36,7 @@ import 'package:finverse/widgets/health_score_card.dart';
 import 'package:finverse/widgets/net_position_card.dart';
 import 'package:finverse/widgets/spending_chart.dart';
 import 'package:finverse/widgets/trend_chart.dart';
+import 'package:finverse/widgets/spending_heatmap.dart';
 
 /// An in-memory session store keeps these tests off the platform keystore,
 /// which has no implementation in the widget-test host.
@@ -591,6 +594,40 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  test('dashboard layout hides selected cards without deleting data', () async {
+    final layout = DashboardLayoutController.inMemory();
+    expect(layout.isVisible(DashboardCard.budgets), isTrue);
+    await layout.setVisible(DashboardCard.budgets, false);
+    expect(layout.isVisible(DashboardCard.budgets), isFalse);
+    expect(layout.isVisible(DashboardCard.transactions), isTrue);
+    await layout.setVisible(DashboardCard.budgets, true);
+    expect(layout.isVisible(DashboardCard.budgets), isTrue);
+  });
+
+  testWidgets('category spending legend reports the selected category',
+      (tester) async {
+    String? selected;
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: SpendingChart(
+          categories: [
+            CategorySpend(
+              categorySlug: 'groceries',
+              categoryName: 'Groceries',
+              total: 12550,
+              totalFormatted: r'$125.50',
+              transactionCount: 4,
+            ),
+          ],
+          onCategorySelected: (category) => selected = category.categorySlug,
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Groceries'));
+    expect(selected, 'groceries');
+  });
+
   testWidgets(
       'financial visuals have spoken equivalents and survive 200% text scaling',
       (tester) async {
@@ -667,6 +704,48 @@ void main() {
     expect(
       find.bySemanticsLabel(
           'Cash flow: 160 of 200 points. Income is above expenses.'),
+      findsOneWidget,
+    );
+    semantics.dispose();
+  });
+
+  testWidgets('spending heatmap exposes daily intensity semantics',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: SpendingHeatmap(points: const [
+          AnalyticsTrendPoint(
+            date: '2026-08-02',
+            income: 0,
+            incomeFormatted: r'$0.00',
+            expenses: 5000,
+            expensesFormatted: r'$50.00',
+            refunds: 0,
+            refundsFormatted: r'$0.00',
+            net: -5000,
+            netFormatted: r'-$50.00',
+          ),
+          AnalyticsTrendPoint(
+            date: '2026-08-03',
+            income: 0,
+            incomeFormatted: r'$0.00',
+            expenses: 8000,
+            expensesFormatted: r'$80.00',
+            refunds: 0,
+            refundsFormatted: r'$0.00',
+            net: -8000,
+            netFormatted: r'-$80.00',
+          ),
+        ]),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Daily spending'), findsOneWidget);
+    expect(
+      find.bySemanticsLabel(
+        r'Daily spending heatmap across 2 days. 2 days had spending. Highest spending $80.00 on 2026-08-03.',
+      ),
       findsOneWidget,
     );
     semantics.dispose();
@@ -989,6 +1068,50 @@ void main() {
     expect(api.rejectedMutationCount.value, 1);
     expect(await cache.pendingMutations('user-1'), isEmpty);
     expect(await cache.pendingMutations('user-2'), hasLength(1));
+    expect(api.rejectedMutations.single.reason, contains('no longer valid'));
+  });
+
+  testWidgets('opens the offline conflict center from the rejected banner',
+      (tester) async {
+    final store = InMemorySessionStore();
+    final cache = InMemoryOfflineCacheStore();
+    await store.write(const SessionTokens(
+      accessToken: 'access',
+      refreshToken: 'refresh',
+      refreshExpiresAt: '2026-09-08T00:00:00.000Z',
+      userId: 'user-1',
+    ));
+    var online = false;
+    final api = clientWith(
+      MockClient((request) async {
+        if (!online) throw http.ClientException('offline');
+        return http.Response('{"message":"validation failed"}', 422);
+      }),
+      store: store,
+      offlineCache: cache,
+    );
+    await api.restoreSession();
+    await expectLater(
+      api.updateTransactionPreferences('txn-1', note: 'queued'),
+      throwsA(isA<OfflineMutationQueuedException>()),
+    );
+    online = true;
+    expect(await api.replayOfflineMutations(), 0);
+
+    await tester.pumpWidget(MaterialApp(
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        AppLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: OfflineConflictScreen(api: api),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Offline changes'), findsOneWidget);
+    expect(find.text('/transactions/txn-1/preferences'), findsOneWidget);
+    expect(find.textContaining('no longer valid'), findsOneWidget);
   });
   test('portable export confirms the password and attaches the active session',
       () async {

@@ -34,6 +34,7 @@ const KEYS = [
   'WEBAUTHN_RP_NAME',
   'HIBP_PASSWORD_CHECK',
   'FCM_CREDENTIALS_JSON',
+  'SENTRY_DSN',
   'GIT_SHA',
 ] as const;
 const original = Object.fromEntries(KEYS.map((key) => [key, process.env[key]]));
@@ -68,6 +69,7 @@ function productionBase(): void {
   delete process.env.WEBAUTHN_RP_NAME;
   delete process.env.HIBP_PASSWORD_CHECK;
   delete process.env.FCM_CREDENTIALS_JSON;
+  delete process.env.SENTRY_DSN;
 }
 
 afterEach(() => {
@@ -155,6 +157,17 @@ describe.sequential('production configuration', () => {
     expect(loadConfig().releaseSha).toBe('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
   });
 
+  it('leaves crash reporting off until a DSN is supplied', () => {
+    productionBase();
+    expect(loadConfig().crashReporting).toEqual({ enabled: false, dsn: null });
+  });
+
+  it('refuses a non-HTTPS crash reporting DSN', () => {
+    productionBase();
+    process.env.SENTRY_DSN = 'http://public@example.com/1';
+    expect(() => loadConfig()).toThrow(/SENTRY_DSN must use HTTPS/);
+  });
+
   it('refuses production without an MFA encryption key', () => {
     productionBase();
     delete process.env.MFA_ENCRYPTION_KEY;
@@ -171,6 +184,12 @@ describe.sequential('production configuration', () => {
     productionBase();
     process.env.LEGAL_TERMS_URL = 'http://finverse.example/legal/terms';
     expect(() => loadConfig()).toThrow(/LEGAL_TERMS_URL must use HTTPS/);
+  });
+
+  it('refuses placeholder example.com legal URLs', () => {
+    productionBase();
+    process.env.LEGAL_TERMS_URL = 'https://example.com/finverse-terms';
+    expect(() => loadConfig()).toThrow(/placeholder example.com host/);
   });
 
   it('refuses to run production Plaid credentials against Sandbox', () => {

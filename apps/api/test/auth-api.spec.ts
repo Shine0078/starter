@@ -398,6 +398,7 @@ describe('auth API', () => {
       const version = await request(http).get('/api/version').expect(200);
       expect(version.body.service).toBe('finverse-api');
       expect(version.body).toHaveProperty('sha');
+      expect(version.body.schema).toMatch(/^\d{3}_.+\.sql$/);
       await request(http).get('/api/categories').expect(200);
       const metrics = await request(http).get('/api/metrics').expect(200);
       expect(metrics.headers['content-type']).toContain('text/plain');

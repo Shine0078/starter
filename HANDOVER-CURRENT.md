@@ -1,4 +1,6 @@
 > **Historical.** Current verified status is in [`HANDOVER-VERIFIED.md`](HANDOVER-VERIFIED.md) on `codex/passkey-webauthn-p0`. Do not treat the counts or Render findings below as current.
+>
+> Canonical current-state file is now [`STATUS.md`](STATUS.md).
 
 # FINVERSE — CURRENT HANDOVER (for the next agent)
 

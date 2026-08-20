@@ -99,12 +99,67 @@ class AppLocalizationsFr extends AppLocalizations {
   String get offlineBannerDismissRejected => 'Ignorer';
 
   @override
+  String get offlineBannerReviewRejected => 'Examiner';
+
+  @override
+  String get offlineConflictTitle => 'Modifications hors ligne';
+
+  @override
+  String get offlineConflictEmpty =>
+      'Aucune modification hors ligne n\'a ete refusee.';
+
+  @override
+  String get offlineConflictPendingTitle => 'En attente de synchronisation';
+
+  @override
+  String get offlineConflictRejectedTitle => 'A traiter';
+
+  @override
+  String get offlineConflictDismissOne => 'Ignorer';
+
+  @override
+  String get offlineConflictRetry => 'Reessayer';
+
+  @override
+  String offlineConflictStatus(int code) {
+    return 'HTTP $code';
+  }
+
+  @override
   String offlineBannerLastUpdated(Object date) {
     return 'Dernière mise à jour : $date. Les changements sont en lecture seule jusqu\'à la reconnexion.';
   }
 
   @override
   String get settingsTitle => 'Paramètres';
+
+  @override
+  String get dashboardCardsTitle => 'Cartes du tableau de bord';
+
+  @override
+  String get dashboardCardsDetail =>
+      'Choisissez quelles mesures restent sur l\'accueil. Les cartes masquees ne sont pas supprimees.';
+
+  @override
+  String get dashboardCardNetWorth => 'Historique de la valeur nette';
+
+  @override
+  String get dashboardCardMonthlySummary => 'Ce mois-ci';
+
+  @override
+  String get dashboardCardSpending => 'Depenses par categorie';
+
+  @override
+  String get dashboardCardHealth => 'Sante financiere';
+
+  @override
+  String get dashboardCardBudgets => 'Budgets';
+
+  @override
+  String get dashboardCardInsights => 'Apercus explicables';
+
+  @override
+  String get dashboardCardTransactions => 'Transactions recentes';
 
   @override
   String get profileTitle => 'Profil';
@@ -669,6 +724,23 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get planningForecastDetail =>
       'Uniquement les revenus et factures répétitifs. Les dépenses quotidiennes ne sont pas prédites.';
+
+  @override
+  String get planningForecastBaseline =>
+      'Base: les revenus et factures recurrents connus restent couverts sur cette periode. Ce n\'est pas une prediction des depenses quotidiennes.';
+
+  @override
+  String planningForecastRiskBand(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Zone de risque: $count jours passent sous zero si seuls les flux recurrents connus continuent. Les depenses quotidiennes ne sont pas predites.',
+      one:
+          'Zone de risque: 1 jour passe sous zero si seuls les flux recurrents connus continuent. Les depenses quotidiennes ne sont pas predites.',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get planningToday => 'Aujourd’hui';

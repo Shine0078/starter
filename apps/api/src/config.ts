@@ -71,8 +71,15 @@ export interface AppConfig {
   passwordBreachCheck: PasswordBreachCheckConfig;
   /** Remote-notification delivery stays disabled until credentials are supplied. */
   push: PushConfig;
+  /** Optional production error sink. Disabled until a DSN is supplied. */
+  crashReporting: CrashReportingConfig;
   /** Exact git SHA of the running image. Required in production so / and HTTP 200 cannot hide the wrong app. */
   releaseSha: string | null;
+}
+
+export interface CrashReportingConfig {
+  enabled: boolean;
+  dsn: string | null;
 }
 
 export interface WebAuthnConfig {
@@ -174,6 +181,24 @@ function resolveReleaseSha(isProduction: boolean): string | null {
   return raw.toLowerCase();
 }
 
+function resolveCrashReportingConfig(): CrashReportingConfig {
+  const raw = (process.env.SENTRY_DSN ?? '').trim();
+  if (!raw) return { enabled: false, dsn: null };
+  let parsed: URL;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    throw new Error('SENTRY_DSN must be a valid HTTPS DSN.');
+  }
+  if (parsed.protocol !== 'https:') {
+    throw new Error('SENTRY_DSN must use HTTPS.');
+  }
+  if (!parsed.username) {
+    throw new Error('SENTRY_DSN must include a public key.');
+  }
+  return { enabled: true, dsn: parsed.toString() };
+}
+
 function readStoreDriver(): StoreDriver {
   const explicit = process.env.STORE?.toLowerCase();
   if (explicit === 'postgres' || explicit === 'memory') return explicit;
@@ -220,6 +245,20 @@ function legalDocument(
   }
   if (parsed.protocol !== 'https:') {
     throw new Error(`${urlName} must use HTTPS.`);
+  }
+
+  const host = parsed.hostname.toLowerCase();
+  if (
+    host === 'example.com' ||
+    host.endsWith('.example.com') ||
+    host === 'example.org' ||
+    host.endsWith('.example.org') ||
+    host === 'example.net' ||
+    host.endsWith('.example.net')
+  ) {
+    throw new Error(
+      `${urlName} must not use a placeholder example.com host. Production registration requires reviewed legal documents.`,
+    );
   }
 
   return { version, url: parsed.toString() };
@@ -603,6 +642,7 @@ function buildConfig(): AppConfig {
     webauthn: resolveWebAuthnConfig(isProduction),
     passwordBreachCheck: resolvePasswordBreachCheck(isProduction),
     push: resolvePushConfig(),
+    crashReporting: resolveCrashReportingConfig(),
     releaseSha: resolveReleaseSha(isProduction),
   };
 }

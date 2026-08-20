@@ -96,6 +96,16 @@ READINESS="$(curl --fail --silent --show-error --max-time 20 "${URL}/api/readine
 echo "${READINESS}" | grep -F '"service":"finverse-api"' >/dev/null
 VERSION="$(curl --fail --silent --show-error --max-time 20 "${URL}/api/version")"
 echo "${VERSION}" | grep -F '"service":"finverse-api"' >/dev/null
+echo "${VERSION}" | grep -F "\"sha\":\"${SHA}\"" >/dev/null || echo "${VERSION}" | grep -F "\"sha\":\"${SHA:0:7}\"" >/dev/null
+LEGAL="$(curl --fail --silent --show-error --max-time 20 "${URL}/api/legal")"
+echo "${LEGAL}" | grep -F 'example.com' >/dev/null && {
+  echo "Legal URLs still point at example.com. Replace LEGAL_* before collecting real-user data." >&2
+  exit 1
+}
+curl --fail --silent --show-error --max-time 20 "${URL}/api/categories" >/dev/null
+curl --fail --silent --show-error --max-time 20 "${URL}/api/webauthn/status" >/dev/null
+APP="$(curl --fail --silent --show-error --max-time 20 "${URL}/app/")"
+echo "${APP}" | grep -F '<base href="/app/">' >/dev/null
 echo
 echo "Set CORS_ORIGINS to ${URL} in ${ENV_FILE}, then rerun this script once"
 echo "to replace the temporary CORS origin with the final Cloud Run origin."

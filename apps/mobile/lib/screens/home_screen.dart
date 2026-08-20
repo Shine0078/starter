@@ -9,6 +9,7 @@ import 'dashboard_screen.dart';
 import 'transactions_screen.dart';
 import 'analytics_screen.dart';
 import 'profile_screen.dart';
+import 'offline_conflict_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
@@ -108,8 +109,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                 .format(cachedAt!.toLocal()))),
                     trailing: rejected > 0
                         ? TextButton(
-                            onPressed: widget.api.dismissRejectedMutations,
-                            child: Text(l10n.offlineBannerDismissRejected),
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => OfflineConflictScreen(
+                                  api: widget.api,
+                                ),
+                              ),
+                            ),
+                            child: Text(l10n.offlineBannerReviewRejected),
                           )
                         : null,
                   ),

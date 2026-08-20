@@ -7,7 +7,9 @@ import '../models/models.dart';
 import '../widgets/health_score_card.dart';
 import '../widgets/spending_chart.dart';
 import '../widgets/trend_chart.dart';
+import '../widgets/spending_heatmap.dart';
 import 'planning_screen.dart';
+import 'transactions_screen.dart';
 
 /// A dedicated, explainable analytics view. The dashboard stays a quick
 /// overview; this screen gives the user the evidence behind the numbers and a
@@ -221,9 +223,21 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           if (analytics.trend.isNotEmpty) ...[
             TrendChart(points: analytics.trend),
             const SizedBox(height: 20),
+            SpendingHeatmap(points: analytics.trend),
+            const SizedBox(height: 20),
           ],
           if (categories.isNotEmpty) ...[
-            SpendingChart(categories: categories),
+            SpendingChart(
+              categories: categories,
+              onCategorySelected: (category) => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => TransactionsScreen(
+                    api: widget.api,
+                    initialCategorySlug: category.categorySlug,
+                  ),
+                ),
+              ),
+            ),
             const SizedBox(height: 20),
           ] else
             FinEmptyState(
@@ -231,6 +245,32 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               title: AppLocalizations.of(context).analyticsHistoryEmptyTitle,
               message: AppLocalizations.of(context).analyticsHistoryEmptyDetail,
             ),
+          if (analytics.spendingByMerchant.isNotEmpty) ...[
+            Text('Spending by merchant',
+                style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Card(
+              child: Column(
+                children: analytics.spendingByMerchant
+                    .take(8)
+                    .map((merchant) => ListTile(
+                          leading: const Icon(Icons.storefront_outlined),
+                          title: Text(merchant.label),
+                          trailing: Text(merchant.totalFormatted),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => TransactionsScreen(
+                                api: widget.api,
+                                initialSearch: merchant.label,
+                              ),
+                            ),
+                          ),
+                        ))
+                    .toList(),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
           _velocityCard(context, analytics.velocity),
           if (analytics.refundMatches.isNotEmpty) ...[
             const SizedBox(height: 20),
