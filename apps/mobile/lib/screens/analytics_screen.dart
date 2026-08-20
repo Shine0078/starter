@@ -9,6 +9,7 @@ import '../widgets/spending_chart.dart';
 import '../widgets/trend_chart.dart';
 import '../widgets/spending_heatmap.dart';
 import 'planning_screen.dart';
+import 'transactions_screen.dart';
 
 /// A dedicated, explainable analytics view. The dashboard stays a quick
 /// overview; this screen gives the user the evidence behind the numbers and a
@@ -226,7 +227,17 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             const SizedBox(height: 20),
           ],
           if (categories.isNotEmpty) ...[
-            SpendingChart(categories: categories),
+            SpendingChart(
+              categories: categories,
+              onCategorySelected: (category) => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => TransactionsScreen(
+                    api: widget.api,
+                    initialCategorySlug: category.categorySlug,
+                  ),
+                ),
+              ),
+            ),
             const SizedBox(height: 20),
           ] else
             FinEmptyState(

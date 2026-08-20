@@ -11,9 +11,14 @@ import '../models/models.dart';
 /// category individually announced, because a colour patch alone would vanish
 /// in greyscale or to a colour-blind reader (MISSION2 §41).
 class SpendingChart extends StatelessWidget {
-  const SpendingChart({required this.categories, super.key});
+  const SpendingChart({
+    required this.categories,
+    this.onCategorySelected,
+    super.key,
+  });
 
   final List<CategorySpend> categories;
+  final ValueChanged<CategorySpend>? onCategorySelected;
 
   @override
   Widget build(BuildContext context) {
@@ -66,37 +71,42 @@ class SpendingChart extends StatelessWidget {
                   label:
                       '${row.categoryName}: ${row.totalFormatted} across ${row.transactionCount} transaction${row.transactionCount == 1 ? '' : 's'}.',
                   child: ExcludeSemantics(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 5),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 10,
-                            height: 10,
-                            decoration: BoxDecoration(
-                              color: series[rows.indexOf(row) % series.length],
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              row.categoryName,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Text(
-                              row.totalFormatted,
-                              style: theme.textTheme.labelLarge?.copyWith(
-                                fontWeight: FontWeight.w600,
+                    child: InkWell(
+                      onTap: onCategorySelected == null
+                          ? null
+                          : () => onCategorySelected!(row),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 5),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 10,
+                              height: 10,
+                              decoration: BoxDecoration(
+                                color: series[rows.indexOf(row) % series.length],
+                                shape: BoxShape.circle,
                               ),
-                              textAlign: TextAlign.end,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                row.categoryName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                row.totalFormatted,
+                                style: theme.textTheme.labelLarge?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                textAlign: TextAlign.end,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),

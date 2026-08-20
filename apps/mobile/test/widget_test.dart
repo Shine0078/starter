@@ -593,6 +593,30 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('category spending legend reports the selected category',
+      (tester) async {
+    String? selected;
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: SpendingChart(
+          categories: [
+            CategorySpend(
+              categorySlug: 'groceries',
+              categoryName: 'Groceries',
+              total: 12550,
+              totalFormatted: r'$125.50',
+              transactionCount: 4,
+            ),
+          ],
+          onCategorySelected: (category) => selected = category.categorySlug,
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Groceries'));
+    expect(selected, 'groceries');
+  });
+
   testWidgets(
       'financial visuals have spoken equivalents and survive 200% text scaling',
       (tester) async {
