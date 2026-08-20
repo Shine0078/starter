@@ -62,6 +62,8 @@ class MetaController {
       service: 'finverse-api',
       store: config.store,
       time: new Date().toISOString(),
+      environment: config.isProduction ? 'production' : 'development',
+      ...(config.releaseSha ? { sha: config.releaseSha } : {}),
     };
 
     if (config.store !== 'postgres') {
@@ -88,6 +90,20 @@ class MetaController {
     }
   }
 
+
+  /** Public identity so a 200 from the wrong process cannot hide as FINVERSE. */
+  @Public()
+  @Get('version')
+  version() {
+    const config = loadConfig();
+    return {
+      service: 'finverse-api',
+      environment: config.isProduction ? 'production' : 'development',
+      store: config.store,
+      sha: config.releaseSha,
+      time: new Date().toISOString(),
+    };
+  }
   /** Public: a static reference list with nothing user-specific in it. */
   @Public()
   @Get('categories')

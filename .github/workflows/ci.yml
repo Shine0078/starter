@@ -99,7 +99,7 @@ jobs:
       - run: npm run build
 
       - name: Build deployable API image
-        run: docker build --tag finverse-api:ci .
+        run: docker build --build-arg GIT_SHA="$GITHUB_SHA" --tag finverse-api:ci .
 
   mobile:
     name: Flutter analysis and tests

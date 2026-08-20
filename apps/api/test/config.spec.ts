@@ -34,6 +34,7 @@ const KEYS = [
   'WEBAUTHN_RP_NAME',
   'HIBP_PASSWORD_CHECK',
   'FCM_CREDENTIALS_JSON',
+  'GIT_SHA',
 ] as const;
 const original = Object.fromEntries(KEYS.map((key) => [key, process.env[key]]));
 
@@ -55,6 +56,7 @@ function productionBase(): void {
   process.env.LEGAL_PRIVACY_VERSION = 'privacy-2026-08';
   process.env.LEGAL_PRIVACY_URL = 'https://finverse.example/legal/privacy';
   process.env.MFA_ENCRYPTION_KEY = Buffer.alloc(32, 9).toString('base64');
+  process.env.GIT_SHA = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
   delete process.env.PLAID_CLIENT_ID;
   delete process.env.PLAID_SECRET;
   delete process.env.PLAID_ENVIRONMENT;
@@ -140,6 +142,17 @@ describe.sequential('production configuration', () => {
     productionBase();
     delete process.env.LEGAL_PRIVACY_URL;
     expect(() => loadConfig()).toThrow(/LEGAL_PRIVACY/);
+  });
+
+  it('refuses production without a release SHA', () => {
+    productionBase();
+    delete process.env.GIT_SHA;
+    expect(() => loadConfig()).toThrow(/GIT_SHA/);
+  });
+
+  it('records a canonical release SHA', () => {
+    productionBase();
+    expect(loadConfig().releaseSha).toBe('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
   });
 
   it('refuses production without an MFA encryption key', () => {

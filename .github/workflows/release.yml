@@ -87,6 +87,8 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           provenance: true
           sbom: true
+          build-args: |
+            GIT_SHA=${{ needs.gate.outputs.sha }}
 
   android:
     name: Build Android release APK

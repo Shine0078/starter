@@ -71,6 +71,8 @@ export interface AppConfig {
   passwordBreachCheck: PasswordBreachCheckConfig;
   /** Remote-notification delivery stays disabled until credentials are supplied. */
   push: PushConfig;
+  /** Exact git SHA of the running image. Required in production so / and HTTP 200 cannot hide the wrong app. */
+  releaseSha: string | null;
 }
 
 export interface WebAuthnConfig {
@@ -155,6 +157,21 @@ function resolveCorsOrigins(isProduction: boolean): string[] | true {
   }
 
   return true;
+}
+
+
+function resolveReleaseSha(isProduction: boolean): string | null {
+  const raw = (process.env.GIT_SHA ?? process.env.COMMIT_SHA ?? '').trim();
+  if (!raw) {
+    if (isProduction) {
+      throw new Error('Production requires GIT_SHA so a wrong process cannot hide behind HTTP 200.');
+    }
+    return null;
+  }
+  if (!/^[0-9a-f]{7,40}$/i.test(raw)) {
+    throw new Error('GIT_SHA must be a 7-40 character hexadecimal git SHA.');
+  }
+  return raw.toLowerCase();
 }
 
 function readStoreDriver(): StoreDriver {
@@ -586,5 +603,6 @@ function buildConfig(): AppConfig {
     webauthn: resolveWebAuthnConfig(isProduction),
     passwordBreachCheck: resolvePasswordBreachCheck(isProduction),
     push: resolvePushConfig(),
+    releaseSha: resolveReleaseSha(isProduction),
   };
 }
