@@ -15,7 +15,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { Pool } from 'pg';
 
-import { isRlsEnforcedFor, parseAppRole } from '../src/infra/postgres/app-role';
+import { assertRestrictedRuntimeRole, isRlsEnforcedFor, parseAppRole } from '../src/infra/postgres/app-role';
 import { closePool, withUserScope } from '../src/infra/postgres/pool';
 import { OWNER_URL, startPgHarness, type PgHarness } from './pg-harness';
 
@@ -40,6 +40,21 @@ const PROTECTED_TABLES = [
   'push_tokens',
   'webauthn_credentials',
   'net_worth_snapshots',
+  'account_reconciliations',
+  'saved_views',
+  'import_batches',
+  'scheduled_transactions',
+  'rule_applications',
+  'rule_application_changes',
+  'fx_rates',
+];
+
+const MEMBERSHIP_SCOPED_TABLES = [
+  'split_groups',
+  'split_group_members',
+  'split_expenses',
+  'split_expense_participants',
+  'split_settlements',
 ];
 
 /** Seeds one account and one transaction for a user, as the owner. */
@@ -131,6 +146,46 @@ async function seed(owner: Pool, userId: string, amount: number): Promise<void> 
      VALUES ($1, '2026-08-08', 'USD', 100000, 0, 100000)`,
     [userId],
   );
+  await owner.query(
+    `INSERT INTO account_reconciliations
+       (id, user_id, account_id, statement_date, observed_balance, currency,
+        computed_balance, difference, source)
+     VALUES ($1, $2, $3, '2026-08-01', 100000, 'USD', 100000, 0, 'manual_count')`,
+    [`rec_${userId}`, userId, `acc_${userId}`],
+  );
+  await owner.query(
+    `INSERT INTO saved_views (id, user_id, name) VALUES ($1, $2, 'Default')`,
+    [`view_${userId}`, userId],
+  );
+  await owner.query(
+    `INSERT INTO import_batches
+       (id, user_id, account_id, filename, status, rows_total, rows_imported, rows_duplicate, rows_invalid)
+     VALUES ($1, $2, $3, 'export.csv', 'committed', 1, 1, 0, 0)`,
+    [`imp_${userId}`, userId, `acc_${userId}`],
+  );
+  await owner.query(
+    `INSERT INTO scheduled_transactions
+       (id, user_id, account_id, name, amount, currency, category_slug, cadence, start_date)
+     VALUES ($1, $2, $3, 'Rent', -180000, 'USD', 'housing', 'monthly', '2026-08-01')`,
+    [`sch_${userId}`, userId, `acc_${userId}`],
+  );
+  await owner.query(
+    `INSERT INTO rule_applications
+       (id, user_id, pattern, match_type, category_slug, rows_changed)
+     VALUES ($1, $2, 'rent', 'contains', 'housing', 1)`,
+    [`rapp_${userId}`, userId],
+  );
+  await owner.query(
+    `INSERT INTO rule_application_changes
+       (application_id, user_id, transaction_id, previous_category_slug, previous_category_source, previous_confidence)
+     VALUES ($1, $2, $3, 'uncategorized', 'rule', 1)`,
+    [`rapp_${userId}`, userId, `txn_${userId}`],
+  );
+  await owner.query(
+    `INSERT INTO fx_rates (id, user_id, base, quote, rate, as_of, source)
+     VALUES ($1, $2, 'USD', 'CAD', 1.35, '2026-08-01', 'manual')`,
+    [`fx_${userId}`, userId],
+  );
 }
 
 if (!OWNER_URL) {
@@ -170,6 +225,8 @@ if (!OWNER_URL) {
     it('the runtime role is not a superuser and does not hold BYPASSRLS', async () => {
       const { role } = parseAppRole(harness.appUrl);
       expect(await isRlsEnforcedFor(owner, role)).toBe(true);
+      await expect(assertRestrictedRuntimeRole(app)).resolves.toBe(role);
+      await expect(assertRestrictedRuntimeRole(owner)).rejects.toThrow(/SUPERUSER or BYPASSRLS|owns public tables/i);
     });
 
     it('connects as the runtime role, not the owner', async () => {
@@ -177,7 +234,7 @@ if (!OWNER_URL) {
       expect(rows[0]?.user).toBe(parseAppRole(harness.appUrl).role);
     });
 
-    it.each(PROTECTED_TABLES)('%s has row security enabled and forced', async (table) => {
+    it.each([...PROTECTED_TABLES, ...MEMBERSHIP_SCOPED_TABLES])('%s has row security enabled and forced', async (table) => {
       const { rows } = await owner.query<{ enabled: boolean; forced: boolean }>(
         `SELECT relrowsecurity AS enabled, relforcerowsecurity AS forced
          FROM pg_class WHERE relname = $1 AND relkind = 'r'`,
@@ -220,6 +277,50 @@ if (!OWNER_URL) {
       expect(rows).toHaveLength(0);
     });
 
+    it('blocks unscoped WebAuthn credential lookup and requires a routing function', async () => {
+      const credentialId = `wa_${ALICE}`;
+      const raw = await app.query(
+        'SELECT user_id FROM webauthn_credentials WHERE credential_id = $1',
+        [credentialId],
+      );
+      expect(raw.rows).toHaveLength(0);
+
+      const routed = await app.query<{ user_id: string }>(
+        'SELECT * FROM finverse_webauthn_credential_owner($1)',
+        [credentialId],
+      );
+
+      expect(routed.fields.map((field) => field.name)).toEqual(['user_id']);
+      expect(routed.rows).toEqual([{ user_id: ALICE }]);
+    });
+    it('grants the runtime role execute on the narrow routing functions only', async () => {
+      const { role } = parseAppRole(harness.appUrl);
+      const { rows } = await owner.query<{
+        fn: string;
+        can_execute: boolean;
+      }>(`
+        SELECT proname AS fn,
+               has_function_privilege($1, oid, 'EXECUTE') AS can_execute
+          FROM pg_proc
+         WHERE pronamespace = 'public'::regnamespace
+           AND proname IN (
+             'finverse_link_owner',
+             'finverse_claim_bank_webhooks',
+             'finverse_is_split_member',
+             'finverse_subscription_owner',
+             'finverse_webauthn_credential_owner'
+           )
+         ORDER BY proname
+      `, [role]);
+      expect(rows.map((row) => row.fn)).toEqual([
+        'finverse_claim_bank_webhooks',
+        'finverse_is_split_member',
+        'finverse_link_owner',
+        'finverse_subscription_owner',
+        'finverse_webauthn_credential_owner',
+      ]);
+      expect(rows.every((row) => row.can_execute)).toBe(true);
+    });
     it('routes a provider Item through the narrow owner function without exposing the token', async () => {
       const result = await app.query(
         'SELECT * FROM finverse_link_owner($1)',

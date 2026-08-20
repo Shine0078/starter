@@ -36,6 +36,7 @@ import { PushModule } from './modules/push/push.module';
 import { WebAuthnModule } from './modules/webauthn/webauthn.module';
 import { httpMetrics, metricsTokenMatches } from './infra/http/metrics';
 import { appleAppSiteAssociation as buildAppleAppSiteAssociation } from './infra/http/apple-app-site-association';
+import { androidAssetLinks, parseAndroidAssetLinkConfig } from './infra/http/asset-links';
 
 const appConfig = loadConfig();
 
@@ -61,6 +62,8 @@ class MetaController {
       service: 'finverse-api',
       store: config.store,
       time: new Date().toISOString(),
+      environment: config.isProduction ? 'production' : 'development',
+      ...(config.releaseSha ? { sha: config.releaseSha } : {}),
     };
 
     if (config.store !== 'postgres') {
@@ -87,6 +90,20 @@ class MetaController {
     }
   }
 
+
+  /** Public identity so a 200 from the wrong process cannot hide as FINVERSE. */
+  @Public()
+  @Get('version')
+  version() {
+    const config = loadConfig();
+    return {
+      service: 'finverse-api',
+      environment: config.isProduction ? 'production' : 'development',
+      store: config.store,
+      sha: config.releaseSha,
+      time: new Date().toISOString(),
+    };
+  }
   /** Public: a static reference list with nothing user-specific in it. */
   @Public()
   @Get('categories')
@@ -139,6 +156,17 @@ class MetaController {
   @Get('apple-app-site-association')
   appleAppSiteAssociationFallback() {
     return this.appleAppSiteAssociation();
+  }
+
+  @Public()
+  @Header('Content-Type', 'application/json')
+  @Get('.well-known/assetlinks.json')
+  assetLinks() {
+    const config = parseAndroidAssetLinkConfig();
+    if (!config) {
+      throw new ServiceUnavailableException('Android Digital Asset Links are not configured.');
+    }
+    return androidAssetLinks(config);
   }
 }
 

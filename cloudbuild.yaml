@@ -8,8 +8,12 @@ steps:
       - Dockerfile.public
       - -t
       - ${_IMAGE}
+      - --build-arg
+      - GIT_SHA=${_GIT_SHA}
       - .
 images:
   - ${_IMAGE}
 options:
   logging: CLOUD_LOGGING_ONLY
+substitutions:
+  _GIT_SHA: unknown

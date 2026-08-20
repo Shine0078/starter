@@ -12,14 +12,16 @@ document records the exact owner action for each.
 - Challenge issuance (`POST /api/webauthn/register/options`,
   `POST /api/webauthn/login/options`).
 - Registration verification (`POST /api/webauthn/register/verify`) — checks
-  client data (type/challenge/origin), the RP-id hash in authData, the user
-  presence flag, parses the CBOR attestation object, extracts the COSE ES256
-  public key, and stores it per user.
+  client data (type/challenge/origin), the RP-id hash in authData, required
+  user verification, the attested-credential (AT) flag, binds `body.id` to the
+  attested credential id, parses the CBOR attestation object, extracts the
+  COSE ES256 public key, and stores it per user.
 - Login verification (`POST /api/webauthn/login/verify`) — verifies the ES256
-  signature over `authData || sha256(clientDataJSON)` and enforces sign-counter
-  monotonicity (a regression is treated as a cloned key).
-- Credential management (`GET/DELETE /api/webauthn/credentials`) with row-level
-  security and account-erasure cascade.
+  signature over `authData || sha256(clientDataJSON)`, requires user
+  verification, and enforces sign-counter monotonicity (a regression is treated
+  as a cloned key). Successful login issues the normal session pair.
+- Credential management (`GET/DELETE /api/webauthn/credentials`) with FORCE RLS,
+  password + MFA step-up for add/remove, and account-erasure cascade.
 - Tested end-to-end with a genuinely generated P-256 key pair and a hand-built
   attestation object (`apps/api/test/webauthn.spec.ts`).
 
@@ -28,16 +30,15 @@ this is a real technical requirement, not a shortcut:
 
 ```env
 WEBAUTHN_ENABLED=true
-WEBAUTHN_RP_ID=api.your-domain.example     # must equal the origin host
-WEBAUTHN_ORIGIN=https://api.your-domain.example
+WEBAUTHN_RP_ID=your-domain.example
+WEBAUTHN_ORIGIN=https://app.your-domain.example,https://api.your-domain.example
 WEBAUTHN_RP_NAME=FINVERSE
 ```
 
-Then, in the Flutter app, a native passkey button calls
-`passkeyRegisterOptions()` / `passkeyLoginOptions()` from `lib/api/client.dart`
-and hands the challenge to the platform authenticator (iOS `ASAuthorization` /
-Android Credential Manager). The mobile client methods are implemented and
-tested; the platform ceremony wiring is the remaining owner/device step.
+The Flutter login and settings screens now call those methods. The web/PWA build
+runs a real `navigator.credentials` ceremony. Native iOS/Android still report
+unsupported until Credential Manager / ASAuthorization and Digital Asset Links /
+`webcredentials` are configured.
 
 ## Remote push and background sync
 

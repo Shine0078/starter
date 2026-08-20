@@ -71,10 +71,15 @@ export interface AppConfig {
   passwordBreachCheck: PasswordBreachCheckConfig;
   /** Remote-notification delivery stays disabled until credentials are supplied. */
   push: PushConfig;
+  /** Exact git SHA of the running image. Required in production so / and HTTP 200 cannot hide the wrong app. */
+  releaseSha: string | null;
 }
 
 export interface WebAuthnConfig {
   rpId: string;
+  /** Exact clientData.origin values the verifier accepts. */
+  origins: string[];
+  /** First allowlisted origin, kept for callers that still read a single value. */
   origin: string;
   rpName: string;
 }
@@ -152,6 +157,21 @@ function resolveCorsOrigins(isProduction: boolean): string[] | true {
   }
 
   return true;
+}
+
+
+function resolveReleaseSha(isProduction: boolean): string | null {
+  const raw = (process.env.GIT_SHA ?? process.env.COMMIT_SHA ?? '').trim();
+  if (!raw) {
+    if (isProduction) {
+      throw new Error('Production requires GIT_SHA so a wrong process cannot hide behind HTTP 200.');
+    }
+    return null;
+  }
+  if (!/^[0-9a-f]{7,40}$/i.test(raw)) {
+    throw new Error('GIT_SHA must be a 7-40 character hexadecimal git SHA.');
+  }
+  return raw.toLowerCase();
 }
 
 function readStoreDriver(): StoreDriver {
@@ -337,37 +357,90 @@ function resolveIosUniversalLink(): IosUniversalLinkConfig | undefined {
  * Passkeys also require a registered domain, which is why this stays an
  * explicit, documented owner gate rather than a default.
  */
-function resolveWebAuthnConfig(isProduction: boolean): WebAuthnConfig | undefined {
-  if (process.env.WEBAUTHN_ENABLED !== 'true') return undefined;
+function isWebAuthnHostname(value: string): boolean {
+  if (!value || value.length > 253) return false;
+  if (value.includes(':') || value.includes('/') || value.includes(' ')) return false;
+  if (value.startsWith('.') || value.endsWith('.')) return false;
+  if (value.toLowerCase() === 'localhost') return true;
+  return /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$/.test(
+    value,
+  );
+}
 
-  const rpId = process.env.WEBAUTHN_RP_ID?.trim();
-  const origin = process.env.WEBAUTHN_ORIGIN?.trim();
-  if (!rpId || !origin) {
-    throw new Error(
-      'WEBAUTHN_ENABLED=true requires WEBAUTHN_RP_ID and WEBAUTHN_ORIGIN (e.g. WEBAUTHN_RP_ID=api.finverse.example, WEBAUTHN_ORIGIN=https://api.finverse.example).',
-    );
-  }
+function hostMatchesWebAuthnRpId(hostname: string, rpId: string): boolean {
+  const host = hostname.toLowerCase();
+  const expected = rpId.toLowerCase();
+  return host === expected || host.endsWith('.' + expected);
+}
+
+const ANDROID_APK_KEY_HASH = /^android:apk-key-hash:[A-Za-z0-9_-]{43}$/;
+
+function parseWebAuthnOrigin(raw: string, isProduction: boolean, rpId: string): string {
+  if (ANDROID_APK_KEY_HASH.test(raw)) return raw;
 
   let parsed: URL;
   try {
-    parsed = new URL(origin);
+    parsed = new URL(raw);
   } catch {
-    throw new Error('WEBAUTHN_ORIGIN must be a valid absolute URL.');
+    throw new Error(
+      'WEBAUTHN_ORIGIN entries must be absolute URLs or android:apk-key-hash:<sha256-base64url>.',
+    );
   }
-  if (isProduction && parsed.protocol !== 'https:') {
-    throw new Error('WEBAUTHN_ORIGIN must use HTTPS in production.');
+
+  const isLocalhost = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1';
+  if (parsed.protocol === 'https:') {
+    // HTTPS web origins are always acceptable when the host matches the RP ID.
+  } else if (parsed.protocol === 'http:' && isLocalhost && !isProduction) {
+    // Local development only.
+  } else if (isProduction) {
+    throw new Error('WEBAUTHN_ORIGIN must use HTTPS in production (or android:apk-key-hash).');
+  } else {
+    throw new Error(
+      'WEBAUTHN_ORIGIN must use HTTPS, http://localhost, or android:apk-key-hash.',
+    );
   }
+
   if (parsed.username || parsed.password || parsed.search || parsed.hash) {
     throw new Error('WEBAUTHN_ORIGIN must not include credentials, a query string, or a fragment.');
   }
-  const originHost = parsed.host.toLowerCase();
-  if (rpId.toLowerCase() !== originHost) {
-    throw new Error('WEBAUTHN_RP_ID must equal the host of WEBAUTHN_ORIGIN.');
+  if (!hostMatchesWebAuthnRpId(parsed.hostname, rpId)) {
+    throw new Error(
+      'Each HTTPS WEBAUTHN_ORIGIN host must equal WEBAUTHN_RP_ID or be a subdomain of it.',
+    );
+  }
+  return parsed.origin;
+}
+
+function parseWebAuthnOrigins(raw: string, isProduction: boolean, rpId: string): string[] {
+  const parts = raw.split(',').map((part) => part.trim()).filter(Boolean);
+  if (parts.length === 0) {
+    throw new Error('WEBAUTHN_ORIGIN must list at least one origin.');
+  }
+  const origins = parts.map((part) => parseWebAuthnOrigin(part, isProduction, rpId));
+  return [...new Set(origins)];
+}
+
+function resolveWebAuthnConfig(isProduction: boolean): WebAuthnConfig | undefined {
+  if (process.env.WEBAUTHN_ENABLED !== 'true') return undefined;
+
+  const rpId = process.env.WEBAUTHN_RP_ID?.trim().toLowerCase();
+  const originRaw = process.env.WEBAUTHN_ORIGIN?.trim();
+  if (!rpId || !originRaw) {
+    throw new Error(
+      'WEBAUTHN_ENABLED=true requires WEBAUTHN_RP_ID and WEBAUTHN_ORIGIN (e.g. WEBAUTHN_RP_ID=finverse.example, WEBAUTHN_ORIGIN=https://app.finverse.example,https://api.finverse.example).',
+    );
+  }
+  if (!isWebAuthnHostname(rpId)) {
+    throw new Error(
+      'WEBAUTHN_RP_ID must be a hostname without a port or scheme (e.g. finverse.example).',
+    );
   }
 
+  const origins = parseWebAuthnOrigins(originRaw, isProduction, rpId);
   return {
     rpId,
-    origin,
+    origins,
+    origin: origins[0]!,
     rpName: process.env.WEBAUTHN_RP_NAME?.trim() || 'FINVERSE',
   };
 }
@@ -467,6 +540,19 @@ function buildConfig(): AppConfig {
         'Production requires DATABASE_APP_URL for the least-privileged RLS runtime role.',
       );
     }
+    if (databaseUrl) {
+      try {
+        const ownerUser = decodeURIComponent(new URL(databaseUrl).username);
+        const appUser = decodeURIComponent(new URL(appDatabaseUrl).username);
+        if (ownerUser && appUser && ownerUser === appUser) {
+          throw new Error(
+            'Production DATABASE_APP_URL must use a different role than DATABASE_URL.',
+          );
+        }
+      } catch (error) {
+        if (error instanceof Error && /must use a different role/.test(error.message)) throw error;
+      }
+    }
     if (migrateOnBoot) {
       throw new Error(
         'Production requires MIGRATE_ON_BOOT=false; run migrations as a separate release step.',
@@ -517,5 +603,6 @@ function buildConfig(): AppConfig {
     webauthn: resolveWebAuthnConfig(isProduction),
     passwordBreachCheck: resolvePasswordBreachCheck(isProduction),
     push: resolvePushConfig(),
+    releaseSha: resolveReleaseSha(isProduction),
   };
 }

@@ -88,6 +88,10 @@ export type AuthEventKind =
   | 'mfa_challenge'
   | 'mfa_verified'
   | 'mfa_disabled'
+  | 'passkey_login'
+  | 'passkey_registered'
+  | 'passkey_removed'
+  | 'passkey_step_up'
   | 'data_exported';
 
 export interface AuthEvent {

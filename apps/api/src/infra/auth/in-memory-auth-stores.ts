@@ -180,11 +180,12 @@ export class InMemoryAuthEventStore implements AuthEventStore {
     this.events.push({ ...event });
   }
 
-  async recentFailures(email: string, since: Date): Promise<Date[]> {
+  async recentFailures(email: string, since: Date, kind: 'login' | 'passkey_login' = 'login'): Promise<Date[]> {
     return this.events
       .filter(
         (e) =>
           e.succeeded === false &&
+          e.kind === kind &&
           e.emailAttempted === email &&
           e.createdAt.getTime() >= since.getTime(),
       )

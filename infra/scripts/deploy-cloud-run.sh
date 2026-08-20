@@ -50,6 +50,11 @@ if ! grep -q '^DATABASE_APP_URL:' "${RUNTIME_ENV_FILE}"; then
   exit 1
 fi
 
+SHA="$(git rev-parse HEAD)"
+if ! grep -q '^GIT_SHA:' "${RUNTIME_ENV_FILE}"; then
+  printf 'GIT_SHA: "%s"\n' "${SHA}" >> "${RUNTIME_ENV_FILE}"
+fi
+
 gcloud artifacts repositories describe "${REPOSITORY}" \
   --location="${REGION}" --project="${PROJECT_ID}" >/dev/null 2>&1 || \
   gcloud artifacts repositories create "${REPOSITORY}" \
@@ -63,7 +68,7 @@ else
   gcloud builds submit . \
     --project="${PROJECT_ID}" \
     --config=cloudbuild.yaml \
-    --substitutions="_IMAGE=${IMAGE}"
+    --substitutions="_IMAGE=${IMAGE},_GIT_SHA=$(git rev-parse HEAD)"
 fi
 
 # Migrations run once as a Cloud Run Job with the schema-owner URL. The
@@ -86,6 +91,11 @@ URL="$(gcloud run services describe "${SERVICE}" --region="${REGION}" \
 echo
 echo "FINVERSE is live at: ${URL}/app/"
 echo "Health check:        ${URL}/api/readiness"
+echo "Identity:            ${URL}/api/version"
+READINESS="$(curl --fail --silent --show-error --max-time 20 "${URL}/api/readiness")"
+echo "${READINESS}" | grep -F '"service":"finverse-api"' >/dev/null
+VERSION="$(curl --fail --silent --show-error --max-time 20 "${URL}/api/version")"
+echo "${VERSION}" | grep -F '"service":"finverse-api"' >/dev/null
 echo
 echo "Set CORS_ORIGINS to ${URL} in ${ENV_FILE}, then rerun this script once"
 echo "to replace the temporary CORS origin with the final Cloud Run origin."

@@ -15,8 +15,8 @@ import { AppModule } from './app.module';
 import { loadConfig, shouldServeDevelopmentDashboard } from './config';
 import { installHttpControls } from './infra/http/controls';
 import { checkWebBundleBaseHref } from './infra/http/web-bundle';
-import { parseAppRole, provisionAppRole } from './infra/postgres/app-role';
-import { closePool, getPool } from './infra/postgres/pool';
+import { assertRestrictedRuntimeRole, parseAppRole, provisionAppRole } from './infra/postgres/app-role';
+import { closePool, getAppPool, getPool } from './infra/postgres/pool';
 import { runMigrations } from './infra/postgres/migrate';
 
 const config = loadConfig();
@@ -43,6 +43,12 @@ async function bootstrap(): Promise<void> {
     }
   }
 
+  if (config.isProduction && config.store === 'postgres') {
+    const runtime = getAppPool(config.appDatabaseUrl);
+    const role = await assertRestrictedRuntimeRole(runtime);
+    logger.log(`Runtime role ${role} is restricted and subject to RLS.`);
+  }
+
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: ['log', 'warn', 'error'],
     rawBody: true,
@@ -54,6 +60,7 @@ async function bootstrap(): Promise<void> {
       'healthz',
       { path: '.well-known/apple-app-site-association', method: RequestMethod.GET },
       { path: 'apple-app-site-association', method: RequestMethod.GET },
+      { path: '.well-known/assetlinks.json', method: RequestMethod.GET },
     ],
   });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));

@@ -392,8 +392,12 @@ describe('auth API', () => {
     });
 
     it('allows health and categories without a token', async () => {
-      await request(http).get('/healthz').expect(200);
+      const health = await request(http).get('/healthz').expect(200);
+      expect(health.body.service).toBe('finverse-api');
       await request(http).get('/api/readiness').expect(200);
+      const version = await request(http).get('/api/version').expect(200);
+      expect(version.body.service).toBe('finverse-api');
+      expect(version.body).toHaveProperty('sha');
       await request(http).get('/api/categories').expect(200);
       const metrics = await request(http).get('/api/metrics').expect(200);
       expect(metrics.headers['content-type']).toContain('text/plain');
@@ -863,6 +867,41 @@ describe('auth API', () => {
       expect(scenario.body.currency).toBe('USD');
       expect(scenario.body.purchase.amountFormatted).toEqual(expect.any(String));
       expect(scenario.body.warnings).toHaveLength(2);
+    });
+
+    it('requires an authenticator code to export or delete when MFA is enabled', async () => {
+      const alice = await register();
+      const enrollment = await request(http)
+        .post('/api/auth/mfa/enroll')
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .send({ password: PASSWORD })
+        .expect(201);
+      await request(http)
+        .post('/api/auth/mfa/enable')
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .send({ code: totpAt(enrollment.body.secret, new Date()).code })
+        .expect(200);
+      await request(http)
+        .post('/api/privacy/export')
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .send({ password: PASSWORD })
+        .expect(401);
+      const exported = await request(http)
+        .post('/api/privacy/export')
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .send({ password: PASSWORD, mfaCode: totpAt(enrollment.body.secret, new Date()).code })
+        .expect(200);
+      expect(exported.body.user.email).toBe(alice.email);
+      await request(http)
+        .delete('/api/auth/account')
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .send({ password: PASSWORD, confirmation: 'DELETE' })
+        .expect(401);
+      await request(http)
+        .post('/api/bank-links/link-token')
+        .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
+        .send({ password: PASSWORD })
+        .expect(401);
     });
 
     it('exports portable user data after password confirmation without credential material', async () => {

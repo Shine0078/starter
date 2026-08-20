@@ -73,11 +73,12 @@ A 404 on `/healthz` means the wrong application is deployed, regardless of what
    role from `DATABASE_URL`.
 5. Set `CORS_ORIGINS` to the final service origin, for example
    `https://finverse.onrender.com`.
-6. For production, change `NODE_ENV` to `production`, change
-   `MIGRATE_ON_BOOT` to `false`, run
-   `node dist/infra/postgres/migrate.js` as a separate deployment step, and
-   supply reviewed HTTPS Terms and Privacy URLs/version IDs, SMTP credentials,
-   `MFA_ENCRYPTION_KEY`, and `BANK_TOKEN_ENCRYPTION_KEY`.
+6. Do not flip this preview Blueprint into production. Create a separate
+   production service with `NODE_ENV=production`, `MIGRATE_ON_BOOT=false`, a
+   restricted `DATABASE_APP_URL` that does not own public tables, reviewed HTTPS
+   Terms and Privacy URLs/version IDs, SMTP credentials, `MFA_ENCRYPTION_KEY`,
+   and `BANK_TOKEN_ENCRYPTION_KEY`. Run `node dist/infra/postgres/migrate.js` as
+   a separate deployment step against that production database.
 7. Deploy and verify:
 
 ```text

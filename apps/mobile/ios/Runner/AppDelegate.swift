@@ -14,6 +14,7 @@ import LinkKit
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   private var pendingPlaidCall: FlutterResult?
   private var cachedPlaidResult: [String: Any?]?
+  private var passkeyChannel: PasskeyChannel?
 #if canImport(LinkKit)
   private var plaidSession: PlaidLinkSession?
 #endif
@@ -50,6 +51,15 @@ import LinkKit
     )
     receiptVisionChannel.setMethodCallHandler { [weak self] call, result in
       self?.handleReceiptVisionCall(call, result: result)
+    }
+    let passkeys = PasskeyChannel { [weak self] in self?.topViewController() }
+    self.passkeyChannel = passkeys
+    let passkeyChannel = FlutterMethodChannel(
+      name: "com.finverse.finance/passkeys",
+      binaryMessenger: engineBridge.applicationRegistrar.messenger()
+    )
+    passkeyChannel.setMethodCallHandler { [weak passkeys] call, result in
+      passkeys?.handle(call, result: result)
     }
   }
 
@@ -104,9 +114,9 @@ import LinkKit
         self?.deliverPlaidResult([
           "status": "success",
           "publicToken": success.publicToken,
-          "institutionId": success.metadata.institution?.id,
-          "institutionName": success.metadata.institution?.name,
-          "linkSessionId": success.metadata.linkSessionId,
+          "institutionId": success.metadata.institution.id,
+          "institutionName": success.metadata.institution.name,
+          "linkSessionId": success.metadata.linkSessionID,
         ])
       },
       onExit: { [weak self] exit in

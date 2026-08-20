@@ -1,19 +1,22 @@
 import { Type } from 'class-transformer';
 import {
-  IsBase64,
   IsObject,
   IsOptional,
   IsString,
   Length,
+  Matches,
   ValidateNested,
 } from 'class-validator';
 
+/** WebAuthn client payloads are unpadded base64url, not RFC 4648 base64. */
+const BASE64URL = /^[A-Za-z0-9_-]+={0,2}$/;
+
 export class RegistrationResponseDto {
-  @IsBase64()
+  @Matches(BASE64URL)
   @IsString()
   clientDataJSON!: string;
 
-  @IsBase64()
+  @Matches(BASE64URL)
   @IsString()
   attestationObject!: string;
 }
@@ -22,6 +25,19 @@ export class RegistrationVerifyDto {
   @IsString()
   @Length(1, 512)
   id!: string;
+
+  @IsString()
+  @Length(16, 128)
+  ceremonyId!: string;
+
+  @IsString()
+  @Length(1, 256)
+  password!: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 64)
+  mfaCode?: string;
 
   @IsObject()
   @ValidateNested()
@@ -37,15 +53,15 @@ export class LoginOptionsDto {
 }
 
 export class LoginResponseDto {
-  @IsBase64()
+  @Matches(BASE64URL)
   @IsString()
   clientDataJSON!: string;
 
-  @IsBase64()
+  @Matches(BASE64URL)
   @IsString()
   authenticatorData!: string;
 
-  @IsBase64()
+  @Matches(BASE64URL)
   @IsString()
   signature!: string;
 }
@@ -55,13 +71,34 @@ export class LoginVerifyDto {
   @Length(1, 512)
   id!: string;
 
-  @IsOptional()
   @IsString()
-  @Length(1, 320)
-  email?: string;
+  @Length(16, 128)
+  ceremonyId!: string;
 
   @IsObject()
   @ValidateNested()
   @Type(() => LoginResponseDto)
   response!: LoginResponseDto;
+}
+
+export class RegistrationOptionsDto {
+  @IsString()
+  @Length(1, 256)
+  password!: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 64)
+  mfaCode?: string;
+}
+
+export class RemoveCredentialDto {
+  @IsString()
+  @Length(1, 256)
+  password!: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 64)
+  mfaCode?: string;
 }

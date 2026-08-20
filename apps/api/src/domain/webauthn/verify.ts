@@ -14,9 +14,11 @@
 import { createHash, createVerify } from 'node:crypto';
 
 export interface WebAuthnConfig {
-  /** The effective domain, e.g. `api.finverse.example`. */
+  /** The effective domain, e.g. `finverse.example`. */
   rpId: string;
-  /** Exact origin the client must present, e.g. `https://api.finverse.example`. */
+  /** Exact clientData.origin values the client may present. */
+  origins: string[];
+  /** First allowlisted origin, kept for callers that still read a single value. */
   origin: string;
   rpName: string;
 }
@@ -49,10 +51,14 @@ export function hashRpId(rpId: string): Buffer {
  * object on success and null on any mismatch — an attacker must match the
  * challenge, the origin, and the ceremony type at once.
  */
+export function allowedWebAuthnOrigins(config: Pick<WebAuthnConfig, 'origin' | 'origins'>): string[] {
+  return config.origins?.length ? config.origins : [config.origin];
+}
+
 export function verifyClientData(
   clientDataJson: Buffer,
   expectedChallenge: string,
-  expectedOrigin: string,
+  expectedOrigin: string | readonly string[],
   expectedType: 'webauthn.create' | 'webauthn.get',
 ): ParsedClientData | null {
   let parsed: unknown;
@@ -67,7 +73,8 @@ export function verifyClientData(
   if (typeof record.challenge !== 'string' || record.challenge !== expectedChallenge) {
     return null;
   }
-  if (typeof record.origin !== 'string' || record.origin !== expectedOrigin) {
+  const allowed = typeof expectedOrigin === 'string' ? [expectedOrigin] : expectedOrigin;
+  if (typeof record.origin !== 'string' || !allowed.includes(record.origin)) {
     return null;
   }
   return {
@@ -106,6 +113,18 @@ export function verifyAssertionSignature(params: {
 export function userPresent(authenticatorData: Buffer): boolean {
   if (authenticatorData.length < 37) return false;
   return (authenticatorData[32]! & 0x01) === 0x01;
+}
+
+/** True when the authenticator's user-verified flag is set. */
+export function userVerified(authenticatorData: Buffer): boolean {
+  if (authenticatorData.length < 37) return false;
+  return (authenticatorData[32]! & 0x04) === 0x04;
+}
+
+/** True when attested credential data is present (registration). */
+export function attestedCredentialDataIncluded(authenticatorData: Buffer): boolean {
+  if (authenticatorData.length < 37) return false;
+  return (authenticatorData[32]! & 0x40) === 0x40;
 }
 
 /** 32-byte SHA-256 of the RP id, expected as the first authData field. */

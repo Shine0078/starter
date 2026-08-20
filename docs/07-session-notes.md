@@ -1,3 +1,5 @@
+> **Historical counts.** Current verified FINVERSE status, including later test counts, is in [`HANDOVER-VERIFIED.md`](../HANDOVER-VERIFIED.md) on `codex/passkey-webauthn-p0`. Do not quote the 487/596 figures below as current.
+
 # Where the project stands
 
 Written for whoever picks this up next — including a fresh agent session with no
@@ -73,7 +75,7 @@ Sandbox adapter is configured locally and has been exercised end to end below.
 **Implemented but awaiting provider/device configuration:** email verification
 and password reset use hashed one-time tokens and SMTP in production; TOTP MFA
 uses encrypted secrets and one-time recovery codes; Android app lock uses system
-device authentication. **Absent:** passkeys and OAuth.
+device authentication. Passkeys are implemented for web; native iOS/Android ceremony wiring and OAuth remain owner/device work.
 
 ## Last task: row-level security — done
 

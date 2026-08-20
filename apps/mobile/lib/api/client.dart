@@ -137,6 +137,17 @@ class OfflineMutationQueuedException implements Exception {
       'Saved on this device. It will sync automatically when you are online.';
 }
 
+class OfflineMutationRejectedException implements Exception {
+  const OfflineMutationRejectedException(this.path, this.statusCode);
+
+  final String path;
+  final int statusCode;
+
+  @override
+  String toString() =>
+      'This change could not be saved and will not be retried automatically.';
+}
+
 /// Thin client over the FINVERSE API.
 ///
 /// It parses JSON into models but contains no financial business logic. The
@@ -194,12 +205,15 @@ class ApiClient implements BackgroundSyncClient {
   // a server-revoked refresh token.
   SessionTokens? _pendingSessionWrite;
   Future<bool>? _refreshFuture;
+  Future<int>? _replayFuture;
   _RefreshFailure _lastRefreshFailure = _RefreshFailure.none;
   final ValueNotifier<DateTime?> offlineCacheStatus = ValueNotifier(null);
 
   /// Number of idempotent writes waiting for connectivity. This is exposed so
   /// the shell can explain why an offline edit is still pending.
   final ValueNotifier<int> pendingMutationCount = ValueNotifier(0);
+  final ValueNotifier<int> rejectedMutationCount = ValueNotifier(0);
+  final List<OfflineMutationRejectedException> _rejectedMutations = [];
 
   /// Monotonically increasing revision for successful authenticated writes.
   ///
@@ -213,6 +227,11 @@ class ApiClient implements BackgroundSyncClient {
   bool get usedOfflineCache => offlineCacheStatus.value != null;
   void resetOfflineStatus() => offlineCacheStatus.value = null;
 
+  void dismissRejectedMutations() {
+    _rejectedMutations.clear();
+    rejectedMutationCount.value = 0;
+  }
+
   /// Called when the session is gone for good, so the app can show sign-in.
   void Function()? onSessionExpired;
 
@@ -225,6 +244,8 @@ class ApiClient implements BackgroundSyncClient {
     final stored = _tokens;
     if (stored == null) {
       pendingMutationCount.value = 0;
+    rejectedMutationCount.value = 0;
+    _rejectedMutations.clear();
       return false;
     }
 
@@ -371,7 +392,7 @@ class ApiClient implements BackgroundSyncClient {
         // keep the refresh credential for the next resume.
         if (response.statusCode == 401 &&
             _lastRefreshFailure == _RefreshFailure.unavailable) {
-          return _cachedOrThrow(
+          return await _cachedOrThrow(
             owner,
             path,
             ApiException(path, response.statusCode, response.body),
@@ -381,7 +402,7 @@ class ApiClient implements BackgroundSyncClient {
           throw PlanUpgradeRequiredException.maybeFrom(path, response) ??
               ApiException(path, response.statusCode, response.body);
         }
-        return _cachedOrThrow(owner, path,
+        return await _cachedOrThrow(owner, path,
             ApiException(path, response.statusCode, response.body));
       }
       if (owner != null && response.body.isNotEmpty && !_neverCache(path)) {
@@ -459,6 +480,8 @@ class ApiClient implements BackgroundSyncClient {
     final owner = _cacheOwner;
     if (owner == null) {
       pendingMutationCount.value = 0;
+    rejectedMutationCount.value = 0;
+    _rejectedMutations.clear();
       return;
     }
     try {
@@ -472,7 +495,13 @@ class ApiClient implements BackgroundSyncClient {
   /// Replays queued idempotent writes in order. Network failures leave the
   /// remaining rows intact; client errors are discarded because retrying them
   /// forever would hide a permanent validation or permission problem.
-  Future<int> replayOfflineMutations() async {
+  Future<int> replayOfflineMutations() {
+    return _replayFuture ??= _replayOfflineMutations().whenComplete(() {
+      _replayFuture = null;
+    });
+  }
+
+  Future<int> _replayOfflineMutations() async {
     final owner = _cacheOwner;
     if (owner == null) return 0;
     List<QueuedApiMutation> pending;
@@ -518,9 +547,17 @@ class ApiClient implements BackgroundSyncClient {
           _lastRefreshFailure == _RefreshFailure.unavailable) {
         break;
       }
+      if (response.statusCode == 408 || response.statusCode == 429) {
+        break;
+      }
       if (response.statusCode >= 400 && response.statusCode < 500) {
         await offlineCache.removeMutation(
             owner, mutation.method, mutation.path);
+        _rejectedMutations.add(OfflineMutationRejectedException(
+          mutation.path,
+          response.statusCode,
+        ));
+        rejectedMutationCount.value = _rejectedMutations.length;
         continue;
       }
       // A server-side outage is transient. Keep this and all following rows.
@@ -821,6 +858,8 @@ class ApiClient implements BackgroundSyncClient {
       }
     }
     pendingMutationCount.value = 0;
+    rejectedMutationCount.value = 0;
+    _rejectedMutations.clear();
     offlineCacheStatus.value = null;
     return serverConfirmed;
   }
@@ -860,16 +899,22 @@ class ApiClient implements BackgroundSyncClient {
       }
     }
     pendingMutationCount.value = 0;
+    rejectedMutationCount.value = 0;
+    _rejectedMutations.clear();
     offlineCacheStatus.value = null;
   }
 
   /// Schedules irreversible erasure after a 30-day recovery window.
   /// Credentials are cleared only after the server accepts the request.
-  Future<DateTime> requestAccountDeletion(String password) async {
+  Future<DateTime> requestAccountDeletion(String password, {String? mfaCode}) async {
     final response = await _perform(
       'DELETE',
       '/auth/account',
-      {'password': password, 'confirmation': 'DELETE'},
+      {
+        'password': password,
+        'confirmation': 'DELETE',
+        if (mfaCode != null && mfaCode.isNotEmpty) 'mfaCode': mfaCode,
+      },
       true,
     );
     final decoded = response.body.isEmpty
@@ -887,11 +932,14 @@ class ApiClient implements BackgroundSyncClient {
     return scheduledFor;
   }
 
-  Future<String> exportData(String password) async {
+  Future<String> exportData(String password, {String? mfaCode}) async {
     final response = await _perform(
       'POST',
       '/privacy/export',
-      {'password': password},
+      {
+        'password': password,
+        if (mfaCode != null && mfaCode.isNotEmpty) 'mfaCode': mfaCode,
+      },
       true,
     );
     if (response.statusCode >= 400) {
@@ -1397,6 +1445,7 @@ class ApiClient implements BackgroundSyncClient {
 
   Future<String> createBankLinkToken({
     required String password,
+    String? mfaCode,
     String? linkId,
     String platform = 'android',
   }) async {
@@ -1407,6 +1456,7 @@ class ApiClient implements BackgroundSyncClient {
         'password': password,
         'platform': platform,
         if (linkId != null) 'linkId': linkId,
+        if (mfaCode != null && mfaCode.isNotEmpty) 'mfaCode': mfaCode,
       },
     ) as Map<String, dynamic>;
     return json['token'] as String;
@@ -1488,20 +1538,33 @@ class ApiClient implements BackgroundSyncClient {
     return json['available'] == true;
   }
 
-  Future<Map<String, dynamic>> passkeyRegisterOptions() async {
+  Future<Map<String, dynamic>> passkeyRegisterOptions({
+    required String password,
+    String? mfaCode,
+  }) async {
     return await _send(
       'POST',
       '/webauthn/register/options',
+      {
+        'password': password,
+        if (mfaCode != null && mfaCode.isNotEmpty) 'mfaCode': mfaCode,
+      },
     ) as Map<String, dynamic>;
   }
 
   Future<Map<String, dynamic>> passkeyRegisterVerify(
-    String id,
-    String clientDataJson,
-    String attestationObject,
-  ) async {
+    String id, {
+    required String ceremonyId,
+    required String password,
+    String? mfaCode,
+    required String clientDataJson,
+    required String attestationObject,
+  }) async {
     return await _send('POST', '/webauthn/register/verify', {
       'id': id,
+      'ceremonyId': ceremonyId,
+      'password': password,
+      if (mfaCode != null && mfaCode.isNotEmpty) 'mfaCode': mfaCode,
       'response': {
         'clientDataJSON': clientDataJson,
         'attestationObject': attestationObject,
@@ -1517,22 +1580,22 @@ class ApiClient implements BackgroundSyncClient {
     ) as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> passkeyLoginVerify(
+  Future<PublicUser> passkeyLoginVerify(
     String id, {
-    String? email,
+    required String ceremonyId,
     required String clientDataJson,
     required String authenticatorData,
     required String signature,
-  }) async {
-    return await _send('POST', '/webauthn/login/verify', {
+  }) {
+    return _authenticate('/webauthn/login/verify', {
       'id': id,
-      if (email != null && email.isNotEmpty) 'email': email,
+      'ceremonyId': ceremonyId,
       'response': {
         'clientDataJSON': clientDataJson,
         'authenticatorData': authenticatorData,
         'signature': signature,
       },
-    }) as Map<String, dynamic>;
+    });
   }
 
   Future<List<Map<String, dynamic>>> passkeyCredentials() async {
@@ -1542,13 +1605,20 @@ class ApiClient implements BackgroundSyncClient {
         .toList();
   }
 
-  Future<void> passkeyRemove(String credentialId) async {
+  Future<void> passkeyRemove(
+    String credentialId, {
+    required String password,
+    String? mfaCode,
+  }) async {
     await _send(
       'DELETE',
       '/webauthn/credentials/${Uri.encodeComponent(credentialId)}',
+      {
+        'password': password,
+        if (mfaCode != null && mfaCode.isNotEmpty) 'mfaCode': mfaCode,
+      },
     );
   }
-
   Future<NotificationPreferences> notificationPreferences() async {
     final json =
         await _get('/notifications/preferences') as Map<String, dynamic>;
@@ -1838,3 +1908,4 @@ class PlanUpgradeRequiredException implements Exception {
   @override
   String toString() => message;
 }
+

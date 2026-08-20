@@ -27,7 +27,7 @@ export class BankingController {
     @Body() body: CreateLinkTokenDto,
     @ReqContext() context: RequestContext,
   ) {
-    await this.auth.verifyBankLinkStepUp(userId, body.password, context);
+    await this.auth.verifyBankLinkStepUp(userId, body.password, body.mfaCode, context);
     return this.banking.createLinkToken(
       userId,
       body.linkId,

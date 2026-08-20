@@ -76,4 +76,7 @@ dependencies {
     // Bundled Latin OCR model: receipt image bytes stay on-device and the
     // model is ready without a first-use Google Play Services download.
     implementation("com.google.mlkit:text-recognition:16.0.1")
+    implementation("androidx.credentials:credentials:1.3.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 }

@@ -1,3 +1,5 @@
+> **Historical.** Current verified status is in [`HANDOVER-VERIFIED.md`](../HANDOVER-VERIFIED.md). The 596 PostgreSQL figure below is superseded.
+
 # MISSION2 audit and delivery status
 
 This is a code-grounded status of the MISSION2 requirements. It is deliberately

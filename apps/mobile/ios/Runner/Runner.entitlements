@@ -10,6 +10,7 @@
 	<key>com.apple.developer.associated-domains</key>
 	<array>
 		<string>applinks:$(PLAID_UNIVERSAL_LINK_DOMAIN)</string>
+		<string>webcredentials:$(PLAID_UNIVERSAL_LINK_DOMAIN)</string>
 	</array>
 </dict>
 </plist>

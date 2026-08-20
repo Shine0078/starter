@@ -282,6 +282,90 @@ export class AuthService {
     return { user: toPublicUser(user), tokens: await this.issueSession(user, null, context) };
   }
 
+  /** Completes login after a verified WebAuthn assertion. */
+  async assertPasskeyNotLocked(email: string | null, context: RequestContext): Promise<void> {
+    if (!email) return;
+    const now = this.clock.now();
+    const failures = await this.events.recentFailures(
+      email,
+      new Date(now.getTime() - FAILURE_WINDOW_MS),
+      'passkey_login',
+    );
+    const lockout = evaluateLockout(failures, now);
+    if (!lockout.locked) return;
+    await this.record('passkey_login', false, null, email, context, 'locked out');
+    throw new HttpException(
+      {
+        message: 'Too many failed attempts. Try again later.',
+        retryAfterSeconds: lockout.retryAfterSeconds,
+      },
+      HttpStatus.TOO_MANY_REQUESTS,
+    );
+  }
+
+  async loginWithVerifiedPasskey(userId: string, context: RequestContext): Promise<AuthResult> {
+    const user = await this.users.findById(userId);
+    await this.assertPasskeyNotLocked(user?.email ?? null, context);
+    if (!user || user.status !== 'active') {
+      await this.record(
+        'passkey_login',
+        false,
+        userId,
+        user?.email ?? null,
+        context,
+        user ? `status=${user.status}` : 'missing user',
+      );
+      throw new UnauthorizedException('This passkey could not be verified.');
+    }
+    await this.record('passkey_login', true, user.id, user.email, context, null);
+    await this.record('login', true, user.id, user.email, context, 'passkey');
+    return { user: toPublicUser(user), tokens: await this.issueSession(user, null, context) };
+  }
+
+  async requireRecentPassword(
+    userId: string,
+    password: string,
+    mfaCode: string | undefined,
+    context: RequestContext,
+    options: { requireMfa?: boolean } = {},
+  ): Promise<User> {
+    const user = await this.requirePassword(userId, password);
+    const mfa = await this.mfa.get(user.id);
+    if (mfa?.enabledAt && options.requireMfa !== false) {
+      if (!mfaCode || !(await this.verifyMfaFactor(user.id, mfaCode, this.clock.now()))) {
+        await this.record('passkey_step_up', false, user.id, user.email, context, 'second factor failed');
+        throw new UnauthorizedException('Authenticator or recovery code is incorrect.');
+      }
+      await this.record('passkey_step_up', true, user.id, user.email, context, null);
+    }
+    return user;
+  }
+
+  recordAuthEvent(
+    kind: AuthEventKind,
+    succeeded: boolean,
+    userId: string | null,
+    emailAttempted: string | null,
+    context: RequestContext,
+    detail: string | null,
+  ): Promise<void> {
+    return this.record(kind, succeeded, userId, emailAttempted, context, detail);
+  }
+
+  async notifyPasskeyChange(email: string, action: 'added' | 'removed'): Promise<void> {
+    const subject =
+      action === 'added' ? 'A passkey was added to your FINVERSE account' : 'A passkey was removed from your FINVERSE account';
+    const body =
+      action === 'added'
+        ? 'A new passkey was added to your FINVERSE account. If you did not do this, sign in and remove it immediately.'
+        : 'A passkey was removed from your FINVERSE account. If you did not do this, reset your password and review your sign-in methods.';
+    try {
+      await this.emailSender.sendSecurityNotice?.(email, subject, body);
+    } catch (error) {
+      this.logger.error(`Failed to send passkey ${action} notice`, error as Error);
+    }
+  }
+
   // ------------------------------------------------------ multi-factor auth
 
   async mfaStatus(userId: string): Promise<{ enabled: boolean; available: boolean; recoveryCodesRemaining: number }> {
@@ -364,24 +448,10 @@ export class AuthService {
   async requestAccountDeletion(
     userId: string,
     password: string,
+    mfaCode: string | undefined,
     context: RequestContext,
   ): Promise<{ purgeScheduledFor: string }> {
-    const user = await this.users.findById(userId);
-    if (!user || user.status !== 'active') {
-      throw new UnauthorizedException('Session is no longer valid. Sign in again.');
-    }
-
-    if (!(await this.hasher.verify(user.passwordHash, password))) {
-      await this.record(
-        'account_deletion_requested',
-        false,
-        user.id,
-        user.email,
-        context,
-        'password re-verification failed',
-      );
-      throw new UnauthorizedException('Password is incorrect.');
-    }
+    const user = await this.requireRecentPassword(userId, password, mfaCode, context);
 
     // Revoke provider Items before disabling the account. Deleting our local
     // row alone would leave a Plaid Item able to pull new financial data during
@@ -651,22 +721,11 @@ export class AuthService {
   async verifyBankLinkStepUp(
     userId: string,
     password: string,
+    mfaCode: string | undefined,
     context: RequestContext,
   ): Promise<void> {
-    const user = await this.users.findById(userId);
-    if (!user || user.status !== 'active') {
-      throw new UnauthorizedException('Session is no longer valid. Sign in again.');
-    }
-    const verified = await this.hasher.verify(user.passwordHash, password);
-    await this.record(
-      'bank_link_step_up',
-      verified,
-      user.id,
-      user.email,
-      context,
-      verified ? null : 'password re-verification failed',
-    );
-    if (!verified) throw new UnauthorizedException('Password is incorrect.');
+    const user = await this.requireRecentPassword(userId, password, mfaCode, context);
+    await this.record('bank_link_step_up', true, user.id, user.email, context, null);
   }
 
   /** Used by the guard. Verifies signature, then confirms the session still exists. */

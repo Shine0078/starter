@@ -13,5 +13,8 @@ export function appleAppSiteAssociation(
         },
       ],
     },
+    webcredentials: {
+      apps: [config.appId],
+    },
   };
 }

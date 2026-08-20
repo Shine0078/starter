@@ -132,6 +132,18 @@ export async function provisionAppRole(pg: Pool, appDatabaseUrl: string): Promis
             app_role
           );
         END IF;
+        IF to_regprocedure('public.finverse_subscription_owner(text)') IS NOT NULL THEN
+          EXECUTE format(
+            'GRANT EXECUTE ON FUNCTION public.finverse_subscription_owner(text) TO %I',
+            app_role
+          );
+        END IF;
+        IF to_regprocedure('public.finverse_webauthn_credential_owner(text)') IS NOT NULL THEN
+          EXECUTE format(
+            'GRANT EXECUTE ON FUNCTION public.finverse_webauthn_credential_owner(text) TO %I',
+            app_role
+          );
+        END IF;
 
         -- Tables added by a later migration are covered without anyone having to
         -- remember to come back here.
@@ -167,4 +179,46 @@ export async function isRlsEnforcedFor(pg: Pool, role: string): Promise<boolean>
     [role],
   );
   return rows[0]?.enforced ?? false;
+}
+
+/**
+ * Production must actually be connected as the restricted runtime role.
+ * DATABASE_APP_URL being set is not enough if the credentials still resolve
+ * to a superuser or BYPASSRLS identity.
+ */
+export async function assertRestrictedRuntimeRole(pg: Pool): Promise<string> {
+  const { rows } = await pg.query<{
+    current_user: string;
+    rolsuper: boolean;
+    rolbypassrls: boolean;
+  }>(`
+    SELECT current_user,
+           rolsuper,
+           rolbypassrls
+      FROM pg_roles
+     WHERE rolname = current_user
+  `);
+  const row = rows[0];
+  if (!row) {
+    throw new Error('Could not determine the PostgreSQL runtime role.');
+  }
+  if (row.rolsuper || row.rolbypassrls) {
+    throw new Error(
+      `Runtime role ${row.current_user} is SUPERUSER or BYPASSRLS; refusing to serve requests.`,
+    );
+  }
+  const owned = await pg.query<{ count: string }>(`
+    SELECT count(*)::text AS count
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+     WHERE n.nspname = 'public'
+       AND c.relkind = 'r'
+       AND c.relowner = (SELECT oid FROM pg_roles WHERE rolname = current_user)
+  `);
+  if (Number(owned.rows[0]?.count ?? 0) > 0) {
+    throw new Error(
+      `Runtime role ${row.current_user} owns public tables; refusing to serve requests as the schema owner.`,
+    );
+  }
+  return row.current_user;
 }

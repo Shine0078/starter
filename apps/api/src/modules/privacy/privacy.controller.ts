@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Header, HttpCode, Param, Patch, Post } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 
 import { CurrentSessionId, CurrentUser, ReqContext } from '../auth/auth.guard';
 import type { RequestContext } from '../auth/auth.service';
@@ -23,6 +24,7 @@ export class PrivacyController {
     return this.privacy.updateOptionalConsent(userId, kind, body.granted);
   }
 
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post('export')
   @HttpCode(200)
   @Header('Content-Type', 'application/json; charset=utf-8')
@@ -33,6 +35,6 @@ export class PrivacyController {
     @Body() body: ExportDataDto,
     @ReqContext() context: RequestContext,
   ) {
-    return this.privacy.exportData(userId, sessionId, body.password, context);
+    return this.privacy.exportData(userId, sessionId, body.password, body.mfaCode, context);
   }
 }

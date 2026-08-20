@@ -132,9 +132,10 @@ async function createSeededUser(baseUrl: string): Promise<string> {
     password: 'correct horse battery staple',
     ...acceptance,
   });
-  const token = registration.tokens.accessToken;
-  await postJson(`${baseUrl}/api/sync`, {}, token);
-  return token;
+  // Postgres deployments refuse the in-memory sample ledger. An empty
+  // authenticated account is enough to prove the restricted runtime role
+  // can serve the read path under load.
+  return registration.tokens.accessToken;
 }
 
 async function getJson<T>(url: string): Promise<T> {

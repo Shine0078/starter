@@ -79,6 +79,26 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get offlineBannerRejected =>
+      'Certaines modifications hors ligne ont ete refusees';
+
+  @override
+  String offlineBannerRejectedDetail(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count modifications n ont pas pu etre enregistrees et ne seront pas relancees automatiquement.',
+      one:
+          '1 modification n a pas pu etre enregistree et ne sera pas relancee automatiquement.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get offlineBannerDismissRejected => 'Ignorer';
+
+  @override
   String offlineBannerLastUpdated(Object date) {
     return 'Dernière mise à jour : $date. Les changements sont en lecture seule jusqu\'à la reconnexion.';
   }
@@ -2055,6 +2075,61 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get settingsThemeColorApply => 'Utiliser la couleur';
+
+  @override
+  String get loginUsePasskey => 'Utiliser une clé d’accès';
+
+  @override
+  String get loginPasskeyUnavailable =>
+      'Les clés d’accès ne sont pas encore disponibles sur cet appareil. Utilisez l’application web FINVERSE ou connectez-vous avec votre mot de passe.';
+
+  @override
+  String get loginPasskeyCancelled =>
+      'La connexion par clé d’accès a été annulée.';
+
+  @override
+  String get loginPasskeyFailed =>
+      'Cette clé d’accès n’a pas pu être vérifiée.';
+
+  @override
+  String get settingsPasskeysTitle => 'Clés d’accès';
+
+  @override
+  String get settingsPasskeysUnavailableServer =>
+      'Non configuré sur ce serveur';
+
+  @override
+  String get settingsPasskeysUnavailableDevice =>
+      'Disponible dans l’application web FINVERSE';
+
+  @override
+  String get settingsPasskeysEmpty => 'Aucune clé d’accès sur ce compte';
+
+  @override
+  String get settingsPasskeysAdd => 'Ajouter une clé d’accès';
+
+  @override
+  String get settingsPasskeysRemove => 'Supprimer';
+
+  @override
+  String get settingsPasskeysAdded => 'Clé d’accès ajoutée.';
+
+  @override
+  String get settingsPasskeysRemoved => 'Clé d’accès supprimée.';
+
+  @override
+  String get settingsPasskeysPasswordTitle => 'Confirmez votre mot de passe';
+
+  @override
+  String get settingsPasskeysPasswordDetail =>
+      'L’ajout ou la suppression d’une clé d’accès exige votre mot de passe actuel.';
+
+  @override
+  String get settingsPasskeysMfaLabel =>
+      'Code d’authentification ou de récupération';
+
+  @override
+  String get settingsPasskeysContinue => 'Continuer';
 
   @override
   String get settingsDarkModeTitle => 'Mode sombre';

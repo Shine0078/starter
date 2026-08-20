@@ -33,6 +33,7 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
   List<BankLink> _links = const [];
   List<Account> _accounts = const [];
   PlanSummary? _plan;
+  MfaStatus? _mfa;
   bool _loading = true;
   bool _working = false;
   String? _error;
@@ -71,6 +72,15 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
   /// Loaded separately and allowed to fail: not knowing the plan costs a
   /// pre-check, and the server still refuses over-limit connections. Folding it
   /// into the main load would let a billing hiccup hide the accounts list.
+  Future<void> _loadMfa() async {
+    try {
+      final mfa = await widget.api.mfaStatus();
+      if (mounted) setState(() => _mfa = mfa);
+    } catch (_) {
+      if (mounted) setState(() => _mfa = null);
+    }
+  }
+
   Future<void> _loadPlan() async {
     try {
       final plan = await widget.api.planSummary();
@@ -83,6 +93,7 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
   Future<void> _load() async {
     widget.api.resetOfflineStatus();
     unawaited(_loadPlan());
+    unawaited(_loadMfa());
     try {
       final results = await Future.wait([
         widget.api.bankLinks(),
@@ -152,12 +163,14 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
       return;
     }
 
-    final password = await _confirmPassword(
+    final stepUp = await _confirmStepUp(
       existing == null
           ? _l10n.bankConnectAction
           : _l10n.bankReconnectThisAction,
     );
-    if (password == null) return;
+    if (stepUp == null) return;
+    final password = stepUp[0];
+    final mfaCode = stepUp[1];
     setState(() {
       _working = true;
       _error = null;
@@ -165,6 +178,7 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
     try {
       final token = await widget.api.createBankLinkToken(
         password: password,
+        mfaCode: mfaCode.isEmpty ? null : mfaCode,
         linkId: existing?.id,
         platform: widget.plaidLink.platform,
       );
@@ -188,9 +202,10 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
     }
   }
 
-  Future<String?> _confirmPassword(String action) async {
+  Future<List<String>?> _confirmStepUp(String action) async {
     var enteredPassword = '';
-    final value = await showDialog<String>(
+    var enteredMfa = '';
+    final value = await showDialog<List<String>>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(_l10n.bankStepUpTitle),
@@ -210,12 +225,23 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
               autofillHints: kIsWeb ? null : const [AutofillHints.password],
               textInputAction: TextInputAction.done,
               onChanged: (value) => enteredPassword = value,
-              onSubmitted: (value) => Navigator.pop(dialogContext, value),
+              onSubmitted: (_) => Navigator.pop(dialogContext, [enteredPassword, enteredMfa.trim()]),
               decoration: InputDecoration(
                 labelText: _l10n.bankPasswordLabel,
                 border: OutlineInputBorder(),
               ),
             ),
+            if (_mfa?.enabled == true) ...[
+              const SizedBox(height: 12),
+              TextField(
+                obscureText: false,
+                onChanged: (value) => enteredMfa = value,
+                decoration: InputDecoration(
+                  labelText: _l10n.loginMfaCode,
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
           ],
         ),
         actions: [
@@ -224,13 +250,13 @@ class _BankConnectionsScreenState extends State<BankConnectionsScreen> {
             child: Text(_l10n.commonCancel),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, enteredPassword),
+            onPressed: () => Navigator.pop(dialogContext, [enteredPassword, enteredMfa.trim()]),
             child: Text(_l10n.bankContinueAction),
           ),
         ],
       ),
     );
-    if (value == null || value.isEmpty) return null;
+    if (value == null || value.isEmpty || value[0].isEmpty) return null;
     return value;
   }
 

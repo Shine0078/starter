@@ -9,6 +9,11 @@ export class CreateLinkTokenDto {
   password!: string;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  mfaCode?: string;
+
+  @IsOptional()
   @IsUUID()
   linkId?: string;
 

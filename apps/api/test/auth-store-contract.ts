@@ -290,6 +290,32 @@ export function runAuthStoreContract(name: string, create: () => Promise<AuthSto
         expect(failures).toHaveLength(0);
       });
 
+      it('does not count passkey failures toward password lockout', async () => {
+        await stores.events.record({
+          id: 'evt-passkey-fail',
+          userId: null,
+          emailAttempted: 'alice@example.com',
+          kind: 'passkey_login',
+          succeeded: false,
+          ipAddress: '127.0.0.1',
+          userAgent: 'vitest',
+          detail: 'assertion failed',
+          createdAt: NOW,
+        });
+        await recordFailure('alice@example.com', NOW);
+        const failures = await stores.events.recentFailures(
+          'alice@example.com',
+          new Date(NOW.getTime() - 5 * 60_000),
+        );
+        expect(failures).toHaveLength(1);
+        const passkeyFailures = await stores.events.recentFailures(
+          'alice@example.com',
+          new Date(NOW.getTime() - 5 * 60_000),
+          'passkey_login',
+        );
+        expect(passkeyFailures).toHaveLength(1);
+      });
+
       it('counts failures against an address with no account', async () => {
         // There is no user row to attach these to, but they still have to count
         // toward lockout or an attacker gets unlimited guesses at any address.

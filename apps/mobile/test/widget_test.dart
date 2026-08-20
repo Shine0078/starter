@@ -15,6 +15,7 @@ import 'package:finverse/api/app_lock.dart';
 import 'package:finverse/api/local_notifications.dart';
 import 'package:finverse/api/onboarding_store.dart';
 import 'package:finverse/api/offline_cache.dart';
+import 'package:finverse/api/passkey_ceremony.dart';
 import 'package:finverse/api/session_store.dart';
 import 'package:finverse/app_theme.dart';
 import 'package:finverse/l10n/app_localizations.dart';
@@ -68,6 +69,37 @@ class FakeDeviceAuthenticator implements DeviceAuthenticator {
 
   @override
   Future<bool> isSupported() async => supported;
+}
+
+class FakePasskeyCeremony implements PasskeyCeremony {
+  FakePasskeyCeremony({this.supported = true});
+
+  final bool supported;
+  Map<String, dynamic>? lastOptions;
+
+  @override
+  bool get isSupported => supported;
+
+  @override
+  Future<PasskeyAssertion> authenticate(Map<String, dynamic> options) async {
+    lastOptions = options;
+    return const PasskeyAssertion(
+      id: 'cred-login',
+      clientDataJson: 'client-data',
+      authenticatorData: 'auth-data',
+      signature: 'sig',
+    );
+  }
+
+  @override
+  Future<PasskeyAttestation> register(Map<String, dynamic> options) async {
+    lastOptions = options;
+    return const PasskeyAttestation(
+      id: 'cred-register',
+      clientDataJson: 'client-data',
+      attestationObject: 'attestation',
+    );
+  }
 }
 
 class UnavailableSessionStore implements SessionStore {
@@ -892,6 +924,72 @@ void main() {
     expect(await cache.pendingMutations('user-1'), isEmpty);
   });
 
+  test('keeps throttled offline mutations queued instead of permanently rejecting them', () async {
+    final store = InMemorySessionStore();
+    final cache = InMemoryOfflineCacheStore();
+    await store.write(const SessionTokens(
+      accessToken: 'access',
+      refreshToken: 'refresh',
+      refreshExpiresAt: '2026-09-08T00:00:00.000Z',
+      userId: 'user-1',
+    ));
+    final api = clientWith(
+      MockClient((request) async => http.Response('{"message":"Too many requests"}', 429)),
+      store: store,
+      offlineCache: cache,
+    );
+    await api.restoreSession();
+    await cache.enqueueMutation(
+      'user-1',
+      'PATCH',
+      '/transactions/txn-1/preferences',
+      '{"notes":"keep"}',
+    );
+    expect(await api.replayOfflineMutations(), 0);
+    expect(api.rejectedMutationCount.value, 0);
+    expect(await cache.pendingMutations('user-1'), hasLength(1));
+  });
+
+  test('keeps rejected offline mutations visible and isolated by account', () async {
+    final store = InMemorySessionStore();
+    final cache = InMemoryOfflineCacheStore();
+    await store.write(const SessionTokens(
+      accessToken: 'access',
+      refreshToken: 'refresh',
+      refreshExpiresAt: '2026-09-08T00:00:00.000Z',
+      userId: 'user-1',
+    ));
+    await cache.enqueueMutation(
+      'user-2',
+      'PATCH',
+      '/transactions/txn-other',
+      '{"notes":"other-user"}',
+    );
+    var online = false;
+    final api = clientWith(
+      MockClient((request) async {
+        if (!online) throw http.ClientException('offline');
+        return http.Response('{"message":"validation failed"}', 422);
+      }),
+      store: store,
+      offlineCache: cache,
+    );
+    await api.restoreSession();
+
+    await expectLater(
+      api.updateTransactionPreferences('txn-1', note: 'queued'),
+      throwsA(isA<OfflineMutationQueuedException>()),
+    );
+    expect(api.pendingMutationCount.value, 1);
+    expect(await cache.pendingMutations('user-2'), hasLength(1));
+
+    online = true;
+    expect(await api.replayOfflineMutations(), 0);
+    expect(api.pendingMutationCount.value, 0);
+    expect(api.rejectedMutationCount.value, 1);
+    expect(await cache.pendingMutations('user-1'), isEmpty);
+    expect(await cache.pendingMutations('user-2'), hasLength(1));
+  });
   test('portable export confirms the password and attaches the active session',
       () async {
     final store = InMemorySessionStore();
@@ -1557,6 +1655,87 @@ void main() {
     );
   });
 
+  testWidgets('explains that an unsupported passkey ceremony cannot sign in',
+      (tester) async {
+    final api = clientWith(MockClient((request) async {
+      if (request.url.path.endsWith('/webauthn/status')) {
+        return http.Response('{"available":true}', 200);
+      }
+      fail('unsupported ceremony must not start a request');
+    }));
+
+    await tester.pumpWidget(MaterialApp(
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        AppLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: LoginScreen(
+        api: api,
+        passkeyCeremony: FakePasskeyCeremony(supported: false),
+        onSignedIn: () => fail('must not sign in'),
+      ),
+    ));
+    await tester.tap(find.text('Use a passkey'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('not available on this device'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('completes passkey login through the platform ceremony',
+      (tester) async {
+    var signedIn = false;
+    http.Request? verify;
+    final ceremony = FakePasskeyCeremony();
+    final api = clientWith(MockClient((request) async {
+      if (request.url.path.endsWith('/webauthn/status')) {
+        return http.Response('{"available":true}', 200);
+      }
+      if (request.url.path.endsWith('/webauthn/login/options')) {
+        return http.Response(
+          '{"ceremonyId":"cer-1","challenge":"abc","rp":{"id":"finverse.test","name":"FINVERSE"},"userVerification":"required"}',
+          200,
+        );
+      }
+      if (request.url.path.endsWith('/webauthn/login/verify')) {
+        verify = request;
+        return http.Response(
+          '{"user":{"id":"user-1","email":"sam@example.com","emailVerified":true},"tokens":{"accessToken":"access","refreshToken":"refresh","refreshExpiresAt":"2099-01-01T00:00:00.000Z"}}',
+          200,
+        );
+      }
+      return http.Response('{}', 200);
+    }));
+
+    await tester.pumpWidget(MaterialApp(
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        AppLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: LoginScreen(
+        api: api,
+        passkeyCeremony: ceremony,
+        onSignedIn: () => signedIn = true,
+      ),
+    ));
+    await tester.enterText(find.byType(TextFormField).first, 'sam@example.com');
+    await tester.tap(find.text('Use a passkey'));
+    await tester.pumpAndSettle();
+
+    expect(signedIn, isTrue);
+    expect(ceremony.lastOptions?['ceremonyId'], 'cer-1');
+    expect(verify?.url.path, endsWith('/webauthn/login/verify'));
+    expect(verify?.body, contains('cred-login'));
+    expect(verify?.body, contains('cer-1'));
+  });
   test('carries passkey and push registration protocol', () async {
     var sawRegisterOptions = false;
     final api = clientWith(MockClient((request) async {
@@ -1585,7 +1764,7 @@ void main() {
     }));
 
     expect(await api.passkeysAvailable(), isTrue);
-    final options = await api.passkeyRegisterOptions();
+    final options = await api.passkeyRegisterOptions(password: 'correct horse battery staple');
     expect(options['challenge'], 'abc');
     expect(sawRegisterOptions, isTrue);
 

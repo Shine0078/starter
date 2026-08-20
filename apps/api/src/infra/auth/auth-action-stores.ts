@@ -102,6 +102,12 @@ export class DevelopmentEmailSender implements EmailSender {
     }
   }
 
+  async sendSecurityNotice(email: string, subject: string, _body: string): Promise<void> {
+    if (process.env.NODE_ENV !== 'test' && !process.env.VITEST) {
+      console.log(`[development email] ${subject} for ${email}`);
+    }
+  }
+
   latest(email: string, kind: AuthActionKind): DevelopmentEmail | null {
     return [...this.messages].reverse().find((message) => message.email === email && message.kind === kind) ?? null;
   }
@@ -139,6 +145,15 @@ export class SmtpEmailSender implements EmailSender {
       text:
         `Use this one-time code to ${purpose}:\n\n${token}\n\n` +
         `It expires in ${lifetime}. If you did not request this, you can ignore this message.`,
+    });
+  }
+
+  async sendSecurityNotice(email: string, subject: string, body: string): Promise<void> {
+    await this.transporter.sendMail({
+      from: this.options.from,
+      to: email,
+      subject,
+      text: body,
     });
   }
 }

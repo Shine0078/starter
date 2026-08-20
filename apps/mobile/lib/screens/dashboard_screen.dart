@@ -64,6 +64,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   List<Transaction> _transactions = const [];
   InsightsReport? _insights;
   DataQualityReport? _dataQuality;
+  MfaStatus? _mfa;
 
   @override
   void initState() {
@@ -73,6 +74,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     // Load persisted data immediately. Provider refreshes are explicit and
     // webhook-driven; opening the app must not inject the development mock.
     unawaited(_loadQuality());
+    unawaited(_loadMfa());
     _load();
   }
 
@@ -113,6 +115,15 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
     unawaited(_loadQuality());
     if (mounted) await _load();
+  }
+
+  Future<void> _loadMfa() async {
+    try {
+      final mfa = await widget.api.mfaStatus();
+      if (mounted) setState(() => _mfa = mfa);
+    } catch (_) {
+      if (mounted) setState(() => _mfa = null);
+    }
   }
 
   Future<void> _loadQuality() async {
@@ -214,6 +225,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     final l10n = AppLocalizations.of(context);
     final password = TextEditingController();
     final confirmation = TextEditingController();
+    final mfaCode = TextEditingController();
     final submitted = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -242,6 +254,16 @@ class _DashboardScreenState extends State<DashboardScreen>
                   border: const OutlineInputBorder(),
                 ),
               ),
+              if (_mfa?.enabled == true) ...[
+                const SizedBox(height: 12),
+                TextField(
+                  controller: mfaCode,
+                  decoration: InputDecoration(
+                    labelText: l10n.loginMfaCode,
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -263,8 +285,10 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     final passwordText = password.text;
     final confirmationText = confirmation.text;
+    final mfaText = mfaCode.text.trim();
     password.dispose();
     confirmation.dispose();
+    mfaCode.dispose();
     if (submitted != true || !mounted) return;
 
     if (passwordText.isEmpty || confirmationText != 'DELETE') {
@@ -275,7 +299,10 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
 
     try {
-      await widget.api.requestAccountDeletion(passwordText);
+      await widget.api.requestAccountDeletion(
+        passwordText,
+        mfaCode: mfaText.isEmpty ? null : mfaText,
+      );
       await widget.onAccountDeleted?.call();
     } on AuthException catch (error) {
       if (!mounted) return;
