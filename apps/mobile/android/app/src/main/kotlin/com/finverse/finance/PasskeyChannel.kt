@@ -1,7 +1,6 @@
 package com.finverse.finance
 
 import android.app.Activity
-import android.os.CancellationSignal
 import android.util.Base64
 import androidx.credentials.CreatePublicKeyCredentialRequest
 import androidx.credentials.CreatePublicKeyCredentialResponse
@@ -25,7 +24,6 @@ class PasskeyChannel(private val activity: Activity) : MethodChannel.MethodCallH
     private val manager = CredentialManager.create(activity)
     private val scope = CoroutineScope(Dispatchers.Main + Job())
     private var inFlight: Job? = null
-    private var cancellation: CancellationSignal? = null
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
@@ -40,7 +38,6 @@ class PasskeyChannel(private val activity: Activity) : MethodChannel.MethodCallH
             result.error("BUSY", "A passkey ceremony is already in progress.", null)
             return
         }
-        cancellation = CancellationSignal()
         inFlight = scope.launch {
             try {
                 block()
@@ -56,7 +53,6 @@ class PasskeyChannel(private val activity: Activity) : MethodChannel.MethodCallH
                 result.error("FAILED", error.message ?: "Could not complete this passkey ceremony.", null)
             } finally {
                 inFlight = null
-                cancellation = null
             }
         }
     }
@@ -70,7 +66,6 @@ class PasskeyChannel(private val activity: Activity) : MethodChannel.MethodCallH
         val response = manager.getCredential(
             context = activity,
             request = GetCredentialRequest(listOf(GetPublicKeyCredentialOption(requestJson))),
-            cancellationSignal = cancellation,
         )
         val credential = response.credential as? PublicKeyCredential
         if (credential == null) {
@@ -89,7 +84,6 @@ class PasskeyChannel(private val activity: Activity) : MethodChannel.MethodCallH
         val response = manager.createCredential(
             context = activity,
             request = CreatePublicKeyCredentialRequest(requestJson),
-            cancellationSignal = cancellation,
         ) as CreatePublicKeyCredentialResponse
         result.success(attestationPayload(response.registrationResponseJson))
     }
