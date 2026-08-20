@@ -1,0 +1,39 @@
+name: Container scan
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - Dockerfile
+      - Dockerfile.public
+      - package-lock.json
+      - apps/api/**
+      - .github/workflows/container-scan.yml
+  pull_request:
+    branches: [main, master]
+    paths:
+      - Dockerfile
+      - Dockerfile.public
+      - package-lock.json
+      - apps/api/**
+      - .github/workflows/container-scan.yml
+
+permissions:
+  contents: read
+
+jobs:
+  trivy:
+    name: Scan API image with Trivy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Build API image
+        run: docker build --build-arg GIT_SHA="$GITHUB_SHA" --tag finverse-api:scan .
+      - uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # v0.33.1
+        with:
+          scan-type: image
+          image-ref: finverse-api:scan
+          format: table
+          exit-code: '1'
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
