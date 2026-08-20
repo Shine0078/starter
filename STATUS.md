@@ -38,6 +38,8 @@ GitHub Pages and `finverse.onrender.com` are not the current API.
 - Main CI on `eebfd1d`: success
 - PR #16 CI on `db0e879`: success (API, Flutter analyze/tests/Android/PWA, unsigned iOS, CodeQL, Trivy runtime image)
 
+- Main CI on merge commit `a21b374`: success
+
 ## Completed this session
 
 - Restored `Final Goal.md`
