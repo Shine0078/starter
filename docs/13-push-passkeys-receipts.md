@@ -35,7 +35,7 @@ WEBAUTHN_ORIGIN=https://app.your-domain.example,https://api.your-domain.example
 WEBAUTHN_RP_NAME=FINVERSE
 ```
 
-`webcredentials` are configured.
+The Flutter login and settings screens call those methods. Web uses navigator.credentials. Native Android uses Credential Manager and native iOS uses AuthenticationServices with required user verification. Live WEBAUTHN_*, Digital Asset Links, associated domains, and physical-device proof are still owner actions. webcredentials is advertised in the AASA document when iOS Universal Links are configured.
 
 ## Remote push and background sync
 
