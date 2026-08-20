@@ -41,6 +41,7 @@ jobs:
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           version: v0.74.0
+          skip-dirs: /usr/local/lib/node_modules
 
   trivy-public:
     name: Report public image scan
