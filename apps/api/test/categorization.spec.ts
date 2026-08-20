@@ -200,6 +200,28 @@ describe('UserCorrectionClassifier', () => {
       }).source,
     ).toBe('user_rule');
   });
+
+  it('reports leave-one-out coverage without claiming real-world accuracy', () => {
+    const evaluation = UserCorrectionClassifier.evaluateLeaveOneOut([
+      manualCorrection('HARBOR ROASTERS ONTARIO', 'coffee'),
+      manualCorrection('HARBOR ROASTERS ONTARIO WEST', 'coffee', { id: 'txn_west' }),
+      manualCorrection('CITY MARKET DOWNTOWN', 'groceries'),
+    ]);
+
+    expect(evaluation.labelled).toBe(3);
+    expect(evaluation.predicted).toBeGreaterThan(0);
+    expect(evaluation.top1Accuracy).toBe(1);
+    expect(evaluation.coverage).toBeGreaterThan(0);
+  });
+
+  it('abstains when there is not enough labelled data to evaluate', () => {
+    const evaluation = UserCorrectionClassifier.evaluateLeaveOneOut([
+      manualCorrection('SOLO MERCHANT', 'shopping'),
+    ]);
+    expect(evaluation.labelled).toBe(1);
+    expect(evaluation.top1Accuracy).toBeNull();
+    expect(evaluation.coverage).toBe(0);
+  });
 });
 
 describe('ruleFromCorrection', () => {

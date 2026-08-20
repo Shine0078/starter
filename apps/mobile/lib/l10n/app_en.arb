@@ -33,6 +33,10 @@
   "offlineConflictRejectedTitle": "Needs attention",
   "offlineConflictDismissOne": "Dismiss",
   "offlineConflictRetry": "Retry sync",
+  "offlineConflictQueuedAt": "Queued {date}",
+  "@offlineConflictQueuedAt": {
+    "placeholders": {"date": {"type": "String"}}
+  },
   "offlineConflictStatus": "HTTP {code}",
   "@offlineConflictStatus": {
     "placeholders": {"code": {"type": "int"}}

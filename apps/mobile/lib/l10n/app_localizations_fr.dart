@@ -121,6 +121,11 @@ class AppLocalizationsFr extends AppLocalizations {
   String get offlineConflictRetry => 'Reessayer';
 
   @override
+  String offlineConflictQueuedAt(String date) {
+    return 'En file $date';
+  }
+
+  @override
   String offlineConflictStatus(int code) {
     return 'HTTP $code';
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../api/client.dart';
 import '../api/offline_cache.dart';
@@ -61,7 +62,9 @@ class _OfflineConflictScreenState extends State<OfflineConflictScreen> {
                 child: ListTile(
                   leading: const Icon(Icons.cloud_upload_outlined),
                   title: Text(mutation.path),
-                  subtitle: Text(mutation.method),
+                  subtitle: Text(
+                    '${mutation.method} · ${l10n.offlineConflictQueuedAt(DateFormat.yMMMd().add_jm().format(mutation.enqueuedAt.toLocal()))}',
+                  ),
                 ),
               ),
             const SizedBox(height: 8),
@@ -83,7 +86,7 @@ class _OfflineConflictScreenState extends State<OfflineConflictScreen> {
                   leading: const Icon(Icons.error_outline),
                   title: Text(mutation.path),
                   subtitle: Text(
-                    '${mutation.toString()}\n${l10n.offlineConflictStatus(mutation.statusCode)}',
+                    '${mutation.toString()}\n${l10n.offlineConflictStatus(mutation.statusCode)}${mutation.enqueuedAt == null ? '' : '\n${l10n.offlineConflictQueuedAt(DateFormat.yMMMd().add_jm().format(mutation.enqueuedAt!.toLocal()))}'}',
                   ),
                   isThreeLine: true,
                   trailing: TextButton(

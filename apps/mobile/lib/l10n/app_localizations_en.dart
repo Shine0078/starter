@@ -118,6 +118,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get offlineConflictRetry => 'Retry sync';
 
   @override
+  String offlineConflictQueuedAt(String date) {
+    return 'Queued $date';
+  }
+
+  @override
   String offlineConflictStatus(int code) {
     return 'HTTP $code';
   }
