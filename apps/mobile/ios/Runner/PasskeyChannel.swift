@@ -70,12 +70,6 @@ final class PasskeyChannel: NSObject, ASAuthorizationControllerDelegate, ASAutho
       userID: userId
     )
     request.userVerificationPreference = .required
-    if #available(iOS 16.0, *),
-       let selection = json["authenticatorSelection"] as? [String: Any],
-       let resident = selection["residentKey"] as? String,
-       resident == "required" || resident == "preferred" {
-      request.residentKeyPreference = .required
-    }
     return request
   }
 
