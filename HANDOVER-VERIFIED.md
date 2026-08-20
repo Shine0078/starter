@@ -1,7 +1,7 @@
 # FINVERSE status - 2026-08-20 (verified)
 
 Canonical working branch: `codex/passkey-webauthn-p0`
-HEAD at write time: tip of `codex/passkey-webauthn-p0` after native passkeys, GIT_SHA identity, fail-closed uptime, CODEOWNERS, and Cloud Run origin.
+HEAD at write time: `22fe3e8` on `codex/passkey-webauthn-p0`. PR #1 is open against protected `main`.
 Do not treat older handover prose as current. This file records only what was executed and observed.
 
 ## Canonical deployment
@@ -39,6 +39,8 @@ Live Cloud Run readiness returned service `finverse-api`, store `postgres`, data
 - Native Android Credential Manager and iOS AuthenticationServices passkey ceremonies (API still verifies)
 - README names Cloud Run as the only public technical-beta; Render is preview-only
 - Release workflow refuses Render as `API_BASE_URL`
+- SHA-pinned CodeQL (`javascript-typescript`, security-extended)
+- GitHub secret scanning, push protection, and Dependabot security updates enabled
 
 ## P0 remaining
 
