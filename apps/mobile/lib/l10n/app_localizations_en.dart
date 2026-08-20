@@ -131,6 +131,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTitle => 'Settings';
 
   @override
+  String get dashboardCardsTitle => 'Dashboard cards';
+
+  @override
+  String get dashboardCardsDetail =>
+      'Choose which existing metrics stay on Home. Hidden cards are not deleted.';
+
+  @override
+  String get dashboardCardNetWorth => 'Net worth history';
+
+  @override
+  String get dashboardCardMonthlySummary => 'This month';
+
+  @override
+  String get dashboardCardSpending => 'Spending by category';
+
+  @override
+  String get dashboardCardHealth => 'Financial health';
+
+  @override
+  String get dashboardCardBudgets => 'Budgets';
+
+  @override
+  String get dashboardCardInsights => 'Explainable insights';
+
+  @override
+  String get dashboardCardTransactions => 'Recent transactions';
+
+  @override
   String get profileTitle => 'Profile';
 
   @override

@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 
 import '../app_locale.dart';
 import '../app_theme.dart';
+import '../dashboard_layout.dart';
 import '../api/client.dart';
 import '../api/app_lock.dart';
 import '../api/passkey_ceremony.dart';
@@ -984,10 +985,67 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final localeController = LocaleControllerScope.maybeOf(context);
     final themeColorController = ThemeColorControllerScope.maybeOf(context);
     final themeModeController = ThemeModeControllerScope.maybeOf(context);
+    final dashboardLayout = DashboardLayoutControllerScope.maybeOf(context);
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       children: [
         _heading('ACCOUNT'),
+        if (dashboardLayout != null) ...[
+          Card(
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.dashboard_customize_outlined),
+                  title: Text(l10n.dashboardCardsTitle),
+                  subtitle: Text(l10n.dashboardCardsDetail),
+                ),
+                SwitchListTile(
+                  title: Text(l10n.dashboardCardNetWorth),
+                  value: dashboardLayout.isVisible(DashboardCard.netWorth),
+                  onChanged: (value) =>
+                      dashboardLayout.setVisible(DashboardCard.netWorth, value),
+                ),
+                SwitchListTile(
+                  title: Text(l10n.dashboardCardMonthlySummary),
+                  value: dashboardLayout.isVisible(DashboardCard.monthlySummary),
+                  onChanged: (value) => dashboardLayout.setVisible(
+                      DashboardCard.monthlySummary, value),
+                ),
+                SwitchListTile(
+                  title: Text(l10n.dashboardCardSpending),
+                  value: dashboardLayout.isVisible(DashboardCard.spending),
+                  onChanged: (value) =>
+                      dashboardLayout.setVisible(DashboardCard.spending, value),
+                ),
+                SwitchListTile(
+                  title: Text(l10n.dashboardCardHealth),
+                  value: dashboardLayout.isVisible(DashboardCard.health),
+                  onChanged: (value) =>
+                      dashboardLayout.setVisible(DashboardCard.health, value),
+                ),
+                SwitchListTile(
+                  title: Text(l10n.dashboardCardBudgets),
+                  value: dashboardLayout.isVisible(DashboardCard.budgets),
+                  onChanged: (value) =>
+                      dashboardLayout.setVisible(DashboardCard.budgets, value),
+                ),
+                SwitchListTile(
+                  title: Text(l10n.dashboardCardInsights),
+                  value: dashboardLayout.isVisible(DashboardCard.insights),
+                  onChanged: (value) =>
+                      dashboardLayout.setVisible(DashboardCard.insights, value),
+                ),
+                SwitchListTile(
+                  title: Text(l10n.dashboardCardTransactions),
+                  value: dashboardLayout.isVisible(DashboardCard.transactions),
+                  onChanged: (value) => dashboardLayout.setVisible(
+                      DashboardCard.transactions, value),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
         Card(
           child: Column(
             children: [

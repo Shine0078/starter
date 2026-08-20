@@ -18,6 +18,7 @@ import 'package:finverse/api/offline_cache.dart';
 import 'package:finverse/api/passkey_ceremony.dart';
 import 'package:finverse/api/session_store.dart';
 import 'package:finverse/app_theme.dart';
+import 'package:finverse/dashboard_layout.dart';
 import 'package:finverse/l10n/app_localizations.dart';
 import 'package:finverse/main.dart';
 import 'package:finverse/models/models.dart';
@@ -591,6 +592,16 @@ void main() {
     expect(find.text('Emergency cash reserve'), findsOneWidget);
     expect(find.text('Add manual'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  test('dashboard layout hides selected cards without deleting data', () async {
+    final layout = DashboardLayoutController.inMemory();
+    expect(layout.isVisible(DashboardCard.budgets), isTrue);
+    await layout.setVisible(DashboardCard.budgets, false);
+    expect(layout.isVisible(DashboardCard.budgets), isFalse);
+    expect(layout.isVisible(DashboardCard.transactions), isTrue);
+    await layout.setVisible(DashboardCard.budgets, true);
+    expect(layout.isVisible(DashboardCard.budgets), isTrue);
   });
 
   testWidgets('category spending legend reports the selected category',

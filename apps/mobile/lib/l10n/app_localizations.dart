@@ -296,6 +296,60 @@ abstract class AppLocalizations {
   /// **'Settings'**
   String get settingsTitle;
 
+  /// No description provided for @dashboardCardsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Dashboard cards'**
+  String get dashboardCardsTitle;
+
+  /// No description provided for @dashboardCardsDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose which existing metrics stay on Home. Hidden cards are not deleted.'**
+  String get dashboardCardsDetail;
+
+  /// No description provided for @dashboardCardNetWorth.
+  ///
+  /// In en, this message translates to:
+  /// **'Net worth history'**
+  String get dashboardCardNetWorth;
+
+  /// No description provided for @dashboardCardMonthlySummary.
+  ///
+  /// In en, this message translates to:
+  /// **'This month'**
+  String get dashboardCardMonthlySummary;
+
+  /// No description provided for @dashboardCardSpending.
+  ///
+  /// In en, this message translates to:
+  /// **'Spending by category'**
+  String get dashboardCardSpending;
+
+  /// No description provided for @dashboardCardHealth.
+  ///
+  /// In en, this message translates to:
+  /// **'Financial health'**
+  String get dashboardCardHealth;
+
+  /// No description provided for @dashboardCardBudgets.
+  ///
+  /// In en, this message translates to:
+  /// **'Budgets'**
+  String get dashboardCardBudgets;
+
+  /// No description provided for @dashboardCardInsights.
+  ///
+  /// In en, this message translates to:
+  /// **'Explainable insights'**
+  String get dashboardCardInsights;
+
+  /// No description provided for @dashboardCardTransactions.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent transactions'**
+  String get dashboardCardTransactions;
+
   /// No description provided for @profileTitle.
   ///
   /// In en, this message translates to:

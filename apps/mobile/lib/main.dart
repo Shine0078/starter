@@ -6,6 +6,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'app_locale.dart';
 import 'app_theme.dart';
+import 'dashboard_layout.dart';
 import 'api/client.dart';
 import 'api/app_lock.dart';
 import 'api/onboarding_store.dart';
@@ -47,11 +48,13 @@ Future<void> main() async {
   final localeController = LocaleController();
   final themeColorController = ThemeColorController();
   final themeModeController = ThemeModeController();
+  final dashboardLayoutController = DashboardLayoutController();
   runApp(FinverseApp(
     api: ApiClient(offlineCache: createOfflineCache()),
     localeController: localeController,
     themeColorController: themeColorController,
     themeModeController: themeModeController,
+    dashboardLayoutController: dashboardLayoutController,
     onboardingStore: SecureOnboardingStore(),
     appLockController: AppLockController(
       store: SecureAppLockStore(),
@@ -64,6 +67,7 @@ Future<void> main() async {
   unawaited(localeController.restore());
   unawaited(themeColorController.restore());
   unawaited(themeModeController.restore());
+  unawaited(dashboardLayoutController.restore());
 }
 
 class FinverseApp extends StatelessWidget {
@@ -74,6 +78,7 @@ class FinverseApp extends StatelessWidget {
     LocaleController? localeController,
     ThemeColorController? themeColorController,
     ThemeModeController? themeModeController,
+    DashboardLayoutController? dashboardLayoutController,
     super.key,
   })  : onboardingStore = onboardingStore ?? CompletedOnboardingStore(),
         localeController = localeController ?? LocaleController.inMemory(),
@@ -81,6 +86,8 @@ class FinverseApp extends StatelessWidget {
             themeColorController ?? ThemeColorController.inMemory(),
         themeModeController =
             themeModeController ?? ThemeModeController.inMemory(),
+        dashboardLayoutController = dashboardLayoutController ??
+            DashboardLayoutController.inMemory(),
         appLockController = appLockController ??
             AppLockController(
               store: InMemoryAppLockStore(),
@@ -93,6 +100,7 @@ class FinverseApp extends StatelessWidget {
   final LocaleController localeController;
   final ThemeColorController themeColorController;
   final ThemeModeController themeModeController;
+  final DashboardLayoutController dashboardLayoutController;
 
   @override
   Widget build(BuildContext context) {
@@ -102,37 +110,39 @@ class FinverseApp extends StatelessWidget {
         listenable: themeColorController,
         builder: (context, _) => ListenableBuilder(
           listenable: themeModeController,
-          builder: (context, _) => MaterialApp(
-            title: 'FINVERSE',
-            debugShowCheckedModeBanner: false,
-            theme: FinTheme.light(themeColorController.color),
-            darkTheme: FinTheme.dark(themeColorController.color),
-            // Follow the OS. A finance app opened at night should not flashbang you.
-            themeMode: themeModeController.mode,
-            locale: localeController.locale,
-            // Localisation plumbing for the date pickers, tooltips, and text-selection
-            // menus. English and French ship today; adding a locale file under l10n/
-            // and extending [LocaleController.supportedLanguageCodes] is all a
-            // future translation needs from here.
-            localizationsDelegates: [
-              ...GlobalMaterialLocalizations.delegates,
-              AppLocalizations.delegate,
-            ],
-            supportedLocales: AppLocalizations.supportedLocales,
-            builder: (context, child) => LocaleControllerScope(
-              controller: localeController,
-              child: ThemeColorControllerScope(
-                controller: themeColorController,
-                child: ThemeModeControllerScope(
-                  controller: themeModeController,
-                  child: child ?? const SizedBox.shrink(),
+          builder: (context, _) => ListenableBuilder(
+            listenable: dashboardLayoutController,
+            builder: (context, _) => MaterialApp(
+              title: 'FINVERSE',
+              debugShowCheckedModeBanner: false,
+              theme: FinTheme.light(themeColorController.color),
+              darkTheme: FinTheme.dark(themeColorController.color),
+              // Follow the OS. A finance app opened at night should not flashbang you.
+              themeMode: themeModeController.mode,
+              locale: localeController.locale,
+              localizationsDelegates: [
+                ...GlobalMaterialLocalizations.delegates,
+                AppLocalizations.delegate,
+              ],
+              supportedLocales: AppLocalizations.supportedLocales,
+              builder: (context, child) => LocaleControllerScope(
+                controller: localeController,
+                child: ThemeColorControllerScope(
+                  controller: themeColorController,
+                  child: ThemeModeControllerScope(
+                    controller: themeModeController,
+                    child: DashboardLayoutControllerScope(
+                      controller: dashboardLayoutController,
+                      child: child ?? const SizedBox.shrink(),
+                    ),
+                  ),
                 ),
               ),
-            ),
-            home: OnboardingGate(
-              api: api,
-              store: onboardingStore,
-              appLockController: appLockController,
+              home: OnboardingGate(
+                api: api,
+                store: onboardingStore,
+                appLockController: appLockController,
+              ),
             ),
           ),
         ),

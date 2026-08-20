@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../api/client.dart';
 import '../api/app_lock.dart';
 import '../design/design.dart';
+import '../dashboard_layout.dart';
 import '../l10n/app_localizations.dart';
 import '../models/models.dart';
 import '../widgets/budget_tile.dart';
@@ -608,17 +609,30 @@ class _DashboardScreenState extends State<DashboardScreen>
   /// list of self-contained columns so the narrow and wide layouts can consume
   /// the same content without duplicating it.
   List<Widget> _sections(ThemeData theme, AppLocalizations l10n) => [
-        if (_netWorthHistory.isNotEmpty)
+        if (_visible(DashboardCard.netWorth) && _netWorthHistory.isNotEmpty)
           NetWorthHistoryChart(points: _netWorthHistory),
-        if (_insights != null) _insightsSection(theme, l10n),
-        if (_insights != null && _insights!.topCategories.isNotEmpty)
+        if (_visible(DashboardCard.monthlySummary) && _insights != null)
+          _insightsSection(theme, l10n),
+        if (_visible(DashboardCard.spending) &&
+            _insights != null &&
+            _insights!.topCategories.isNotEmpty)
           SpendingChart(categories: _insights!.topCategories),
-        if (_health != null) _healthSection(theme, l10n),
-        if (_budgets.isNotEmpty) _budgetsSection(theme, l10n),
-        if (_insights != null && _insights!.insights.isNotEmpty)
+        if (_visible(DashboardCard.health) && _health != null)
+          _healthSection(theme, l10n),
+        if (_visible(DashboardCard.budgets) && _budgets.isNotEmpty)
+          _budgetsSection(theme, l10n),
+        if (_visible(DashboardCard.insights) &&
+            _insights != null &&
+            _insights!.insights.isNotEmpty)
           _insightsListSection(theme, l10n),
-        _transactionsSection(theme, l10n),
+        if (_visible(DashboardCard.transactions))
+          _transactionsSection(theme, l10n),
       ];
+
+  bool _visible(DashboardCard card) {
+    return DashboardLayoutControllerScope.maybeOf(context)?.isVisible(card) ??
+        true;
+  }
 
   List<Widget> _spaced(List<Widget> items) {
     final result = <Widget>[];

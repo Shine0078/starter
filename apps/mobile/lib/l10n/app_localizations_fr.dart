@@ -134,6 +134,34 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settingsTitle => 'Paramètres';
 
   @override
+  String get dashboardCardsTitle => 'Cartes du tableau de bord';
+
+  @override
+  String get dashboardCardsDetail =>
+      'Choisissez quelles mesures restent sur l\'accueil. Les cartes masquees ne sont pas supprimees.';
+
+  @override
+  String get dashboardCardNetWorth => 'Historique de la valeur nette';
+
+  @override
+  String get dashboardCardMonthlySummary => 'Ce mois-ci';
+
+  @override
+  String get dashboardCardSpending => 'Depenses par categorie';
+
+  @override
+  String get dashboardCardHealth => 'Sante financiere';
+
+  @override
+  String get dashboardCardBudgets => 'Budgets';
+
+  @override
+  String get dashboardCardInsights => 'Apercus explicables';
+
+  @override
+  String get dashboardCardTransactions => 'Transactions recentes';
+
+  @override
   String get profileTitle => 'Profil';
 
   @override

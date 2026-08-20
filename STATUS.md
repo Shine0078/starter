@@ -65,6 +65,12 @@ CI follow-up:
 - Optional Sentry DSN now sends redacted crash reports
 - Category spending drills into matching transactions
 
+CI follow-up 2:
+
+- Trivy fail-closed scan uses the production API runtime image
+- Public Cloud Run image scan is reported without failing CI on Flutter toolchain CVEs
+- Dashboard cards can be hidden locally without deleting data
+
 ## P0 remaining
 
 - Redeploy Cloud Run from a CI-green SHA with `GIT_SHA`
