@@ -709,6 +709,34 @@ void main() {
     semantics.dispose();
   });
 
+  testWidgets('financial visuals keep spoken labels under high contrast',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(MaterialApp(
+      home: MediaQuery(
+        data: const MediaQueryData(highContrast: true),
+        child: Scaffold(
+          body: SpendingChart(categories: [
+            CategorySpend(
+              categorySlug: 'groceries',
+              categoryName: 'Groceries',
+              total: 12550,
+              totalFormatted: r'$125.50',
+              transactionCount: 4,
+            ),
+          ]),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(
+      find.bySemanticsLabel(r'Groceries: $125.50 across 4 transactions.'),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+    semantics.dispose();
+  });
+
   testWidgets('spending heatmap exposes daily intensity semantics',
       (tester) async {
     final semantics = tester.ensureSemantics();
