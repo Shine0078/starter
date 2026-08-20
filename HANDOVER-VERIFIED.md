@@ -1,92 +1,75 @@
-# FINVERSE status - 2026-08-18 (verified)
+# FINVERSE status - 2026-08-20 (verified)
 
 Canonical working branch: `codex/passkey-webauthn-p0`
-HEAD at write time: `1e6db33` on `codex/passkey-webauthn-p0`.
+HEAD at write time: tip of `codex/passkey-webauthn-p0` after native passkeys, GIT_SHA identity, fail-closed uptime, CODEOWNERS, and Cloud Run origin.
 Do not treat older handover prose as current. This file records only what was executed and observed.
 
-## Passkey / WebAuthn (P0)
+## Canonical deployment
 
-Implemented and proven on this branch:
+Google Cloud Run + Neon, same-origin PWA:
 
-- Unauthenticated `POST /webauthn/login/options` and `POST /webauthn/login/verify`
-- Shared hashed ceremony IDs, purpose-bound, atomically consumed
-- `finverse_webauthn_credential_owner` returns only `user_id` under FORCE RLS
-- Public key loaded under `withUserScope`
-- Required user verification on register and login
-- Successful assertion issues the normal `{ user, tokens }` session
-- `/auth/me` succeeds for that user
-- Enroll/remove require password (+ MFA if enabled); passkey login does not satisfy management step-up
-- Passkey add/remove write security events and send a security notice
-- Flutter `passkeyLoginVerify` goes through `_authenticate` and persists the session
-- `WEBAUTHN_ORIGIN` is a comma-separated exact-origin allowlist under one RP ID (HTTPS hosts must equal the RP ID or be a subdomain; `android:apk-key-hash` is accepted)
-- Login and settings now call the passkey client. Web uses `navigator.credentials`. Native builds report unsupported instead of inventing a hardware ceremony.
+- Web: https://finverse-d6vqs5iu7q-uc.a.run.app/app/
+- Readiness: https://finverse-d6vqs5iu7q-uc.a.run.app/api/readiness (200, service=finverse-api, store=postgres, database=reachable)
+- Legal: https://finverse-d6vqs5iu7q-uc.a.run.app/api/legal (registrationRequired=true, placeholder example.com URLs)
+- WebAuthn: https://finverse-d6vqs5iu7q-uc.a.run.app/api/webauthn/status (`available:false` until RP env is set)
+- GitHub `API_BASE_URL`: https://finverse-d6vqs5iu7q-uc.a.run.app
+- GitHub `PRODUCTION_HEALTH_URL`: https://finverse-d6vqs5iu7q-uc.a.run.app/api/readiness
+- `finverse.onrender.com/healthz` is still the unrelated Express placeholder (`Cannot GET /healthz`)
+- GitHub Pages is not the canonical API
 
-GitHub Actions on `1e6db33` ([run 32158579991](https://github.com/Shine0078/starter/actions/runs/32158579991)) succeeded:
+## Current API / DB health
 
-- API typecheck, in-memory tests, Postgres tests, migrations, backup drill, load-smoke, API build, and deployable image
-- Production `npm audit --omit=dev --audit-level=high`
-- Flutter analyze, Flutter tests, Android release APK, and PWA `/app/` compile
-- Unsigned iOS compile on macos-26 after the LinkKit 7 metadata fix and 7.1 pin
+Live Cloud Run readiness returned service `finverse-api`, store `postgres`, database `reachable` on 2026-08-20.
 
-Proven locally after the CI-red fixes on this turn:
+## Tests this session
 
-- `npx vitest run test/webauthn.spec.ts` - 17 passed, including MFA-enabled enroll after setting `MFA_ENCRYPTION_KEY`
-- `npx vitest run test/config.spec.ts test/webauthn.spec.ts test/auth-api.spec.ts` - 117 passed
-- `flutter analyze` - no issues
-- `flutter test test/widget_test.dart` - 63 passed, including 408/429 staying queued
+- `npx vitest run test/config.spec.ts test/auth-api.spec.ts` — 102 passed
+- `dart analyze` on passkey ceremony files — no issues
+- `flutter test test/widget_test.dart --name "unsupported passkey|completes passkey login"` — 2 passed
+- `npm audit --omit=dev --audit-level=high` — 0 vulnerabilities
 
+## Completed this session
 
-Earlier on this branch, still valid unless contradicted above:
+- Production requires `GIT_SHA`; `/api/version` and readiness advertise `service=finverse-api`
+- Docker/Cloud Build/CI/release pass `GIT_SHA`
+- Cloud Run deploy writes GIT_SHA and probes `/api/readiness` plus `/api/version`
+- Uptime fails closed when `PRODUCTION_HEALTH_URL` is missing and requires a FINVERSE identity body
+- `main` branch protection: PR required, required CI, up-to-date, no force push, no deletion, conversation resolution
+- CODEOWNERS for auth, WebAuthn, migrations, postgres, infra, workflows
+- Native Android Credential Manager and iOS AuthenticationServices passkey ceremonies (API still verifies)
+- README names Cloud Run as the only public technical-beta; Render is preview-only
+- Release workflow refuses Render as `API_BASE_URL`
 
-- Isolated `npx vitest run test/auth-api.spec.ts` - 70 passed
-- Targeted Postgres `webauthn-postgres.spec.ts` + `rls.spec.ts` after migration 030 - 71 passed
-- A full `npm run test:db` on `4feb081` passed: **60 files, 1001 tests, 0 failed**
-- `npx tsc --noEmit` - pass
-- `flutter build web --release --no-web-resources-cdn --base-href=/app/` - succeeded earlier
-- `flutter build apk --release --dart-define=API_BASE_URL=https://api.example.invalid` - succeeded earlier
+## P0 remaining
 
-A complete local `npm run test:db` has **not** been re-run on `1e6db33`. CI on that SHA ran the equivalent Postgres service-container suite, migrations, backup drill, and load-smoke successfully.
+- Merge this branch to `main` through a PR and wait for green main CI
+- Redeploy Cloud Run so `/api/version` exists and GIT_SHA is present
+- Replace placeholder legal URLs before real users
+- Set live `WEBAUTHN_*` RP/domain values
+- Physical Android/iPhone passkey proof
+- Confirm production runtime DB role is not owner/SUPERUSER/BYPASSRLS on Neon
 
-## Release / production invariants
+## P1 remaining
 
-- Production requires `DATABASE_APP_URL`, refuses the same role as `DATABASE_URL` when both are set, and refuses SUPERUSER, BYPASSRLS, or a runtime role that owns public tables
-- Automatic release remains main/master + 40-character SHA + successful CI
-- Manual release and database-release also require that successful CI run to be on main/master in this repository
-- `render.yaml` is `finverse-preview` / `finverse-preview-db` and is labeled preview-only
-- GitHub Actions used by CI/release are SHA-pinned; GHCR push requests provenance + SBOM
-- Image tags are digest-pinned from live registries
-- iOS CI now compiles on `macos-26` so the iOS 26 SDK can see `BGContinuedProcessingTask`
-- CI fails the API job on high/critical production npm advisories (`npm audit --omit=dev --audit-level=high`); local audit was clean at write time
-- Load-smoke no longer calls demo `/api/sync`; Postgres refuses that route and an empty authenticated account is enough for the restricted-role read path
+- Production Plaid/Stripe/SMTP/APNs-FCM
+- Physical-device acceptance matrix
+- Crash/error monitoring
+- Stronger SAST/container scanning
+- Offline conflict-center UX
+- Accessibility hardware audit
 
-## Mobile / offline
+## P2 remaining
 
-- Rejected 4xx replays increment `rejectedMutationCount` and are shown with dedicated rejected copy
-- Home banner can dismiss rejected mutations
-- Rejected mutation list is cleared on sign-out / session restore
-- Concurrent replay is serialized
-- Offline replay keeps 408/429 queued instead of treating them as permanent rejects
-- Cached GET fallbacks await the Future so `flutter analyze` stays clean
-- iOS xcconfig comments use `//` so Xcode does not treat `# Replace` / `# before` as preprocessor directives
+- External pentest, legal/privacy review, DR exercise, incident tabletop, store review, secret/KMS lifecycle
 
-- Registration requires the AT flag and `body.id` to match the attested credential id
-- Passkey enroll/remove routes are throttled at 10/min
-- Migration 030 drops unused `webauthn_challenges.failed_attempts` and grants EXECUTE on `finverse_webauthn_credential_owner` when `finverse_app` exists
-- Passkey enroll consumes MFA only on options; verify re-checks the password against the issued ceremony
-- Export, account deletion, and bank-link step-up require MFA when enabled; export and deletion are throttled at 5/min
-- Mobile export, deletion, and bank-link dialogs collect an authenticator code when MFA is enabled
-- Native association files include AASA `webcredentials` and optional `/.well-known/assetlinks.json` (requires ANDROID_CERT_FINGERPRINTS). Repeated failed assertions on a known passkey lock further passkey login without affecting password lockout.
+## External owner/provider blockers
 
-## Still open (not claimed complete)
+1. Merge/PR approval onto protected `main`
+2. Cloud Run redeploy with GIT_SHA and reviewed legal documents
+3. Domain/TLS and WebAuthn RP configuration
+4. Physical device passkey smoke
+5. Provider production credentials and store signing
 
-- Native iOS/Android Credential Manager / ASAuthorization ceremony (web is wired; native is an honest stub)
-- Physical-device / Safari-Chrome passkey smoke
-- External owner gates: production Plaid/Stripe, domains/TLS, SMTP, APNs/FCM, Apple/Android store signing, legal/privacy review, independent pentest
-- Merge to `main` before release/database-release can publish
+## Exact next action
 
-## Owner actions required
-
-1. Keep working on `codex/passkey-webauthn-p0`. `main` is still `1a4a9f4`.
-2. CI is green on `1e6db33` for this branch. Dispatch release/database-release only after that SHA is merged to main and the same-repo main/master CI is green.
-3. Provision production with a restricted `DATABASE_APP_URL` role that does not own public tables.
-4. Provide production provider credentials and signing accounts before calling the system production-ready.
+Open a PR from `codex/passkey-webauthn-p0` into `main`. After that SHA is green on `main`, redeploy Cloud Run from it and replace the example.com legal URLs before collecting real-user data.
