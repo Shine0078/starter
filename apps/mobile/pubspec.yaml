@@ -19,7 +19,7 @@ dependencies:
   # Vision/ML Kit channel and the image itself is never sent to the API.
   image_picker: ^1.2.3
   http: ^1.2.2
-  intl: ^0.20.2
+  intl: ^0.20.3
   # Browser bindings for the web build's Plaid Link implementation.
   web: ^1.1.0
   cryptography: ^2.9.0
