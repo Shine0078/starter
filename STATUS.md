@@ -11,10 +11,8 @@ Protected default branch: `main`
 
 ## Current commit SHA
 
-- `main` / `origin/main`: `eebfd1d` (merge of PR #1)
-- Local follow-up commits on the working branch are not released until their own CI is green.
-
-Open PR: https://github.com/Shine0078/starter/pull/16
+- `main` / `origin/main`: `a21b374` (merge of [PR #16](https://github.com/Shine0078/starter/pull/16))
+- Working branch `codex/passkey-webauthn-p0` is at `db0e879`
 
 ## Canonical deployment
 
@@ -37,8 +35,8 @@ GitHub Pages and `finverse.onrender.com` are not the current API.
 
 ## Test results
 
-- Main CI on `eebfd1d`: success (API, Flutter analyze/tests, Android, PWA, unsigned iOS)
-- Local: config + schema-identity + auth-api 71 passed; Flutter conflict/offline tests 3 passed; analyze clean on changed Dart files
+- Main CI on `eebfd1d`: success
+- PR #16 CI on `db0e879`: success (API, Flutter analyze/tests/Android/PWA, unsigned iOS, CodeQL, Trivy runtime image)
 
 ## Completed this session
 
@@ -92,4 +90,4 @@ CI follow-up 2:
 
 ## Exact next action
 
-Replace live `LEGAL_*` values with reviewed HTTPS documents, then deploy a CI-green SHA to Cloud Run with `GIT_SHA` set.
+Replace live `LEGAL_*` values with reviewed HTTPS documents, then deploy `a21b374` to Cloud Run with `GIT_SHA=a21b374...`.
