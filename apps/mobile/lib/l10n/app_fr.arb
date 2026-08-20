@@ -33,6 +33,10 @@
   "offlineConflictRejectedTitle": "A traiter",
   "offlineConflictDismissOne": "Ignorer",
   "offlineConflictRetry": "Reessayer",
+  "offlineConflictQueuedAt": "En file {date}",
+  "@offlineConflictQueuedAt": {
+    "placeholders": {"date": {"type": "String"}}
+  },
   "offlineConflictStatus": "HTTP {code}",
   "@offlineConflictStatus": {
     "placeholders": {"code": {"type": "int"}}

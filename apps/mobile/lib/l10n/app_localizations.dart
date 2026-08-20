@@ -278,6 +278,12 @@ abstract class AppLocalizations {
   /// **'Retry sync'**
   String get offlineConflictRetry;
 
+  /// No description provided for @offlineConflictQueuedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Queued {date}'**
+  String offlineConflictQueuedAt(String date);
+
   /// No description provided for @offlineConflictStatus.
   ///
   /// In en, this message translates to:
