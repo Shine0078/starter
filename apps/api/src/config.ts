@@ -71,8 +71,15 @@ export interface AppConfig {
   passwordBreachCheck: PasswordBreachCheckConfig;
   /** Remote-notification delivery stays disabled until credentials are supplied. */
   push: PushConfig;
+  /** Optional production error sink. Disabled until a DSN is supplied. */
+  crashReporting: CrashReportingConfig;
   /** Exact git SHA of the running image. Required in production so / and HTTP 200 cannot hide the wrong app. */
   releaseSha: string | null;
+}
+
+export interface CrashReportingConfig {
+  enabled: boolean;
+  dsn: string | null;
 }
 
 export interface WebAuthnConfig {
@@ -172,6 +179,24 @@ function resolveReleaseSha(isProduction: boolean): string | null {
     throw new Error('GIT_SHA must be a 7-40 character hexadecimal git SHA.');
   }
   return raw.toLowerCase();
+}
+
+function resolveCrashReportingConfig(): CrashReportingConfig {
+  const raw = (process.env.SENTRY_DSN ?? '').trim();
+  if (!raw) return { enabled: false, dsn: null };
+  let parsed: URL;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    throw new Error('SENTRY_DSN must be a valid HTTPS DSN.');
+  }
+  if (parsed.protocol !== 'https:') {
+    throw new Error('SENTRY_DSN must use HTTPS.');
+  }
+  if (!parsed.username) {
+    throw new Error('SENTRY_DSN must include a public key.');
+  }
+  return { enabled: true, dsn: parsed.toString() };
 }
 
 function readStoreDriver(): StoreDriver {
@@ -617,6 +642,7 @@ function buildConfig(): AppConfig {
     webauthn: resolveWebAuthnConfig(isProduction),
     passwordBreachCheck: resolvePasswordBreachCheck(isProduction),
     push: resolvePushConfig(),
+    crashReporting: resolveCrashReportingConfig(),
     releaseSha: resolveReleaseSha(isProduction),
   };
 }
