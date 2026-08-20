@@ -44,7 +44,15 @@ final class PasskeyChannel: NSObject, ASAuthorizationControllerDelegate, ASAutho
     let challenge = try bytes(json["challenge"] as? String, field: "challenge")
     let rpId = json["rpId"] as? String ?? ""
     let provider = ASAuthorizationPlatformPublicKeyCredentialProvider(relyingPartyIdentifier: rpId)
-    return provider.createCredentialAssertionRequest(challenge: challenge)
+    let request = provider.createCredentialAssertionRequest(challenge: challenge)
+    request.userVerificationPreference = .required
+    if let allowed = json["allowCredentials"] as? [[String: Any]] {
+      request.allowedCredentials = allowed.compactMap { item in
+        guard let id = item["id"] as? String, let data = Data(base64URLEncoded: id) else { return nil }
+        return ASAuthorizationPlatformPublicKeyCredentialDescriptor(credentialID: data)
+      }
+    }
+    return request
   }
 
   private func registrationRequest(from call: FlutterMethodCall) throws -> ASAuthorizationRequest {
@@ -56,11 +64,19 @@ final class PasskeyChannel: NSObject, ASAuthorizationControllerDelegate, ASAutho
     let userId = try bytes(user["id"] as? String, field: "user.id")
     let name = user["name"] as? String ?? ""
     let provider = ASAuthorizationPlatformPublicKeyCredentialProvider(relyingPartyIdentifier: rpId)
-    return provider.createCredentialRegistrationRequest(
+    let request = provider.createCredentialRegistrationRequest(
       challenge: challenge,
       name: name,
       userID: userId
     )
+    request.userVerificationPreference = .required
+    if #available(iOS 16.0, *),
+       let selection = json["authenticatorSelection"] as? [String: Any],
+       let resident = selection["residentKey"] as? String,
+       resident == "required" || resident == "preferred" {
+      request.residentKeyPreference = .required
+    }
+    return request
   }
 
   private func requestJSON(from call: FlutterMethodCall) throws -> [String: Any] {
