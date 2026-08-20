@@ -11,6 +11,7 @@ import '../app_theme.dart';
 import '../api/client.dart';
 import '../api/app_lock.dart';
 import '../api/passkey_ceremony.dart';
+import '../api/crash_log.dart';
 import '../api/platform/file_share.dart';
 import '../l10n/app_localizations.dart';
 import '../models/models.dart';
@@ -1271,6 +1272,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
               'Bank credentials stay with Plaid. FINVERSE encrypts provider access tokens and isolates each user at the database layer.',
             ),
             isThreeLine: true,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.bug_report_outlined),
+            title: const Text('Local crash log'),
+            subtitle: const Text(
+              'Stores redacted error summaries on this device. No amounts, tokens, or account identifiers.',
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () async {
+              final navigatorContext = context;
+              final entries = await CrashLog.recent();
+              if (!navigatorContext.mounted) return;
+              await showModalBottomSheet<void>(
+                context: navigatorContext,
+                builder: (sheetContext) => ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    Text('Local crash log',
+                        style: Theme.of(sheetContext).textTheme.titleMedium),
+                    const SizedBox(height: 8),
+                    if (entries.isEmpty)
+                      const Text('No local crash records on this device.')
+                    else
+                      for (final entry in entries)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Text(entry),
+                        ),
+                  ],
+                ),
+              );
+            },
           ),
         ),
         if (_privacy != null && _privacy!.securityActivity.isNotEmpty) ...[

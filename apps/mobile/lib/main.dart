@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'app_locale.dart';
@@ -18,6 +19,7 @@ import 'l10n/app_localizations_en.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/onboarding_screen.dart';
+import 'api/crash_log.dart';
 
 /// Isolated embedders (including app-lock and session-recovery tests) may not
 /// install the app's localization delegates. Keep these recovery paths usable
@@ -33,6 +35,14 @@ AppLocalizations _localizations(BuildContext context) {
 // time rather than behind a runtime `if (kIsWeb)`.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    unawaited(CrashLog.record(details.exception, stackTrace: details.stack, context: 'flutter'));
+  };
+  PlatformDispatcher.instance.onError = (error, stack) {
+    unawaited(CrashLog.record(error, stackTrace: stack, context: 'platform'));
+    return true;
+  };
   await configureBackgroundSync();
   final localeController = LocaleController();
   final themeColorController = ThemeColorController();
