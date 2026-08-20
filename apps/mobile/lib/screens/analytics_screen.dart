@@ -245,6 +245,32 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               title: AppLocalizations.of(context).analyticsHistoryEmptyTitle,
               message: AppLocalizations.of(context).analyticsHistoryEmptyDetail,
             ),
+          if (analytics.spendingByMerchant.isNotEmpty) ...[
+            Text('Spending by merchant',
+                style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Card(
+              child: Column(
+                children: analytics.spendingByMerchant
+                    .take(8)
+                    .map((merchant) => ListTile(
+                          leading: const Icon(Icons.storefront_outlined),
+                          title: Text(merchant.label),
+                          trailing: Text(merchant.totalFormatted),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => TransactionsScreen(
+                                api: widget.api,
+                                initialSearch: merchant.label,
+                              ),
+                            ),
+                          ),
+                        ))
+                    .toList(),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
           _velocityCard(context, analytics.velocity),
           if (analytics.refundMatches.isNotEmpty) ...[
             const SizedBox(height: 20),

@@ -15,11 +15,13 @@ class TransactionsScreen extends StatefulWidget {
   const TransactionsScreen({
     required this.api,
     this.initialCategorySlug,
+    this.initialSearch,
     super.key,
   });
 
   final ApiClient api;
   final String? initialCategorySlug;
+  final String? initialSearch;
 
   @override
   State<TransactionsScreen> createState() => _TransactionsScreenState();
@@ -52,6 +54,9 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   void initState() {
     super.initState();
     _categorySlug = widget.initialCategorySlug;
+    if (widget.initialSearch != null && widget.initialSearch!.isNotEmpty) {
+      _search.text = widget.initialSearch!;
+    }
     widget.api.dataRevision.addListener(_onDataChanged);
     _scroll.addListener(_onScroll);
     _load();
