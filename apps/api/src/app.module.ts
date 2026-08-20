@@ -37,6 +37,7 @@ import { WebAuthnModule } from './modules/webauthn/webauthn.module';
 import { httpMetrics, metricsTokenMatches } from './infra/http/metrics';
 import { appleAppSiteAssociation as buildAppleAppSiteAssociation } from './infra/http/apple-app-site-association';
 import { androidAssetLinks, parseAndroidAssetLinkConfig } from './infra/http/asset-links';
+import { bundledSchemaVersion } from './infra/postgres/schema-identity';
 
 const appConfig = loadConfig();
 
@@ -94,13 +95,14 @@ class MetaController {
   /** Public identity so a 200 from the wrong process cannot hide as FINVERSE. */
   @Public()
   @Get('version')
-  version() {
+  async version() {
     const config = loadConfig();
     return {
       service: 'finverse-api',
       environment: config.isProduction ? 'production' : 'development',
       store: config.store,
       sha: config.releaseSha,
+      schema: await bundledSchemaVersion(),
       time: new Date().toISOString(),
     };
   }
