@@ -29,6 +29,37 @@ if [[ ! -f "${ENV_FILE}" ]]; then
   exit 1
 fi
 
+# A Cloud Run process without Plaid credentials is healthy but cannot connect
+# any bank. Fail before building or deploying that misleading state. Values
+# are inspected only for presence/placeholders; never print them.
+yaml_value() {
+  local key="$1"
+  awk -v key="${key}" '
+    $0 ~ "^" key ":[[:space:]]*" {
+      value = $0
+      sub("^" key ":[[:space:]]*", "", value)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+      gsub(/^"|"$/, "", value)
+      print value
+      exit
+    }
+  ' "${ENV_FILE}"
+}
+
+for key in PLAID_CLIENT_ID PLAID_SECRET PLAID_ENVIRONMENT PLAID_COUNTRIES PLAID_WEBHOOK_URL PLAID_WEB_REDIRECT_URI BANK_TOKEN_ENCRYPTION_KEY; do
+  value="$(yaml_value "${key}")"
+  case "${value}" in
+    ""|REPLACE_*|replace-me|REPLACE_WITH_*)
+      echo "${key} must be configured in ${ENV_FILE}; refusing a bank-disabled deployment." >&2
+      exit 1
+      ;;
+  esac
+done
+if [[ "$(yaml_value PLAID_ENVIRONMENT)" != "production" ]]; then
+  echo "PLAID_ENVIRONMENT must be production for this Cloud Run deployment." >&2
+  exit 1
+fi
+
 # The migration job needs the schema-owner URL; the serving process must not
 # receive it. Build a private, short-lived runtime env file containing only the
 # least-privileged application URL and the ordinary service settings.
