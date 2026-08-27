@@ -144,6 +144,8 @@ last 15 minutes; exchange the refresh token at `/api/auth/refresh` for a new pai
 | `GET` | `/transactions` | `?search=&category=&account=&kind=&pending=&recurring=&minAmount=&maxAmount=&from=&to=&before=&limit=` |
 | `GET` | `/transactions/export.csv` | Download the user-owned ledger as a CSV; spreadsheet-formula-safe text fields |
 | `GET` | `/transactions/needs-review` | What we refused to guess at |
+| `POST` | `/imports/statements` | Upload and stage a CSV, XLSX, PDF, or supported image statement for review |
+| `GET`/`PATCH`/`POST`/`DELETE` | `/imports/statements/:id...` | Review rows, split/merge, approve, inspect audit, and remove the original source |
 | `PATCH` | `/transactions/:id/category` | Correct a category, optionally create a rule |
 | `GET`/`DELETE` | `/categorization-rules[/:id]` | Review or remove durable merchant categorization rules |
 | `GET`/`POST` | `/budgets` | List / create |

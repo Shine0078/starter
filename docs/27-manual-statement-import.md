@@ -1,0 +1,69 @@
+# Manual Statement Import
+
+Manual Statement Import is a review-first path for bringing a statement into
+the FINVERSE ledger when a bank connection is unavailable. It accepts CSV,
+XLSX, text PDFs, and PNG/JPEG/WEBP/TIFF/BMP images up to 10 MiB.
+
+## Security contract
+
+- The upload is authenticated and account-scoped. The account is resolved
+  through the caller's user scope before parsing or persistence.
+- The API validates the file signature as well as the extension/MIME type,
+  bounds rows at 10,000, bounds XLSX decompression at 10 MiB, and never
+  evaluates spreadsheet formulas.
+- The original payload is encrypted with AES-256-GCM before it is stored.
+  Production must set `STATEMENT_IMPORT_ENCRYPTION_KEY` to canonical base64 for
+  a 32-byte key. The key belongs in the deployment secret manager, never in the
+  repository or a client build.
+- `statement_imports`, `statement_import_rows`, and
+  `statement_import_events` use forced PostgreSQL RLS and user-scoped foreign
+  keys. The runtime connection must be the restricted application role.
+- Parsing and categorization are local and deterministic: user rules and the
+  existing merchant lexicon are applied first. Unknown or low-confidence rows
+  remain `needs_review`; no remote model call or training export is made.
+- A statement identity is SHA-256 of the original bytes. It cannot be imported
+  twice for the same user/account while the previous import is retained.
+  Transaction fingerprints and the ledger's unique provider key provide a
+  second idempotency boundary.
+- The original encrypted source can be deleted after approval with
+  `DELETE /api/imports/statements/:id/source`. Approved transaction rows and
+  the audit history remain. Deleting the account cascades staged statement
+  material through the existing account-deletion path.
+
+## Review workflow
+
+1. `POST /api/imports/statements` with `accountId`, `filename`, `mimeType`, and
+   a base64 payload. The response contains staged rows and parser warnings.
+2. Review every row. Each row includes the source line, normalized date,
+   signed minor-unit amount, currency, debit/credit direction, merchant,
+   category, confidence, and flags such as `possible_duplicate`,
+   `recurring_payment`, `refund`, `internal_transfer`, `unusual_spending`, or
+   `extraction_error`.
+3. Use `PATCH .../:rowId` to edit fields or set `decision` to `include` or
+   `exclude`. A category correction is recorded as a user rule after approval
+   and applies only to that user's future descriptors.
+4. Use the split and merge endpoints when a source row represents multiple
+   purchases or a combined posting. Splits must sum exactly to the original
+   amount; parent rows are retained as excluded audit records.
+5. `POST /api/imports/statements/:id/approve` atomically creates the normal
+   import batch and ledger transactions. Approval is refused while any row is
+   still `needs_review`.
+6. `GET .../:id/summary` reports the included income, expenses, savings,
+   category totals, date range, recurring count, duplicate count, and unusual
+   count. Approved rows consequently appear in the existing transactions,
+   budgets, analytics, subscriptions, and monthly report surfaces.
+7. `GET .../:id/audit` returns the append-only import event history for the
+   user's own import.
+
+The mobile Transactions and Settings screens expose the same flow. The server
+remains authoritative, so a client cannot bypass review, isolation, or the
+approval transaction by sending a handcrafted request.
+
+## Operational limits
+
+Image OCR and PDF text extraction are bounded, local processing steps. A PDF
+with no extractable text produces no guessed transactions and must be reviewed
+or converted by the user before approval. The current endpoint intentionally
+keeps the durable staged boundary and strict size/row limits; deployments with
+large-volume OCR should move the extraction call behind the existing durable
+job pattern before increasing those limits.

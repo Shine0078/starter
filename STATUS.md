@@ -2,7 +2,7 @@
 
 Canonical current-state file. Older handovers are historical unless they match this file and the repository.
 
-Verified: 2026-08-20
+Verified: 2026-08-27
 
 ## Current branch
 
@@ -72,6 +72,24 @@ CI follow-up 2:
 - Dashboard cards can be hidden locally without deleting data
 
 - Leave-one-out evaluation for the user-correction categorizer
+
+## Manual statement import (verified 2026-08-27)
+
+- CSV, XLSX, text-PDF, and PNG/JPEG/WEBP/TIFF/BMP uploads are authenticated,
+  bounded, signature-checked, encrypted at rest, and staged for review.
+- Rows expose date, description, merchant, amount, currency, debit/credit,
+  category, confidence, recurring/duplicate/refund/transfer/unusual flags, and
+  extraction-error warnings. Users can edit, split, merge, include, exclude,
+  recategorize, approve, delete the source, and inspect an audit trail.
+- Approval atomically writes normal ledger transactions and import batches;
+  statement identity plus transaction provider fingerprints prevent duplicates.
+- PostgreSQL migrations 031-032 apply cleanly under the restricted runtime role
+  with forced RLS. API DB tests cover cross-user isolation, source retention,
+  approval, and duplicate protection. No remote model-training path is used;
+  user corrections feed only the same user's local classifier/rules.
+- Current extraction is synchronous and deliberately bounded. Scanned PDFs
+  without a text layer return a warning rather than guessed transactions; a
+  durable OCR worker is required before increasing limits for large-volume use.
 
 ## P0 remaining
 
