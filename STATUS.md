@@ -12,7 +12,7 @@ Protected default branch: `main`
 ## Current commit SHA
 
 - `main` / `origin/main`: `a21b374` (merge of [PR #16](https://github.com/Shine0078/starter/pull/16))
-- Working branch `codex/passkey-webauthn-p0` feature tip is `b1974dd` (this
+- Working branch `codex/passkey-webauthn-p0` feature tip is `7a7fb8f` (this
   status update is a documentation-only follow-up)
 
 ## Canonical deployment
