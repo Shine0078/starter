@@ -10,6 +10,7 @@ import '../models/models.dart';
 import '../widgets/transaction_tile.dart';
 import 'transaction_feed_groups.dart';
 import 'transaction_detail_screen.dart';
+import 'statement_import_screen.dart';
 
 class TransactionsScreen extends StatefulWidget {
   const TransactionsScreen({
@@ -239,7 +240,18 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.transactionsTitle)),
+      appBar: AppBar(
+        title: Text(l10n.transactionsTitle),
+        actions: [
+          IconButton(
+            tooltip: 'Import statement',
+            icon: const Icon(Icons.upload_file_outlined),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => StatementImportScreen(api: widget.api),
+            )),
+          ),
+        ],
+      ),
       body: Column(
         children: [
           Padding(

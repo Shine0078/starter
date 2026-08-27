@@ -1031,6 +1031,91 @@ class ApiClient implements BackgroundSyncClient {
         .toList();
   }
 
+  Future<StatementImportDetail> createStatementImport({
+    required String accountId,
+    required String filename,
+    required String mimeType,
+    required List<int> bytes,
+  }) async {
+    final json = await _send('POST', '/imports/statements', {
+      'accountId': accountId,
+      'filename': filename,
+      'mimeType': mimeType,
+      'contentBase64': base64Encode(bytes),
+    }) as Map<String, dynamic>;
+    return StatementImportDetail.fromJson(json);
+  }
+
+  Future<List<StatementImport>> statementImports() async {
+    final json = await _get('/imports/statements') as List<dynamic>;
+    return json
+        .whereType<Map<String, dynamic>>()
+        .map(StatementImport.fromJson)
+        .toList();
+  }
+
+  Future<StatementImportDetail> statementImport(String id) async {
+    final json = await _get('/imports/statements/${Uri.encodeComponent(id)}')
+        as Map<String, dynamic>;
+    return StatementImportDetail.fromJson(json);
+  }
+
+  Future<StatementSummary> statementImportSummary(String id) async {
+    final json = await _get('/imports/statements/${Uri.encodeComponent(id)}/summary')
+        as Map<String, dynamic>;
+    return StatementSummary.fromJson(json);
+  }
+
+  Future<StatementRow> editStatementRow(
+    String importId,
+    String rowId,
+    Map<String, dynamic> patch,
+  ) async {
+    final json = await _send(
+      'PATCH',
+      '/imports/statements/${Uri.encodeComponent(importId)}/rows/${Uri.encodeComponent(rowId)}',
+      patch,
+    ) as Map<String, dynamic>;
+    return StatementRow.fromJson(json);
+  }
+
+  Future<StatementImport> approveStatementImport(String id) async {
+    final json = await _send(
+      'POST',
+      '/imports/statements/${Uri.encodeComponent(id)}/approve',
+    ) as Map<String, dynamic>;
+    return StatementImport.fromJson(json);
+  }
+
+  Future<List<StatementRow>> splitStatementRow(
+    String importId,
+    String rowId,
+    List<Map<String, dynamic>> parts,
+  ) async {
+    final json = await _send(
+      'POST',
+      '/imports/statements/${Uri.encodeComponent(importId)}/rows/${Uri.encodeComponent(rowId)}/split',
+      {'parts': parts},
+    ) as List<dynamic>;
+    return json.whereType<Map<String, dynamic>>().map(StatementRow.fromJson).toList();
+  }
+
+  Future<StatementRow> mergeStatementRows(String importId, List<String> rowIds) async {
+    final json = await _send(
+      'POST',
+      '/imports/statements/${Uri.encodeComponent(importId)}/rows/merge',
+      {'rowIds': rowIds},
+    ) as Map<String, dynamic>;
+    return StatementRow.fromJson(json);
+  }
+
+  Future<void> deleteStatementSource(String id) async {
+    await _send(
+      'DELETE',
+      '/imports/statements/${Uri.encodeComponent(id)}/source',
+    );
+  }
+
   Future<List<NetWorthSnapshot>> netWorthHistory({
     required String currency,
     int limit = 365,

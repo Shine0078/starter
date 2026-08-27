@@ -129,7 +129,8 @@ class ReconciliationSummary {
         accountName: json['accountName'] as String,
         currency: json['currency'] as String? ?? 'USD',
         currentBalance: json['currentBalance'] as int,
-        currentBalanceFormatted: json['currentBalanceFormatted'] as String? ?? '',
+        currentBalanceFormatted:
+            json['currentBalanceFormatted'] as String? ?? '',
         overdue: json['overdue'] as bool? ?? false,
         lastStatementDate: json['lastStatementDate'] as String?,
         lastDifference: json['lastDifference'] as int?,
@@ -1816,6 +1817,165 @@ class ReceiptRecord {
   final int? taxMinor;
   final String? currency;
   final List<String> items;
+}
+
+class StatementImport {
+  const StatementImport({
+    required this.id,
+    required this.accountId,
+    required this.filename,
+    required this.mimeType,
+    required this.format,
+    required this.status,
+    required this.rowsTotal,
+    required this.rowsIncluded,
+    required this.rowsExcluded,
+    required this.rowsNeedsReview,
+    required this.createdAt,
+    this.sourceDeletedAt,
+  });
+
+  factory StatementImport.fromJson(Map<String, dynamic> json) =>
+      StatementImport(
+        id: json['id'] as String,
+        accountId: json['accountId'] as String,
+        filename: json['filename'] as String,
+        mimeType: json['mimeType'] as String? ?? 'application/octet-stream',
+        format: json['format'] as String? ?? 'unknown',
+        status: json['status'] as String? ?? 'ready',
+        rowsTotal: (json['rowsTotal'] as num?)?.toInt() ?? 0,
+        rowsIncluded: (json['rowsIncluded'] as num?)?.toInt() ?? 0,
+        rowsExcluded: (json['rowsExcluded'] as num?)?.toInt() ?? 0,
+        rowsNeedsReview: (json['rowsNeedsReview'] as num?)?.toInt() ?? 0,
+        createdAt: json['createdAt'] as String? ?? '',
+        sourceDeletedAt: json['sourceDeletedAt'] as String?,
+      );
+
+  final String id;
+  final String accountId;
+  final String filename;
+  final String mimeType;
+  final String format;
+  final String status;
+  final int rowsTotal;
+  final int rowsIncluded;
+  final int rowsExcluded;
+  final int rowsNeedsReview;
+  final String createdAt;
+  final String? sourceDeletedAt;
+}
+
+class StatementRow {
+  const StatementRow({
+    required this.id,
+    required this.importId,
+    required this.sourceLine,
+    required this.description,
+    required this.amount,
+    required this.currency,
+    required this.direction,
+    this.merchant,
+    required this.categorySlug,
+    required this.categoryConfidence,
+    required this.decision,
+    required this.flags,
+    required this.postedAt,
+    required this.isRecurring,
+  });
+
+  factory StatementRow.fromJson(Map<String, dynamic> json) => StatementRow(
+        id: json['id'] as String,
+        importId: json['importId'] as String,
+        sourceLine: (json['sourceLine'] as num?)?.toInt() ?? 0,
+        description: json['description'] as String? ?? '',
+        amount: (json['amount'] as num?)?.toInt(),
+        currency: json['currency'] as String? ?? 'USD',
+        direction: json['direction'] as String? ?? 'unknown',
+        merchant: json['merchant'] as String?,
+        categorySlug: json['categorySlug'] as String? ?? 'unknown',
+        categoryConfidence:
+            (json['categoryConfidence'] as num?)?.toDouble() ?? 0,
+        decision: json['decision'] as String? ?? 'needs_review',
+        flags: (json['flags'] as List<dynamic>? ?? const [])
+            .whereType<String>()
+            .toList(),
+        postedAt: json['postedAt'] as String?,
+        isRecurring: json['isRecurring'] as bool? ?? false,
+      );
+
+  final String id;
+  final String importId;
+  final int sourceLine;
+  final String description;
+  final int? amount;
+  final String currency;
+  final String direction;
+  final String? merchant;
+  final String categorySlug;
+  final double categoryConfidence;
+  final String decision;
+  final List<String> flags;
+  final String? postedAt;
+  final bool isRecurring;
+}
+
+class StatementImportDetail {
+  const StatementImportDetail({required this.statement, required this.rows});
+  factory StatementImportDetail.fromJson(Map<String, dynamic> json) =>
+      StatementImportDetail(
+        statement:
+            StatementImport.fromJson(json['statement'] as Map<String, dynamic>),
+        rows: (json['rows'] as List<dynamic>? ?? const [])
+            .whereType<Map<String, dynamic>>()
+            .map(StatementRow.fromJson)
+            .toList(),
+      );
+  final StatementImport statement;
+  final List<StatementRow> rows;
+}
+
+class StatementSummary {
+  const StatementSummary({
+    required this.currency,
+    required this.income,
+    required this.expenses,
+    required this.savings,
+    required this.recurringCount,
+    required this.duplicateCount,
+    required this.unusualCount,
+    required this.categoryTotals,
+  });
+
+  factory StatementSummary.fromJson(Map<String, dynamic> json) =>
+      StatementSummary(
+        currency: json['currency'] as String? ?? 'USD',
+        income: (json['income'] as num?)?.toInt() ?? 0,
+        expenses: (json['expenses'] as num?)?.toInt() ?? 0,
+        savings: (json['savings'] as num?)?.toInt() ?? 0,
+        recurringCount: (json['recurringCount'] as num?)?.toInt() ?? 0,
+        duplicateCount: (json['duplicateCount'] as num?)?.toInt() ?? 0,
+        unusualCount: (json['unusualCount'] as num?)?.toInt() ?? 0,
+        categoryTotals: (json['categoryTotals'] as List<dynamic>? ?? const [])
+            .whereType<Map<String, dynamic>>()
+            .map((value) => {
+                  'categorySlug': value['categorySlug'] as String? ?? 'unknown',
+                  'amount': (value['amount'] as num?)?.toInt() ?? 0,
+                  'count': (value['count'] as num?)?.toInt() ?? 0,
+                  'label': value['label'] as String? ??
+                      value['categorySlug'] as String? ??
+                      'Unknown',
+                })
+            .toList(),
+      );
+
+  final String currency;
+  final int income;
+  final int expenses;
+  final int savings;
+  final int recurringCount;
+  final int duplicateCount;
+  final int unusualCount;
+  final List<Map<String, dynamic>> categoryTotals;
 }
 
 class SplitGroup {
