@@ -12,7 +12,8 @@ Protected default branch: `main`
 ## Current commit SHA
 
 - `main` / `origin/main`: `a21b374` (merge of [PR #16](https://github.com/Shine0078/starter/pull/16))
-- Working branch `codex/passkey-webauthn-p0` is at `db0e879`
+- Working branch `codex/passkey-webauthn-p0` feature tip is `b1974dd` (this
+  status update is a documentation-only follow-up)
 
 ## Canonical deployment
 
@@ -39,6 +40,13 @@ GitHub Pages and `finverse.onrender.com` are not the current API.
 - PR #16 CI on `db0e879`: success (API, Flutter analyze/tests/Android/PWA, unsigned iOS, CodeQL, Trivy runtime image)
 
 - Main CI on merge commit `a21b374`: success
+
+Local verification on `b1974dd` (2026-08-27): API typecheck/build passed;
+manual-import focused tests passed (11 tests); full PostgreSQL suite passed
+(71 files, 1,045 tests); `npm audit --omit=dev` reported zero vulnerabilities;
+Flutter analyze passed; Flutter tests passed (118); Flutter web and debug APK
+builds passed. Migration application validated all 32 migrations and provisioned
+the restricted runtime role.
 
 ## Completed this session
 
