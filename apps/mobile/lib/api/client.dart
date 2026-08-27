@@ -36,7 +36,13 @@ String resolveBaseUrl() {
           : defaultTargetPlatform == TargetPlatform.android
               ? 'http://10.0.2.2:3000'
               : 'http://127.0.0.1:3000';
-  return normalizeBaseUrl(raw);
+  // A local release-web preview derives its API origin from the page itself.
+  // Keep the native release invariant intact while allowing that explicitly
+  // local, same-origin development case to use http://localhost.
+  final localWebPreview = kIsWeb &&
+      configured.isEmpty &&
+      {'localhost', '127.0.0.1', '::1', '[::1]'}.contains(Uri.base.host);
+  return normalizeBaseUrl(raw, release: kReleaseMode && !localWebPreview);
 }
 
 /// Validates and canonicalises an API origin before it is used to construct a
