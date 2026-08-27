@@ -32,6 +32,12 @@ import type { Reconciliation } from '../domain/reconciliation/types';
 import type { SavedView } from '../domain/transactions/saved-view';
 import type { ScheduledTransaction } from '../domain/scheduled/schedule';
 import type { FxRate } from '../domain/fx/rates';
+import type {
+  StatementImport,
+  StatementImportEvent,
+  StatementRowRecord,
+} from '../domain/statement-import/types';
+export type { StatementFileCipher } from './statement-import';
 
 export const ACCOUNT_STORE = 'ACCOUNT_STORE';
 export const TRANSACTION_STORE = 'TRANSACTION_STORE';
@@ -48,6 +54,8 @@ export const RULE_APPLICATION_STORE = 'RULE_APPLICATION_STORE';
 export const FX_RATE_STORE = 'FX_RATE_STORE';
 export const AGGREGATOR = 'AGGREGATOR';
 export const CLOCK = 'CLOCK';
+export const STATEMENT_IMPORT_STORE = 'STATEMENT_IMPORT_STORE';
+export const STATEMENT_FILE_CIPHER = 'STATEMENT_FILE_CIPHER';
 
 export interface AccountStore {
   list(userId: string): Promise<Account[]>;
@@ -219,6 +227,49 @@ export interface ImportBatchStore {
   ): Promise<ImportBatch>;
   /** Returns how many transactions were removed, or null when already reverted. */
   revert(userId: string, id: string, at: string): Promise<number | null>;
+}
+
+export interface StatementImportStore {
+  list(userId: string): Promise<StatementImport[]>;
+  get(userId: string, id: string): Promise<StatementImport | null>;
+  rows(userId: string, id: string): Promise<StatementRowRecord[]>;
+  create(
+    userId: string,
+    statement: StatementImport,
+    encryptedSource: string,
+    rows: readonly StatementRowRecord[],
+  ): Promise<StatementImport>;
+  updateRow(
+    userId: string,
+    importId: string,
+    rowId: string,
+    patch: Partial<StatementRowRecord>,
+    event: StatementImportEvent,
+  ): Promise<StatementRowRecord | null>;
+  splitRow(
+    userId: string,
+    importId: string,
+    rowId: string,
+    parts: readonly StatementRowRecord[],
+    event: StatementImportEvent,
+  ): Promise<StatementRowRecord[] | null>;
+  mergeRows(
+    userId: string,
+    importId: string,
+    rowIds: readonly string[],
+    merged: StatementRowRecord,
+    event: StatementImportEvent,
+  ): Promise<StatementRowRecord | null>;
+  finalize(
+    userId: string,
+    importId: string,
+    batch: ImportBatch,
+    transactions: readonly Transaction[],
+    event: StatementImportEvent,
+  ): Promise<StatementImport | null>;
+  deleteSource(userId: string, id: string, at: string, event: StatementImportEvent): Promise<boolean>;
+  delete(userId: string, id: string, at: string, event: StatementImportEvent): Promise<boolean>;
+  audit(userId: string, id: string): Promise<StatementImportEvent[]>;
 }
 
 /** Declared obligations. Archived rather than deleted, so history survives. */

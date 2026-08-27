@@ -47,6 +47,9 @@ const PROTECTED_TABLES = [
   'rule_applications',
   'rule_application_changes',
   'fx_rates',
+  'statement_imports',
+  'statement_import_rows',
+  'statement_import_events',
 ];
 
 const MEMBERSHIP_SCOPED_TABLES = [
@@ -162,6 +165,28 @@ async function seed(owner: Pool, userId: string, amount: number): Promise<void> 
        (id, user_id, account_id, filename, status, rows_total, rows_imported, rows_duplicate, rows_invalid)
      VALUES ($1, $2, $3, 'export.csv', 'committed', 1, 1, 0, 0)`,
     [`imp_${userId}`, userId, `acc_${userId}`],
+  );
+  await owner.query(
+    `INSERT INTO statement_imports
+       (id,user_id,account_id,filename,mime_type,format,statement_hash,status,
+        rows_total,rows_included,rows_excluded,rows_needs_review,encrypted_source)
+     VALUES ($1,$2,$3,'statement.csv','text/csv','csv',$4,'ready',1,1,0,0,'v1.test')`,
+    [`stmt_${userId}`, userId, `acc_${userId}`, 'a'.repeat(64)],
+  );
+  await owner.query(
+    `INSERT INTO statement_import_rows
+       (id,import_id,user_id,source_line,posted_at,description,amount,currency,
+        direction,category_slug,category_source,category_confidence,decision,
+        fingerprint,raw)
+     VALUES ($1,$2,$3,2,'2026-08-01','Statement row',-1000,'USD','debit',
+        'groceries','lexicon',0.9,'include',$4,'Statement row')`,
+    [`stmt_row_${userId}`, `stmt_${userId}`, userId, 'b'.repeat(64)],
+  );
+  await owner.query(
+    `INSERT INTO statement_import_events
+       (id,user_id,import_id,kind,detail)
+     VALUES ($1,$2,$3,'created','{}'::jsonb)`,
+    [`stmt_evt_${userId}`, userId, `stmt_${userId}`],
   );
   await owner.query(
     `INSERT INTO scheduled_transactions
@@ -388,7 +413,8 @@ if (!OWNER_URL) {
       );
 
       const { rows } = await owner.query<{ user_id: string; amount: number }>(
-        'SELECT user_id, amount FROM transactions ORDER BY user_id',
+        'SELECT user_id, amount FROM transactions WHERE user_id = ANY($1::text[]) ORDER BY user_id',
+        [[ALICE, BOB]],
       );
       expect(rows).toEqual([
         { user_id: ALICE, amount: -1 },

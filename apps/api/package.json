@@ -27,18 +27,22 @@
     "@nestjs/platform-express": "^11.1.28",
     "@nestjs/throttler": "^6.5.0",
     "@node-rs/argon2": "^2.0.2",
+    "@tesseract.js-data/eng": "^1.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "compression": "^1.8.1",
     "dotenv": "^17.4.2",
+    "fflate": "^0.8.3",
     "jsonwebtoken": "^9.0.3",
     "nodemailer": "^9.0.5",
+    "pdf-parse": "^2.4.5",
     "pdfkit": "^0.19.1",
     "pg": "^8.13.1",
     "plaid": "^45.0.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "stripe": "^22.4.0"
+    "stripe": "^22.4.0",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@nestjs/testing": "^11.1.28",

@@ -560,6 +560,17 @@ function buildConfig(): AppConfig {
     }
   }
 
+  const statementKey = process.env.STATEMENT_IMPORT_ENCRYPTION_KEY;
+  if (isProduction && !statementKey) {
+    throw new Error('Production requires STATEMENT_IMPORT_ENCRYPTION_KEY for encrypted statement uploads.');
+  }
+  if (statementKey) {
+    const decoded = Buffer.from(statementKey, 'base64');
+    if (decoded.length !== 32 || decoded.toString('base64') !== statementKey) {
+      throw new Error('STATEMENT_IMPORT_ENCRYPTION_KEY must be canonical base64 encoding exactly 32 bytes.');
+    }
+  }
+
   if (store === 'postgres' && !databaseUrl && !appDatabaseUrl) {
     throw new Error(
       'STORE=postgres requires DATABASE_APP_URL for runtime or DATABASE_URL for local migrations.',

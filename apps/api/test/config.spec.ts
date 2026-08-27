@@ -23,6 +23,7 @@ const KEYS = [
   'LEGAL_PRIVACY_VERSION',
   'LEGAL_PRIVACY_URL',
   'MFA_ENCRYPTION_KEY',
+  'STATEMENT_IMPORT_ENCRYPTION_KEY',
   'PLAID_CLIENT_ID',
   'PLAID_SECRET',
   'PLAID_ENVIRONMENT',
@@ -57,6 +58,7 @@ function productionBase(): void {
   process.env.LEGAL_PRIVACY_VERSION = 'privacy-2026-08';
   process.env.LEGAL_PRIVACY_URL = 'https://finverse.example/legal/privacy';
   process.env.MFA_ENCRYPTION_KEY = Buffer.alloc(32, 9).toString('base64');
+  process.env.STATEMENT_IMPORT_ENCRYPTION_KEY = Buffer.alloc(32, 8).toString('base64');
   process.env.GIT_SHA = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
   delete process.env.PLAID_CLIENT_ID;
   delete process.env.PLAID_SECRET;
@@ -178,6 +180,12 @@ describe.sequential('production configuration', () => {
     productionBase();
     process.env.MFA_ENCRYPTION_KEY = 'not-a-key';
     expect(() => loadConfig()).toThrow(/exactly 32 bytes/);
+  });
+
+  it('refuses production without a statement import encryption key', () => {
+    productionBase();
+    delete process.env.STATEMENT_IMPORT_ENCRYPTION_KEY;
+    expect(() => loadConfig()).toThrow(/STATEMENT_IMPORT_ENCRYPTION_KEY/);
   });
 
   it('refuses non-HTTPS legal document URLs', () => {

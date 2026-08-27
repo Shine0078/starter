@@ -55,6 +55,11 @@ async function bootstrap(): Promise<void> {
     rawBody: true,
   });
 
+  // Statement uploads are base64-wrapped JSON so the mobile/web client uses one
+  // authenticated path across platforms. Keep the parser bounded; the service
+  // applies the stricter decoded 10 MB limit before any processing.
+  app.useBodyParser('json', { limit: '14mb' });
+
   installHttpControls(app, config);
   app.setGlobalPrefix('api', {
     exclude: [

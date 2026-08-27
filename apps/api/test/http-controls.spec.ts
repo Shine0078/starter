@@ -19,6 +19,7 @@ describe('HTTP controls', () => {
     process.env.LEGAL_PRIVACY_VERSION = 'privacy-2026-08';
     process.env.LEGAL_PRIVACY_URL = 'https://finverse.example/legal/privacy';
     process.env.MFA_ENCRYPTION_KEY = Buffer.alloc(32, 9).toString('base64');
+    process.env.STATEMENT_IMPORT_ENCRYPTION_KEY = Buffer.alloc(32, 8).toString('base64');
     process.env.GIT_SHA = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
     delete process.env.PLAID_CLIENT_ID;
     delete process.env.PLAID_SECRET;
