@@ -1,7 +1,8 @@
 # FINVERSE Current Status
 
 **Verified:** 2026-08-28  
-**Integration branch:** `codex/passkey-webauthn-p0` at `c136435`, including the
+**Integration branch:** `codex/passkey-webauthn-p0` at its latest verified local
+state, including the
 statement-upload, light-theme, release-identity, parser-bound, split-
   authorization, duplicate-race, supply-chain, and light-only cleanup
   milestones.
