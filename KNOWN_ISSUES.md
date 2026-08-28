@@ -6,7 +6,7 @@
   conflict in `infra/scripts/deploy-cloud-run.sh`. Preserve it until its intended
   Plaid gate and upstream deployment changes are reconciled deliberately.
 - **Integration not merged:** manual statement import and the white default UI
-  are on `codex/passkey-webauthn-p0` at `d0af44d`, ahead of the remote branch.
+  are on `codex/passkey-webauthn-p0` at `c136435`, ahead of the remote branch.
 - **Final candidate regression:** API PostgreSQL, Flutter tests, and Flutter web
   build pass on the integration branch. Android build, migration idempotency,
   and the protected-main post-merge run remain outstanding.

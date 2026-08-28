@@ -19,6 +19,8 @@ authoritative detail; `CURRENT_STATUS.md` records current gates and blockers.
 ### Changed
 
 - Flutter now uses the light theme as the only/default application theme.
+- Obsolete dark-mode settings translations were removed; no dark-theme control
+  remains in the mobile application.
 - Integration branch merged current protected `main` at `a21b374` and now
   includes the verified `d0af44d` supply-chain milestone.
 - Split membership changes are admin-only, split expenses can only name the
