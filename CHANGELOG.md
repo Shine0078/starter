@@ -27,6 +27,8 @@ authoritative detail; `CURRENT_STATUS.md` records current gates and blockers.
   authenticated actor as payer, and PostgreSQL forced-RLS enforces both rules.
 - Command-specific split membership RLS policies prevent direct cross-member
   deletion, and a trigger protects the creator membership from deletion.
+- Direct split membership deletes are now held closed until a balance-checked,
+  auditable leave/remove command is implemented.
 - Backup scripts restrict local archive permissions and remove temporary dump
   files after compression; they now require age encryption before an archive is
   durable, and restore drills decrypt only into temporary files.

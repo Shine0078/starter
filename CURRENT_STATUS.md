@@ -14,7 +14,7 @@ cleanup, encrypted-backup, and direct-membership-RLS milestones.
   7 tests skipped because they require PostgreSQL.
 - API PostgreSQL suite on the integration branch: 71 files and 1,052 tests
   passed using embedded PostgreSQL, a restricted runtime role, and forced RLS.
-- Migration verification on a fresh ephemeral PostgreSQL cluster: all 34
+- Migration verification on a fresh ephemeral PostgreSQL cluster: all 36
   migrations applied, the restricted `finverse_app` role was provisioned, and
   the repeat check reported 0 pending migrations.
 - Production WebAuthn gate passed in that suite: unauthenticated options,
@@ -28,8 +28,8 @@ cleanup, encrypted-backup, and direct-membership-RLS milestones.
   summaries, encryption, and authenticated review flow passed after correcting
   a local generated dependency link.
 - Split authorization tests passed under both in-memory and PostgreSQL forced
-  RLS: non-admin membership writes, forged payer attribution, direct
-  cross-member deletes, and creator-membership deletion are rejected.
+  RLS: non-admin membership writes, forged payer attribution, and all direct
+  membership deletes are rejected.
 - Backup scripts now require authenticated age encryption, apply owner-only
   directory/archive permissions, and clean up temporary plaintext dump files on
   exit; production recipient custody and restore-key controls remain external.
@@ -43,7 +43,7 @@ cleanup, encrypted-backup, and direct-membership-RLS milestones.
 
 - Encrypted manual statement import and review workflow.
 - Statement import database migrations `031` and `032`, plus split membership
-  command policies in `034`.
+  command policies in `034` and the direct-delete hold in `036`.
 - First-use account creation from the statement picker.
 - Light-only Flutter theme.
 - Additional operations, provider, device, incident, and privacy documentation.
@@ -64,8 +64,8 @@ cleanup, encrypted-backup, and direct-membership-RLS milestones.
   identified backup confidentiality, deployment image identity, WebAuthn parser
   resource bounds, and shared-expense invitation/consent risks. Actor,
   non-admin write paths, and direct split-membership deletes are now hardened
-  on the integration branch; invitation acceptance and revocation still need a
-  complete product flow. Backup scripts
+  on the integration branch; invitation acceptance, balance-checked removal,
+  and revocation still need a complete product flow. Backup scripts
   now fail closed without age encryption, but production key custody is not
   locally verifiable.
 - Manual document analysis currently runs in the request lifecycle; durable

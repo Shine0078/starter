@@ -479,14 +479,13 @@ if (!OWNER_URL) {
         [groupId, ALICE, BOB],
       );
 
-      await expect(
-        withUserScope(app, ALICE, (client) =>
-          client.query(
-            'DELETE FROM split_group_members WHERE group_id = $1 AND user_id = $2',
-            [groupId, ALICE],
-          ),
+      const deleted = await withUserScope(app, ALICE, (client) =>
+        client.query(
+          'DELETE FROM split_group_members WHERE group_id = $1 AND user_id = $2',
+          [groupId, ALICE],
         ),
-      ).rejects.toThrow(/creator membership cannot be removed/i);
+      );
+      expect(deleted.rowCount).toBe(0);
     });
 
     // ------------------------------------------------------- the scope itself
