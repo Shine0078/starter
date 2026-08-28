@@ -3,6 +3,14 @@ import type { Transaction } from '../types';
 export type StatementFormat = 'csv' | 'xlsx' | 'pdf' | 'image';
 export type StatementRowDecision = 'include' | 'exclude' | 'needs_review';
 
+/** Opaque routing data returned when the durable analysis worker claims work. */
+export interface StatementImportJob {
+  id: string;
+  userId: string;
+  accountId: string;
+  attempts: number;
+}
+
 /** A row extracted from a statement, before it is allowed into the ledger. */
 export interface StatementRowDraft {
   sourceLine: number;
@@ -37,7 +45,7 @@ export interface StatementImport {
   mimeType: string;
   format: StatementFormat;
   statementHash: string;
-  status: 'ready' | 'approved' | 'failed' | 'deleted';
+  status: 'queued' | 'processing' | 'ready' | 'approved' | 'failed' | 'deleted';
   rowsTotal: number;
   rowsIncluded: number;
   rowsExcluded: number;

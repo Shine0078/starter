@@ -192,7 +192,9 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
       _error = null;
     });
     try {
-      final detail = await widget.api.statementImport(item.id);
+      final detail = await _waitForAnalysis(
+        await widget.api.statementImport(item.id),
+      );
       if (!mounted) return;
       setState(() {
         _detail = detail;
@@ -238,12 +240,13 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
     try {
       final bytes = await file.readAsBytes();
       final mime = _mimeFor(file.name);
-      final detail = await widget.api.createStatementImport(
+      final detail =
+          await _waitForAnalysis(await widget.api.createStatementImport(
         accountId: accountId,
         filename: file.name,
         mimeType: mime,
         bytes: bytes,
-      );
+      ));
       if (mounted) setState(() => _detail = detail);
       if (mounted) {
         try {
@@ -259,6 +262,26 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
     } finally {
       if (mounted) setState(() => _working = false);
     }
+  }
+
+  Future<StatementImportDetail> _waitForAnalysis(
+      StatementImportDetail initial) async {
+    var current = initial;
+    if (current.statement.status != 'queued' &&
+        current.statement.status != 'processing') {
+      return current;
+    }
+    for (var attempt = 0; attempt < 60; attempt++) {
+      await Future<void>.delayed(const Duration(seconds: 1));
+      if (!mounted) return current;
+      current = await widget.api.statementImport(current.statement.id);
+      if (current.statement.status != 'queued' &&
+          current.statement.status != 'processing') {
+        return current;
+      }
+    }
+    throw StateError(
+        'Analysis is still in progress. Reopen this import shortly to review it.');
   }
 
   Future<void> _decision(StatementRow row, String decision) async {
@@ -597,11 +620,15 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
                       child: ListTile(
                         leading: Icon(item.status == 'approved'
                             ? Icons.check_circle_outline
-                            : Icons.rate_review_outlined),
+                            : item.status == 'failed'
+                                ? Icons.error_outline
+                                : Icons.rate_review_outlined),
                         title: Text(item.filename,
                             maxLines: 1, overflow: TextOverflow.ellipsis),
-                        subtitle: Text(
-                            '${item.rowsNeedsReview} need review · ${item.status}'),
+                        subtitle: Text(item.status == 'queued' ||
+                                item.status == 'processing'
+                            ? 'Analysis in progress · ${item.status}'
+                            : '${item.rowsNeedsReview} need review · ${item.status}'),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: _working ? null : () => _openExisting(item),
                       ),
@@ -611,6 +638,20 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
                 const SizedBox(height: 24),
                 Text(detail.statement.filename,
                     style: Theme.of(context).textTheme.titleMedium),
+                if (detail.statement.status == 'queued' ||
+                    detail.statement.status == 'processing')
+                  Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                          'FINVERSE is securely analyzing this statement. This page will show the rows when processing finishes.')),
+                if (detail.statement.status == 'failed')
+                  Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                          detail.statement.error ??
+                              'Statement analysis failed. Upload the file again after checking its format.',
+                          style: TextStyle(
+                              color: Theme.of(context).colorScheme.error))),
                 Text(
                     '${detail.statement.rowsTotal} rows · ${detail.statement.rowsNeedsReview} need review',
                     style: Theme.of(context).textTheme.bodySmall),

@@ -1,5 +1,7 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
+import { Res } from '@nestjs/common';
+import type { Response } from 'express';
 
 import { CurrentUser } from '../auth/auth.guard';
 import { StatementImportService } from './statement-import.service';
@@ -10,15 +12,19 @@ export class StatementImportController {
 
   @Post()
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
-  create(@CurrentUser() userId: string, @Body() body: Record<string, unknown>) {
-    return this.statements.create(userId, body);
+  async create(@CurrentUser() userId: string, @Body() body: Record<string, unknown>, @Res({ passthrough: true }) response: Response) {
+    const result = await this.statements.create(userId, body);
+    if (result.queued) response.status(202);
+    return result;
   }
 
   @Post('preview')
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @HttpCode(201)
-  preview(@CurrentUser() userId: string, @Body() body: Record<string, unknown>) {
-    return this.statements.create(userId, body);
+  async preview(@CurrentUser() userId: string, @Body() body: Record<string, unknown>, @Res({ passthrough: true }) response: Response) {
+    const result = await this.statements.create(userId, body);
+    if (result.queued) response.status(202);
+    return result;
   }
 
   @Get()

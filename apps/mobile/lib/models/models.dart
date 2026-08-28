@@ -1833,6 +1833,7 @@ class StatementImport {
     required this.rowsNeedsReview,
     required this.createdAt,
     this.sourceDeletedAt,
+    this.error,
   });
 
   factory StatementImport.fromJson(Map<String, dynamic> json) =>
@@ -1849,6 +1850,7 @@ class StatementImport {
         rowsNeedsReview: (json['rowsNeedsReview'] as num?)?.toInt() ?? 0,
         createdAt: json['createdAt'] as String? ?? '',
         sourceDeletedAt: json['sourceDeletedAt'] as String?,
+        error: json['error'] as String?,
       );
 
   final String id;
@@ -1863,6 +1865,7 @@ class StatementImport {
   final int rowsNeedsReview;
   final String createdAt;
   final String? sourceDeletedAt;
+  final String? error;
 }
 
 class StatementRow {

@@ -35,6 +35,7 @@ import type { FxRate } from '../domain/fx/rates';
 import type {
   StatementImport,
   StatementImportEvent,
+  StatementImportJob,
   StatementRowRecord,
 } from '../domain/statement-import/types';
 export type { StatementFileCipher } from './statement-import';
@@ -239,6 +240,32 @@ export interface StatementImportStore {
     encryptedSource: string,
     rows: readonly StatementRowRecord[],
   ): Promise<StatementImport>;
+  /** Persist an encrypted source as durable work without parsing in the request. */
+  enqueue(
+    userId: string,
+    statement: StatementImport,
+    encryptedSource: string,
+  ): Promise<StatementImport>;
+  /** Atomically claim queued or stale processing work across users. */
+  claim(limit: number): Promise<StatementImportJob[]>;
+  /** Read a claimed source only inside that user's RLS scope. */
+  source(userId: string, importId: string): Promise<{ statement: StatementImport; encryptedSource: string } | null>;
+  /** Store extracted rows and the processed audit event atomically. */
+  completeProcessing(
+    userId: string,
+    importId: string,
+    rows: readonly StatementRowRecord[],
+    processedAt: string,
+    event: StatementImportEvent,
+  ): Promise<StatementImport | null>;
+  /** Mark irrecoverable analysis input failures without leaking source data. */
+  failProcessing(
+    userId: string,
+    importId: string,
+    error: string,
+    at: string,
+    event: StatementImportEvent,
+  ): Promise<boolean>;
   updateRow(
     userId: string,
     importId: string,

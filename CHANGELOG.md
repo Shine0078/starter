@@ -9,6 +9,8 @@ authoritative detail; `CURRENT_STATUS.md` records current gates and blockers.
 
 - Encrypted, review-first manual statement import for CSV, XLSX, text PDF, and
   supported images.
+- Durable production statement analysis queue with forced-RLS claims, stale-lease
+  recovery, failure audit events, and mobile polling.
 - Statement row confidence, flags, edit/split/merge/exclude/approve controls,
   audit history, summaries, duplicate checks, and per-user correction learning.
 - First-use account creation from the statement picker.

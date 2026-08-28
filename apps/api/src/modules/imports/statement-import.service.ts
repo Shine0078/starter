@@ -4,10 +4,11 @@ import { BadRequestException, ConflictException, Inject, Injectable, NotFoundExc
 import { isKnownCategory } from '../../domain/categories';
 import { categorizeDescriptor, ruleFromCorrection } from '../../domain/categorization/categorize';
 import { normalizeDescriptor } from '../../domain/categorization/normalize';
-import { analyzeStatement } from '../../domain/statement-import/analyze';
+import { analyzeStatement, formatFor } from '../../domain/statement-import/analyze';
 import { summarizeStatementRows } from '../../domain/statement-import/summary';
-import type { StatementImport, StatementImportEvent, StatementRowDraft, StatementRowRecord } from '../../domain/statement-import/types';
+import type { StatementImport, StatementImportEvent, StatementImportJob, StatementRowDraft, StatementRowRecord } from '../../domain/statement-import/types';
 import type { Transaction } from '../../domain/types';
+import { loadConfig } from '../../config';
 import {
   ACCOUNT_STORE, CLOCK, RULE_STORE, STATEMENT_FILE_CIPHER, STATEMENT_IMPORT_STORE, TRANSACTION_STORE,
   type AccountStore, type ClockPort, type ImportBatch, type RuleStore, type StatementFileCipher,
@@ -46,7 +47,7 @@ export class StatementImportService {
     @Inject(CLOCK) private readonly clock: ClockPort,
   ) {}
 
-  async create(userId: string, input: CreateStatementInput): Promise<{ statement: StatementImport; rows: StatementRowRecord[]; warnings: string[] }> {
+  async create(userId: string, input: CreateStatementInput): Promise<{ statement: StatementImport; rows: StatementRowRecord[]; warnings: string[]; queued: boolean }> {
     const accountId = stringField(input.accountId, 'accountId', 1, 120);
     const filename = stringField(input.filename, 'filename', 1, MAX_FILENAME);
     const mimeType = typeof input.mimeType === 'string' ? input.mimeType.trim().toLowerCase() : 'application/octet-stream';
@@ -56,6 +57,34 @@ export class StatementImportService {
     if (bytes.length === 0 || bytes.length > MAX_BYTES) throw new BadRequestException('Statement files must be between 1 byte and 10 MB.');
     const account = await this.accounts.get(userId, accountId);
     if (!account) throw new NotFoundException('No such account.');
+
+    // Production uses a durable queue so OCR and workbook parsing cannot hold
+    // an HTTP request open or lose an upload when the process restarts. Local
+    // development and contract tests keep the synchronous response unless
+    // explicitly opted into the worker with STATEMENT_IMPORT_ASYNC=true.
+    if (loadConfig().statementImportAsync) {
+      let format;
+      try {
+        format = formatFor(filename, mimeType);
+      } catch (error) {
+        throw new BadRequestException(error instanceof Error ? error.message : 'Unsupported statement format.');
+      }
+      const statement: StatementImport = {
+        id: randomUUID(), accountId, filename, mimeType, format,
+        statementHash: createHash('sha256').update(bytes).digest('hex'),
+        status: 'queued', rowsTotal: 0, rowsIncluded: 0, rowsExcluded: 0,
+        rowsNeedsReview: 0, createdAt: this.clock.now().toISOString(),
+        processedAt: null, approvedAt: null, sourceDeletedAt: null, error: null,
+      };
+      try {
+        await this.imports.enqueue(userId, statement, this.cipher.encrypt(encoded));
+      } catch (error) {
+        if (error instanceof Error && error.message === 'STATEMENT_DUPLICATE') throw new ConflictException('This statement has already been imported for this account.');
+        throw error;
+      }
+      return { statement, rows: [], warnings: [], queued: true };
+    }
+
     const existing = await this.transactions.list(userId, { accountId });
     const rules = await this.rules.list(userId);
     let extraction;
@@ -80,7 +109,63 @@ export class StatementImportService {
       if (error instanceof Error && error.message === 'STATEMENT_DUPLICATE') throw new ConflictException('This statement has already been imported for this account.');
       throw error;
     }
-    return { statement, rows, warnings: extraction.warnings };
+    return { statement, rows, warnings: extraction.warnings, queued: false };
+  }
+
+  /** Runs one claimed durable job. Safe to call concurrently across instances. */
+  async processQueued(job: StatementImportJob): Promise<void> {
+    const source = await this.imports.source(job.userId, job.id);
+    if (!source) {
+      await this.imports.failProcessing(
+        job.userId,
+        job.id,
+        'The encrypted statement source is unavailable.',
+        this.clock.now().toISOString(),
+        this.event(job.id, null, 'failed', { reason: 'source_unavailable' }),
+      );
+      return;
+    }
+
+    try {
+      const encoded = this.cipher.decrypt(source.encryptedSource);
+      const bytes = Buffer.from(encoded, 'base64');
+      if (bytes.length === 0 || bytes.length > MAX_BYTES) throw new Error('Statement source integrity check failed.');
+      const hash = createHash('sha256').update(bytes).digest('hex');
+      if (hash !== source.statement.statementHash) throw new Error('Statement source integrity check failed.');
+      const account = await this.accounts.get(job.userId, source.statement.accountId);
+      if (!account) throw new Error('The statement account no longer exists.');
+      const existing = await this.transactions.list(job.userId, { accountId: source.statement.accountId });
+      const rules = await this.rules.list(job.userId);
+      const extraction = await analyzeStatement({
+        filename: source.statement.filename,
+        mimeType: source.statement.mimeType,
+        bytes,
+        currency: account.currency,
+        existing,
+        rules,
+      });
+      const rows = this.decorateRows(job.id, extraction.rows, existing);
+      const processedAt = this.clock.now().toISOString();
+      await this.imports.completeProcessing(
+        job.userId,
+        job.id,
+        rows,
+        processedAt,
+        this.event(job.id, null, 'processed', {
+          rows: rows.length,
+          warnings: extraction.warnings.slice(0, 8),
+        }),
+      );
+    } catch (error) {
+      const message = safeProcessingError(error);
+      await this.imports.failProcessing(
+        job.userId,
+        job.id,
+        message,
+        this.clock.now().toISOString(),
+        this.event(job.id, null, 'failed', { reason: message }),
+      );
+    }
   }
 
   list(userId: string): Promise<StatementImport[]> { return this.imports.list(userId); }
@@ -257,4 +342,9 @@ function stringField(value: unknown, field: string, min: number, max: number): s
 
 function fingerprint(row: Pick<StatementRowRecord, 'sourceLine' | 'postedAt' | 'amount' | 'description' | 'currency'>): string {
   return createHash('sha256').update(`${row.sourceLine}|${row.postedAt ?? ''}|${row.amount ?? ''}|${normalizeDescriptor(row.description)}|${row.currency}`).digest('hex');
+}
+
+function safeProcessingError(error: unknown): string {
+  const message = error instanceof Error ? error.message : 'Statement processing failed.';
+  return message.replace(/[\r\n]+/g, ' ').slice(0, 500) || 'Statement processing failed.';
 }

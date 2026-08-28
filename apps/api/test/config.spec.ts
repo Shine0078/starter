@@ -24,6 +24,7 @@ const KEYS = [
   'LEGAL_PRIVACY_URL',
   'MFA_ENCRYPTION_KEY',
   'STATEMENT_IMPORT_ENCRYPTION_KEY',
+  'STATEMENT_IMPORT_ASYNC',
   'PLAID_CLIENT_ID',
   'PLAID_SECRET',
   'PLAID_ENVIRONMENT',
@@ -59,6 +60,7 @@ function productionBase(): void {
   process.env.LEGAL_PRIVACY_URL = 'https://finverse.example/legal/privacy';
   process.env.MFA_ENCRYPTION_KEY = Buffer.alloc(32, 9).toString('base64');
   process.env.STATEMENT_IMPORT_ENCRYPTION_KEY = Buffer.alloc(32, 8).toString('base64');
+  delete process.env.STATEMENT_IMPORT_ASYNC;
   process.env.GIT_SHA = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
   delete process.env.PLAID_CLIENT_ID;
   delete process.env.PLAID_SECRET;
@@ -104,6 +106,17 @@ describe.sequential('production configuration', () => {
     expect(config.appDatabaseUrl).toContain('finverse_app');
     expect(config.trustedProxyHops).toBe(1);
     expect(config.passwordBreachCheck).toEqual({ mode: 'required' });
+  });
+
+  it('enables durable statement processing by default in production', () => {
+    productionBase();
+    expect(loadConfig().statementImportAsync).toBe(true);
+  });
+
+  it('refuses production when durable statement processing is disabled', () => {
+    productionBase();
+    process.env.STATEMENT_IMPORT_ASYNC = 'false';
+    expect(() => loadConfig()).toThrow(/STATEMENT_IMPORT_ASYNC=true/);
   });
 
   it('refuses the data-losing in-memory store', () => {

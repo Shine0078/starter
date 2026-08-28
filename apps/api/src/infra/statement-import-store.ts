@@ -1,6 +1,7 @@
 import type {
   StatementImport,
   StatementImportEvent,
+  StatementImportJob,
   StatementRowRecord,
 } from '../domain/statement-import/types';
 import type { ImportBatch, StatementImportStore } from '../ports';
@@ -10,6 +11,8 @@ interface StoredStatement extends StatementImport {
   encryptedSource: string | null;
   rows: StatementRowRecord[];
   events: StatementImportEvent[];
+  attempts: number;
+  processingStartedAt: string | null;
 }
 
 /** In-memory adapter used by contract tests and the local demo. */
@@ -38,8 +41,75 @@ export class InMemoryStatementImportStore implements StatementImportStore {
     }
     const created: StatementImportEvent = { id: `evt_${statement.id}_created`, importId: statement.id, rowId: null, kind: 'created', detail: { format: statement.format, rows: rows.length }, createdAt: statement.createdAt };
     const processed: StatementImportEvent = { id: `evt_${statement.id}_processed`, importId: statement.id, rowId: null, kind: 'processed', detail: { rows: rows.length }, createdAt: statement.processedAt ?? statement.createdAt };
-    bucket.push({ ...statement, encryptedSource, rows: rows.map(cloneRow), events: [created, processed] });
+    bucket.push({ ...statement, encryptedSource, rows: rows.map(cloneRow), events: [created, processed], attempts: 0, processingStartedAt: null });
     return { ...statement };
+  }
+
+  async enqueue(userId: string, statement: StatementImport, encryptedSource: string): Promise<StatementImport> {
+    const bucket = this.bucket(userId);
+    if (bucket.some((item) => item.accountId === statement.accountId && item.statementHash === statement.statementHash && item.status !== 'deleted')) {
+      throw new Error('STATEMENT_DUPLICATE');
+    }
+    const created: StatementImportEvent = { id: `evt_${statement.id}_created`, importId: statement.id, rowId: null, kind: 'created', detail: { format: statement.format, queued: true }, createdAt: statement.createdAt };
+    const stored: StoredStatement = {
+      ...statement,
+      encryptedSource,
+      rows: [],
+      events: [created],
+      attempts: 0,
+      processingStartedAt: null,
+    };
+    bucket.push(stored);
+    return strip(stored);
+  }
+
+  async claim(limit: number): Promise<StatementImportJob[]> {
+    const now = Date.now();
+    const stale = now - 5 * 60_000;
+    const candidates = [...this.byUser.entries()]
+      .flatMap(([userId, statements]) => statements.map((statement) => ({ userId, statement })))
+      .filter(({ statement }) =>
+        (statement.status === 'queued' && statement.encryptedSource !== null) ||
+        (statement.status === 'processing' && statement.processingStartedAt !== null && Date.parse(statement.processingStartedAt) < stale),
+      )
+      .sort((left, right) => left.statement.createdAt.localeCompare(right.statement.createdAt))
+      .slice(0, Math.max(1, Math.min(limit, 100)));
+    return candidates.map(({ userId, statement }) => {
+      statement.status = 'processing';
+      statement.processingStartedAt = new Date(now).toISOString();
+      statement.attempts += 1;
+      return { id: statement.id, userId, accountId: statement.accountId, attempts: statement.attempts };
+    });
+  }
+
+  async source(userId: string, importId: string): Promise<{ statement: StatementImport; encryptedSource: string } | null> {
+    const statement = this.find(userId, importId);
+    if (!statement || statement.status !== 'processing' || !statement.encryptedSource) return null;
+    return { statement: strip(statement), encryptedSource: statement.encryptedSource };
+  }
+
+  async completeProcessing(userId: string, importId: string, rows: readonly StatementRowRecord[], processedAt: string, event: StatementImportEvent): Promise<StatementImport | null> {
+    const statement = this.find(userId, importId);
+    if (!statement || statement.status !== 'processing') return null;
+    statement.rows = rows.map(cloneRow);
+    statement.status = 'ready';
+    statement.processedAt = processedAt;
+    statement.error = null;
+    statement.processingStartedAt = null;
+    recalculate(statement);
+    statement.events.push(cloneEvent(event));
+    return strip(statement);
+  }
+
+  async failProcessing(userId: string, importId: string, error: string, at: string, event: StatementImportEvent): Promise<boolean> {
+    const statement = this.find(userId, importId);
+    if (!statement || statement.status !== 'processing') return false;
+    statement.status = 'failed';
+    statement.error = error.slice(0, 500);
+    statement.processingStartedAt = null;
+    statement.processedAt = at;
+    statement.events.push(cloneEvent(event));
+    return true;
   }
 
   async updateRow(userId: string, importId: string, rowId: string, patch: Partial<StatementRowRecord>, event: StatementImportEvent): Promise<StatementRowRecord | null> {
@@ -83,6 +153,7 @@ export class InMemoryStatementImportStore implements StatementImportStore {
     if (!statement || statement.status !== 'ready') return null;
     if (this.transactions) await this.transactions.upsertMany(userId, _transactions);
     statement.status = 'approved';
+    statement.processingStartedAt = null;
     statement.approvedAt = event.createdAt;
     statement.events.push(cloneEvent(event));
     return strip(statement);
@@ -101,6 +172,7 @@ export class InMemoryStatementImportStore implements StatementImportStore {
     const statement = this.find(userId, id);
     if (!statement || statement.status === 'deleted') return false;
     statement.status = 'deleted';
+    statement.processingStartedAt = null;
     statement.sourceDeletedAt = at;
     statement.events.push(cloneEvent({ ...event, createdAt: at }));
     return true;

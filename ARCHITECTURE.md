@@ -47,6 +47,20 @@ domain logic -> ports -> PostgreSQL adapters
 - Manual statement rows remain staged until the user resolves uncertainty and
   approves them into the ledger.
 
+## Statement Processing
+
+In production, a statement upload stores its AES-GCM ciphertext and metadata as
+one `statement_imports` row with status `queued`. Migration `037` adds a bounded
+lease and attempt counter. API instances claim work through the narrow,
+`SECURITY DEFINER` function `finverse_claim_statement_imports(integer)` using
+`FOR UPDATE SKIP LOCKED`; it returns only routing identifiers. The worker then
+reads the ciphertext through `withUserScope`, decrypts and integrity-checks it,
+runs bounded local PDF/XLSX/OCR analysis, and atomically stores staged rows and
+the `processed` audit event. A five-minute stale lease is reclaimable after a
+crash. Parser failures become a user-scoped `failed` record and do not expose
+source content in logs. The client polls queued imports and cannot approve them
+until the server has produced reviewable rows.
+
 ## Deployment Paths
 
 - Local development can use volatile in-memory adapters.
@@ -58,4 +72,3 @@ domain logic -> ports -> PostgreSQL adapters
 See `docs/01-architecture.md`, `docs/03-security-privacy.md`, and the ADRs under
 `docs/adr` for detailed design history. Current code and migrations win when a
 historical ADR no longer describes all tables or adapters.
-

@@ -126,6 +126,12 @@ export async function provisionAppRole(pg: Pool, appDatabaseUrl: string): Promis
             app_role
           );
         END IF;
+        IF to_regprocedure('public.finverse_claim_statement_imports(integer)') IS NOT NULL THEN
+          EXECUTE format(
+            'GRANT EXECUTE ON FUNCTION public.finverse_claim_statement_imports(integer) TO %I',
+            app_role
+          );
+        END IF;
         IF to_regprocedure('public.finverse_is_split_member(text)') IS NOT NULL THEN
           EXECUTE format(
             'GRANT EXECUTE ON FUNCTION public.finverse_is_split_member(text) TO %I',

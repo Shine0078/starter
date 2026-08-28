@@ -73,6 +73,8 @@ export interface AppConfig {
   push: PushConfig;
   /** Optional production error sink. Disabled until a DSN is supplied. */
   crashReporting: CrashReportingConfig;
+  /** Durable statement analysis worker. Required for production uploads. */
+  statementImportAsync: boolean;
   /** Exact git SHA of the running image. Required in production so / and HTTP 200 cannot hide the wrong app. */
   releaseSha: string | null;
 }
@@ -571,6 +573,17 @@ function buildConfig(): AppConfig {
     }
   }
 
+  const statementImportAsyncRaw = process.env.STATEMENT_IMPORT_ASYNC;
+  if (statementImportAsyncRaw !== undefined && !['true', 'false'].includes(statementImportAsyncRaw)) {
+    throw new Error('STATEMENT_IMPORT_ASYNC must be true or false.');
+  }
+  const statementImportAsync = statementImportAsyncRaw === undefined
+    ? isProduction
+    : statementImportAsyncRaw === 'true';
+  if (isProduction && !statementImportAsync) {
+    throw new Error('Production requires STATEMENT_IMPORT_ASYNC=true for durable statement processing.');
+  }
+
   if (store === 'postgres' && !databaseUrl && !appDatabaseUrl) {
     throw new Error(
       'STORE=postgres requires DATABASE_APP_URL for runtime or DATABASE_URL for local migrations.',
@@ -654,6 +667,7 @@ function buildConfig(): AppConfig {
     passwordBreachCheck: resolvePasswordBreachCheck(isProduction),
     push: resolvePushConfig(),
     crashReporting: resolveCrashReportingConfig(),
+    statementImportAsync,
     releaseSha: resolveReleaseSha(isProduction),
   };
 }

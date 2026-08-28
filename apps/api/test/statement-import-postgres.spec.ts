@@ -97,5 +97,42 @@ if (!OWNER_URL) {
       expect((await store.get(ALICE, second.statement.id))?.status).toBe('ready');
       expect((await transactions.list(ALICE, { accountId: first.statement.accountId })).filter((txn) => txn.providerTxnId === 'manual-race')).toHaveLength(1);
     });
+
+    it('claims queued work through the restricted role and recovers a stale lease', async () => {
+      const queued = fixture();
+      queued.statement.id = 'stmt_queue';
+      queued.statement.statementHash = 'f'.repeat(64);
+      queued.statement.status = 'queued';
+      queued.statement.rowsTotal = 0;
+      queued.statement.rowsIncluded = 0;
+      queued.statement.processedAt = null;
+      queued.row.id = 'row_queue';
+      queued.row.importId = queued.statement.id;
+      await store.enqueue(ALICE, queued.statement, 'cipher-queued');
+
+      const [claimed] = await store.claim(1);
+      expect(claimed).toMatchObject({ id: queued.statement.id, userId: ALICE, accountId: queued.statement.accountId, attempts: 1 });
+      expect((await store.source(ALICE, queued.statement.id))?.encryptedSource).toBe('cipher-queued');
+
+      await owner.query(
+        `UPDATE statement_imports
+            SET processing_started_at = now() - interval '10 minutes'
+          WHERE user_id=$1 AND id=$2`,
+        [ALICE, queued.statement.id],
+      );
+      const [reclaimed] = await store.claim(1);
+      expect(reclaimed?.attempts).toBe(2);
+
+      const completed = await store.completeProcessing(
+        ALICE,
+        queued.statement.id,
+        [queued.row],
+        '2026-08-01T01:00:00.000Z',
+        { id: 'evt-processed-queue', importId: queued.statement.id, rowId: null, kind: 'processed', detail: { rows: 1 }, createdAt: '2026-08-01T01:00:00.000Z' },
+      );
+      expect(completed?.status).toBe('ready');
+      expect((await store.rows(ALICE, queued.statement.id))).toHaveLength(1);
+      expect((await store.claim(1))).toHaveLength(0);
+    });
   });
 }

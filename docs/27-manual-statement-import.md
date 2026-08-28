@@ -33,7 +33,9 @@ XLSX, text PDFs, and PNG/JPEG/WEBP/TIFF/BMP images up to 10 MiB.
 ## Review workflow
 
 1. `POST /api/imports/statements` with `accountId`, `filename`, `mimeType`, and
-   a base64 payload. The response contains staged rows and parser warnings.
+   a base64 payload. Development may return staged rows immediately. Production
+   returns `202` with a queued import; the mobile client polls the import until
+   the worker has produced rows.
 2. Review every row. Each row includes the source line, normalized date,
    signed minor-unit amount, currency, debit/credit direction, merchant,
    category, confidence, and flags such as `possible_duplicate`,
@@ -59,11 +61,20 @@ The mobile Transactions and Settings screens expose the same flow. The server
 remains authoritative, so a client cannot bypass review, isolation, or the
 approval transaction by sending a handcrafted request.
 
-## Operational limits
+## Durable processing and operational limits
 
 Image OCR and PDF text extraction are bounded, local processing steps. A PDF
 with no extractable text produces no guessed transactions and must be reviewed
-or converted by the user before approval. The current endpoint intentionally
-keeps the durable staged boundary and strict size/row limits; deployments with
-large-volume OCR should move the extraction call behind the existing durable
-job pattern before increasing those limits.
+or converted by the user before approval. In production, migration `037` turns
+the encrypted `statement_imports` row into a durable `queued`/`processing` job:
+the restricted runtime role claims work through
+`finverse_claim_statement_imports(integer)`, processes only inside the owning
+user's RLS scope, and recovers a stale lease after five minutes. The worker is
+bounded to 25 claims per pass and runs on every API instance; PostgreSQL
+`SKIP LOCKED` prevents duplicate processing across instances. A parser failure
+is recorded as `failed` without exposing source contents in logs.
+
+Production configuration defaults `STATEMENT_IMPORT_ASYNC=true` and refuses an
+explicit `false`. Local development can opt in with the same variable when a
+durable queue is desired. The 10 MiB source and 10,000-row limits remain in
+force until load testing demonstrates a larger safe envelope.

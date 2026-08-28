@@ -3,6 +3,7 @@ import type { Pool, PoolClient } from 'pg';
 import type {
   StatementImport,
   StatementImportEvent,
+  StatementImportJob,
   StatementRowRecord,
 } from '../../domain/statement-import/types';
 import type { ImportBatch, StatementImportStore } from '../../ports';
@@ -23,6 +24,13 @@ interface StatementDb {
   rows_excluded: number; rows_needs_review: number; created_at: Date;
   processed_at: Date | null; approved_at: Date | null; source_deleted_at: Date | null;
   error: string | null;
+}
+
+interface StatementJobDb {
+  id: string;
+  user_id: string;
+  account_id: string;
+  attempts: number;
 }
 
 const STATEMENT_COLUMNS = `id, account_id, filename, mime_type, format, statement_hash,
@@ -83,6 +91,94 @@ export class PostgresStatementImportStore implements StatementImportStore {
         kind: 'processed', detail: { rows: rows.length }, createdAt: statement.processedAt ?? statement.createdAt,
       });
       return statement;
+    });
+  }
+
+  async enqueue(userId: string, statement: StatementImport, encryptedSource: string): Promise<StatementImport> {
+    return withUserScope(this.pg, userId, async (client) => {
+      await ensureUser(client, userId);
+      try {
+        await client.query(`INSERT INTO statement_imports (
+          id, user_id, account_id, filename, mime_type, format, statement_hash,
+          status, rows_total, rows_included, rows_excluded, rows_needs_review,
+          created_at, encrypted_source, attempts, processing_started_at
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,'queued',0,0,0,0,$8,$9,0,NULL)`, [
+          statement.id, userId, statement.accountId, statement.filename, statement.mimeType,
+          statement.format, statement.statementHash, statement.createdAt, encryptedSource,
+        ]);
+      } catch (error) {
+        if ((error as { code?: string }).code === '23505') throw new Error('STATEMENT_DUPLICATE');
+        throw error;
+      }
+      await insertEvent(client, userId, {
+        id: `evt_${statement.id}_created`, importId: statement.id, rowId: null,
+        kind: 'created', detail: { format: statement.format, queued: true }, createdAt: statement.createdAt,
+      });
+      return statement;
+    });
+  }
+
+  async claim(limit: number): Promise<StatementImportJob[]> {
+    const { rows } = await this.pg.query<StatementJobDb>(
+      'SELECT id, user_id, account_id, attempts FROM finverse_claim_statement_imports($1)',
+      [limit],
+    );
+    return rows.map((row) => ({
+      id: row.id,
+      userId: row.user_id,
+      accountId: row.account_id,
+      attempts: row.attempts,
+    }));
+  }
+
+  async source(userId: string, importId: string): Promise<{ statement: StatementImport; encryptedSource: string } | null> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const { rows } = await client.query<StatementDb & { encrypted_source: string | null }>(
+        `SELECT ${STATEMENT_COLUMNS}, encrypted_source FROM statement_imports
+         WHERE user_id=$1 AND id=$2 AND status='processing' FOR UPDATE`,
+        [userId, importId],
+      );
+      const row = rows[0];
+      if (!row?.encrypted_source) return null;
+      return { statement: toStatement(row), encryptedSource: row.encrypted_source };
+    });
+  }
+
+  async completeProcessing(userId: string, importId: string, rows: readonly StatementRowRecord[], processedAt: string, event: StatementImportEvent): Promise<StatementImport | null> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const { rows: statements } = await client.query<StatementDb>(
+        `SELECT ${STATEMENT_COLUMNS} FROM statement_imports
+         WHERE user_id=$1 AND id=$2 FOR UPDATE`,
+        [userId, importId],
+      );
+      if (statements[0]?.status !== 'processing') return null;
+      await insertRows(client, userId, rows);
+      await refreshCounts(client, userId, importId);
+      const { rows: updated } = await client.query<StatementDb>(
+        `UPDATE statement_imports
+            SET status='ready', processed_at=$3, error=NULL,
+                processing_started_at=NULL
+          WHERE user_id=$1 AND id=$2 AND status='processing'
+        RETURNING ${STATEMENT_COLUMNS}`,
+        [userId, importId, processedAt],
+      );
+      await insertEvent(client, userId, event);
+      return updated[0] ? toStatement(updated[0]) : null;
+    });
+  }
+
+  async failProcessing(userId: string, importId: string, error: string, at: string, event: StatementImportEvent): Promise<boolean> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const result = await client.query(
+        `UPDATE statement_imports
+            SET status='failed', error=$3, processed_at=$4,
+                processing_started_at=NULL
+          WHERE user_id=$1 AND id=$2 AND status='processing'`,
+        [userId, importId, error.slice(0, 500), at],
+      );
+      if ((result.rowCount ?? 0) === 0) return false;
+      await insertEvent(client, userId, event);
+      return true;
     });
   }
 

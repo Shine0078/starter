@@ -21,9 +21,10 @@
   branch fixes parser bounds, release image identity, and split actor writes;
   backup scripts now require age encryption, while production key custody and
   the complete split invitation consent flow remain open.
-- **Statement processing durability:** PDF/OCR/XLSX analysis is bounded but runs
-  in the request lifecycle. A durable, observable background job model with
-  restart recovery and concurrency limits is not yet proven.
+- **Statement processing operations:** Production PDF/OCR/XLSX analysis now uses
+  the forced-RLS durable `queued`/`processing` workflow with stale-lease
+  recovery and bounded claims. External worker metrics, alerting, and realistic
+  OCR/load evidence are still not proven.
 - **Image-scan freshness:** Compose and CI now pin the reviewed image versions,
   but digest refreshes remain a deliberate maintenance task when upstream
   security releases arrive.

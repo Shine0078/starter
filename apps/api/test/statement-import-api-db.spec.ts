@@ -6,6 +6,11 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { appUrlFrom, OWNER_URL, startPgHarness, type PgHarness } from './pg-harness';
 import { closePool } from '../src/infra/postgres/pool';
+import { StatementImportWorker } from '../src/modules/imports/statement-import.worker';
+
+// Exercise the production request contract in a test process without starting
+// the worker's timer; the test invokes one deterministic drain below.
+process.env.STATEMENT_IMPORT_ASYNC = 'true';
 
 if (!OWNER_URL) {
   describe('manual statement import API on PostgreSQL', () => {
@@ -51,9 +56,14 @@ if (!OWNER_URL) {
       const token = registered.body.tokens.accessToken as string;
       const account = await request(http).post('/api/accounts/manual').set('Authorization', `Bearer ${token}`).send({ name: 'Statement account', type: 'checking', currency: 'USD', balanceCurrent: 0 }).expect(201);
       const csv = 'Date,Description,Amount\n2026-03-01,GROCERY MART,-12.50\n2026-03-02,RENT PAYMENT,-900.00';
-      const created = await request(http).post('/api/imports/statements').set('Authorization', `Bearer ${token}`).send({ accountId: account.body.id, filename: 'march.csv', mimeType: 'text/csv', contentBase64: Buffer.from(csv).toString('base64') }).expect(201);
+      const created = await request(http).post('/api/imports/statements').set('Authorization', `Bearer ${token}`).send({ accountId: account.body.id, filename: 'march.csv', mimeType: 'text/csv', contentBase64: Buffer.from(csv).toString('base64') }).expect(202);
       const importId = created.body.statement.id as string;
-      for (const row of created.body.rows as Array<{ id: string }>) {
+      expect(created.body.statement.status).toBe('queued');
+      expect(created.body.rows).toEqual([]);
+      await app.get(StatementImportWorker).runOnce();
+      const processed = await request(http).get(`/api/imports/statements/${importId}`).set('Authorization', `Bearer ${token}`).expect(200);
+      expect(processed.body.statement.status).toBe('ready');
+      for (const row of processed.body.rows as Array<{ id: string }>) {
         await request(http).patch(`/api/imports/statements/${importId}/rows/${row.id}`).set('Authorization', `Bearer ${token}`).send({ categorySlug: 'groceries', decision: 'include' }).expect(200);
       }
       const approved = await request(http).post(`/api/imports/statements/${importId}/approve`).set('Authorization', `Bearer ${token}`).expect(201);

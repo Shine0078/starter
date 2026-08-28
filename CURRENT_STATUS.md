@@ -4,7 +4,8 @@
 **Integration branch:** `codex/passkey-webauthn-p0` at its latest verified local
 state, including the statement-upload, light-theme, release-identity,
 parser-bound, split-authorization, duplicate-race, supply-chain, light-only
-cleanup, encrypted-backup, and direct-membership-RLS milestones.
+cleanup, encrypted-backup, durable-statement-worker, and direct-membership-RLS
+milestones.
 **Protected main observed:** `a21b3749164561db75f13f89cd3e9d9f7da07109`.
 
 ## Verified Today
@@ -27,6 +28,9 @@ cleanup, encrypted-backup, and direct-membership-RLS milestones.
 - Manual statement focused tests on the integration branch: extraction,
   summaries, encryption, and authenticated review flow passed after correcting
   a local generated dependency link.
+- Durable statement queue tests passed under both in-memory and PostgreSQL
+  restricted-role paths, including stale-lease recovery and the production
+  `202` upload contract.
 - Split authorization tests passed under both in-memory and PostgreSQL forced
   RLS: non-admin membership writes, forged payer attribution, and all direct
   membership deletes are rejected.
@@ -42,8 +46,9 @@ cleanup, encrypted-backup, and direct-membership-RLS milestones.
 ## Integrated But Not Yet On Main
 
 - Encrypted manual statement import and review workflow.
-- Statement import database migrations `031` and `032`, plus split membership
-  command policies in `034` and the direct-delete hold in `036`.
+- Statement import database migrations `031`, `032`, and durable queue migration
+  `037`, plus split membership command policies in `034` and the direct-delete
+  hold in `036`.
 - First-use account creation from the statement picker.
 - Light-only Flutter theme.
 - Additional operations, provider, device, incident, and privacy documentation.
@@ -68,9 +73,9 @@ cleanup, encrypted-backup, and direct-membership-RLS milestones.
   and revocation still need a complete product flow. Backup scripts
   now fail closed without age encryption, but production key custody is not
   locally verifiable.
-- Manual document analysis currently runs in the request lifecycle; durable
-  background processing, crash recovery, and production load evidence remain to
-  be established.
+- Manual document analysis now has a durable, forced-RLS queue with stale-lease
+  recovery and bounded workers. Production OCR/load evidence and external
+  queue/worker observability remain to be established.
 - Plaid production access, live SMTP delivery, Stripe production configuration,
   domain association, signing, physical-device testing, cloud IAM, encrypted
   off-host backups, and disaster-recovery evidence require owner or external
