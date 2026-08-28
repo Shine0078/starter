@@ -25,6 +25,8 @@ authoritative detail; `CURRENT_STATUS.md` records current gates and blockers.
   includes the verified `d0af44d` supply-chain milestone.
 - Split membership changes are admin-only, split expenses can only name the
   authenticated actor as payer, and PostgreSQL forced-RLS enforces both rules.
+- Command-specific split membership RLS policies prevent direct cross-member
+  deletion, and a trigger protects the creator membership from deletion.
 - Backup scripts restrict local archive permissions and remove temporary dump
   files after compression; they now require age encryption before an archive is
   durable, and restore drills decrypt only into temporary files.
@@ -34,7 +36,7 @@ authoritative detail; `CURRENT_STATUS.md` records current gates and blockers.
 
 ### Verified
 
-- Integration branch: API typecheck, 873 in-memory tests, 1,050 PostgreSQL
+- Integration branch: API typecheck, 873 in-memory tests, 1,052 PostgreSQL
   tests, Flutter tests, Flutter web release build, Android release APK build,
   and migration verification all pass.
 - Integration branch: Flutter analysis and focused statement extraction,
