@@ -9,10 +9,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finverse/design/design.dart';
 
-Widget host(Widget child, {Brightness brightness = Brightness.light}) =>
-    MaterialApp(
-      theme:
-          brightness == Brightness.light ? FinTheme.light() : FinTheme.dark(),
+Widget host(Widget child) => MaterialApp(
+      theme: FinTheme.light(),
       home: Scaffold(body: Center(child: child)),
     );
 
@@ -215,21 +213,21 @@ void main() {
   });
 
   group('theme', () {
-    testWidgets('supplies the financial palette in both modes', (tester) async {
-      for (final brightness in Brightness.values) {
-        late FinColors fin;
-        await tester.pumpWidget(host(
-          Builder(builder: (context) {
-            fin = context.finColors;
-            return const SizedBox();
-          }),
-          brightness: brightness,
-        ));
+    testWidgets('supplies the financial palette on the white theme',
+        (tester) async {
+      late FinColors fin;
+      late ThemeData theme;
+      await tester.pumpWidget(host(
+        Builder(builder: (context) {
+          fin = context.finColors;
+          theme = Theme.of(context);
+          return const SizedBox();
+        }),
+      ));
 
-        // Income and expense must never resolve to the same colour, whichever
-        // mode the phone is in.
-        expect(fin.income, isNot(fin.expense));
-      }
+      expect(fin.income, isNot(fin.expense));
+      expect(theme.brightness, Brightness.light);
+      expect(theme.scaffoldBackgroundColor, Colors.white);
     });
 
     testWidgets('gives every button a reachable tap target', (tester) async {

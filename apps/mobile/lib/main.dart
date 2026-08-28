@@ -38,7 +38,8 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
-    unawaited(CrashLog.record(details.exception, stackTrace: details.stack, context: 'flutter'));
+    unawaited(CrashLog.record(details.exception,
+        stackTrace: details.stack, context: 'flutter'));
   };
   PlatformDispatcher.instance.onError = (error, stack) {
     unawaited(CrashLog.record(error, stackTrace: stack, context: 'platform'));
@@ -47,13 +48,11 @@ Future<void> main() async {
   await configureBackgroundSync();
   final localeController = LocaleController();
   final themeColorController = ThemeColorController();
-  final themeModeController = ThemeModeController();
   final dashboardLayoutController = DashboardLayoutController();
   runApp(FinverseApp(
     api: ApiClient(offlineCache: createOfflineCache()),
     localeController: localeController,
     themeColorController: themeColorController,
-    themeModeController: themeModeController,
     dashboardLayoutController: dashboardLayoutController,
     onboardingStore: SecureOnboardingStore(),
     appLockController: AppLockController(
@@ -66,7 +65,6 @@ Future<void> main() async {
   // from a temporarily unavailable platform preference store.
   unawaited(localeController.restore());
   unawaited(themeColorController.restore());
-  unawaited(themeModeController.restore());
   unawaited(dashboardLayoutController.restore());
 }
 
@@ -77,17 +75,14 @@ class FinverseApp extends StatelessWidget {
     AppLockController? appLockController,
     LocaleController? localeController,
     ThemeColorController? themeColorController,
-    ThemeModeController? themeModeController,
     DashboardLayoutController? dashboardLayoutController,
     super.key,
   })  : onboardingStore = onboardingStore ?? CompletedOnboardingStore(),
         localeController = localeController ?? LocaleController.inMemory(),
         themeColorController =
             themeColorController ?? ThemeColorController.inMemory(),
-        themeModeController =
-            themeModeController ?? ThemeModeController.inMemory(),
-        dashboardLayoutController = dashboardLayoutController ??
-            DashboardLayoutController.inMemory(),
+        dashboardLayoutController =
+            dashboardLayoutController ?? DashboardLayoutController.inMemory(),
         appLockController = appLockController ??
             AppLockController(
               store: InMemoryAppLockStore(),
@@ -99,7 +94,6 @@ class FinverseApp extends StatelessWidget {
   final AppLockController appLockController;
   final LocaleController localeController;
   final ThemeColorController themeColorController;
-  final ThemeModeController themeModeController;
   final DashboardLayoutController dashboardLayoutController;
 
   @override
@@ -109,40 +103,32 @@ class FinverseApp extends StatelessWidget {
       builder: (context, _) => ListenableBuilder(
         listenable: themeColorController,
         builder: (context, _) => ListenableBuilder(
-          listenable: themeModeController,
-          builder: (context, _) => ListenableBuilder(
-            listenable: dashboardLayoutController,
-            builder: (context, _) => MaterialApp(
-              title: 'FINVERSE',
-              debugShowCheckedModeBanner: false,
-              theme: FinTheme.light(themeColorController.color),
-              darkTheme: FinTheme.dark(themeColorController.color),
-              // Follow the OS. A finance app opened at night should not flashbang you.
-              themeMode: themeModeController.mode,
-              locale: localeController.locale,
-              localizationsDelegates: [
-                ...GlobalMaterialLocalizations.delegates,
-                AppLocalizations.delegate,
-              ],
-              supportedLocales: AppLocalizations.supportedLocales,
-              builder: (context, child) => LocaleControllerScope(
-                controller: localeController,
-                child: ThemeColorControllerScope(
-                  controller: themeColorController,
-                  child: ThemeModeControllerScope(
-                    controller: themeModeController,
-                    child: DashboardLayoutControllerScope(
-                      controller: dashboardLayoutController,
-                      child: child ?? const SizedBox.shrink(),
-                    ),
-                  ),
+          listenable: dashboardLayoutController,
+          builder: (context, _) => MaterialApp(
+            title: 'FINVERSE',
+            debugShowCheckedModeBanner: false,
+            theme: FinTheme.light(themeColorController.color),
+            themeMode: ThemeMode.light,
+            locale: localeController.locale,
+            localizationsDelegates: [
+              ...GlobalMaterialLocalizations.delegates,
+              AppLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            builder: (context, child) => LocaleControllerScope(
+              controller: localeController,
+              child: ThemeColorControllerScope(
+                controller: themeColorController,
+                child: DashboardLayoutControllerScope(
+                  controller: dashboardLayoutController,
+                  child: child ?? const SizedBox.shrink(),
                 ),
               ),
-              home: OnboardingGate(
-                api: api,
-                store: onboardingStore,
-                appLockController: appLockController,
-              ),
+            ),
+            home: OnboardingGate(
+              api: api,
+              store: onboardingStore,
+              appLockController: appLockController,
             ),
           ),
         ),

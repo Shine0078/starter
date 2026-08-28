@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -153,7 +153,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-
   Future<List<String>?> _askPasskeyStepUp() async {
     final l10n = AppLocalizations.of(context);
     var password = '';
@@ -305,9 +304,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : TextButton(
-                    onPressed: !_passkeysAvailable || !supported
-                        ? null
-                        : _addPasskey,
+                    onPressed:
+                        !_passkeysAvailable || !supported ? null : _addPasskey,
                     child: Text(l10n.settingsPasskeysAdd),
                   ),
           ),
@@ -985,7 +983,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final l10n = AppLocalizations.of(context);
     final localeController = LocaleControllerScope.maybeOf(context);
     final themeColorController = ThemeColorControllerScope.maybeOf(context);
-    final themeModeController = ThemeModeControllerScope.maybeOf(context);
     final dashboardLayout = DashboardLayoutControllerScope.maybeOf(context);
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
@@ -1008,7 +1005,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 SwitchListTile(
                   title: Text(l10n.dashboardCardMonthlySummary),
-                  value: dashboardLayout.isVisible(DashboardCard.monthlySummary),
+                  value:
+                      dashboardLayout.isVisible(DashboardCard.monthlySummary),
                   onChanged: (value) => dashboardLayout.setVisible(
                       DashboardCard.monthlySummary, value),
                 ),
@@ -1093,34 +1091,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ),
                 ),
-              if (themeModeController != null) ...[
-                SwitchListTile.adaptive(
-                  secondary: Icon(themeModeController.mode == ThemeMode.dark
-                      ? Icons.dark_mode_outlined
-                      : Icons.light_mode_outlined),
-                  title: Text(l10n.settingsDarkModeTitle),
-                  subtitle: Text(switch (themeModeController.mode) {
-                    ThemeMode.dark => l10n.settingsDarkModeOn,
-                    ThemeMode.light => l10n.settingsDarkModeOff,
-                    ThemeMode.system => l10n.settingsDarkModeSystem,
-                  }),
-                  value: themeModeController.mode == ThemeMode.dark ||
-                      (themeModeController.mode == ThemeMode.system &&
-                          Theme.of(context).brightness == Brightness.dark),
-                  onChanged: (enabled) => unawaited(themeModeController
-                      .select(enabled ? ThemeMode.dark : ThemeMode.light)),
-                ),
-                if (themeModeController.mode != ThemeMode.system)
-                  Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: TextButton.icon(
-                      onPressed: () => unawaited(
-                          themeModeController.select(ThemeMode.system)),
-                      icon: const Icon(Icons.settings_suggest_outlined),
-                      label: Text(l10n.settingsDarkModeUseDevice),
-                    ),
-                  ),
-              ],
               ListTile(
                 leading: const Icon(Icons.notifications_outlined),
                 title: const Text('Notification preferences'),
