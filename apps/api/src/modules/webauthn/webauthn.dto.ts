@@ -14,10 +14,12 @@ const BASE64URL = /^[A-Za-z0-9_-]+={0,2}$/;
 export class RegistrationResponseDto {
   @Matches(BASE64URL)
   @IsString()
+  @Length(1, 4_096)
   clientDataJSON!: string;
 
   @Matches(BASE64URL)
   @IsString()
+  @Length(1, 32_768)
   attestationObject!: string;
 }
 
@@ -55,14 +57,17 @@ export class LoginOptionsDto {
 export class LoginResponseDto {
   @Matches(BASE64URL)
   @IsString()
+  @Length(1, 4_096)
   clientDataJSON!: string;
 
   @Matches(BASE64URL)
   @IsString()
+  @Length(1, 2_048)
   authenticatorData!: string;
 
   @Matches(BASE64URL)
   @IsString()
+  @Length(1, 1_024)
   signature!: string;
 }
 
