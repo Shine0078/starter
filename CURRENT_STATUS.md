@@ -26,6 +26,9 @@ authorization milestones.
 - Backup scripts now apply owner-only directory/archive permissions and clean up
   temporary plaintext dump files on exit; archive encryption is still an
   external storage/key-management requirement.
+- Public and Oracle edge images are pinned to immutable Caddy/Nginx digests;
+  the public container scan is blocking and the release gate requires both the
+  CI and Container scan workflows for the exact candidate SHA.
 - `npm audit --omit=dev` reported zero known production vulnerabilities for both
   current `main` and the integration branch.
 

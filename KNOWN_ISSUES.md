@@ -17,6 +17,9 @@
 - **Statement processing durability:** PDF/OCR/XLSX analysis is bounded but runs
   in the request lifecycle. A durable, observable background job model with
   restart recovery and concurrency limits is not yet proven.
+- **Image-scan freshness:** Compose and CI now pin the reviewed image versions,
+  but digest refreshes remain a deliberate maintenance task when upstream
+  security releases arrive.
 
 ## External Or Owner Blockers
 

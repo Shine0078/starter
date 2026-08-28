@@ -56,7 +56,7 @@ jobs:
           scan-type: image
           image-ref: finverse-public:scan
           format: table
-          exit-code: '0'
+          exit-code: '1'
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           version: v0.74.0

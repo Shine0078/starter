@@ -2,7 +2,7 @@ name: Release artifacts
 
 on:
   workflow_run:
-    workflows: ["CI"]
+    workflows: ["CI", "Container scan"]
     types: [completed]
   workflow_dispatch:
     inputs:
@@ -54,8 +54,11 @@ jobs:
             SHA="$MANUAL_SHA"
           fi
           test "${#SHA}" -eq 40
-          MATCH=$(gh api "repos/${REPO}/actions/runs?head_sha=${SHA}&status=completed&per_page=30" --jq '.workflow_runs | map(select(.name=="CI" and .conclusion=="success" and .head_sha=="'"$SHA"'" and (.head_branch=="main" or .head_branch=="master") and .head_repository.full_name=="'"$REPO"'")) | length')
-          test "$MATCH" -gt 0
+          RUNS=$(gh api "repos/${REPO}/actions/runs?head_sha=${SHA}&status=completed&per_page=100")
+          CI_MATCH=$(printf '%s' "$RUNS" | jq '[.workflow_runs[] | select(.name=="CI" and .conclusion=="success" and .head_sha=="'"$SHA"'" and (.head_branch=="main" or .head_branch=="master") and .head_repository.full_name=="'"$REPO"'")] | length')
+          SCAN_MATCH=$(printf '%s' "$RUNS" | jq '[.workflow_runs[] | select(.name=="Container scan" and .conclusion=="success" and .head_sha=="'"$SHA"'" and (.head_branch=="main" or .head_branch=="master") and .head_repository.full_name=="'"$REPO"'")] | length')
+          test "$CI_MATCH" -gt 0
+          test "$SCAN_MATCH" -gt 0
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
           echo "Releasing verified SHA $SHA"
 
@@ -100,6 +103,7 @@ jobs:
           ref: ${{ needs.gate.outputs.sha }}
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
+          flutter-version: '3.44.9'
           channel: stable
           cache: true
       - working-directory: apps/mobile
@@ -150,6 +154,7 @@ jobs:
           ref: ${{ needs.gate.outputs.sha }}
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
+          flutter-version: '3.44.9'
           channel: stable
           cache: true
       - working-directory: apps/mobile

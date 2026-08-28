@@ -24,6 +24,9 @@ authoritative detail; `CURRENT_STATUS.md` records current gates and blockers.
   authenticated actor as payer, and PostgreSQL forced-RLS enforces both rules.
 - Backup scripts restrict local archive permissions and remove temporary dump
   files after compression.
+- Public edge images are digest-pinned, and release publication now requires a
+  successful blocking Container scan in addition to the exact-SHA CI run.
+- Flutter CI/release builds pin the toolchain to Flutter 3.44.9.
 
 ### Verified
 
