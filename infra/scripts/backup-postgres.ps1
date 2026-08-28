@@ -57,10 +57,16 @@ try {
 
 if ($runningOnWindows) {
   & icacls $archive /inheritance:r /grant:r "${identity}:F" | Out-Null
-  if ($LASTEXITCODE -ne 0) { throw 'Could not restrict backup archive ACLs.' }
+  if ($LASTEXITCODE -ne 0) {
+    Remove-Item -LiteralPath $archive -Force -ErrorAction SilentlyContinue
+    throw 'Could not restrict backup archive ACLs; archive removed.'
+  }
 } elseif (Get-Command chmod -ErrorAction SilentlyContinue) {
   & chmod 600 $archive
-  if ($LASTEXITCODE -ne 0) { throw 'Could not restrict backup archive permissions.' }
+  if ($LASTEXITCODE -ne 0) {
+    Remove-Item -LiteralPath $archive -Force -ErrorAction SilentlyContinue
+    throw 'Could not restrict backup archive permissions; archive removed.'
+  }
 }
 
 $archiveBytes = [System.IO.File]::ReadAllBytes($archive)
