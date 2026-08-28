@@ -2,10 +2,9 @@
 
 **Verified:** 2026-08-28  
 **Integration branch:** `codex/passkey-webauthn-p0` at its latest verified local
-state, including the
-statement-upload, light-theme, release-identity, parser-bound, split-
-  authorization, duplicate-race, supply-chain, and light-only cleanup
-  milestones.
+state, including the statement-upload, light-theme, release-identity,
+parser-bound, split-authorization, duplicate-race, supply-chain, and light-only
+cleanup milestones.
 **Protected main observed:** `a21b3749164561db75f13f89cd3e9d9f7da07109`.
 
 ## Verified Today
