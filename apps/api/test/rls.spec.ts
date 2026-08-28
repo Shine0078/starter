@@ -331,7 +331,9 @@ if (!OWNER_URL) {
            AND proname IN (
              'finverse_link_owner',
              'finverse_claim_bank_webhooks',
+             'finverse_is_split_admin',
              'finverse_is_split_member',
+             'finverse_is_split_creator',
              'finverse_subscription_owner',
              'finverse_webauthn_credential_owner'
            )
@@ -339,6 +341,8 @@ if (!OWNER_URL) {
       `, [role]);
       expect(rows.map((row) => row.fn)).toEqual([
         'finverse_claim_bank_webhooks',
+        'finverse_is_split_admin',
+        'finverse_is_split_creator',
         'finverse_is_split_member',
         'finverse_link_owner',
         'finverse_subscription_owner',

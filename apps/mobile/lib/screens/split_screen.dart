@@ -278,13 +278,11 @@ class _SplitGroupDetailScreenState extends State<SplitGroupDetailScreen> {
     final description = TextEditingController();
     final amount = TextEditingController();
     final members = _detail?.members ?? const <SplitMember>[];
-    String paidBy = members.isNotEmpty ? members.first.userId : '';
     String method = 'equal';
     final shareControllers = {
       for (final m in members) m.userId: TextEditingController()
     };
-    final submitted = await showDialog<
-        (String, String, String, String, Map<String, String>)?>(
+    final submitted = await showDialog<(String, String, String, Map<String, String>)?>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(l10n.splitAddExpenseTitle),
@@ -312,19 +310,6 @@ class _SplitGroupDetailScreenState extends State<SplitGroupDetailScreen> {
             const SizedBox(height: 12),
             StatefulBuilder(
                 builder: (context, setDialogState) => Column(children: [
-                      DropdownButtonFormField<String>(
-                          initialValue: paidBy,
-                          decoration: InputDecoration(
-                              labelText: l10n.splitPaidByLabel,
-                              border: const OutlineInputBorder()),
-                          items: members
-                              .map((m) => DropdownMenuItem(
-                                  value: m.userId,
-                                  child: Text(m.email ?? m.userId)))
-                              .toList(),
-                          onChanged: (v) =>
-                              setDialogState(() => paidBy = v ?? paidBy)),
-                      const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
                           initialValue: method,
                           decoration: InputDecoration(
@@ -370,7 +355,6 @@ class _SplitGroupDetailScreenState extends State<SplitGroupDetailScreen> {
               Navigator.of(dialogContext).pop((
                 description.text.trim(),
                 amount.text.trim(),
-                paidBy,
                 method,
                 shares
               ));
@@ -390,8 +374,8 @@ class _SplitGroupDetailScreenState extends State<SplitGroupDetailScreen> {
     if (submitted.$1.isEmpty || major == null || major <= 0) return;
     final minor = (major * 100).round();
     final shares = <String, int>{};
-    if (submitted.$4 == 'shares') {
-      for (final entry in submitted.$5.entries) {
+    if (submitted.$3 == 'shares') {
+      for (final entry in submitted.$4.entries) {
         final value = double.tryParse(entry.value);
         if (value == null || value <= 0) return;
         shares[entry.key] = (value * 100).round();
@@ -403,9 +387,8 @@ class _SplitGroupDetailScreenState extends State<SplitGroupDetailScreen> {
         widget.groupId,
         description: submitted.$1,
         amount: minor,
-        paidByUserId: submitted.$3,
-        splitMethod: submitted.$4,
-        shares: submitted.$4 == 'shares' ? shares : null,
+        splitMethod: submitted.$3,
+        shares: submitted.$3 == 'shares' ? shares : null,
       );
       await _load();
     } catch (error) {
@@ -579,6 +562,8 @@ class _SplitGroupDetailScreenState extends State<SplitGroupDetailScreen> {
       );
     }
     final detail = _detail!;
+    final canManageMembers = detail.members.any((member) =>
+        member.userId == widget.api.sessionUserId && member.role == 'admin');
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
       children: [
@@ -588,10 +573,12 @@ class _SplitGroupDetailScreenState extends State<SplitGroupDetailScreen> {
               ListTile(
                 leading: const Icon(Icons.people_outline),
                 title: Text(l10n.splitMembersHeading),
-                trailing: TextButton(
-                  onPressed: _addMember,
-                  child: Text(l10n.splitAddMemberAction),
-                ),
+                trailing: canManageMembers
+                    ? TextButton(
+                        onPressed: _addMember,
+                        child: Text(l10n.splitAddMemberAction),
+                      )
+                    : null,
               ),
               ...detail.members.map(
                 (member) => ListTile(

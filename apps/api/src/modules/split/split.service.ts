@@ -85,16 +85,18 @@ export class SplitService {
     groupId: string,
     input: AddSplitMemberInput,
   ): Promise<SplitGroupMember> {
-    await this.assertMember(userId, groupId);
+    await this.assertAdmin(userId, groupId);
     const email = input.email?.trim().toLowerCase();
     if (!email) throw new BadRequestException('email is required.');
     const invitee = await this.users.findByEmail(email);
     if (!invitee) {
-      throw new NotFoundException('No FINVERSE account found for that email.');
+      // Keep account presence private to authenticated group administrators.
+      // A caller cannot use this endpoint as an email-enumeration oracle.
+      throw new BadRequestException('Unable to add that account.');
     }
     const existing = await this.splits.listMembers(userId, groupId);
     if (existing.some((member) => member.userId === invitee.id)) {
-      throw new BadRequestException('That user is already a member.');
+      throw new BadRequestException('Unable to add that account.');
     }
     return this.splits.addMember(userId, {
       groupId,
@@ -123,8 +125,8 @@ export class SplitService {
     const memberIds = new Set(members.map((member) => member.userId));
 
     const paidByUserId = input.paidByUserId ?? userId;
-    if (!memberIds.has(paidByUserId)) {
-      throw new BadRequestException('paidByUserId must be a group member.');
+    if (paidByUserId !== userId) {
+      throw new ForbiddenException('Only the authenticated member can claim payment.');
     }
 
     const splitMethod = input.splitMethod ?? 'equal';
@@ -237,6 +239,15 @@ export class SplitService {
   private async assertMember(userId: string, groupId: string): Promise<SplitGroup> {
     const group = await this.splits.getGroup(userId, groupId);
     if (!group) throw new NotFoundException('Group not found.');
+    return group;
+  }
+
+  private async assertAdmin(userId: string, groupId: string): Promise<SplitGroup> {
+    const group = await this.assertMember(userId, groupId);
+    const members = await this.splits.listMembers(userId, groupId);
+    if (!members.some((member) => member.userId === userId && member.role === 'admin')) {
+      throw new ForbiddenException('Only a group administrator can add members.');
+    }
     return group;
   }
 

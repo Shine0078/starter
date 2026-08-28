@@ -75,7 +75,23 @@ describe('split service (in-memory)', () => {
     const group = await service.createGroup('split_alice', { name: 'Trip' });
     await expect(
       service.addMember('split_alice', group.id, { email: 'nobody@example.com' }),
-    ).rejects.toThrow(/No FINVERSE account/);
+    ).rejects.toThrow(/Unable to add that account/);
+  });
+
+  it('restricts membership changes to admins and payer attribution to the actor', async () => {
+    const group = await service.createGroup('split_alice', { name: 'Trip' });
+    await service.addMember('split_alice', group.id, { email: 'bob@example.com' });
+
+    await expect(
+      service.addMember('split_bob', group.id, { email: 'mallory@example.com' }),
+    ).rejects.toThrow(/administrator/);
+    await expect(
+      service.addExpense('split_bob', group.id, {
+        description: 'Forged payer',
+        amount: 100,
+        paidByUserId: 'split_alice',
+      }),
+    ).rejects.toThrow(/authenticated member/);
   });
 
   it('keeps non-members out of a group', async () => {
@@ -219,6 +235,52 @@ if (TEST_DATABASE_URL) {
       expect(settlements).toHaveLength(1);
       expect(settlements[0]?.amount).toBe(2_000);
       expect(await store.listExpenses('split_mallory', 'pg-group-3')).toHaveLength(0);
+    });
+
+    it('blocks non-admin membership writes and forged payer attribution under forced RLS', async () => {
+      await store.createGroup(
+        'split_alice',
+        {
+          id: 'pg-group-4',
+          name: 'Authorization',
+          currency: 'USD',
+          createdBy: 'split_alice',
+          createdAt: '2026-08-10',
+          archivedAt: null,
+        },
+        { groupId: 'pg-group-4', userId: 'split_alice', role: 'admin', joinedAt: '2026-08-10T00:00:00.000Z' },
+      );
+      await store.addMember('split_alice', {
+        groupId: 'pg-group-4',
+        userId: 'split_bob',
+        role: 'member',
+        joinedAt: '2026-08-10T00:00:00.000Z',
+      });
+
+      await expect(
+        store.addMember('split_bob', {
+          groupId: 'pg-group-4',
+          userId: 'split_mallory',
+          role: 'member',
+          joinedAt: '2026-08-10T00:00:00.000Z',
+        }),
+      ).rejects.toThrow();
+
+      await expect(
+        store.addExpense('split_bob', {
+          id: 'pg-expense-forged',
+          groupId: 'pg-group-4',
+          description: 'Forged payer',
+          category: 'other',
+          amount: 100,
+          currency: 'USD',
+          paidByUserId: 'split_alice',
+          splitMethod: 'equal',
+          date: '2026-08-10',
+          createdAt: '2026-08-10T12:00:00.000Z',
+          participants: [{ expenseId: 'pg-expense-forged', userId: 'split_bob', amount: 100 }],
+        }),
+      ).rejects.toThrow();
     });
   });
 } else {
