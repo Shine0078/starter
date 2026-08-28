@@ -47,6 +47,145 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
     }
   }
 
+  Future<void> _chooseStatement() async {
+    if (_working) return;
+    if (_accounts.isEmpty) {
+      final account = await _addManualAccount();
+      if (!mounted || account == null) return;
+      setState(() => _accountId = account.id);
+    }
+    await _pickAndAnalyze();
+  }
+
+  Future<Account?> _addManualAccount() async {
+    var name = '';
+    var balanceText = '0';
+    var currency = 'USD';
+    var type = 'checking';
+    final submitted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Add account for this statement'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  autofocus: true,
+                  onChanged: (value) => name = value,
+                  decoration: const InputDecoration(
+                    labelText: 'Account name',
+                    hintText: 'e.g. Main checking',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: type,
+                  decoration: const InputDecoration(
+                    labelText: 'Account type',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                        value: 'checking', child: Text('Checking')),
+                    DropdownMenuItem(value: 'savings', child: Text('Savings')),
+                    DropdownMenuItem(value: 'cash', child: Text('Cash')),
+                    DropdownMenuItem(
+                        value: 'investment', child: Text('Investment')),
+                    DropdownMenuItem(
+                        value: 'property', child: Text('Property')),
+                    DropdownMenuItem(value: 'loan', child: Text('Loan')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) setDialogState(() => type = value);
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  initialValue: balanceText,
+                  onChanged: (value) => balanceText = value,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Current balance',
+                    hintText: '0.00',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  initialValue: currency,
+                  onChanged: (value) => currency = value,
+                  textCapitalization: TextCapitalization.characters,
+                  maxLength: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Currency',
+                    hintText: 'USD',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Add account'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    name = name.trim();
+    currency = currency.trim().toUpperCase();
+    final balance = _minorUnits(balanceText);
+    if (submitted != true || !mounted) return null;
+    if (name.isEmpty ||
+        !RegExp(r'^[A-Z]{3}$').hasMatch(currency) ||
+        balance == null) {
+      _showMessage(
+          'Enter an account name, a three-letter currency, and a valid balance.');
+      return null;
+    }
+
+    setState(() {
+      _working = true;
+      _error = null;
+    });
+    try {
+      final account = await widget.api.createManualAccount(
+        name: name,
+        type: type,
+        currency: currency,
+        balanceCurrent: type == 'loan' ? -balance : balance,
+      );
+      await _loadAccounts();
+      if (mounted) setState(() => _accountId = account.id);
+      return account;
+    } catch (error) {
+      if (mounted) _showError(error);
+      return null;
+    } finally {
+      if (mounted) setState(() => _working = false);
+    }
+  }
+
+  int? _minorUnits(String input) {
+    final match = RegExp(r'^(\d+)(?:\.(\d{1,2}))?$').firstMatch(input.trim());
+    if (match == null) return null;
+    final whole = int.tryParse(match.group(1)!);
+    final cents = int.tryParse((match.group(2) ?? '').padRight(2, '0')) ?? 0;
+    if (whole == null) return null;
+    return whole * 100 + cents;
+  }
+
   Future<void> _openExisting(StatementImport item) async {
     setState(() {
       _working = true;
@@ -422,12 +561,28 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
                   onChanged: _working
                       ? null
                       : (value) => setState(() => _accountId = value)),
+              if (_accounts.isEmpty) ...[
+                const SizedBox(height: 10),
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.account_balance_wallet_outlined),
+                    title: const Text('Add an account first'),
+                    subtitle: const Text(
+                        'Create a checking, savings, investment, property, cash, or loan account for this statement.'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: _working ? null : _addManualAccount,
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               FilledButton.icon(
-                  onPressed:
-                      _working || _accountId == null ? null : _pickAndAnalyze,
+                  onPressed: _working ? null : _chooseStatement,
                   icon: const Icon(Icons.upload_file),
-                  label: Text(_working ? 'Processing…' : 'Choose statement')),
+                  label: Text(_working
+                      ? 'Processing…'
+                      : _accounts.isEmpty
+                          ? 'Add account and choose statement'
+                          : 'Choose statement')),
               if (_error != null)
                 Padding(
                     padding: const EdgeInsets.only(top: 12),

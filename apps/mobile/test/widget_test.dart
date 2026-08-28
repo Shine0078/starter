@@ -30,6 +30,7 @@ import 'package:finverse/screens/help_support_screen.dart';
 import 'package:finverse/screens/login_screen.dart';
 import 'package:finverse/screens/plan_screen.dart';
 import 'package:finverse/screens/split_screen.dart';
+import 'package:finverse/screens/statement_import_screen.dart';
 import 'package:finverse/screens/transaction_detail_screen.dart';
 import 'package:finverse/widgets/budget_tile.dart';
 import 'package:finverse/widgets/health_score_card.dart';
@@ -47,6 +48,10 @@ ApiClient clientWith(MockClient http,
       baseUrl: 'http://localhost:9999',
       sessionStore: store ?? InMemorySessionStore(),
       offlineCache: offlineCache,
+    );
+
+Widget statementImportHarness(ApiClient api) => MaterialApp(
+      home: StatementImportScreen(api: api),
     );
 
 class LocalizationProbe extends StatelessWidget {
@@ -1031,7 +1036,9 @@ void main() {
     expect(await cache.pendingMutations('user-1'), isEmpty);
   });
 
-  test('keeps throttled offline mutations queued instead of permanently rejecting them', () async {
+  test(
+      'keeps throttled offline mutations queued instead of permanently rejecting them',
+      () async {
     final store = InMemorySessionStore();
     final cache = InMemoryOfflineCacheStore();
     await store.write(const SessionTokens(
@@ -1041,7 +1048,8 @@ void main() {
       userId: 'user-1',
     ));
     final api = clientWith(
-      MockClient((request) async => http.Response('{"message":"Too many requests"}', 429)),
+      MockClient((request) async =>
+          http.Response('{"message":"Too many requests"}', 429)),
       store: store,
       offlineCache: cache,
     );
@@ -1057,7 +1065,8 @@ void main() {
     expect(await cache.pendingMutations('user-1'), hasLength(1));
   });
 
-  test('keeps rejected offline mutations visible and isolated by account', () async {
+  test('keeps rejected offline mutations visible and isolated by account',
+      () async {
     final store = InMemorySessionStore();
     final cache = InMemoryOfflineCacheStore();
     await store.write(const SessionTokens(
@@ -1946,7 +1955,8 @@ void main() {
     }));
 
     expect(await api.passkeysAvailable(), isTrue);
-    final options = await api.passkeyRegisterOptions(password: 'correct horse battery staple');
+    final options = await api.passkeyRegisterOptions(
+        password: 'correct horse battery staple');
     expect(options['challenge'], 'abc');
     expect(sawRegisterOptions, isTrue);
 
@@ -2525,5 +2535,32 @@ void main() {
     expect(find.text('Wallet cash'), findsOneWidget);
     expect(find.text('\$125.00'), findsOneWidget);
     semantics.dispose();
+  });
+
+  testWidgets(
+      'statement import offers account creation instead of a disabled upload',
+      (tester) async {
+    final api = clientWith(MockClient((request) async {
+      if (request.url.path == '/api/accounts') {
+        return http.Response('[]', 200);
+      }
+      if (request.url.path == '/api/imports/statements') {
+        return http.Response('[]', 200);
+      }
+      return http.Response('{}', 404);
+    }));
+
+    await tester.pumpWidget(statementImportHarness(api));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Add an account first'), findsOneWidget);
+    final action = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Add account and choose statement'),
+    );
+    expect(action.onPressed, isNotNull);
+
+    await tester.tap(find.text('Add account and choose statement'));
+    await tester.pumpAndSettle();
+    expect(find.text('Add account for this statement'), findsOneWidget);
   });
 }
