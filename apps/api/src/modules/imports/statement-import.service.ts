@@ -191,7 +191,15 @@ export class StatementImportService {
       isRecurring: row.isRecurring, pending: false, importBatchId: batchId,
     }));
     const batch: ImportBatch = { id: batchId, accountId: found.statement.accountId, filename: found.statement.filename, status: 'committed', rowsTotal: found.rows.length, rowsImported: transactions.length, rowsDuplicate: found.rows.filter((row) => row.flags.includes('possible_duplicate')).length, rowsInvalid: found.rows.filter((row) => row.flags.includes('extraction_error')).length, createdAt: this.clock.now().toISOString(), revertedAt: null };
-    const result = await this.imports.finalize(userId, importId, batch, transactions, this.event(importId, null, 'approved', { rows: transactions.length }));
+    let result: StatementImport | null;
+    try {
+      result = await this.imports.finalize(userId, importId, batch, transactions, this.event(importId, null, 'approved', { rows: transactions.length }));
+    } catch (error) {
+      if (error instanceof Error && error.message === 'STATEMENT_DUPLICATE') {
+        throw new ConflictException('One or more included rows already exist in this account. Exclude them to prevent a duplicate ledger entry.');
+      }
+      throw error;
+    }
     if (!result) throw new ConflictException('This statement is no longer awaiting approval.');
     for (const row of included.filter((candidate) => candidate.categorySource === 'user_manual')) {
       try { await this.rules.create(userId, ruleFromCorrection(row.description, row.categorySlug, randomUUID())); } catch { /* a duplicate correction does not invalidate an approved import */ }

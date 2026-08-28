@@ -74,5 +74,28 @@ if (!OWNER_URL) {
       const unscoped = await app.query('SELECT user_id FROM statement_import_events');
       expect(unscoped.rows).toHaveLength(0);
     });
+
+    it('rolls back approval when a concurrent or prior row wins the transaction uniqueness race', async () => {
+      const first = fixture();
+      await store.create(ALICE, first.statement, 'cipher-first', [first.row]);
+      const existingTxn = {
+        id: 'txn-existing', accountId: first.statement.accountId, providerTxnId: 'manual-race',
+        postedAt: first.row.postedAt!, amount: first.row.amount!, currency: first.row.currency,
+        rawDescriptor: first.row.description, normalizedDescriptor: 'grocery mart', categorySlug: first.row.categorySlug,
+        categorySource: first.row.categorySource, categoryConfidence: first.row.categoryConfidence, isRecurring: false,
+        pending: false, importBatchId: 'batch-existing',
+      } as const;
+      await transactions.upsertMany(ALICE, [existingTxn]);
+
+      const second = fixture();
+      second.statement.id = 'stmt_race';
+      second.statement.statementHash = 'e'.repeat(64);
+      second.row.id = 'row_race';
+      second.row.importId = second.statement.id;
+      await store.create(ALICE, second.statement, 'cipher-race', [second.row]);
+      await expect(store.finalize(ALICE, second.statement.id, second.batch, [{ ...existingTxn, id: 'txn-race', providerTxnId: 'manual-race', importBatchId: second.batch.id }], { id: 'evt-race', importId: second.statement.id, rowId: null, kind: 'approved', detail: {}, createdAt: '2026-08-01T05:00:00.000Z' })).rejects.toThrow('STATEMENT_DUPLICATE');
+      expect((await store.get(ALICE, second.statement.id))?.status).toBe('ready');
+      expect((await transactions.list(ALICE, { accountId: first.statement.accountId })).filter((txn) => txn.providerTxnId === 'manual-race')).toHaveLength(1);
+    });
   });
 }

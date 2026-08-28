@@ -135,7 +135,10 @@ export class PostgresStatementImportStore implements StatementImportStore {
       const pending = await client.query(`SELECT 1 FROM statement_import_rows WHERE user_id=$1 AND import_id=$2 AND decision='needs_review' LIMIT 1`, [userId, importId]);
       if ((pending.rowCount ?? 0) > 0) throw new Error('STATEMENT_REVIEW_REQUIRED');
       await client.query(`INSERT INTO import_batches (id,user_id,account_id,filename,status,rows_total,rows_imported,rows_duplicate,rows_invalid,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`, [batch.id,userId,batch.accountId,batch.filename,batch.status,batch.rowsTotal,batch.rowsImported,batch.rowsDuplicate,batch.rowsInvalid,batch.createdAt]);
-      await insertTransactions(client, userId, transactions);
+      const inserted = await insertTransactions(client, userId, transactions);
+      if (inserted !== transactions.length) {
+        throw new Error('STATEMENT_DUPLICATE');
+      }
       const { rows: updated } = await client.query<StatementDb>(`UPDATE statement_imports SET status='approved', approved_at=$3, processed_at=COALESCE(processed_at,$3) WHERE user_id=$1 AND id=$2 RETURNING ${STATEMENT_COLUMNS}`, [userId, importId, event.createdAt]);
       await insertEvent(client, userId, event);
       return updated[0] ? toStatement(updated[0]) : null;
@@ -196,10 +199,13 @@ async function insertEvent(client: PoolClient, userId: string, event: StatementI
   await client.query(`INSERT INTO statement_import_events (id,user_id,import_id,row_id,kind,detail,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7)`, [event.id,userId,event.importId,event.rowId,event.kind,event.detail,event.createdAt]);
 }
 
-async function insertTransactions(client: PoolClient, userId: string, transactions: readonly Transaction[]): Promise<void> {
+async function insertTransactions(client: PoolClient, userId: string, transactions: readonly Transaction[]): Promise<number> {
+  let inserted = 0;
   for (const txn of transactions) {
-    await client.query(`INSERT INTO transactions (id,user_id,account_id,provider_txn_id,posted_at,amount,currency,raw_descriptor,normalized_descriptor,merchant,merchant_override,note,excluded_from_analytics,category_slug,category_source,category_confidence,is_recurring,recurring_override,duplicate_reported,pending,tags,import_batch_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22) ON CONFLICT (user_id,account_id,provider_txn_id) DO NOTHING`, [txn.id,userId,txn.accountId,txn.providerTxnId,txn.postedAt,txn.amount,txn.currency,txn.rawDescriptor,txn.normalizedDescriptor,txn.merchant ?? null,txn.merchantOverride ?? null,txn.note ?? null,txn.excludedFromAnalytics ?? false,txn.categorySlug,txn.categorySource,txn.categoryConfidence,txn.isRecurring,txn.recurringOverride ?? null,txn.duplicateReported ?? false,txn.pending,txn.tags ?? [],txn.importBatchId ?? null]);
+    const result = await client.query(`INSERT INTO transactions (id,user_id,account_id,provider_txn_id,posted_at,amount,currency,raw_descriptor,normalized_descriptor,merchant,merchant_override,note,excluded_from_analytics,category_slug,category_source,category_confidence,is_recurring,recurring_override,duplicate_reported,pending,tags,import_batch_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22) ON CONFLICT (user_id,account_id,provider_txn_id) DO NOTHING`, [txn.id,userId,txn.accountId,txn.providerTxnId,txn.postedAt,txn.amount,txn.currency,txn.rawDescriptor,txn.normalizedDescriptor,txn.merchant ?? null,txn.merchantOverride ?? null,txn.note ?? null,txn.excludedFromAnalytics ?? false,txn.categorySlug,txn.categorySource,txn.categoryConfidence,txn.isRecurring,txn.recurringOverride ?? null,txn.duplicateReported ?? false,txn.pending,txn.tags ?? [],txn.importBatchId ?? null]);
+    inserted += result.rowCount ?? 0;
   }
+  return inserted;
 }
 
 function toStatement(row: StatementDb): StatementImport {
