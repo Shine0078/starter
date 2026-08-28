@@ -438,6 +438,57 @@ if (!OWNER_URL) {
       expect(rows.map((r) => r.user_id)).toEqual([BOB]);
     });
 
+    it('does not let a non-admin member delete another split member directly', async () => {
+      const groupId = 'rls_split_group';
+      await owner.query(
+        `INSERT INTO split_groups (id, name, currency, created_by, created_at)
+         VALUES ($1, 'RLS group', 'USD', $2, '2026-08-10')`,
+        [groupId, ALICE],
+      );
+      await owner.query(
+        `INSERT INTO split_group_members (group_id, user_id, role)
+         VALUES ($1, $2, 'admin'), ($1, $3, 'member')`,
+        [groupId, ALICE, BOB],
+      );
+
+      const deleted = await withUserScope(app, BOB, (client) =>
+        client.query(
+          'DELETE FROM split_group_members WHERE group_id = $1 AND user_id = $2',
+          [groupId, ALICE],
+        ),
+      );
+      expect(deleted.rowCount).toBe(0);
+
+      const { rows } = await owner.query(
+        'SELECT user_id FROM split_group_members WHERE group_id = $1 ORDER BY user_id',
+        [groupId],
+      );
+      expect(rows.map((row) => row.user_id)).toEqual([ALICE, BOB].sort());
+    });
+
+    it('does not let any role delete the split group creator membership', async () => {
+      const groupId = 'rls_split_creator_guard';
+      await owner.query(
+        `INSERT INTO split_groups (id, name, currency, created_by, created_at)
+         VALUES ($1, 'Creator guard', 'USD', $2, '2026-08-10')`,
+        [groupId, ALICE],
+      );
+      await owner.query(
+        `INSERT INTO split_group_members (group_id, user_id, role)
+         VALUES ($1, $2, 'admin'), ($1, $3, 'member')`,
+        [groupId, ALICE, BOB],
+      );
+
+      await expect(
+        withUserScope(app, ALICE, (client) =>
+          client.query(
+            'DELETE FROM split_group_members WHERE group_id = $1 AND user_id = $2',
+            [groupId, ALICE],
+          ),
+        ),
+      ).rejects.toThrow(/creator membership cannot be removed/i);
+    });
+
     // ------------------------------------------------------- the scope itself
 
     it('does not leak the scope to the next user of the connection', async () => {
