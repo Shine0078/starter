@@ -52,13 +52,13 @@ statement-upload, light-theme, release-identity, parser-bound, split-
   `infra/scripts/deploy-cloud-run.sh`. It was not discarded or resolved during
   this audit.
 - The integration branch is ahead of its remote. Full API PostgreSQL, Flutter,
-  and Flutter web regression gates now pass; an Android build and protected-main
-  post-merge run remain outstanding.
-- A repository-wide adversarial security scan has a validated but unsealed
-  five-finding draft for protected `main`. Finalization was rejected by the
-  scanner workbench because legacy `includePaths`/`excludePaths` fields were
-  supplied; the exact error is retained in the audit log and no seal is
-  claimed. Initial review
+  Flutter web, and Android regression gates now pass; the protected-main
+  post-merge run remains outstanding.
+- A repository-wide adversarial security scan is sealed for protected `main`
+  with five validated findings (two high, three medium). The report covers
+  release identity, backup confidentiality, WebAuthn parser bounds, and split
+  authorization/consent; fixes on the newer integration branch are called out
+  separately because the scan target was the protected-main snapshot. The review
   identified backup confidentiality, deployment image identity, WebAuthn parser
   resource bounds, and shared-expense invitation/consent risks. Actor and
   non-admin write paths are now hardened on the integration branch; invitation

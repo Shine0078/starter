@@ -40,10 +40,13 @@ authoritative detail; `CURRENT_STATUS.md` records current gates and blockers.
   encryption, summary, and API review tests.
 - Production dependency audit: zero known vulnerabilities reported by npm on
   2026-08-28.
+- Sealed adversarial security audit: five validated protected-main findings (two
+  high, three medium) with Markdown and SARIF reports generated.
 
 ### Pending
 
-- Complete adversarial security review and remediation.
+- Remediate the remaining protected-main security findings and rerun the audit
+  on the final candidate.
 - Replace immediate split membership with an auditable invitation requiring
   target acceptance, with decline, revocation, removal, and notification.
 - Full regression suite and final integration into protected `main`.
