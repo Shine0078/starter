@@ -19,7 +19,8 @@ authoritative detail; `CURRENT_STATUS.md` records current gates and blockers.
 ### Changed
 
 - Flutter now uses the light theme as the only/default application theme.
-- Integration branch merged current protected `main` at `a21b374`.
+- Integration branch merged current protected `main` at `a21b374` and now
+  includes the verified `d0af44d` supply-chain milestone.
 - Split membership changes are admin-only, split expenses can only name the
   authenticated actor as payer, and PostgreSQL forced-RLS enforces both rules.
 - Backup scripts restrict local archive permissions and remove temporary dump
@@ -30,7 +31,8 @@ authoritative detail; `CURRENT_STATUS.md` records current gates and blockers.
 
 ### Verified
 
-- Current `main`: API typecheck, 855 in-memory tests, and 1,021 PostgreSQL tests.
+- Integration branch: API typecheck, 873 in-memory tests, 1,050 PostgreSQL
+  tests, Flutter tests, and Flutter web release build all pass.
 - Integration branch: Flutter analysis and focused statement extraction,
   encryption, summary, and API review tests.
 - Production dependency audit: zero known vulnerabilities reported by npm on

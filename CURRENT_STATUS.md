@@ -1,9 +1,9 @@
 # FINVERSE Current Status
 
 **Verified:** 2026-08-28  
-**Integration branch:** `codex/passkey-webauthn-p0` at `cf39fd2`, including the
-statement-upload, light-theme, release-identity, parser-bound, and split-
-authorization milestones.  
+**Integration branch:** `codex/passkey-webauthn-p0` at `d0af44d`, including the
+statement-upload, light-theme, release-identity, parser-bound, split-
+authorization, duplicate-race, and supply-chain milestones.
 **Protected main observed:** `a21b3749164561db75f13f89cd3e9d9f7da07109`.
 
 ## Verified Today
@@ -11,13 +11,14 @@ authorization milestones.
 - API TypeScript typecheck on `main`: passed.
 - API in-memory suite on `main`: 60 files passed, 855 tests passed, 4 files and
   7 tests skipped because they require PostgreSQL.
-- API PostgreSQL suite on `main`: 64 files and 1,021 tests passed using embedded
-  PostgreSQL, a restricted runtime role, and forced RLS.
+- API PostgreSQL suite on the integration branch: 71 files and 1,050 tests
+  passed using embedded PostgreSQL, a restricted runtime role, and forced RLS.
 - Production WebAuthn gate passed in that suite: unauthenticated options,
   restricted-role credential routing, assertion verification, normal access and
   refresh issuance, `/auth/me`, replay rejection, eligibility checks, and
   management authorization.
 - Flutter analysis on the integration branch: passed with no issues.
+- Full Flutter test suite: passed; Flutter web release build: passed.
 - Manual statement focused tests on the integration branch: extraction,
   summaries, encryption, and authenticated review flow passed after correcting
   a local generated dependency link.
@@ -45,8 +46,9 @@ authorization milestones.
 - The original `main` worktree has an unresolved, user-owned conflict in
   `infra/scripts/deploy-cloud-run.sh`. It was not discarded or resolved during
   this audit.
-- The integration branch is ahead of its remote and has not passed a fresh full
-  PostgreSQL, Flutter, web, and Android regression run after its latest merge.
+- The integration branch is ahead of its remote. Full API PostgreSQL, Flutter,
+  and Flutter web regression gates now pass; an Android build and protected-main
+  post-merge run remain outstanding.
 - A repository-wide adversarial security scan is in progress. Initial review
   identified backup confidentiality, deployment image identity, WebAuthn parser
   resource bounds, and shared-expense invitation/consent risks. Actor and
