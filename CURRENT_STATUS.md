@@ -1,8 +1,9 @@
 # FINVERSE Current Status
 
 **Verified:** 2026-08-28  
-**Integration branch:** `codex/passkey-webauthn-p0` at merge commit `688a39d`
-plus the statement-upload and light-theme commits below it.  
+**Integration branch:** `codex/passkey-webauthn-p0` at `cf39fd2`, including the
+statement-upload, light-theme, release-identity, parser-bound, and split-
+authorization milestones.  
 **Protected main observed:** `a21b3749164561db75f13f89cd3e9d9f7da07109`.
 
 ## Verified Today
@@ -20,6 +21,11 @@ plus the statement-upload and light-theme commits below it.
 - Manual statement focused tests on the integration branch: extraction,
   summaries, encryption, and authenticated review flow passed after correcting
   a local generated dependency link.
+- Split authorization tests passed under both in-memory and PostgreSQL forced
+  RLS: non-admin membership writes and forged payer attribution are rejected.
+- Backup scripts now apply owner-only directory/archive permissions and clean up
+  temporary plaintext dump files on exit; archive encryption is still an
+  external storage/key-management requirement.
 - `npm audit --omit=dev` reported zero known production vulnerabilities for both
   current `main` and the integration branch.
 
@@ -39,8 +45,10 @@ plus the statement-upload and light-theme commits below it.
 - The integration branch is ahead of its remote and has not passed a fresh full
   PostgreSQL, Flutter, web, and Android regression run after its latest merge.
 - A repository-wide adversarial security scan is in progress. Initial review
-  identified shared-expense invitation and actor-authority questions requiring
-  validation and remediation decisions.
+  identified backup confidentiality, deployment image identity, WebAuthn parser
+  resource bounds, and shared-expense invitation/consent risks. Actor and
+  non-admin write paths are now hardened on the integration branch; invitation
+  acceptance and revocation still need a complete product flow.
 - Manual document analysis currently runs in the request lifecycle; durable
   background processing, crash recovery, and production load evidence remain to
   be established.
@@ -51,4 +59,3 @@ plus the statement-upload and light-theme commits below it.
 
 Do not convert these statements into a completion percentage. A green narrow
 test is evidence only for the behavior it actually exercises.
-

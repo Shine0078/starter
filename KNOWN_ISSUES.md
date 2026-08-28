@@ -9,9 +9,11 @@
   are on `codex/passkey-webauthn-p0`, ahead of the remote branch.
 - **Full post-merge regression pending:** run API PostgreSQL tests, migration
   idempotency, Flutter tests, web build, and Android build on the final candidate.
-- **Security review open:** split-group invitation consent/account enumeration
-  and the authority to record another member as payer need final source-backed
-  validation and a product-safe fix.
+- **Security review open:** split-group invitations still add an existing
+  account immediately and have no accept/decline/revoke lifecycle. The API now
+  limits additions to admins, returns a generic account error, and binds payer
+  attribution to the authenticated actor, but target consent and membership
+  removal still require a complete invitation flow.
 - **Statement processing durability:** PDF/OCR/XLSX analysis is bounded but runs
   in the request lifecycle. A durable, observable background job model with
   restart recovery and concurrency limits is not yet proven.
@@ -26,7 +28,9 @@
   passkey/provider testing.
 - Production Cloud Run/Neon role, IAM, secret-manager, monitoring, and exact-SHA
   readback.
-- Encrypted off-host backups and a recorded restore/disaster-recovery exercise.
+- Authenticated encryption for off-host backups, key rotation, and a recorded
+  restore/disaster-recovery exercise. Local scripts now restrict permissions,
+  but compression alone is not encryption.
 - Independent penetration test and legal/privacy review before real financial
   users are admitted.
 
@@ -37,4 +41,3 @@
   installed from the original workspace. This is a workstation layout issue,
   not a manifest omission.
 - In-memory development accounts and sessions disappear when the API restarts.
-
