@@ -19,7 +19,8 @@
 - **Security findings on protected main:** the sealed repository-wide audit
   reports five validated findings (two high, three medium). The integration
   branch fixes parser bounds, release image identity, and split actor writes;
-  backup encryption and the complete split invitation consent flow remain open.
+  backup scripts now require age encryption, while production key custody and
+  the complete split invitation consent flow remain open.
 - **Statement processing durability:** PDF/OCR/XLSX analysis is bounded but runs
   in the request lifecycle. A durable, observable background job model with
   restart recovery and concurrency limits is not yet proven.
@@ -37,9 +38,9 @@
   passkey/provider testing.
 - Production Cloud Run/Neon role, IAM, secret-manager, monitoring, and exact-SHA
   readback.
-- Authenticated encryption for off-host backups, key rotation, and a recorded
-  restore/disaster-recovery exercise. Local scripts now restrict permissions,
-  but compression alone is not encryption.
+- Production age recipient/private-key custody, key rotation, off-host storage,
+  and a recorded restore/disaster-recovery exercise. Local scripts now encrypt
+  and restrict permissions, but production operations are not yet verified.
 - Independent penetration test and legal/privacy review before real financial
   users are admitted.
 

@@ -26,7 +26,8 @@ authoritative detail; `CURRENT_STATUS.md` records current gates and blockers.
 - Split membership changes are admin-only, split expenses can only name the
   authenticated actor as payer, and PostgreSQL forced-RLS enforces both rules.
 - Backup scripts restrict local archive permissions and remove temporary dump
-  files after compression.
+  files after compression; they now require age encryption before an archive is
+  durable, and restore drills decrypt only into temporary files.
 - Public edge images are digest-pinned, and release publication now requires a
   successful blocking Container scan in addition to the exact-SHA CI run.
 - Flutter CI/release builds pin the toolchain to Flutter 3.44.9.

@@ -17,17 +17,19 @@ These numbers are planning values, not measured production results.
 ## What CI already proves
 
 - Migrations apply cleanly and are idempotent.
-- `infra/scripts/backup-postgres.ps1` produces a valid archive.
-- `infra/scripts/restore-drill-postgres.ps1` restores into an isolated database.
+- `infra/scripts/backup-postgres.ps1` produces a non-empty age-encrypted archive.
+- `infra/scripts/restore-drill-postgres.ps1` decrypts and restores into an
+  isolated database, removing the temporary plaintext dump on exit.
 - Production runtime refuses owner/SUPERUSER/BYPASSRLS.
 
 ## Live drill still required
 
-1. Take a Neon backup or the encrypted archive from the production schedule.
-2. Restore into a new database whose name ends in `_restore_test`.
-3. Verify migration history, RLS isolation, a sample export, and account deletion.
-4. Record actual RPO/RTO, gaps, and remediation.
-5. Do not overwrite production until two people confirm the restore target.
+1. Take a Neon backup or the age-encrypted archive from the production schedule.
+2. Retrieve the recovery identity through the approved two-person process.
+3. Restore into a new database whose name ends in `_restore_test`.
+4. Verify migration history, RLS isolation, a sample export, and account deletion.
+5. Record actual RPO/RTO, gaps, and remediation.
+6. Do not overwrite production until two people confirm the restore target.
 
 ## Related
 

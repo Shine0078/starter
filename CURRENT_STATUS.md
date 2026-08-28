@@ -29,9 +29,9 @@ cleanup milestones.
   a local generated dependency link.
 - Split authorization tests passed under both in-memory and PostgreSQL forced
   RLS: non-admin membership writes and forged payer attribution are rejected.
-- Backup scripts now apply owner-only directory/archive permissions and clean up
-  temporary plaintext dump files on exit; archive encryption is still an
-  external storage/key-management requirement.
+- Backup scripts now require authenticated age encryption, apply owner-only
+  directory/archive permissions, and clean up temporary plaintext dump files on
+  exit; production recipient custody and restore-key controls remain external.
 - Public and Oracle edge images are pinned to immutable Caddy/Nginx digests;
   the public container scan is blocking and the release gate requires both the
   CI and Container scan workflows for the exact candidate SHA.
@@ -62,7 +62,9 @@ cleanup milestones.
   identified backup confidentiality, deployment image identity, WebAuthn parser
   resource bounds, and shared-expense invitation/consent risks. Actor and
   non-admin write paths are now hardened on the integration branch; invitation
-  acceptance and revocation still need a complete product flow.
+  acceptance and revocation still need a complete product flow. Backup scripts
+  now fail closed without age encryption, but production key custody is not
+  locally verifiable.
 - Manual document analysis currently runs in the request lifecycle; durable
   background processing, crash recovery, and production load evidence remain to
   be established.
