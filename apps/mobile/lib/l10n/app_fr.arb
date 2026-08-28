@@ -854,10 +854,5 @@
   "settingsPasskeysPasswordTitle": "Confirmez votre mot de passe",
   "settingsPasskeysPasswordDetail": "L’ajout ou la suppression d’une clé d’accès exige votre mot de passe actuel.",
   "settingsPasskeysMfaLabel": "Code d’authentification ou de récupération",
-  "settingsPasskeysContinue": "Continuer",
-  "settingsDarkModeTitle": "Mode sombre",
-  "settingsDarkModeOn": "Toujours utiliser l'apparence sombre.",
-  "settingsDarkModeOff": "Toujours utiliser l'apparence claire.",
-  "settingsDarkModeSystem": "Suivre l'apparence de votre appareil.",
-  "settingsDarkModeUseDevice": "Utiliser l'apparence de l'appareil"
+  "settingsPasskeysContinue": "Continuer"
 }

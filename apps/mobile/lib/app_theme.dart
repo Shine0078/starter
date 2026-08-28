@@ -3,8 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'api/platform/shared_preferences_registration.dart';
 
-/// The six choices shown in Settings. Presets are intentionally far enough
-/// apart that the selected brand remains obvious across light and dark mode.
+/// The six accent choices shown in Settings. Presets stay distinct against the
+/// app's fixed light surfaces.
 abstract final class FinThemeColors {
   static const emerald = 'emerald';
   static const indigo = 'indigo';
