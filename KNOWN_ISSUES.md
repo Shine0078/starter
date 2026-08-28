@@ -15,6 +15,10 @@
   limits additions to admins, returns a generic account error, and binds payer
   attribution to the authenticated actor, but target consent and membership
   removal still require a complete invitation flow.
+- **Security report sealing:** the local workbench contains a validated
+  five-finding protected-main draft, but its finalization call rejected legacy
+  path fields. Treat the draft as unsealed and do not represent this audit as
+  a sealed no-findings result.
 - **Statement processing durability:** PDF/OCR/XLSX analysis is bounded but runs
   in the request lifecycle. A durable, observable background job model with
   restart recovery and concurrency limits is not yet proven.

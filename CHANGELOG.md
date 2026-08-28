@@ -32,7 +32,8 @@ authoritative detail; `CURRENT_STATUS.md` records current gates and blockers.
 ### Verified
 
 - Integration branch: API typecheck, 873 in-memory tests, 1,050 PostgreSQL
-  tests, Flutter tests, and Flutter web release build all pass.
+  tests, Flutter tests, Flutter web release build, Android release APK build,
+  and migration verification all pass.
 - Integration branch: Flutter analysis and focused statement extraction,
   encryption, summary, and API review tests.
 - Production dependency audit: zero known vulnerabilities reported by npm on

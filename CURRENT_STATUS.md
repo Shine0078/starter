@@ -13,12 +13,16 @@ authorization, duplicate-race, and supply-chain milestones.
   7 tests skipped because they require PostgreSQL.
 - API PostgreSQL suite on the integration branch: 71 files and 1,050 tests
   passed using embedded PostgreSQL, a restricted runtime role, and forced RLS.
+- Migration verification on a fresh ephemeral PostgreSQL cluster: all 33
+  migrations applied, the restricted `finverse_app` role was provisioned, and
+  the repeat check reported 0 pending migrations.
 - Production WebAuthn gate passed in that suite: unauthenticated options,
   restricted-role credential routing, assertion verification, normal access and
   refresh issuance, `/auth/me`, replay rejection, eligibility checks, and
   management authorization.
 - Flutter analysis on the integration branch: passed with no issues.
 - Full Flutter test suite: passed; Flutter web release build: passed.
+- Flutter Android release APK build: passed (`app-release.apk`).
 - Manual statement focused tests on the integration branch: extraction,
   summaries, encryption, and authenticated review flow passed after correcting
   a local generated dependency link.
@@ -49,7 +53,11 @@ authorization, duplicate-race, and supply-chain milestones.
 - The integration branch is ahead of its remote. Full API PostgreSQL, Flutter,
   and Flutter web regression gates now pass; an Android build and protected-main
   post-merge run remain outstanding.
-- A repository-wide adversarial security scan is in progress. Initial review
+- A repository-wide adversarial security scan has a validated but unsealed
+  five-finding draft for protected `main`. Finalization was rejected by the
+  scanner workbench because legacy `includePaths`/`excludePaths` fields were
+  supplied; the exact error is retained in the audit log and no seal is
+  claimed. Initial review
   identified backup confidentiality, deployment image identity, WebAuthn parser
   resource bounds, and shared-expense invitation/consent risks. Actor and
   non-admin write paths are now hardened on the integration branch; invitation
