@@ -39,6 +39,15 @@ jobs:
 
       - run: npm ci
 
+      - name: Validate release and operations scripts
+        shell: bash
+        run: |
+          bash -n infra/scripts/*.sh
+          if git grep -n -E '^(<<<<<<< |=======|>>>>>>> )' -- .; then
+            echo "Unresolved merge-conflict marker found." >&2
+            exit 1
+          fi
+
       - name: Audit production npm dependencies
         run: npm audit --omit=dev --audit-level=high
 
