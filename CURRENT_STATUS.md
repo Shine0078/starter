@@ -1,29 +1,30 @@
 # FINVERSE Current Status
 
-**Verified:** 2026-08-28  
+**Verified:** 2026-08-30
 **Integration branch:** `codex/passkey-webauthn-p0` at its latest verified local
 state, including the statement-upload, light-theme, release-identity,
-parser-bound, split-authorization, duplicate-race, supply-chain, light-only
-cleanup, encrypted-backup, durable-statement-worker, and direct-membership-RLS
-milestones.
+parser-bound, split-authorization, split invitation-consent, balance-safe
+member-departure, duplicate-race, supply-chain, encrypted-backup, and
+durable-statement-worker milestones.
 **Protected main observed:** `a21b3749164561db75f13f89cd3e9d9f7da07109`.
 
 ## Verified Today
 
-- API TypeScript typecheck on `main`: passed.
-- API in-memory suite on `main`: 60 files passed, 855 tests passed, 4 files and
-  7 tests skipped because they require PostgreSQL.
-- API PostgreSQL suite on the integration branch: 71 files and 1,052 tests
-  passed using embedded PostgreSQL, a restricted runtime role, and forced RLS.
-- Migration verification on a fresh ephemeral PostgreSQL cluster: all 36
-  migrations applied, the restricted `finverse_app` role was provisioned, and
-  the repeat check reported 0 pending migrations.
+- API TypeScript typecheck and production build on the integration branch:
+  passed.
+- API in-memory suite on the integration branch: 66 files passed, 878 tests
+  passed, 6 files and 9 tests skipped because they require PostgreSQL.
+- API PostgreSQL suite on a fresh embedded cluster: 72 files and 1,062 tests
+  passed using the restricted runtime role and forced RLS.
+- The fresh PostgreSQL test cluster applied all 39 numbered migrations and
+  provisioned `finverse_app`; migration repeat/idempotency is also a blocking
+  CI step.
 - Production WebAuthn gate passed in that suite: unauthenticated options,
   restricted-role credential routing, assertion verification, normal access and
   refresh issuance, `/auth/me`, replay rejection, eligibility checks, and
   management authorization.
 - Flutter analysis on the integration branch: passed with no issues.
-- Full Flutter test suite: passed; Flutter web release build: passed.
+- Full Flutter test suite: 118 tests passed; Flutter web release build: passed.
 - Flutter Android release APK build: passed (`app-release.apk`).
 - Manual statement focused tests on the integration branch: extraction,
   summaries, encryption, and authenticated review flow passed after correcting
@@ -32,8 +33,10 @@ milestones.
   restricted-role paths, including stale-lease recovery and the production
   `202` upload contract.
 - Split authorization tests passed under both in-memory and PostgreSQL forced
-  RLS: non-admin membership writes, forged payer attribution, and all direct
-  membership deletes are rejected.
+  RLS: consent is required before membership, invitations can be declined or
+  revoked, removal is serialized with financial writes and rejects non-zero
+  balances, forged payer attribution is rejected, and direct membership
+  deletes remain closed.
 - Backup scripts now require authenticated age encryption, apply owner-only
   directory/archive permissions, and clean up temporary plaintext dump files on
   exit; production recipient custody and restore-key controls remain external.
@@ -46,9 +49,9 @@ milestones.
 ## Integrated But Not Yet On Main
 
 - Encrypted manual statement import and review workflow.
-- Statement import database migrations `031`, `032`, and durable queue migration
-  `037`, plus split membership command policies in `034` and the direct-delete
-  hold in `036`.
+- Statement import migrations `031`, `032`, and durable queue migration `037`,
+  plus split invitation/consent migration `038` and balance-safe departure
+  migration `039`.
 - First-use account creation from the statement picker.
 - Light-only Flutter theme.
 - Additional operations, provider, device, incident, and privacy documentation.
@@ -58,9 +61,9 @@ milestones.
 - The original `main` worktree has an unresolved, user-owned conflict in
   `infra/scripts/deploy-cloud-run.sh`. It was not discarded or resolved during
   this audit.
-- The integration branch is ahead of its remote. Full API PostgreSQL, Flutter,
-  Flutter web, and Android regression gates now pass; the protected-main
-  post-merge run remains outstanding.
+- The integration branch is ahead of its remote. Full API PostgreSQL, API
+  in-memory, Flutter, Flutter web, and Android regression gates pass locally;
+  the protected-main post-merge run remains outstanding.
 - A repository-wide adversarial security scan is sealed for protected `main`
   with five validated findings (two high, three medium). The report covers
   release identity, backup confidentiality, WebAuthn parser bounds, and split
@@ -68,11 +71,11 @@ milestones.
   separately because the scan target was the protected-main snapshot. The review
   identified backup confidentiality, deployment image identity, WebAuthn parser
   resource bounds, and shared-expense invitation/consent risks. Actor,
-  non-admin write paths, and direct split-membership deletes are now hardened
-  on the integration branch; invitation acceptance, balance-checked removal,
-  and revocation still need a complete product flow. Backup scripts
-  now fail closed without age encryption, but production key custody is not
-  locally verifiable.
+  non-admin write paths, direct split-membership deletes, invitation consent,
+  revocation, and balance-checked removal are now hardened on the integration
+  branch. The sealed report still targets the protected-main snapshot and has
+  not been rerun against this branch. Backup scripts now fail closed without
+  age encryption, but production key custody is not locally verifiable.
 - Manual document analysis now has a durable, forced-RLS queue with stale-lease
   recovery and bounded workers. Production OCR/load evidence and external
   queue/worker observability remain to be established.

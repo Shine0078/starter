@@ -8,19 +8,20 @@
 - **Integration not merged:** manual statement import and the white default UI
   are on the latest verified state of `codex/passkey-webauthn-p0`, ahead of the
   remote branch.
-- **Final candidate regression:** API PostgreSQL, Flutter tests, and Flutter web
-  build pass on the integration branch. Android build, migration idempotency,
-  and the protected-main post-merge run remain outstanding.
-- **Security review open:** split-group invitations still add an existing
-  account immediately and have no accept/decline/revoke lifecycle. The API now
-  limits additions to admins, returns a generic account error, and binds payer
-  attribution to the authenticated actor, but target consent and membership
-  removal still require a complete invitation flow.
+- **Final candidate regression:** API PostgreSQL (1,062 tests), API in-memory
+  (878 tests), Flutter tests (118 tests), Flutter web, and Android release
+  builds pass on the integration branch. Migration idempotency and the
+  protected-main post-merge run still need the CI environment.
+- **Split notifications:** invitation creation, consent, decline, revocation,
+  and balance-safe leave/remove are implemented and audited. Push/email
+  notification delivery for invitations is not wired yet; users can see
+  pending invitations when they open the shared-expenses screen.
 - **Security findings on protected main:** the sealed repository-wide audit
   reports five validated findings (two high, three medium). The integration
-  branch fixes parser bounds, release image identity, and split actor writes;
-  backup scripts now require age encryption, while production key custody and
-  the complete split invitation consent flow remain open.
+  branch fixes parser bounds, release image identity, split actor writes, and
+  split invitation consent/removal; backup scripts require age encryption.
+  The sealed scan has not been rerun on the integration branch, and production
+  key custody remains external.
 - **Statement processing operations:** Production PDF/OCR/XLSX analysis now uses
   the forced-RLS durable `queued`/`processing` workflow with stale-lease
   recovery and bounded claims. External worker metrics, alerting, and realistic

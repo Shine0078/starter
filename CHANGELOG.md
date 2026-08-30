@@ -14,6 +14,8 @@ authoritative detail; `CURRENT_STATUS.md` records current gates and blockers.
 - Statement row confidence, flags, edit/split/merge/exclude/approve controls,
   audit history, summaries, duplicate checks, and per-user correction learning.
 - First-use account creation from the statement picker.
+- Split-group invitations with explicit invitee consent, decline/revocation,
+  balance-safe leave/remove, and audit-preserving departure states.
 - Memory-friendly project entry documents: `START_HERE.md`,
   `PROJECT_OVERVIEW.md`, `CURRENT_STATUS.md`, `ARCHITECTURE.md`,
   `DEVELOPMENT_GUIDE.md`, and `KNOWN_ISSUES.md`.
@@ -27,10 +29,11 @@ authoritative detail; `CURRENT_STATUS.md` records current gates and blockers.
   includes the verified `d0af44d` supply-chain milestone.
 - Split membership changes are admin-only, split expenses can only name the
   authenticated actor as payer, and PostgreSQL forced-RLS enforces both rules.
-- Command-specific split membership RLS policies prevent direct cross-member
-  deletion, and a trigger protects the creator membership from deletion.
-- Direct split membership deletes are now held closed until a balance-checked,
-  auditable leave/remove command is implemented.
+- Split membership is consent-only; command-specific forced-RLS policies prevent
+  direct cross-member deletion, protect the creator membership, and serialize
+  balance-checked leave/remove with financial writes.
+- Split settlement arithmetic now applies payments in the correct direction and
+  cannot attribute a payment to a different actor.
 - Backup scripts restrict local archive permissions and remove temporary dump
   files after compression; they now require age encryption before an archive is
   durable, and restore drills decrypt only into temporary files.
@@ -40,9 +43,9 @@ authoritative detail; `CURRENT_STATUS.md` records current gates and blockers.
 
 ### Verified
 
-- Integration branch: API typecheck, 873 in-memory tests, 1,052 PostgreSQL
-  tests, Flutter tests, Flutter web release build, Android release APK build,
-  and migration verification all pass.
+- Integration branch: API typecheck/build, 878 in-memory tests, 1,062
+  PostgreSQL tests, 118 Flutter tests, Flutter web release build, Android
+  release APK build, and fresh-schema verification all pass.
 - Integration branch: Flutter analysis and focused statement extraction,
   encryption, summary, and API review tests.
 - Production dependency audit: zero known vulnerabilities reported by npm on
@@ -54,8 +57,8 @@ authoritative detail; `CURRENT_STATUS.md` records current gates and blockers.
 
 - Remediate the remaining protected-main security findings and rerun the audit
   on the final candidate.
-- Replace immediate split membership with an auditable invitation requiring
-  target acceptance, with decline, revocation, removal, and notification.
-- Full regression suite and final integration into protected `main`.
+- Add invitation push/email notifications and independently verify delivery.
+- Rerun the sealed security review on the final candidate and complete
+  integration into protected `main`.
 - External production/provider/device/backup gates listed in
   `KNOWN_ISSUES.md`.
