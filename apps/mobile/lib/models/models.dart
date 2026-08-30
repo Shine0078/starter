@@ -1986,6 +1986,7 @@ class SplitGroup {
     required this.id,
     required this.name,
     required this.currency,
+    this.createdBy,
     this.createdAt,
     this.archivedAt,
   });
@@ -1994,6 +1995,7 @@ class SplitGroup {
         id: json['id'] as String,
         name: json['name'] as String,
         currency: json['currency'] as String? ?? 'USD',
+        createdBy: json['createdBy'] as String?,
         createdAt: json['createdAt'] as String?,
         archivedAt: json['archivedAt'] as String?,
       );
@@ -2001,6 +2003,7 @@ class SplitGroup {
   final String id;
   final String name;
   final String currency;
+  final String? createdBy;
   final String? createdAt;
   final String? archivedAt;
 }

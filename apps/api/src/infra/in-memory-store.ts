@@ -587,6 +587,45 @@ export class InMemorySplitStore implements SplitStore {
     return true;
   }
 
+  async removeMember(
+    userId: string,
+    groupId: string,
+    targetUserId: string,
+  ): Promise<'removed' | 'not_found' | 'creator' | 'balance_nonzero' | 'forbidden'> {
+    const group = await this.getGroup(userId, groupId);
+    if (!group || group.archivedAt) return 'not_found';
+    const members = this.members.get(groupId) ?? [];
+    const actor = members.find((member) => member.userId === userId);
+    const target = members.find((member) => member.userId === targetUserId);
+    if (!target) return 'not_found';
+    if (group.createdBy === targetUserId) return 'creator';
+    if (userId !== targetUserId && actor?.role !== 'admin') return 'forbidden';
+
+    let net = 0;
+    for (const expense of this.expenses.get(groupId) ?? []) {
+      if (expense.currency !== group.currency) continue;
+      if (expense.paidByUserId === targetUserId) net += expense.amount;
+      for (const participant of expense.participants) {
+        if (participant.userId === targetUserId) net -= participant.amount;
+      }
+    }
+    for (const settlement of this.settlements.get(groupId) ?? []) {
+      if (settlement.currency !== group.currency) continue;
+      if (settlement.fromUserId === targetUserId) net += settlement.amount;
+      if (settlement.toUserId === targetUserId) net -= settlement.amount;
+    }
+    if (net !== 0) return 'balance_nonzero';
+
+    this.members.set(groupId, members.filter((member) => member.userId !== targetUserId));
+    for (const invitation of this.invitations.values()) {
+      if (invitation.groupId === groupId && invitation.inviteeUserId === targetUserId && invitation.status === 'accepted') {
+        invitation.status = userId === targetUserId ? 'left' : 'removed';
+        invitation.decidedAt = new Date().toISOString();
+      }
+    }
+    return 'removed';
+  }
+
   async listExpenses(userId: string, groupId: string): Promise<SplitExpense[]> {
     if (!(await this.getGroup(userId, groupId))) return [];
     return [...(this.expenses.get(groupId) ?? [])].sort((a, b) =>

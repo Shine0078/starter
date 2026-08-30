@@ -187,26 +187,27 @@ class _SplitScreenState extends State<SplitScreen> {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
       children: [
         if (_invitations.isNotEmpty) ...[
-          Text('Pending invitations', style: Theme.of(context).textTheme.titleMedium),
+          Text(l10n.splitPendingInvitations, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           ..._invitations.map((invitation) => Card(
                 child: ListTile(
                   leading: const Icon(Icons.mail_outline),
-                  title: Text(invitation.groupName ?? 'Shared group'),
+                  title: Text(invitation.groupName ?? l10n.splitInvitationSharedGroup),
                   subtitle: Text([
                     if (invitation.currency != null) invitation.currency!,
-                    if (invitation.invitedByEmail != null) 'Invited by ${invitation.invitedByEmail}',
+                    if (invitation.invitedByEmail != null)
+                      l10n.splitInvitationInvitedBy(invitation.invitedByEmail!),
                   ].join(' · ')),
                   trailing: Wrap(
                     spacing: 4,
                     children: [
                       IconButton(
-                        tooltip: 'Decline',
+                        tooltip: l10n.splitInvitationDecline,
                         onPressed: () => _respondToInvitation(invitation, false),
                         icon: const Icon(Icons.close),
                       ),
                       IconButton(
-                        tooltip: 'Accept',
+                        tooltip: l10n.splitInvitationAccept,
                         onPressed: () => _respondToInvitation(invitation, true),
                         icon: const Icon(Icons.check),
                       ),
@@ -579,6 +580,43 @@ class _SplitGroupDetailScreenState extends State<SplitGroupDetailScreen> {
     }
   }
 
+  Future<void> _removeMember(SplitMember member) async {
+    final l10n = AppLocalizations.of(context);
+    final isSelf = member.userId == widget.api.sessionUserId;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(isSelf ? l10n.splitLeaveGroupTitle : l10n.splitRemoveMemberTitle),
+        content: Text(
+          isSelf
+              ? l10n.splitLeaveGroupDetail
+              : l10n.splitRemoveMemberDetail,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(AppLocalizations.of(context).commonCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(isSelf ? l10n.splitLeaveGroupAction : l10n.splitRemoveMemberAction),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await widget.api.removeSplitMember(widget.groupId, member.userId);
+      await _load();
+      if (isSelf && mounted) Navigator.of(context).pop();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(friendlyErrorMessage(error))),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -636,6 +674,18 @@ class _SplitGroupDetailScreenState extends State<SplitGroupDetailScreen> {
                   dense: true,
                   title: Text(member.email ?? member.userId),
                   subtitle: Text(member.role),
+                  trailing: (member.userId == widget.api.sessionUserId || canManageMembers) &&
+                          member.userId != detail.group.createdBy
+                      ? IconButton(
+                          tooltip: member.userId == widget.api.sessionUserId
+                              ? l10n.splitLeaveGroupTooltip
+                              : l10n.splitRemoveMemberTooltip,
+                          icon: Icon(member.userId == widget.api.sessionUserId
+                              ? Icons.exit_to_app
+                              : Icons.person_remove_outlined),
+                          onPressed: () => _removeMember(member),
+                        )
+                      : null,
                 ),
               ),
             ],

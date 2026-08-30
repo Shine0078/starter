@@ -164,6 +164,11 @@ export interface SplitStore {
   acceptInvitation(userId: string, invitationId: string): Promise<SplitGroupMember | null>;
   declineInvitation(userId: string, invitationId: string): Promise<boolean>;
   revokeInvitation(userId: string, groupId: string, invitationId: string): Promise<boolean>;
+  removeMember(
+    userId: string,
+    groupId: string,
+    targetUserId: string,
+  ): Promise<'removed' | 'not_found' | 'creator' | 'balance_nonzero' | 'forbidden'>;
   listExpenses(userId: string, groupId: string): Promise<SplitExpense[]>;
   addExpense(userId: string, expense: SplitExpense): Promise<SplitExpense>;
   listSettlements(userId: string, groupId: string): Promise<SplitSettlement[]>;

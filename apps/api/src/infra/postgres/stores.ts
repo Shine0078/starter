@@ -1074,6 +1074,24 @@ export class PostgresSplitStore implements SplitStore {
     });
   }
 
+  async removeMember(
+    userId: string,
+    groupId: string,
+    targetUserId: string,
+  ): Promise<'removed' | 'not_found' | 'creator' | 'balance_nonzero' | 'forbidden'> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const { rows } = await client.query<{ result: string }>(
+        `SELECT result FROM finverse_remove_split_member($1, $2)`,
+        [groupId, targetUserId],
+      );
+      const result = rows[0]?.result;
+      if (result === 'removed' || result === 'not_found' || result === 'creator' || result === 'balance_nonzero' || result === 'forbidden') {
+        return result;
+      }
+      return 'not_found';
+    });
+  }
+
   async listExpenses(userId: string, groupId: string): Promise<SplitExpense[]> {
     return withUserScope(this.pg, userId, async (client) => {
       const { rows } = await client.query<SplitExpenseRow>(

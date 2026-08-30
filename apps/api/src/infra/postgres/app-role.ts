@@ -162,6 +162,12 @@ export async function provisionAppRole(pg: Pool, appDatabaseUrl: string): Promis
             app_role
           );
         END IF;
+        IF to_regprocedure('public.finverse_remove_split_member(text,text)') IS NOT NULL THEN
+          EXECUTE format(
+            'GRANT EXECUTE ON FUNCTION public.finverse_remove_split_member(text,text) TO %I',
+            app_role
+          );
+        END IF;
         IF to_regprocedure('public.finverse_split_invitation_context(text)') IS NOT NULL THEN
           EXECUTE format(
             'GRANT EXECUTE ON FUNCTION public.finverse_split_invitation_context(text) TO %I',

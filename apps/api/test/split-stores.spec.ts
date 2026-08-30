@@ -100,6 +100,18 @@ describe('split service (in-memory)', () => {
     await expect(service.acceptInvitation('split_bob', second.id)).rejects.toThrow(/not found/i);
   });
 
+  it('only removes a member after their balance reaches zero', async () => {
+    const group = await service.createGroup('split_alice', { name: 'Removal' });
+    await inviteAndAccept(service, group.id, 'bob@example.com', 'split_bob');
+    await service.addExpense('split_alice', group.id, { description: 'Dinner', amount: 1000 });
+    await expect(service.removeMember('split_alice', group.id, 'split_bob')).rejects.toThrow(/settle/i);
+
+    await service.addSettlement('split_bob', group.id, { toUserId: 'split_alice', amount: 500 });
+    await expect(service.removeMember('split_bob', group.id, 'split_bob')).resolves.toBeUndefined();
+    expect((await service.groupDetail('split_alice', group.id)).members.map((m) => m.userId)).toEqual(['split_alice']);
+    await expect(service.removeMember('split_alice', group.id, 'split_alice')).rejects.toThrow(/creator/i);
+  });
+
   it('restricts membership changes to admins and payer attribution to the actor', async () => {
     const group = await service.createGroup('split_alice', { name: 'Trip' });
     await inviteAndAccept(service, group.id, 'bob@example.com', 'split_bob');
@@ -239,6 +251,65 @@ if (TEST_DATABASE_URL) {
       expect((await store.acceptInvitation('split_bob', invitation.id))?.userId).toBe('split_bob');
       expect(await store.listGroups('split_bob')).toHaveLength(1);
       expect((await store.listInvitations('split_bob'))).toHaveLength(0);
+    });
+
+    it('removes only a zero-balance member and records the departure', async () => {
+      await store.createGroup(
+        'split_alice',
+        {
+          id: 'pg-group-remove',
+          name: 'Removal',
+          currency: 'USD',
+          createdBy: 'split_alice',
+          createdAt: '2026-08-10',
+          archivedAt: null,
+        },
+        { groupId: 'pg-group-remove', userId: 'split_alice', role: 'admin', joinedAt: '2026-08-10T00:00:00.000Z' },
+      );
+      const invitation = await store.createInvitation('split_alice', {
+        id: 'pg-invitation-remove',
+        groupId: 'pg-group-remove',
+        inviteeUserId: 'split_bob',
+        invitedByUserId: 'split_alice',
+        status: 'pending',
+        createdAt: '2026-08-10T00:00:00.000Z',
+        decidedAt: null,
+      });
+      await store.acceptInvitation('split_bob', invitation.id);
+      await store.addExpense('split_alice', {
+        id: 'pg-expense-remove',
+        groupId: 'pg-group-remove',
+        description: 'Dinner',
+        category: 'other',
+        amount: 1000,
+        currency: 'USD',
+        paidByUserId: 'split_alice',
+        splitMethod: 'equal',
+        date: '2026-08-10',
+        createdAt: '2026-08-10T12:00:00.000Z',
+        participants: [
+          { expenseId: 'pg-expense-remove', userId: 'split_alice', amount: 500 },
+          { expenseId: 'pg-expense-remove', userId: 'split_bob', amount: 500 },
+        ],
+      });
+      expect(await store.removeMember('split_alice', 'pg-group-remove', 'split_bob')).toBe('balance_nonzero');
+      await store.addSettlement('split_bob', {
+        id: 'pg-settlement-remove',
+        groupId: 'pg-group-remove',
+        fromUserId: 'split_bob',
+        toUserId: 'split_alice',
+        amount: 500,
+        currency: 'USD',
+        note: '',
+        createdAt: '2026-08-10T13:00:00.000Z',
+      });
+      expect(await store.removeMember('split_bob', 'pg-group-remove', 'split_bob')).toBe('removed');
+      expect((await store.listMembers('split_alice', 'pg-group-remove')).map((m) => m.userId)).toEqual(['split_alice']);
+      const { rows: invitationState } = await harness.owner.query(
+        'SELECT status FROM split_group_invitations WHERE id = $1',
+        [invitation.id],
+      );
+      expect(invitationState).toEqual([{ status: 'left' }]);
     });
 
     it('round-trips expenses with participants and settlements', async () => {

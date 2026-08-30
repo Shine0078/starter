@@ -1560,6 +1560,13 @@ class ApiClient implements BackgroundSyncClient {
     await _send('DELETE', '/split/groups/$groupId/invitations/$invitationId');
   }
 
+  Future<void> removeSplitMember(String groupId, String userId) async {
+    await _send(
+      'DELETE',
+      '/split/groups/$groupId/members/${Uri.encodeComponent(userId)}',
+    );
+  }
+
   Future<void> addSplitExpense(
     String groupId, {
     required String description,

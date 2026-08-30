@@ -143,6 +143,22 @@ export class SplitService {
     }
   }
 
+  async removeMember(userId: string, groupId: string, targetUserId: string): Promise<void> {
+    await this.assertActiveMember(userId, groupId);
+    const result = await this.splits.removeMember(userId, groupId, targetUserId);
+    if (result === 'removed') return;
+    if (result === 'balance_nonzero') {
+      throw new BadRequestException('The member must settle their balance before leaving.');
+    }
+    if (result === 'creator') {
+      throw new ForbiddenException('The group creator cannot be removed.');
+    }
+    if (result === 'forbidden') {
+      throw new ForbiddenException('Only a group administrator can remove another member.');
+    }
+    throw new NotFoundException('Member not found.');
+  }
+
   async addExpense(
     userId: string,
     groupId: string,

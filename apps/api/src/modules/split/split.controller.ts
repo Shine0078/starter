@@ -116,6 +116,16 @@ export class SplitController {
     return this.split.revokeInvitation(userId, groupId, invitationId);
   }
 
+  @Delete('groups/:groupId/members/:userId')
+  @HttpCode(204)
+  removeMember(
+    @CurrentUser() userId: string,
+    @Param('groupId') groupId: string,
+    @Param('userId') targetUserId: string,
+  ) {
+    return this.split.removeMember(userId, groupId, targetUserId);
+  }
+
   @Post('groups/:id/expenses')
   async addExpense(
     @CurrentUser() userId: string,
@@ -147,6 +157,7 @@ function presentGroup(group: SplitGroup) {
     id: group.id,
     name: group.name,
     currency: group.currency,
+    createdBy: group.createdBy,
     createdAt: group.createdAt,
     archivedAt: group.archivedAt,
   };

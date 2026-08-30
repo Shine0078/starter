@@ -338,6 +338,7 @@ if (!OWNER_URL) {
              'finverse_has_pending_split_invitation',
              'finverse_accept_split_invitation',
              'finverse_split_invitation_context',
+             'finverse_remove_split_member',
              'finverse_subscription_owner',
              'finverse_webauthn_credential_owner'
            )
@@ -351,6 +352,7 @@ if (!OWNER_URL) {
         'finverse_is_split_creator',
         'finverse_is_split_member',
         'finverse_link_owner',
+        'finverse_remove_split_member',
         'finverse_split_invitation_context',
         'finverse_subscription_owner',
         'finverse_webauthn_credential_owner',
