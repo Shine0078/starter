@@ -1528,7 +1528,36 @@ class ApiClient implements BackgroundSyncClient {
   }
 
   Future<void> addSplitMember(String groupId, String email) async {
-    await _send('POST', '/split/groups/$groupId/members', {'email': email});
+    await _send('POST', '/split/groups/$groupId/invitations', {'email': email});
+  }
+
+  Future<SplitInvitation> createSplitInvitation(String groupId, String email) async {
+    final json = await _send(
+      'POST',
+      '/split/groups/$groupId/invitations',
+      {'email': email},
+    ) as Map<String, dynamic>;
+    return SplitInvitation.fromJson(json);
+  }
+
+  Future<List<SplitInvitation>> splitInvitations() async {
+    final json = await _get('/split/invitations') as Map<String, dynamic>;
+    return (json['invitations'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(SplitInvitation.fromJson)
+        .toList();
+  }
+
+  Future<void> acceptSplitInvitation(String invitationId) async {
+    await _send('POST', '/split/invitations/$invitationId/accept');
+  }
+
+  Future<void> declineSplitInvitation(String invitationId) async {
+    await _send('POST', '/split/invitations/$invitationId/decline');
+  }
+
+  Future<void> revokeSplitInvitation(String groupId, String invitationId) async {
+    await _send('DELETE', '/split/groups/$groupId/invitations/$invitationId');
   }
 
   Future<void> addSplitExpense(

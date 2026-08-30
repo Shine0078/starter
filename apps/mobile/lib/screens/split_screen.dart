@@ -21,6 +21,7 @@ class _SplitScreenState extends State<SplitScreen> {
   var _loading = true;
   String? _error;
   List<SplitGroup> _groups = const [];
+  List<SplitInvitation> _invitations = const [];
 
   @override
   void initState() {
@@ -34,10 +35,16 @@ class _SplitScreenState extends State<SplitScreen> {
       _error = null;
     });
     try {
-      final groups = await widget.api.splitGroups();
+      final results = await Future.wait([
+        widget.api.splitGroups(),
+        widget.api.splitInvitations(),
+      ]);
+      final groups = results[0] as List<SplitGroup>;
+      final invitations = results[1] as List<SplitInvitation>;
       if (!mounted) return;
       setState(() {
         _groups = groups;
+        _invitations = invitations;
         _loading = false;
       });
     } catch (error) {
@@ -46,6 +53,22 @@ class _SplitScreenState extends State<SplitScreen> {
         _error = friendlyErrorMessage(error);
         _loading = false;
       });
+    }
+  }
+
+  Future<void> _respondToInvitation(SplitInvitation invitation, bool accept) async {
+    try {
+      if (accept) {
+        await widget.api.acceptSplitInvitation(invitation.id);
+      } else {
+        await widget.api.declineSplitInvitation(invitation.id);
+      }
+      await _load();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(friendlyErrorMessage(error))),
+      );
     }
   }
 
@@ -142,7 +165,7 @@ class _SplitScreenState extends State<SplitScreen> {
         ),
       );
     }
-    if (_groups.isEmpty) {
+    if (_groups.isEmpty && _invitations.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -160,24 +183,52 @@ class _SplitScreenState extends State<SplitScreen> {
         ),
       );
     }
-    return ListView.builder(
+    return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-      itemCount: _groups.length,
-      itemBuilder: (context, index) {
-        final group = _groups[index];
-        return Card(
-          child: ListTile(
-            leading: const CircleAvatar(child: Icon(Icons.group_outlined)),
-            title: Text(group.name),
-            subtitle: Text(group.currency),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) =>
-                  SplitGroupDetailScreen(api: widget.api, groupId: group.id),
-            )),
-          ),
-        );
-      },
+      children: [
+        if (_invitations.isNotEmpty) ...[
+          Text('Pending invitations', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          ..._invitations.map((invitation) => Card(
+                child: ListTile(
+                  leading: const Icon(Icons.mail_outline),
+                  title: Text(invitation.groupName ?? 'Shared group'),
+                  subtitle: Text([
+                    if (invitation.currency != null) invitation.currency!,
+                    if (invitation.invitedByEmail != null) 'Invited by ${invitation.invitedByEmail}',
+                  ].join(' · ')),
+                  trailing: Wrap(
+                    spacing: 4,
+                    children: [
+                      IconButton(
+                        tooltip: 'Decline',
+                        onPressed: () => _respondToInvitation(invitation, false),
+                        icon: const Icon(Icons.close),
+                      ),
+                      IconButton(
+                        tooltip: 'Accept',
+                        onPressed: () => _respondToInvitation(invitation, true),
+                        icon: const Icon(Icons.check),
+                      ),
+                    ],
+                  ),
+                ),
+              )),
+          const SizedBox(height: 16),
+        ],
+        if (_groups.isNotEmpty)
+          ..._groups.map((group) => Card(
+                child: ListTile(
+                  leading: const CircleAvatar(child: Icon(Icons.group_outlined)),
+                  title: Text(group.name),
+                  subtitle: Text(group.currency),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => SplitGroupDetailScreen(api: widget.api, groupId: group.id),
+                  )),
+                ),
+              )),
+      ],
     );
   }
 }

@@ -24,6 +24,7 @@ import { isWithin } from '../domain/dates';
 import { getCategory } from '../domain/categories';
 import type {
   SplitExpense,
+  SplitGroupInvitation,
   SplitGroup,
   SplitGroupMember,
   SplitSettlement,
@@ -468,6 +469,7 @@ export class InMemorySplitStore implements SplitStore {
   private readonly members = new Map<string, SplitGroupMember[]>();
   private readonly expenses = new Map<string, SplitExpense[]>();
   private readonly settlements = new Map<string, SplitSettlement[]>();
+  private readonly invitations = new Map<string, SplitGroupInvitation>();
 
   private memberIds(groupId: string): string[] {
     return (this.members.get(groupId) ?? []).map((m) => m.userId);
@@ -509,17 +511,80 @@ export class InMemorySplitStore implements SplitStore {
     );
   }
 
-  async addMember(
-    userId: string,
-    membership: SplitGroupMember,
-  ): Promise<SplitGroupMember> {
-    if (!(await this.getGroup(userId, membership.groupId))) {
-      throw new Error('Not a member of this group.');
+  async createInvitation(userId: string, invitation: SplitGroupInvitation): Promise<SplitGroupInvitation> {
+    const group = await this.getGroup(userId, invitation.groupId);
+    if (!group || group.archivedAt) throw new Error('Not an active member of this group.');
+    const admin = (this.members.get(invitation.groupId) ?? []).some(
+      (member) => member.userId === userId && member.role === 'admin',
+    );
+    if (!admin) throw new Error('Only a group administrator can invite members.');
+    if ((this.members.get(invitation.groupId) ?? []).some((member) => member.userId === invitation.inviteeUserId)) {
+      throw new Error('Unable to add that account.');
     }
-    const rows = this.members.get(membership.groupId) ?? [];
-    if (!rows.some((m) => m.userId === membership.userId)) rows.push(membership);
-    this.members.set(membership.groupId, rows);
-    return membership;
+    if ([...this.invitations.values()].some((existing) =>
+      existing.groupId === invitation.groupId &&
+      existing.inviteeUserId === invitation.inviteeUserId &&
+      existing.status === 'pending')) {
+      throw new Error('An invitation is already pending.');
+    }
+    this.invitations.set(invitation.id, { ...invitation });
+    return { ...invitation };
+  }
+
+  async listInvitations(userId: string): Promise<SplitGroupInvitation[]> {
+    return [...this.invitations.values()]
+      .filter((invitation) => invitation.inviteeUserId === userId && invitation.status === 'pending')
+      .map((invitation) => ({ ...invitation }));
+  }
+
+  async listGroupInvitations(userId: string, groupId: string): Promise<SplitGroupInvitation[]> {
+    const group = await this.getGroup(userId, groupId);
+    const admin = (this.members.get(groupId) ?? []).some(
+      (member) => member.userId === userId && member.role === 'admin',
+    );
+    if (!group || !admin) return [];
+    return [...this.invitations.values()]
+      .filter((invitation) => invitation.groupId === groupId)
+      .map((invitation) => ({ ...invitation }));
+  }
+
+  async acceptInvitation(userId: string, invitationId: string): Promise<SplitGroupMember | null> {
+    const invitation = this.invitations.get(invitationId);
+    if (!invitation || invitation.inviteeUserId !== userId || invitation.status !== 'pending') return null;
+    const group = this.groups.get(invitation.groupId);
+    if (!group || group.archivedAt) return null;
+    const membership: SplitGroupMember = {
+      groupId: invitation.groupId,
+      userId,
+      role: 'member',
+      joinedAt: new Date().toISOString(),
+    };
+    const rows = this.members.get(invitation.groupId) ?? [];
+    if (!rows.some((member) => member.userId === userId)) rows.push(membership);
+    this.members.set(invitation.groupId, rows);
+    invitation.status = 'accepted';
+    invitation.decidedAt = new Date().toISOString();
+    return { ...membership };
+  }
+
+  async declineInvitation(userId: string, invitationId: string): Promise<boolean> {
+    const invitation = this.invitations.get(invitationId);
+    if (!invitation || invitation.inviteeUserId !== userId || invitation.status !== 'pending') return false;
+    invitation.status = 'declined';
+    invitation.decidedAt = new Date().toISOString();
+    return true;
+  }
+
+  async revokeInvitation(userId: string, groupId: string, invitationId: string): Promise<boolean> {
+    const invitation = this.invitations.get(invitationId);
+    const group = await this.getGroup(userId, groupId);
+    const admin = (this.members.get(groupId) ?? []).some(
+      (member) => member.userId === userId && member.role === 'admin',
+    );
+    if (!group || !admin || !invitation || invitation.groupId !== groupId || invitation.status !== 'pending') return false;
+    invitation.status = 'revoked';
+    invitation.decidedAt = new Date().toISOString();
+    return true;
   }
 
   async listExpenses(userId: string, groupId: string): Promise<SplitExpense[]> {

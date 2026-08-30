@@ -58,6 +58,7 @@ const MEMBERSHIP_SCOPED_TABLES = [
   'split_expenses',
   'split_expense_participants',
   'split_settlements',
+  'split_group_invitations',
 ];
 
 /** Seeds one account and one transaction for a user, as the owner. */
@@ -334,17 +335,23 @@ if (!OWNER_URL) {
              'finverse_is_split_admin',
              'finverse_is_split_member',
              'finverse_is_split_creator',
+             'finverse_has_pending_split_invitation',
+             'finverse_accept_split_invitation',
+             'finverse_split_invitation_context',
              'finverse_subscription_owner',
              'finverse_webauthn_credential_owner'
            )
          ORDER BY proname
       `, [role]);
       expect(rows.map((row) => row.fn)).toEqual([
+        'finverse_accept_split_invitation',
         'finverse_claim_bank_webhooks',
+        'finverse_has_pending_split_invitation',
         'finverse_is_split_admin',
         'finverse_is_split_creator',
         'finverse_is_split_member',
         'finverse_link_owner',
+        'finverse_split_invitation_context',
         'finverse_subscription_owner',
         'finverse_webauthn_credential_owner',
       ]);
@@ -384,6 +391,63 @@ if (!OWNER_URL) {
         // whatever runs next.
         client.release(true);
       }
+    });
+
+    it('keeps invitations scoped and makes consent the only membership path', async () => {
+      const groupId = 'rls_split_invitation_group';
+      const invitationId = 'rls_split_invitation';
+      const mallory = 'user_rls_mallory';
+      await owner.query(
+        `INSERT INTO users (id) VALUES ($1) ON CONFLICT (id) DO NOTHING`,
+        [mallory],
+      );
+      await owner.query(
+        `INSERT INTO split_groups (id, name, currency, created_by, created_at)
+         VALUES ($1, 'Invitation group', 'USD', $2, '2026-08-10')`,
+        [groupId, ALICE],
+      );
+      await owner.query(
+        `INSERT INTO split_group_members (group_id, user_id, role)
+         VALUES ($1, $2, 'admin')`,
+        [groupId, ALICE],
+      );
+      await withUserScope(app, ALICE, (client) =>
+        client.query(
+          `INSERT INTO split_group_invitations
+             (id, group_id, invitee_user_id, invited_by_user_id, status)
+           VALUES ($1, $2, $3, $4, 'pending')`,
+          [invitationId, groupId, BOB, ALICE],
+        ),
+      );
+
+      const bobRows = await withUserScope(app, BOB, (client) =>
+        client.query('SELECT id FROM split_group_invitations'),
+      );
+      const malloryRows = await withUserScope(app, mallory, (client) =>
+        client.query('SELECT id FROM split_group_invitations'),
+      );
+      expect(bobRows.rows).toEqual([{ id: invitationId }]);
+      expect(malloryRows.rows).toHaveLength(0);
+
+      await expect(
+        withUserScope(app, BOB, (client) =>
+          client.query(
+            `INSERT INTO split_group_members (group_id, user_id, role)
+             VALUES ($1, $2, 'member')`,
+            [groupId, BOB],
+          ),
+        ),
+      ).rejects.toThrow();
+
+      const accepted = await withUserScope(app, BOB, (client) =>
+        client.query('SELECT * FROM finverse_accept_split_invitation($1)', [invitationId]),
+      );
+      expect(accepted.rows[0]).toMatchObject({ group_id: groupId, user_id: BOB, role: 'member' });
+      const { rows: state } = await owner.query(
+        'SELECT status FROM split_group_invitations WHERE id = $1',
+        [invitationId],
+      );
+      expect(state).toEqual([{ status: 'accepted' }]);
     });
 
     // ----------------------------------------------------------- writes

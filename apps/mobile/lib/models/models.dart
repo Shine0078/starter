@@ -2022,6 +2022,36 @@ class SplitMember {
   final String? joinedAt;
 }
 
+class SplitInvitation {
+  SplitInvitation({
+    required this.id,
+    required this.groupId,
+    required this.status,
+    this.groupName,
+    this.currency,
+    this.invitedByEmail,
+    this.createdAt,
+  });
+
+  factory SplitInvitation.fromJson(Map<String, dynamic> json) => SplitInvitation(
+        id: json['id'] as String,
+        groupId: json['groupId'] as String,
+        status: json['status'] as String? ?? 'pending',
+        groupName: json['groupName'] as String?,
+        currency: json['currency'] as String?,
+        invitedByEmail: json['invitedByEmail'] as String?,
+        createdAt: json['createdAt'] as String?,
+      );
+
+  final String id;
+  final String groupId;
+  final String status;
+  final String? groupName;
+  final String? currency;
+  final String? invitedByEmail;
+  final String? createdAt;
+}
+
 class SplitParticipant {
   SplitParticipant(
       {required this.userId,

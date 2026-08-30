@@ -31,6 +31,7 @@ import type {
 import { CATEGORIES } from '../../domain/categories';
 import type {
   SplitExpense,
+  SplitGroupInvitation,
   SplitGroup,
   SplitGroupMember,
   SplitSettlement,
@@ -878,6 +879,32 @@ const SPLIT_PARTICIPANT_COLUMNS = 'expense_id, group_id, user_id, amount';
 const SPLIT_SETTLEMENT_COLUMNS =
   'id, group_id, from_user_id, to_user_id, amount, currency, note, created_at';
 
+interface SplitInvitationRow {
+  id: string;
+  group_id: string;
+  invitee_user_id: string;
+  invited_by_user_id: string | null;
+  status: string;
+  created_at: Date;
+  decided_at: Date | null;
+  context: { groupName?: string; currency?: string; invitedByEmail?: string | null } | null;
+}
+
+function toSplitInvitation(row: SplitInvitationRow): SplitGroupInvitation {
+  return {
+    id: row.id,
+    groupId: row.group_id,
+    inviteeUserId: row.invitee_user_id,
+    invitedByUserId: row.invited_by_user_id,
+    status: row.status as SplitGroupInvitation['status'],
+    createdAt: row.created_at.toISOString(),
+    decidedAt: row.decided_at?.toISOString() ?? null,
+    groupName: row.context?.groupName,
+    currency: row.context?.currency,
+    invitedByEmail: row.context?.invitedByEmail ?? null,
+  };
+}
+
 export class PostgresSplitStore implements SplitStore {
   constructor(private readonly pg: Pool) {}
 
@@ -951,17 +978,99 @@ export class PostgresSplitStore implements SplitStore {
     });
   }
 
-  async addMember(
-    userId: string,
-    membership: SplitGroupMember,
-  ): Promise<SplitGroupMember> {
+  async createInvitation(userId: string, invitation: SplitGroupInvitation): Promise<SplitGroupInvitation> {
     return withUserScope(this.pg, userId, async (client) => {
       await client.query(
-        `INSERT INTO split_group_members (group_id, user_id, role)
-         VALUES ($1, $2, $3)`,
-        [membership.groupId, membership.userId, membership.role],
+        `INSERT INTO split_group_invitations
+           (id, group_id, invitee_user_id, invited_by_user_id, status, created_at)
+         VALUES ($1, $2, $3, $4, 'pending', $5)
+         `,
+        [
+          invitation.id,
+          invitation.groupId,
+          invitation.inviteeUserId,
+          invitation.invitedByUserId,
+          invitation.createdAt,
+        ],
       );
-      return membership;
+      // Read after the insert so the narrow context function can see the
+      // committed row through the caller's scoped transaction.
+      const { rows } = await client.query<SplitInvitationRow>(
+        `SELECT id, group_id, invitee_user_id, invited_by_user_id,
+                status, created_at, decided_at,
+                finverse_split_invitation_context(id) AS context
+           FROM split_group_invitations WHERE id = $1`,
+        [invitation.id],
+      );
+      return rows[0] ? toSplitInvitation(rows[0]) : invitation;
+    });
+  }
+
+  async listInvitations(userId: string): Promise<SplitGroupInvitation[]> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const { rows } = await client.query<SplitInvitationRow>(
+        `SELECT id, group_id, invitee_user_id, invited_by_user_id,
+                status, created_at, decided_at,
+                finverse_split_invitation_context(id) AS context
+           FROM split_group_invitations
+          WHERE invitee_user_id = $1 AND status = 'pending'
+          ORDER BY created_at DESC, id DESC`,
+        [userId],
+      );
+      return rows.map(toSplitInvitation);
+    });
+  }
+
+  async listGroupInvitations(userId: string, groupId: string): Promise<SplitGroupInvitation[]> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const { rows } = await client.query<SplitInvitationRow>(
+        `SELECT id, group_id, invitee_user_id, invited_by_user_id,
+                status, created_at, decided_at,
+                finverse_split_invitation_context(id) AS context
+           FROM split_group_invitations
+          WHERE group_id = $1
+          ORDER BY created_at DESC, id DESC`,
+        [groupId],
+      );
+      return rows.map(toSplitInvitation);
+    });
+  }
+
+  async acceptInvitation(userId: string, invitationId: string): Promise<SplitGroupMember | null> {
+    return withUserScope(this.pg, userId, async (client) => {
+      // The database command locks the invitation and performs membership
+      // creation plus state transition atomically. A revoke racing this call
+      // has exactly one winner.
+      const membership = await client.query<SplitMemberRow>(
+        `SELECT group_id, user_id, role, joined_at
+           FROM finverse_accept_split_invitation($1)`,
+        [invitationId],
+      );
+      return membership.rows[0] ? toSplitMember(membership.rows[0]) : null;
+    });
+  }
+
+  async declineInvitation(userId: string, invitationId: string): Promise<boolean> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const result = await client.query(
+        `UPDATE split_group_invitations
+            SET status = 'declined', decided_at = now()
+          WHERE id = $1 AND invitee_user_id = $2 AND status = 'pending'`,
+        [invitationId, userId],
+      );
+      return (result.rowCount ?? 0) > 0;
+    });
+  }
+
+  async revokeInvitation(userId: string, groupId: string, invitationId: string): Promise<boolean> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const result = await client.query(
+        `UPDATE split_group_invitations
+            SET status = 'revoked', decided_at = now()
+          WHERE id = $1 AND group_id = $2 AND status = 'pending'`,
+        [invitationId, groupId],
+      );
+      return (result.rowCount ?? 0) > 0;
     });
   }
 

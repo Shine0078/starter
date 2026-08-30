@@ -150,6 +150,24 @@ export async function provisionAppRole(pg: Pool, appDatabaseUrl: string): Promis
             app_role
           );
         END IF;
+        IF to_regprocedure('public.finverse_has_pending_split_invitation(text)') IS NOT NULL THEN
+          EXECUTE format(
+            'GRANT EXECUTE ON FUNCTION public.finverse_has_pending_split_invitation(text) TO %I',
+            app_role
+          );
+        END IF;
+        IF to_regprocedure('public.finverse_accept_split_invitation(text)') IS NOT NULL THEN
+          EXECUTE format(
+            'GRANT EXECUTE ON FUNCTION public.finverse_accept_split_invitation(text) TO %I',
+            app_role
+          );
+        END IF;
+        IF to_regprocedure('public.finverse_split_invitation_context(text)') IS NOT NULL THEN
+          EXECUTE format(
+            'GRANT EXECUTE ON FUNCTION public.finverse_split_invitation_context(text) TO %I',
+            app_role
+          );
+        END IF;
         IF to_regprocedure('public.finverse_subscription_owner(text)') IS NOT NULL THEN
           EXECUTE format(
             'GRANT EXECUTE ON FUNCTION public.finverse_subscription_owner(text) TO %I',

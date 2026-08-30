@@ -24,6 +24,7 @@ import type {
 } from '../domain/types';
 import type {
   SplitExpense,
+  SplitGroupInvitation,
   SplitGroup,
   SplitGroupMember,
   SplitSettlement,
@@ -157,7 +158,12 @@ export interface SplitStore {
   ): Promise<SplitGroup>;
   archiveGroup(userId: string, groupId: string): Promise<boolean>;
   listMembers(userId: string, groupId: string): Promise<SplitGroupMember[]>;
-  addMember(userId: string, membership: SplitGroupMember): Promise<SplitGroupMember>;
+  createInvitation(userId: string, invitation: SplitGroupInvitation): Promise<SplitGroupInvitation>;
+  listInvitations(userId: string): Promise<SplitGroupInvitation[]>;
+  listGroupInvitations(userId: string, groupId: string): Promise<SplitGroupInvitation[]>;
+  acceptInvitation(userId: string, invitationId: string): Promise<SplitGroupMember | null>;
+  declineInvitation(userId: string, invitationId: string): Promise<boolean>;
+  revokeInvitation(userId: string, groupId: string, invitationId: string): Promise<boolean>;
   listExpenses(userId: string, groupId: string): Promise<SplitExpense[]>;
   addExpense(userId: string, expense: SplitExpense): Promise<SplitExpense>;
   listSettlements(userId: string, groupId: string): Promise<SplitSettlement[]>;
