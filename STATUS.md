@@ -30,8 +30,8 @@ GitHub Pages and `finverse.onrender.com` are not the current API.
 ## Current API / DB / WebAuthn
 
 - Live `/api/version`: HTTP 404, proving the public URL is still an older image.
-- Live `/app/`: HTTP 200, but it is the older dark bundle and does not declare
-  the candidate `/app/` base href. It must not be treated as the verified app.
+- Live `/app/`: HTTP 200, but it is the older dark bundle and has no matching
+  `/api/version` candidate identity. It must not be treated as the verified app.
 - Candidate preview: `http://localhost:3001/app/` with
   `http://localhost:3001/api/version` reporting schema
   `040_statement_import_retention.sql`; registration and `/api/auth/me` were
