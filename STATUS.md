@@ -12,8 +12,8 @@ Protected default branch: `main`
 ## Current commit SHA
 
 - `main` / `origin/main`: the protected branch remains behind the candidate.
-- Working branch `codex/passkey-webauthn-p0` feature tip is `3057fcf` locally,
-  35 commits ahead of its remote tracking ref. The candidate worktree is clean.
+- Working branch `codex/passkey-webauthn-p0` feature tip is `e1d29c5`, pushed to
+  its remote tracking ref. The candidate worktree is clean.
 
 ## Canonical deployment
 
@@ -47,11 +47,11 @@ GitHub Pages and `finverse.onrender.com` are not the current API.
 - Main CI on merge commit `a21b374`: success
 
 Local verification on the current candidate (2026-09-05): API typecheck/build
-passed; API in-memory suite passed (66 files, 881 tests, 9 skipped); fresh
+passed; API in-memory suite passed (66 files, 882 tests, 9 skipped); fresh
 PostgreSQL suite passed (72 files, 1,065 tests) under the restricted runtime
 role with forced RLS; Flutter analysis passed; Flutter tests passed (119);
 Flutter web release and Android release builds passed; focused statement
-parser/queue tests passed (10). The web-shell light-theme test passed (2).
+parser/queue tests passed (11). The web-shell light-theme test passed (2).
 The candidate includes migration 040 for bounded statement-source retention,
 ZIP expansion limits, active import quotas, and the immutable-image release
 identity gates.
@@ -111,8 +111,8 @@ CI follow-up 2:
 
 ## P0 remaining
 
-- Push/merge the exact candidate SHA, then redeploy Cloud Run with `GIT_SHA`
-  and verify `/api/version` before calling the public URL current
+- Merge/deploy the exact CI-green candidate SHA `e1d29c5` to Cloud Run with
+  `GIT_SHA`, then verify `/api/version` before calling the public URL current
 - Replace live legal URLs before real users
 - Configure live `WEBAUTHN_*`
 - Physical passkey proof

@@ -2,18 +2,18 @@
 
 **Verified:** 2026-09-05
 **Integration branch:** `codex/passkey-webauthn-p0` at local candidate SHA
-`3057fcf`, including the statement-upload, light-theme, release-identity,
+`e1d29c5`, including the statement-upload, light-theme, release-identity,
 parser-bound, retention/quota, split-authorization, split invitation-consent,
 balance-safe member-departure, duplicate-race, supply-chain, encrypted-backup,
-and durable-statement-worker milestones. The worktree is clean and is 35
-commits ahead of its remote tracking ref.
+and durable-statement-worker milestones. The worktree is clean and matches its
+remote tracking ref.
 **Protected main observed:** `a21b3749164561db75f13f89cd3e9d9f7da07109`.
 
 ## Verified Today
 
 - API TypeScript typecheck and production build on the integration branch:
   passed.
-- API in-memory suite on the integration branch: 66 files passed, 881 tests
+- API in-memory suite on the integration branch: 66 files passed, 882 tests
   passed, 9 tests skipped because they require PostgreSQL.
 - API PostgreSQL suite on a fresh embedded cluster: 72 files and 1,065 tests
   passed using the restricted runtime role and forced RLS.
@@ -59,16 +59,15 @@ commits ahead of its remote tracking ref.
 - Light-only Flutter theme.
 - Additional operations, provider, device, incident, and privacy documentation.
 
-## Not A Production Candidate Yet
+## Not Live In Production Yet
 
-- The integration branch is ahead of its remote. Full API PostgreSQL, API
-  in-memory, Flutter, Flutter web, and Android regression gates pass locally;
-  the protected-main post-merge run and exact-SHA release publication remain
-  outstanding.
+- The exact candidate SHA `e1d29c5` is pushed and its required CI, CodeQL,
+  dependency-review, and container-scan gates pass. It has not yet been merged
+  to protected `main` or published to the canonical Cloud Run service.
 - The canonical Cloud Run URL is stale: `/api/version` currently returns 404
   and `/app/` serves an older dark bundle. The local candidate preview at
   `http://localhost:3001/app/` is the only runtime verified against SHA
-  `3057fcf` in this workstation session.
+  `e1d29c5` in this workstation session.
 - A repository-wide adversarial security scan is sealed for protected `main`
   with five validated findings (two high, three medium). The report covers
   release identity, backup confidentiality, WebAuthn parser bounds, and split

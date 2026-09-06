@@ -3,11 +3,11 @@
 ## Release Blockers
 
 - **Integration not merged:** manual statement import and the white default UI
-  are on the latest verified state of `codex/passkey-webauthn-p0` at local SHA
-  `3057fcf`, ahead of the remote branch. The local `main` deploy script conflict
-  markers were removed without touching the separate user dashboard.
+  are on the latest verified state of `codex/passkey-webauthn-p0` at SHA
+  `e1d29c5`. The local `main` deploy script conflict markers were removed
+  without touching the separate user dashboard.
 - **Final candidate regression:** API PostgreSQL (1,065 tests), API in-memory
-  (881 tests), Flutter tests (119 tests), Flutter web, and Android release
+  (882 tests), Flutter tests (119 tests), Flutter web, and Android release
   builds pass on the integration branch. Migration idempotency and the
   protected-main post-merge run still need the CI environment.
 - **Split notifications:** invitation creation, consent, decline, revocation,
