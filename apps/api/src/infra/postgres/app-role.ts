@@ -126,9 +126,51 @@ export async function provisionAppRole(pg: Pool, appDatabaseUrl: string): Promis
             app_role
           );
         END IF;
+        IF to_regprocedure('public.finverse_claim_statement_imports(integer)') IS NOT NULL THEN
+          EXECUTE format(
+            'GRANT EXECUTE ON FUNCTION public.finverse_claim_statement_imports(integer) TO %I',
+            app_role
+          );
+        END IF;
         IF to_regprocedure('public.finverse_is_split_member(text)') IS NOT NULL THEN
           EXECUTE format(
             'GRANT EXECUTE ON FUNCTION public.finverse_is_split_member(text) TO %I',
+            app_role
+          );
+        END IF;
+        IF to_regprocedure('public.finverse_is_split_admin(text)') IS NOT NULL THEN
+          EXECUTE format(
+            'GRANT EXECUTE ON FUNCTION public.finverse_is_split_admin(text) TO %I',
+            app_role
+          );
+        END IF;
+        IF to_regprocedure('public.finverse_is_split_creator(text)') IS NOT NULL THEN
+          EXECUTE format(
+            'GRANT EXECUTE ON FUNCTION public.finverse_is_split_creator(text) TO %I',
+            app_role
+          );
+        END IF;
+        IF to_regprocedure('public.finverse_has_pending_split_invitation(text)') IS NOT NULL THEN
+          EXECUTE format(
+            'GRANT EXECUTE ON FUNCTION public.finverse_has_pending_split_invitation(text) TO %I',
+            app_role
+          );
+        END IF;
+        IF to_regprocedure('public.finverse_accept_split_invitation(text)') IS NOT NULL THEN
+          EXECUTE format(
+            'GRANT EXECUTE ON FUNCTION public.finverse_accept_split_invitation(text) TO %I',
+            app_role
+          );
+        END IF;
+        IF to_regprocedure('public.finverse_remove_split_member(text,text)') IS NOT NULL THEN
+          EXECUTE format(
+            'GRANT EXECUTE ON FUNCTION public.finverse_remove_split_member(text,text) TO %I',
+            app_role
+          );
+        END IF;
+        IF to_regprocedure('public.finverse_split_invitation_context(text)') IS NOT NULL THEN
+          EXECUTE format(
+            'GRANT EXECUTE ON FUNCTION public.finverse_split_invitation_context(text) TO %I',
             app_role
           );
         END IF;

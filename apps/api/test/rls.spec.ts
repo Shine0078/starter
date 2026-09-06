@@ -47,6 +47,9 @@ const PROTECTED_TABLES = [
   'rule_applications',
   'rule_application_changes',
   'fx_rates',
+  'statement_imports',
+  'statement_import_rows',
+  'statement_import_events',
 ];
 
 const MEMBERSHIP_SCOPED_TABLES = [
@@ -55,6 +58,7 @@ const MEMBERSHIP_SCOPED_TABLES = [
   'split_expenses',
   'split_expense_participants',
   'split_settlements',
+  'split_group_invitations',
 ];
 
 /** Seeds one account and one transaction for a user, as the owner. */
@@ -162,6 +166,28 @@ async function seed(owner: Pool, userId: string, amount: number): Promise<void> 
        (id, user_id, account_id, filename, status, rows_total, rows_imported, rows_duplicate, rows_invalid)
      VALUES ($1, $2, $3, 'export.csv', 'committed', 1, 1, 0, 0)`,
     [`imp_${userId}`, userId, `acc_${userId}`],
+  );
+  await owner.query(
+    `INSERT INTO statement_imports
+       (id,user_id,account_id,filename,mime_type,format,statement_hash,status,
+        rows_total,rows_included,rows_excluded,rows_needs_review,encrypted_source)
+     VALUES ($1,$2,$3,'statement.csv','text/csv','csv',$4,'ready',1,1,0,0,'v1.test')`,
+    [`stmt_${userId}`, userId, `acc_${userId}`, 'a'.repeat(64)],
+  );
+  await owner.query(
+    `INSERT INTO statement_import_rows
+       (id,import_id,user_id,source_line,posted_at,description,amount,currency,
+        direction,category_slug,category_source,category_confidence,decision,
+        fingerprint,raw)
+     VALUES ($1,$2,$3,2,'2026-08-01','Statement row',-1000,'USD','debit',
+        'groceries','lexicon',0.9,'include',$4,'Statement row')`,
+    [`stmt_row_${userId}`, `stmt_${userId}`, userId, 'b'.repeat(64)],
+  );
+  await owner.query(
+    `INSERT INTO statement_import_events
+       (id,user_id,import_id,kind,detail)
+     VALUES ($1,$2,$3,'created','{}'::jsonb)`,
+    [`stmt_evt_${userId}`, userId, `stmt_${userId}`],
   );
   await owner.query(
     `INSERT INTO scheduled_transactions
@@ -306,16 +332,28 @@ if (!OWNER_URL) {
            AND proname IN (
              'finverse_link_owner',
              'finverse_claim_bank_webhooks',
+             'finverse_is_split_admin',
              'finverse_is_split_member',
+             'finverse_is_split_creator',
+             'finverse_has_pending_split_invitation',
+             'finverse_accept_split_invitation',
+             'finverse_split_invitation_context',
+             'finverse_remove_split_member',
              'finverse_subscription_owner',
              'finverse_webauthn_credential_owner'
            )
          ORDER BY proname
       `, [role]);
       expect(rows.map((row) => row.fn)).toEqual([
+        'finverse_accept_split_invitation',
         'finverse_claim_bank_webhooks',
+        'finverse_has_pending_split_invitation',
+        'finverse_is_split_admin',
+        'finverse_is_split_creator',
         'finverse_is_split_member',
         'finverse_link_owner',
+        'finverse_remove_split_member',
+        'finverse_split_invitation_context',
         'finverse_subscription_owner',
         'finverse_webauthn_credential_owner',
       ]);
@@ -357,6 +395,63 @@ if (!OWNER_URL) {
       }
     });
 
+    it('keeps invitations scoped and makes consent the only membership path', async () => {
+      const groupId = 'rls_split_invitation_group';
+      const invitationId = 'rls_split_invitation';
+      const mallory = 'user_rls_mallory';
+      await owner.query(
+        `INSERT INTO users (id) VALUES ($1) ON CONFLICT (id) DO NOTHING`,
+        [mallory],
+      );
+      await owner.query(
+        `INSERT INTO split_groups (id, name, currency, created_by, created_at)
+         VALUES ($1, 'Invitation group', 'USD', $2, '2026-08-10')`,
+        [groupId, ALICE],
+      );
+      await owner.query(
+        `INSERT INTO split_group_members (group_id, user_id, role)
+         VALUES ($1, $2, 'admin')`,
+        [groupId, ALICE],
+      );
+      await withUserScope(app, ALICE, (client) =>
+        client.query(
+          `INSERT INTO split_group_invitations
+             (id, group_id, invitee_user_id, invited_by_user_id, status)
+           VALUES ($1, $2, $3, $4, 'pending')`,
+          [invitationId, groupId, BOB, ALICE],
+        ),
+      );
+
+      const bobRows = await withUserScope(app, BOB, (client) =>
+        client.query('SELECT id FROM split_group_invitations'),
+      );
+      const malloryRows = await withUserScope(app, mallory, (client) =>
+        client.query('SELECT id FROM split_group_invitations'),
+      );
+      expect(bobRows.rows).toEqual([{ id: invitationId }]);
+      expect(malloryRows.rows).toHaveLength(0);
+
+      await expect(
+        withUserScope(app, BOB, (client) =>
+          client.query(
+            `INSERT INTO split_group_members (group_id, user_id, role)
+             VALUES ($1, $2, 'member')`,
+            [groupId, BOB],
+          ),
+        ),
+      ).rejects.toThrow();
+
+      const accepted = await withUserScope(app, BOB, (client) =>
+        client.query('SELECT * FROM finverse_accept_split_invitation($1)', [invitationId]),
+      );
+      expect(accepted.rows[0]).toMatchObject({ group_id: groupId, user_id: BOB, role: 'member' });
+      const { rows: state } = await owner.query(
+        'SELECT status FROM split_group_invitations WHERE id = $1',
+        [invitationId],
+      );
+      expect(state).toEqual([{ status: 'accepted' }]);
+    });
+
     // ----------------------------------------------------------- writes
 
     it('refuses an INSERT that claims another user', async () => {
@@ -388,7 +483,8 @@ if (!OWNER_URL) {
       );
 
       const { rows } = await owner.query<{ user_id: string; amount: number }>(
-        'SELECT user_id, amount FROM transactions ORDER BY user_id',
+        'SELECT user_id, amount FROM transactions WHERE user_id = ANY($1::text[]) ORDER BY user_id',
+        [[ALICE, BOB]],
       );
       expect(rows).toEqual([
         { user_id: ALICE, amount: -1 },
@@ -406,6 +502,56 @@ if (!OWNER_URL) {
 
       const { rows } = await owner.query<{ user_id: string }>('SELECT user_id FROM budgets');
       expect(rows.map((r) => r.user_id)).toEqual([BOB]);
+    });
+
+    it('does not let a non-admin member delete another split member directly', async () => {
+      const groupId = 'rls_split_group';
+      await owner.query(
+        `INSERT INTO split_groups (id, name, currency, created_by, created_at)
+         VALUES ($1, 'RLS group', 'USD', $2, '2026-08-10')`,
+        [groupId, ALICE],
+      );
+      await owner.query(
+        `INSERT INTO split_group_members (group_id, user_id, role)
+         VALUES ($1, $2, 'admin'), ($1, $3, 'member')`,
+        [groupId, ALICE, BOB],
+      );
+
+      const deleted = await withUserScope(app, BOB, (client) =>
+        client.query(
+          'DELETE FROM split_group_members WHERE group_id = $1 AND user_id = $2',
+          [groupId, ALICE],
+        ),
+      );
+      expect(deleted.rowCount).toBe(0);
+
+      const { rows } = await owner.query(
+        'SELECT user_id FROM split_group_members WHERE group_id = $1 ORDER BY user_id',
+        [groupId],
+      );
+      expect(rows.map((row) => row.user_id)).toEqual([ALICE, BOB].sort());
+    });
+
+    it('does not let any role delete the split group creator membership', async () => {
+      const groupId = 'rls_split_creator_guard';
+      await owner.query(
+        `INSERT INTO split_groups (id, name, currency, created_by, created_at)
+         VALUES ($1, 'Creator guard', 'USD', $2, '2026-08-10')`,
+        [groupId, ALICE],
+      );
+      await owner.query(
+        `INSERT INTO split_group_members (group_id, user_id, role)
+         VALUES ($1, $2, 'admin'), ($1, $3, 'member')`,
+        [groupId, ALICE, BOB],
+      );
+
+      const deleted = await withUserScope(app, ALICE, (client) =>
+        client.query(
+          'DELETE FROM split_group_members WHERE group_id = $1 AND user_id = $2',
+          [groupId, ALICE],
+        ),
+      );
+      expect(deleted.rowCount).toBe(0);
     });
 
     // ------------------------------------------------------- the scope itself

@@ -17,6 +17,7 @@ import { InMemoryConsentStore } from '../privacy/consent-stores';
 import { InMemoryReceiptStore } from '../receipts/receipt-stores';
 import { InMemoryPushTokenStore } from '../push/push-token-stores';
 import { InMemoryWebAuthnCredentialStore } from '../webauthn/webauthn-credential-stores';
+import type { InMemoryStatementImportStore } from '../statement-import-store';
 import { InMemoryAuthEventStore, InMemorySessionStore, InMemoryUserStore } from './in-memory-auth-stores';
 import { InMemoryMfaStore } from './mfa-stores';
 
@@ -47,6 +48,7 @@ export class InMemoryAccountDeletionStore implements AccountDeletionStore {
     private readonly receipts: InMemoryReceiptStore,
     private readonly pushTokens: InMemoryPushTokenStore,
     private readonly webauthnCredentials: InMemoryWebAuthnCredentialStore,
+    private readonly statementImports?: InMemoryStatementImportStore,
   ) {}
 
   async request(userId: string, email: string, _requestedAt: Date, purgeAfter: Date): Promise<void> {
@@ -87,6 +89,7 @@ export class InMemoryAccountDeletionStore implements AccountDeletionStore {
       this.receipts.purgeUser(userId);
       this.pushTokens.purgeUser(userId);
       this.webauthnCredentials.purgeUser(userId);
+      this.statementImports?.purgeUser(userId);
       this.sessions.purgeUser(userId);
       this.events.purgeUser(userId, deletion.email);
       this.users.purgeUser(userId);

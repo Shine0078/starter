@@ -73,6 +73,51 @@ export class UserCorrectionClassifier implements ModelClassifier {
     return new UserCorrectionClassifier(examples);
   }
 
+  /**
+   * Leave-one-out evaluation over this user's own unambiguous corrections.
+   * This is not held-out real-world accuracy and must not be quoted as such.
+   */
+  static evaluateLeaveOneOut(transactions: readonly Transaction[]): {
+    labelled: number;
+    predicted: number;
+    correct: number;
+    abstained: number;
+    top1Accuracy: number | null;
+    coverage: number;
+  } {
+    const labelled = UserCorrectionClassifier.fromTransactions(transactions).examples;
+    if (labelled.length < 2) {
+      return {
+        labelled: labelled.length,
+        predicted: 0,
+        correct: 0,
+        abstained: labelled.length,
+        top1Accuracy: null,
+        coverage: 0,
+      };
+    }
+
+    let predicted = 0;
+    let correct = 0;
+    for (let i = 0; i < labelled.length; i += 1) {
+      const heldOut = labelled[i]!;
+      const trainer = new UserCorrectionClassifier(labelled.filter((_, index) => index !== i));
+      const guess = trainer.classify(heldOut.normalizedDescriptor);
+      if (!guess) continue;
+      predicted += 1;
+      if (guess.categorySlug === heldOut.categorySlug) correct += 1;
+    }
+
+    return {
+      labelled: labelled.length,
+      predicted,
+      correct,
+      abstained: labelled.length - predicted,
+      top1Accuracy: predicted === 0 ? null : correct / predicted,
+      coverage: predicted / labelled.length,
+    };
+  }
+
   classify(normalizedDescriptor: string): ModelPrediction | null {
     const normalized = normalizeDescriptor(normalizedDescriptor);
     const tokens = new Set(descriptorTokens(normalized));
