@@ -13,7 +13,12 @@ interface StoredStatement extends StatementImport {
   events: StatementImportEvent[];
   attempts: number;
   processingStartedAt: string | null;
+  sourceExpiresAt: string | null;
 }
+
+const MAX_STAGED_SOURCE_BYTES = 64 * 1024 * 1024;
+const MAX_ACTIVE_IMPORTS = 5;
+const SOURCE_RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
 
 /** In-memory adapter used by contract tests and the local demo. */
 export class InMemoryStatementImportStore implements StatementImportStore {
@@ -36,17 +41,19 @@ export class InMemoryStatementImportStore implements StatementImportStore {
 
   async create(userId: string, statement: StatementImport, encryptedSource: string, rows: readonly StatementRowRecord[]): Promise<StatementImport> {
     const bucket = this.bucket(userId);
+    assertQuota(bucket, encryptedSource, false);
     if (bucket.some((item) => item.accountId === statement.accountId && item.statementHash === statement.statementHash && item.status !== 'deleted')) {
       throw new Error('STATEMENT_DUPLICATE');
     }
     const created: StatementImportEvent = { id: `evt_${statement.id}_created`, importId: statement.id, rowId: null, kind: 'created', detail: { format: statement.format, rows: rows.length }, createdAt: statement.createdAt };
     const processed: StatementImportEvent = { id: `evt_${statement.id}_processed`, importId: statement.id, rowId: null, kind: 'processed', detail: { rows: rows.length }, createdAt: statement.processedAt ?? statement.createdAt };
-    bucket.push({ ...statement, encryptedSource, rows: rows.map(cloneRow), events: [created, processed], attempts: 0, processingStartedAt: null });
+    bucket.push({ ...statement, encryptedSource, rows: rows.map(cloneRow), events: [created, processed], attempts: 0, processingStartedAt: null, sourceExpiresAt: expiry(statement.createdAt) });
     return { ...statement };
   }
 
   async enqueue(userId: string, statement: StatementImport, encryptedSource: string): Promise<StatementImport> {
     const bucket = this.bucket(userId);
+    assertQuota(bucket, encryptedSource, true);
     if (bucket.some((item) => item.accountId === statement.accountId && item.statementHash === statement.statementHash && item.status !== 'deleted')) {
       throw new Error('STATEMENT_DUPLICATE');
     }
@@ -58,6 +65,7 @@ export class InMemoryStatementImportStore implements StatementImportStore {
       events: [created],
       attempts: 0,
       processingStartedAt: null,
+      sourceExpiresAt: expiry(statement.createdAt),
     };
     bucket.push(stored);
     return strip(stored);
@@ -68,6 +76,20 @@ export class InMemoryStatementImportStore implements StatementImportStore {
     const stale = now - 5 * 60_000;
     const candidates = [...this.byUser.entries()]
       .flatMap(([userId, statements]) => statements.map((statement) => ({ userId, statement })))
+      .filter(({ statement }) => {
+        if (!expireIfNeeded(statement, now)) return false;
+        if (statement.status === 'processing' && statement.attempts >= 3 && statement.processingStartedAt !== null && Date.parse(statement.processingStartedAt) < stale) {
+          statement.status = 'failed';
+          statement.error = 'The statement job exceeded the retry limit.';
+          statement.encryptedSource = null;
+          statement.sourceDeletedAt = new Date(now).toISOString();
+          statement.sourceExpiresAt = null;
+          statement.processingStartedAt = null;
+          statement.events.push({ id: `evt_retry_exhausted_${statement.id}`, importId: statement.id, rowId: null, kind: 'failed', detail: { reason: 'retry_limit' }, createdAt: statement.sourceDeletedAt });
+          return false;
+        }
+        return true;
+      })
       .filter(({ statement }) =>
         (statement.status === 'queued' && statement.encryptedSource !== null) ||
         (statement.status === 'processing' && statement.processingStartedAt !== null && Date.parse(statement.processingStartedAt) < stale),
@@ -203,7 +225,7 @@ function recalculate(statement: StoredStatement): void {
 }
 
 function strip(statement: StoredStatement): StatementImport {
-  const { encryptedSource: _source, rows: _rows, events: _events, ...publicRecord } = statement;
+  const { encryptedSource: _source, rows: _rows, events: _events, sourceExpiresAt: _sourceExpiresAt, ...publicRecord } = statement;
   return { ...publicRecord };
 }
 
@@ -213,4 +235,31 @@ function cloneRow(row: StatementRowRecord): StatementRowRecord {
 
 function cloneEvent(event: StatementImportEvent): StatementImportEvent {
   return { ...event, detail: { ...event.detail } };
+}
+
+function assertQuota(bucket: readonly StoredStatement[], encryptedSource: string, countActive: boolean): void {
+  const bytes = bucket.reduce((sum, statement) => sum + (statement.encryptedSource ? Buffer.byteLength(statement.encryptedSource, 'utf8') : 0), 0);
+  const active = bucket.filter((statement) => statement.status === 'queued' || statement.status === 'processing').length;
+  if (bytes + Buffer.byteLength(encryptedSource, 'utf8') > MAX_STAGED_SOURCE_BYTES || (countActive && active >= MAX_ACTIVE_IMPORTS)) {
+    throw new Error('STATEMENT_QUOTA_EXCEEDED');
+  }
+}
+
+function expiry(createdAt: string): string {
+  return new Date(Date.parse(createdAt) + SOURCE_RETENTION_MS).toISOString();
+}
+
+function expireIfNeeded(statement: StoredStatement, now: number): boolean {
+  if (!statement.encryptedSource || !statement.sourceExpiresAt || Date.parse(statement.sourceExpiresAt) > now) return true;
+  statement.encryptedSource = null;
+  statement.sourceDeletedAt = new Date(now).toISOString();
+  statement.sourceExpiresAt = null;
+  statement.events.push({ id: `evt_source_expired_${statement.id}`, importId: statement.id, rowId: null, kind: 'source_deleted', detail: { reason: 'retention_expired' }, createdAt: statement.sourceDeletedAt });
+  if (statement.status === 'queued' || statement.status === 'processing') {
+    statement.status = 'failed';
+    statement.error = 'The encrypted source retention period expired.';
+    statement.processingStartedAt = null;
+    statement.processedAt = statement.sourceDeletedAt;
+  }
+  return false;
 }

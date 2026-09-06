@@ -39,6 +39,34 @@ describe('statement analysis', () => {
     expect(result.rows[0]?.postedAt).toBe('2026-03-01');
   });
 
+  it('rejects XLSX ZIP metadata that would exceed the decompression budget', async () => {
+    const bytes = Buffer.from(zipSync({
+      'xl/worksheets/sheet1.xml': Buffer.from('<worksheet><sheetData><row r="1"><c r="A1"><v>1</v></c></row></sheetData></worksheet>'),
+    }));
+    const centralDirectory = bytes.indexOf(Buffer.from([0x50, 0x4b, 0x01, 0x02]));
+    expect(centralDirectory).toBeGreaterThan(0);
+    // Keep the payload tiny while advertising an unsafe expansion size.
+    bytes.writeUInt32LE(11 * 1024 * 1024, centralDirectory + 24);
+    await expect(analyzeStatement({
+      ...base,
+      filename: 'bomb.xlsx',
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      bytes,
+    })).rejects.toThrow(/decompressed size exceeds/);
+  });
+
+  it('rejects worksheet cell references beyond Excel\'s XFD column limit', async () => {
+    const bytes = Buffer.from(zipSync({
+      'xl/worksheets/sheet1.xml': Buffer.from('<worksheet><sheetData><row r="1"><c r="XFE1"><v>1</v></c></row></sheetData></worksheet>'),
+    }));
+    await expect(analyzeStatement({
+      ...base,
+      filename: 'wide.xlsx',
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      bytes,
+    })).rejects.toThrow(/XFD limit/);
+  });
+
   it('extracts text from a PDF and never accepts an unrecognised format', async () => {
     const document = new PDFDocument();
     const chunks: Buffer[] = [];

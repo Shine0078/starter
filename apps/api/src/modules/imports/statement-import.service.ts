@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, HttpException, HttpStatus, Inject, Injectable, NotFoundException } from '@nestjs/common';
 
 import { isKnownCategory } from '../../domain/categories';
 import { categorizeDescriptor, ruleFromCorrection } from '../../domain/categorization/categorize';
@@ -80,6 +80,7 @@ export class StatementImportService {
         await this.imports.enqueue(userId, statement, this.cipher.encrypt(encoded));
       } catch (error) {
         if (error instanceof Error && error.message === 'STATEMENT_DUPLICATE') throw new ConflictException('This statement has already been imported for this account.');
+        if (error instanceof Error && error.message === 'STATEMENT_QUOTA_EXCEEDED') throw new HttpException('Statement import storage or queue capacity is temporarily full. Delete old sources or wait for existing imports to finish.', HttpStatus.TOO_MANY_REQUESTS);
         throw error;
       }
       return { statement, rows: [], warnings: [], queued: true };
@@ -107,6 +108,7 @@ export class StatementImportService {
       await this.imports.create(userId, statement, this.cipher.encrypt(encoded), rows);
     } catch (error) {
       if (error instanceof Error && error.message === 'STATEMENT_DUPLICATE') throw new ConflictException('This statement has already been imported for this account.');
+      if (error instanceof Error && error.message === 'STATEMENT_QUOTA_EXCEEDED') throw new HttpException('Statement import storage capacity is temporarily full. Delete old sources before uploading another statement.', HttpStatus.TOO_MANY_REQUESTS);
       throw error;
     }
     return { statement, rows, warnings: extraction.warnings, queued: false };

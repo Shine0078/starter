@@ -39,6 +39,8 @@ const STATEMENT_COLUMNS = `id, account_id, filename, mime_type, format, statemen
 const ROW_COLUMNS = `id, import_id, source_line, posted_at, description, merchant, amount,
   currency, direction, category_slug, category_source, category_confidence,
   is_recurring, flags, decision, fingerprint, raw, edited_at`;
+const MAX_STAGED_SOURCE_BYTES = 64 * 1024 * 1024;
+const MAX_ACTIVE_IMPORTS = 5;
 
 export class PostgresStatementImportStore implements StatementImportStore {
   constructor(private readonly pg: Pool) {}
@@ -67,12 +69,13 @@ export class PostgresStatementImportStore implements StatementImportStore {
   async create(userId: string, statement: StatementImport, encryptedSource: string, rows: readonly StatementRowRecord[]): Promise<StatementImport> {
     return withUserScope(this.pg, userId, async (client) => {
       await ensureUser(client, userId);
+      await assertStatementQuota(client, userId, encryptedSource, false);
       try {
         await client.query(`INSERT INTO statement_imports (
           id, user_id, account_id, filename, mime_type, format, statement_hash,
           status, rows_total, rows_included, rows_excluded, rows_needs_review,
-          created_at, processed_at, encrypted_source
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,'ready',$8,$9,$10,$11,$12,$12,$13)`, [
+          created_at, processed_at, encrypted_source, source_expires_at
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,'ready',$8,$9,$10,$11,$12,$12,$13,$12::timestamptz + interval '90 days')`, [
           statement.id, userId, statement.accountId, statement.filename, statement.mimeType,
           statement.format, statement.statementHash, statement.rowsTotal, statement.rowsIncluded,
           statement.rowsExcluded, statement.rowsNeedsReview, statement.createdAt, encryptedSource,
@@ -97,12 +100,13 @@ export class PostgresStatementImportStore implements StatementImportStore {
   async enqueue(userId: string, statement: StatementImport, encryptedSource: string): Promise<StatementImport> {
     return withUserScope(this.pg, userId, async (client) => {
       await ensureUser(client, userId);
+      await assertStatementQuota(client, userId, encryptedSource, true);
       try {
         await client.query(`INSERT INTO statement_imports (
           id, user_id, account_id, filename, mime_type, format, statement_hash,
           status, rows_total, rows_included, rows_excluded, rows_needs_review,
-          created_at, encrypted_source, attempts, processing_started_at
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,'queued',0,0,0,0,$8,$9,0,NULL)`, [
+          created_at, encrypted_source, source_expires_at, attempts, processing_started_at
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,'queued',0,0,0,0,$8,$9,$8::timestamptz + interval '90 days',0,NULL)`, [
           statement.id, userId, statement.accountId, statement.filename, statement.mimeType,
           statement.format, statement.statementHash, statement.createdAt, encryptedSource,
         ]);
@@ -269,6 +273,25 @@ export class PostgresStatementImportStore implements StatementImportStore {
 
 async function ensureUser(client: PoolClient, userId: string): Promise<void> {
   await client.query('INSERT INTO users (id) VALUES ($1) ON CONFLICT (id) DO NOTHING', [userId]);
+}
+
+async function assertStatementQuota(client: PoolClient, userId: string, encryptedSource: string, countActive: boolean): Promise<void> {
+  // Serialize uploads for one user so two concurrent requests cannot both pass
+  // the byte/job budget and commit an over-quota result.
+  await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [userId]);
+  const { rows } = await client.query<{ bytes: string | number; active: string | number }>(
+    `SELECT COALESCE(sum(octet_length(encrypted_source)), 0) AS bytes,
+            count(*) FILTER (WHERE status IN ('queued', 'processing')) AS active
+       FROM statement_imports
+      WHERE user_id = $1 AND encrypted_source IS NOT NULL`,
+    [userId],
+  );
+  const bytes = Number(rows[0]?.bytes ?? 0);
+  const active = Number(rows[0]?.active ?? 0);
+  const incoming = Buffer.byteLength(encryptedSource, 'utf8');
+  if (bytes + incoming > MAX_STAGED_SOURCE_BYTES || (countActive && active >= MAX_ACTIVE_IMPORTS)) {
+    throw new Error('STATEMENT_QUOTA_EXCEEDED');
+  }
 }
 
 async function getRow(client: PoolClient, userId: string, importId: string, rowId: string): Promise<StatementRowRecord | null> {

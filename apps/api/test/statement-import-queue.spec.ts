@@ -60,4 +60,30 @@ describe('in-memory statement analysis queue', () => {
     expect(await store.claim(10)).toEqual([]);
     expect((await store.rows('user_memory', statement.id))[0]?.description).toBe('GROCERY MART');
   });
+
+  it('bounds concurrent queued imports and expires stale sources', async () => {
+    const store = new InMemoryStatementImportStore();
+    for (let index = 0; index < 5; index += 1) {
+      await store.enqueue('user_quota', {
+        id: `stmt_quota_${index}`, accountId: 'account_quota', filename: 'statement.csv', mimeType: 'text/csv', format: 'csv',
+        statementHash: String(index).padStart(64, 'a'), status: 'queued', rowsTotal: 0, rowsIncluded: 0, rowsExcluded: 0,
+        rowsNeedsReview: 0, createdAt: '2026-08-01T00:00:00.000Z', processedAt: null, approvedAt: null, sourceDeletedAt: null, error: null,
+      }, 'ciphertext');
+    }
+    await expect(store.enqueue('user_quota', {
+      id: 'stmt_quota_6', accountId: 'account_quota', filename: 'statement.csv', mimeType: 'text/csv', format: 'csv',
+      statementHash: 'f'.repeat(64), status: 'queued', rowsTotal: 0, rowsIncluded: 0, rowsExcluded: 0,
+      rowsNeedsReview: 0, createdAt: '2026-08-01T00:00:00.000Z', processedAt: null, approvedAt: null, sourceDeletedAt: null, error: null,
+    }, 'ciphertext')).rejects.toThrow('STATEMENT_QUOTA_EXCEEDED');
+
+    const expired: StatementImport = {
+      id: 'stmt_expired', accountId: 'account_expired', filename: 'statement.csv', mimeType: 'text/csv', format: 'csv', statementHash: 'e'.repeat(64),
+      status: 'queued', rowsTotal: 0, rowsIncluded: 0, rowsExcluded: 0, rowsNeedsReview: 0, createdAt: '2025-01-01T00:00:00.000Z',
+      processedAt: null, approvedAt: null, sourceDeletedAt: null, error: null,
+    };
+    await store.enqueue('user_expired', expired, 'ciphertext');
+    expect((await store.claim(10)).some((job) => job.id === expired.id)).toBe(false);
+    expect((await store.get('user_expired', expired.id))?.status).toBe('failed');
+    expect((await store.audit('user_expired', expired.id)).map((event) => event.kind)).toContain('source_deleted');
+  });
 });

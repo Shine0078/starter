@@ -12,6 +12,8 @@ import type { StatementExtraction, StatementFormat, StatementRowDraft } from './
 
 const MAX_ROWS = 10_000;
 const MAX_DECOMPRESSED_BYTES = 10 * 1024 * 1024;
+const MAX_ZIP_ENTRIES = 512;
+const MAX_XLSX_COLUMNS = 16_384; // Excel's XFD limit.
 const IMAGE_MIME = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/tiff', 'image/bmp']);
 
 export function formatFor(filename: string, mimeType?: string): StatementFormat {
@@ -242,6 +244,7 @@ function xlsxToCsv(bytes: Buffer): string {
   // processing. Formulas are never evaluated.
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { unzipSync } = require('fflate') as { unzipSync(input: Uint8Array): Record<string, Uint8Array> };
+  assertZipExpansionBudget(bytes);
   const parts = unzipSync(bytes);
   const total = Object.values(parts).reduce((sum, value) => sum + value.length, 0);
   if (total > MAX_DECOMPRESSED_BYTES) throw new Error('The XLSX decompressed size exceeds the safety limit.');
@@ -250,11 +253,14 @@ function xlsxToCsv(bytes: Buffer): string {
   if (!sheet) throw new Error('The XLSX file does not contain a first worksheet.');
   const xml = Buffer.from(sheet).toString('utf8');
   const rows: string[][] = [];
-  for (const rowXml of xml.match(/<row\b[^>]*>[\s\S]*?<\/row>/g) ?? []) {
+  const rowMatches = xml.match(/<row\b[^>]*>[\s\S]*?<\/row>/g) ?? [];
+  if (rowMatches.length > MAX_ROWS) throw new Error(`An XLSX worksheet may contain at most ${MAX_ROWS} rows.`);
+  for (const rowXml of rowMatches) {
     const cells: string[] = [];
     for (const cellXml of rowXml.match(/<c\b[^>]*>[\s\S]*?<\/c>/g) ?? []) {
       const ref = /\br="([A-Z]+)\d+"/.exec(cellXml)?.[1] ?? '';
       const column = columnNumber(ref);
+      if (column >= MAX_XLSX_COLUMNS) throw new Error('The XLSX worksheet contains a column beyond Excel\'s XFD limit.');
       while (cells.length < column) cells.push('');
       const type = /\bt="([^" ]+)"/.exec(cellXml)?.[1];
       const value = decodeXml(/<v>([\s\S]*?)<\/v>/.exec(cellXml)?.[1] ?? /<t>([\s\S]*?)<\/t>/.exec(cellXml)?.[1] ?? '');
@@ -263,6 +269,66 @@ function xlsxToCsv(bytes: Buffer): string {
     rows.push(cells);
   }
   return rows.map((row) => row.map(csvEscape).join(',')).join('\n');
+}
+
+/**
+ * Validate ZIP metadata before fflate allocates decompressed buffers. XLSX is
+ * user supplied and its central directory is the only bounded source of the
+ * entry sizes available before inflation. ZIP64 and multi-disk archives are
+ * rejected because they cannot be safely bounded by this parser.
+ */
+function assertZipExpansionBudget(bytes: Buffer): void {
+  if (bytes.length < 22) throw new Error('The XLSX file is missing a valid ZIP directory.');
+  const minimumEnd = Math.max(0, bytes.length - (22 + 0xffff));
+  let eocd = -1;
+  for (let offset = bytes.length - 22; offset >= minimumEnd; offset -= 1) {
+    if (bytes.readUInt32LE(offset) === 0x06054b50) {
+      eocd = offset;
+      break;
+    }
+  }
+  if (eocd < 0) throw new Error('The XLSX file is missing a valid ZIP directory.');
+
+  const disk = bytes.readUInt16LE(eocd + 4);
+  const directoryDisk = bytes.readUInt16LE(eocd + 6);
+  const entriesOnDisk = bytes.readUInt16LE(eocd + 8);
+  const entries = bytes.readUInt16LE(eocd + 10);
+  const directorySize = bytes.readUInt32LE(eocd + 12);
+  const directoryOffset = bytes.readUInt32LE(eocd + 16);
+  if (disk !== 0 || directoryDisk !== 0 || entriesOnDisk !== entries || entries === 0 || entries > MAX_ZIP_ENTRIES) {
+    throw new Error('The XLSX ZIP directory is invalid or contains too many entries.');
+  }
+  if (directorySize > bytes.length || directoryOffset > bytes.length || directoryOffset + directorySize > eocd) {
+    throw new Error('The XLSX ZIP directory is outside the uploaded file.');
+  }
+
+  let cursor = directoryOffset;
+  let total = 0;
+  for (let index = 0; index < entries; index += 1) {
+    if (cursor + 46 > eocd || bytes.readUInt32LE(cursor) !== 0x02014b50) {
+      throw new Error('The XLSX ZIP directory contains a malformed entry.');
+    }
+    const compressedSize = bytes.readUInt32LE(cursor + 20);
+    const uncompressedSize = bytes.readUInt32LE(cursor + 24);
+    const nameLength = bytes.readUInt16LE(cursor + 28);
+    const extraLength = bytes.readUInt16LE(cursor + 30);
+    const commentLength = bytes.readUInt16LE(cursor + 32);
+    const localOffset = bytes.readUInt32LE(cursor + 42);
+    if (compressedSize === 0xffffffff || uncompressedSize === 0xffffffff || localOffset === 0xffffffff) {
+      throw new Error('ZIP64 XLSX archives are not supported.');
+    }
+    const recordLength = 46 + nameLength + extraLength + commentLength;
+    if (cursor + recordLength > eocd || localOffset >= bytes.length) {
+      throw new Error('The XLSX ZIP directory contains an out-of-bounds entry.');
+    }
+    if (uncompressedSize > MAX_DECOMPRESSED_BYTES || compressedSize > bytes.length) {
+      throw new Error('The XLSX decompressed size exceeds the safety limit.');
+    }
+    total += uncompressedSize;
+    if (total > MAX_DECOMPRESSED_BYTES) throw new Error('The XLSX decompressed size exceeds the safety limit.');
+    cursor += recordLength;
+  }
+  if (cursor !== directoryOffset + directorySize) throw new Error('The XLSX ZIP directory length is invalid.');
 }
 
 function parseSharedStrings(bytes: Uint8Array | undefined): string[] {
