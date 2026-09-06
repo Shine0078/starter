@@ -3,6 +3,7 @@ import type { Pool } from 'pg';
 
 import { PostgresStatementImportStore } from '../src/infra/postgres/statement-import-stores';
 import { PostgresTransactionStore } from '../src/infra/postgres/stores';
+import { AesGcmStatementFileCipher } from '../src/infra/statement-file-cipher';
 import { closePool, withUserScope } from '../src/infra/postgres/pool';
 import type { StatementImport, StatementRowRecord } from '../src/domain/statement-import/types';
 import type { ImportBatch } from '../src/ports';
@@ -28,7 +29,7 @@ if (!OWNER_URL) {
       harness = await startPgHarness(ownerUrl);
       owner = harness.owner;
       app = harness.app;
-      store = new PostgresStatementImportStore(app);
+      store = new PostgresStatementImportStore(app, new AesGcmStatementFileCipher(Buffer.alloc(32, 7)));
       transactions = new PostgresTransactionStore(app);
     });
 
@@ -53,8 +54,16 @@ if (!OWNER_URL) {
       const { statement, row, batch } = fixture();
       await store.create(ALICE, statement, `v1.encrypted.${'x'.repeat(16)}`, [row]);
       expect((await store.rows(ALICE, statement.id))[0]?.description).toBe('GROCERY MART');
+      const persisted = await owner.query<{ description: string; merchant: string | null; raw: string; encrypted_fields: string | null }>(
+        'SELECT description, merchant, raw, encrypted_fields FROM statement_import_rows WHERE user_id=$1 AND import_id=$2',
+        [ALICE, statement.id],
+      );
+      expect(persisted.rows[0]).toMatchObject({ description: '[encrypted]', merchant: null, raw: '[encrypted]' });
+      expect(persisted.rows[0]?.encrypted_fields).toMatch(/^v1\./);
+      expect(persisted.rows[0]?.encrypted_fields).not.toContain('GROCERY MART');
       const updated = await store.updateRow(ALICE, statement.id, row.id, { decision: 'exclude' }, { id: 'evt-edit', importId: statement.id, rowId: row.id, kind: 'row_edited', detail: { decision: 'exclude' }, createdAt: '2026-08-01T01:00:00.000Z' });
       expect(updated?.decision).toBe('exclude');
+      expect((await store.rows(ALICE, statement.id))[0]?.raw).toBe(row.raw);
       await store.updateRow(ALICE, statement.id, row.id, { decision: 'include' }, { id: 'evt-include', importId: statement.id, rowId: row.id, kind: 'row_edited', detail: { decision: 'include' }, createdAt: '2026-08-01T02:00:00.000Z' });
       const finalized = await store.finalize(ALICE, statement.id, batch, [{ id: 'txn_stmt', accountId: statement.accountId, providerTxnId: 'manual_d'.repeat(1), postedAt: row.postedAt!, amount: row.amount!, currency: row.currency, rawDescriptor: row.description, normalizedDescriptor: 'grocery mart', categorySlug: row.categorySlug, categorySource: row.categorySource, categoryConfidence: row.categoryConfidence, isRecurring: false, pending: false, importBatchId: batch.id }], { id: 'evt-approved', importId: statement.id, rowId: null, kind: 'approved', detail: {}, createdAt: '2026-08-01T03:00:00.000Z' });
       expect(finalized?.status).toBe('approved');
@@ -73,6 +82,18 @@ if (!OWNER_URL) {
       expect(visible.rows).toEqual([{ user_id: ALICE }]);
       const unscoped = await app.query('SELECT user_id FROM statement_import_events');
       expect(unscoped.rows).toHaveLength(0);
+    });
+
+    it('fails closed when staged row ciphertext is tampered with', async () => {
+      const { statement, row } = fixture();
+      await store.create(ALICE, statement, 'cipher-row', [row]);
+      await owner.query(
+        `UPDATE statement_import_rows
+            SET encrypted_fields = 'v1.invalid.invalid.invalid'
+          WHERE user_id=$1 AND import_id=$2 AND id=$3`,
+        [ALICE, statement.id, row.id],
+      );
+      await expect(store.rows(ALICE, statement.id)).rejects.toThrow();
     });
 
     it('rolls back approval when a concurrent or prior row wins the transaction uniqueness race', async () => {
