@@ -1942,6 +1942,7 @@ class StatementSummary {
     required this.currency,
     required this.income,
     required this.expenses,
+    required this.netCashFlow,
     required this.savings,
     required this.recurringCount,
     required this.duplicateCount,
@@ -1954,6 +1955,9 @@ class StatementSummary {
         currency: json['currency'] as String? ?? 'USD',
         income: (json['income'] as num?)?.toInt() ?? 0,
         expenses: (json['expenses'] as num?)?.toInt() ?? 0,
+        netCashFlow: (json['netCashFlow'] as num?)?.toInt() ??
+            ((json['income'] as num?)?.toInt() ?? 0) -
+            ((json['expenses'] as num?)?.toInt() ?? 0),
         savings: (json['savings'] as num?)?.toInt() ?? 0,
         recurringCount: (json['recurringCount'] as num?)?.toInt() ?? 0,
         duplicateCount: (json['duplicateCount'] as num?)?.toInt() ?? 0,
@@ -1974,6 +1978,7 @@ class StatementSummary {
   final String currency;
   final int income;
   final int expenses;
+  final int netCashFlow;
   final int savings;
   final int recurringCount;
   final int duplicateCount;

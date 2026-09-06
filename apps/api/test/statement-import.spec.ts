@@ -56,6 +56,23 @@ describe('manual statement imports', () => {
     expect(summary.body.categoryTotals).toEqual(expect.any(Array));
   });
 
+  it('does not block approval just because a recognized merchant is recurring', async () => {
+    const signedIn = await user();
+    const recurringCsv = [
+      'Date,Description,Amount',
+      '2026-03-01,APPLE.COM/BILL,-7.33',
+      '2026-04-01,APPLE.COM/BILL,-7.33',
+    ].join('\n');
+    const response = await request(http)
+      .post('/api/imports/statements')
+      .set('Authorization', `Bearer ${signedIn.token}`)
+      .send({ accountId: signedIn.accountId, filename: 'recurring.csv', mimeType: 'text/csv', contentBase64: Buffer.from(recurringCsv).toString('base64') })
+      .expect(201);
+
+    expect(response.body.statement.rowsNeedsReview).toBe(0);
+    expect(response.body.rows.every((row: { flags: string[]; decision: string }) => row.flags.includes('recurring_payment') && row.decision === 'include')).toBe(true);
+  });
+
   it('supports edit, split, merge, approval, and duplicate identity protection', async () => {
     const signedIn = await user();
     const created = await request(http).post('/api/imports/statements').set('Authorization', `Bearer ${signedIn.token}`).send({ accountId: signedIn.accountId, filename: 'march.csv', mimeType: 'text/csv', contentBase64: Buffer.from(csv).toString('base64') }).expect(201);

@@ -157,6 +157,14 @@ function parseTextRows(
   model: UserCorrectionClassifier,
 ): StatementRowDraft[] {
   const lines = text.split(/\r?\n/).map((line) => line.replace(/\s+/g, ' ').trim()).filter(Boolean);
+  // Many card issuers put two textual dates and a positive charge amount on
+  // each row (for example, "Aug 01 Aug 04 MERCHANT Restaurants 7.33").
+  // Those amounts are debits even though they do not carry a minus sign. Parse
+  // this well-known statement shape before the generic signed-amount parser so
+  // charges are not mistaken for income.
+  const cardRows = parseCreditCardRows(lines, text, currency, rules, existing, model);
+  if (cardRows.length > 0) return cardRows;
+
   const dates = lines.map((line) => /\b\d{1,4}[\/-]\d{1,2}[\/-]\d{1,4}\b/.exec(line)?.[0] ?? '').filter(Boolean);
   const dateOrder = dates.some((date) => /^\d{4}/.test(date)) ? 'YMD' : 'DMY';
   const ambiguousDate = dates.length > 0 && !dates.some((date) => {
@@ -208,6 +216,154 @@ function parseTextRows(
     });
   }
   return rows;
+}
+
+const MONTHS: Record<string, number> = {
+  jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3,
+  apr: 4, april: 4, may: 5, jun: 6, june: 6, jul: 7, july: 7,
+  aug: 8, august: 8, sep: 9, sept: 9, september: 9, oct: 10,
+  october: 10, nov: 11, november: 11, dec: 12, december: 12,
+};
+
+const CARD_CATEGORY_LABELS = [
+  'Retail and Grocery', 'Restaurants', 'Transportation',
+  'Personal and Household Expenses', 'Professional and Financial Services',
+  'Home and Office Improvement', 'Entertainment', 'Travel', 'Other',
+];
+
+function parseCreditCardRows(
+  lines: readonly string[],
+  text: string,
+  currency: string,
+  rules: readonly CategorizationRule[],
+  existing: readonly Transaction[],
+  model: UserCorrectionClassifier,
+): StatementRowDraft[] {
+  // Require a statement-year anchor. A month/day without a year is not safe
+  // to import because a statement can span December and January.
+  const year = findStatementYear(text);
+  if (year === null || !/(?:credit card|card number|spend categories|new charges and credits)/i.test(text)) return [];
+
+  const rows: StatementRowDraft[] = [];
+  const datePattern = Object.keys(MONTHS).join('|');
+  const rowPattern = new RegExp(`^(${datePattern})\\s+(\\d{1,2})\\s+(${datePattern})\\s+(\\d{1,2})\\s+(.+?)\\s+((?:\\(?[-+]?[$€£]?\\d[\\d,.]*\\)?))$`, 'i');
+
+  for (let index = 0; index < lines.length && rows.length < MAX_ROWS; index += 1) {
+    const line = lines[index]!;
+    const match = rowPattern.exec(line);
+    if (!match) continue;
+
+    const transactionMonth = MONTHS[match[1]!.toLowerCase()];
+    const transactionDay = Number(match[2]);
+    const postedAt = buildTextDate(year, transactionMonth, transactionDay);
+    const amount = parseAmount(match[6]!, currency);
+    let description = match[5]!.trim();
+    let issuerCategory: string | undefined;
+    // Issuer-provided spend labels are metadata, not part of the merchant
+    // name. Strip only a known suffix so a similarly named merchant is kept.
+    for (const label of CARD_CATEGORY_LABELS) {
+      const suffix = new RegExp(`\\s+${escapeRegExp(label)}$`, 'i');
+      if (suffix.test(description)) {
+        issuerCategory = label;
+        description = description.replace(suffix, '').trim();
+        break;
+      }
+    }
+
+    const normalized = normalizeDescriptor(description);
+    const isCredit = /\b(payment|credit|refund|reversal)\b/i.test(normalized);
+    const signedAmount = amount === null ? null : isCredit ? Math.abs(amount) : -Math.abs(amount);
+    rows.push(textDraft({
+      sourceLine: index + 1,
+      raw: line,
+      postedAt,
+      amount: signedAmount,
+      currency,
+      description,
+      issuerCategory,
+      rules,
+      existing,
+      model,
+    }));
+  }
+  return rows;
+}
+
+function findStatementYear(text: string): number | null {
+  const explicit = /(?:statement date|statement period|to)\b[^\d]*(20\d{2})\b/i.exec(text)?.[1];
+  const fallback = /\b(20\d{2})\b/.exec(text)?.[1];
+  const year = Number(explicit ?? fallback ?? '');
+  return year >= 2000 && year <= 2100 ? year : null;
+}
+
+function buildTextDate(year: number | null, month: number | undefined, day: number): string | null {
+  if (year === null || month === undefined || day < 1 || day > 31) return null;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null;
+  return `${year.toString().padStart(4, '0')}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+}
+
+function textDraft(input: {
+  sourceLine: number;
+  raw: string;
+  postedAt: string | null;
+  amount: number | null;
+  currency: string;
+  description: string;
+  issuerCategory?: string;
+  rules: readonly CategorizationRule[];
+  existing: readonly Transaction[];
+  model: UserCorrectionClassifier;
+}): StatementRowDraft {
+  const categorizedByMerchant = input.description
+    ? categorizeDescriptor(input.description, { rules: input.rules, model: input.model })
+    : null;
+  const categorized = categorizedByMerchant?.categorySlug !== UNKNOWN_CATEGORY
+    ? categorizedByMerchant
+    : issuerCategoryResult(input.issuerCategory) ?? categorizedByMerchant;
+  const normalized = normalizeDescriptor(input.description);
+  const flags = [
+    ...(input.postedAt ? [] : ['extraction_error']),
+    ...(input.amount === null || input.amount === 0 ? ['extraction_error'] : []),
+    ...(categorized && categorized.confidence < 0.7 ? ['low_confidence'] : []),
+    ...(!categorized || categorized.categorySlug === UNKNOWN_CATEGORY ? ['uncategorized'] : []),
+  ];
+  if (input.existing.some((txn) => txn.postedAt === input.postedAt && txn.amount === input.amount && txn.normalizedDescriptor === normalized)) {
+    flags.push('possible_duplicate');
+  }
+  const fingerprint = createHash('sha256')
+    .update(`${input.sourceLine}|${input.postedAt ?? ''}|${input.amount ?? ''}|${normalized}|${input.currency}`)
+    .digest('hex');
+  return {
+    sourceLine: input.sourceLine,
+    postedAt: input.postedAt,
+    description: input.description.slice(0, 500),
+    merchant: categorized?.merchant ?? null,
+    amount: input.amount,
+    currency: input.currency,
+    direction: input.amount === null ? 'unknown' : input.amount < 0 ? 'debit' : 'credit',
+    categorySlug: categorized?.categorySlug ?? UNKNOWN_CATEGORY,
+    categorySource: categorized?.source ?? 'unknown',
+    categoryConfidence: categorized?.confidence ?? 0,
+    isRecurring: false,
+    flags: flags.slice(0, 8),
+    decision: flags.length === 0 ? 'include' : 'needs_review',
+    fingerprint,
+    raw: input.raw.slice(0, 2_000),
+  };
+}
+
+function issuerCategoryResult(label: string | undefined): { categorySlug: string; source: 'lexicon'; confidence: number; merchant?: string; reason: string } | null {
+  if (!label) return null;
+  if (/restaurant/i.test(label)) return { categorySlug: 'restaurants', source: 'lexicon', confidence: 0.82, merchant: 'Restaurant', reason: 'Matched the issuer-provided spend category.' };
+  if (/transportation/i.test(label)) return { categorySlug: 'transportation', source: 'lexicon', confidence: 0.82, merchant: 'Transportation', reason: 'Matched the issuer-provided spend category.' };
+  if (/retail and grocery/i.test(label)) return { categorySlug: 'groceries', source: 'lexicon', confidence: 0.72, merchant: 'Retail and Grocery', reason: 'Matched the issuer-provided spend category.' };
+  if (/entertainment/i.test(label)) return { categorySlug: 'entertainment', source: 'lexicon', confidence: 0.78, merchant: 'Entertainment', reason: 'Matched the issuer-provided spend category.' };
+  return null;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\[\]\\]/g, '\\$&');
 }
 
 async function extractPdfText(bytes: Buffer): Promise<string> {

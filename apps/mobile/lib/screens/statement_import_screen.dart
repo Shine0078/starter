@@ -743,18 +743,39 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
 
   Widget _summaryView(StatementSummary summary) => Padding(
         padding: const EdgeInsets.only(top: 12),
-        child: Wrap(spacing: 8, runSpacing: 8, children: [
-          Chip(label: Text('Income ${summary.income} ${summary.currency}')),
-          Chip(label: Text('Expenses ${summary.expenses} ${summary.currency}')),
-          Chip(label: Text('Savings ${summary.savings} ${summary.currency}')),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Wrap(spacing: 8, runSpacing: 8, children: [
+          Chip(label: Text('Income ${_formatMinor(summary.income, summary.currency)}')),
+          Chip(label: Text('Expenses ${_formatMinor(summary.expenses, summary.currency)}')),
+          Chip(label: Text('Net cash flow ${_formatMinor(summary.netCashFlow, summary.currency)}')),
+          Chip(label: Text('Savings ${_formatMinor(summary.savings, summary.currency)}')),
           Chip(label: Text('${summary.recurringCount} recurring')),
           if (summary.unusualCount > 0)
             Chip(label: Text('${summary.unusualCount} unusual')),
           if (summary.duplicateCount > 0)
             Chip(label: Text('${summary.duplicateCount} possible duplicates')),
+          ]),
+          if (summary.categoryTotals.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            const Text('Category totals', style: TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 4),
+            ...summary.categoryTotals.map((category) => Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(child: Text('${category['label']} (${category['count']})')),
+                      Text(_formatMinor(category['amount'] as int, summary.currency)),
+                    ],
+                  ),
+                )),
+          ],
         ]),
       );
 }
+
+String _formatMinor(int amount, String currency) =>
+    '$currency ${(amount / 100).toStringAsFixed(2)}';
 
 String _mimeFor(String name) {
   switch (name.toLowerCase().split('.').last) {

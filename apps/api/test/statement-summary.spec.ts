@@ -22,6 +22,7 @@ describe('statement summaries', () => {
     ]);
     expect(summary.income).toBe(500);
     expect(summary.expenses).toBe(100);
+    expect(summary.netCashFlow).toBe(400);
     expect(summary.savings).toBe(50);
     expect(summary.recurringCount).toBe(1);
     expect(summary.duplicateCount).toBe(1);

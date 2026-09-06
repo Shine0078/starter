@@ -328,7 +328,13 @@ export class StatementImportService {
       if ((row.categorySlug === 'transfer' || row.categorySlug === 'savings' || row.categorySlug === 'investments') && !flags.includes('internal_transfer')) flags.push('internal_transfer');
       if ((row.categorySlug === 'refunds' || /\brefund\b|\breversal\b/i.test(row.description)) && !flags.includes('refund')) flags.push('refund');
       if (row.amount !== null && Math.abs(row.amount) > 500_000 && !flags.includes('unusual_spending')) flags.push('unusual_spending');
-      return { ...row, id: `${importId}_row_${row.sourceLine}_${randomUUID().slice(0, 8)}`, importId, isRecurring: recurring || row.isRecurring, flags: flags.slice(0, 8), decision: flags.length > 0 ? 'needs_review' : row.decision, editedAt: null };
+      // Recurring, refund, transfer, and unusual-spend markers are useful
+      // analysis signals, not extraction failures. Only evidence that makes a
+      // row unsafe to approve should hold the import at the review boundary.
+      const blocksApproval = flags.some((flag) =>
+        ['extraction_error', 'uncategorized', 'low_confidence', 'ambiguous_date', 'possible_duplicate'].includes(flag),
+      );
+      return { ...row, id: `${importId}_row_${row.sourceLine}_${randomUUID().slice(0, 8)}`, importId, isRecurring: recurring || row.isRecurring, flags: flags.slice(0, 8), decision: blocksApproval ? 'needs_review' : row.decision, editedAt: null };
     });
   }
 

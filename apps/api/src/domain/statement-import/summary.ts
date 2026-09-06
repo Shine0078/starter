@@ -6,6 +6,8 @@ export interface StatementSummary {
   dateRange: { start: string; end: string } | null;
   income: number;
   expenses: number;
+  /** Income minus spending, in minor currency units. Transfers are excluded. */
+  netCashFlow: number;
   savings: number;
   categoryTotals: Array<{ categorySlug: string; amount: number; count: number }>;
   recurringCount: number;
@@ -34,6 +36,7 @@ export function summarizeStatementRows(rows: readonly StatementRowRecord[]): Sta
     dateRange: dates.length ? { start: dates[0]!, end: dates[dates.length - 1]! } : null,
     income,
     expenses,
+    netCashFlow: income - expenses,
     savings,
     categoryTotals: [...categories.entries()]
       .map(([categorySlug, value]) => ({ categorySlug, ...value, label: getCategory(categorySlug)?.name ?? 'Unknown' }))

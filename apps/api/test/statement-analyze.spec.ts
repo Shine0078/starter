@@ -96,6 +96,38 @@ describe('statement analysis', () => {
     await expect(analyzeStatement({ ...base, filename: 'statement.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', bytes: Buffer.from('not a workbook') })).rejects.toThrow(/ZIP-based workbook/);
   });
 
+  it('reads card statements with textual dates and treats positive charges as debits', async () => {
+    const document = new PDFDocument();
+    const chunks: Buffer[] = [];
+    document.on('data', (chunk: Buffer) => chunks.push(chunk));
+    const done = new Promise<Buffer>((resolve) => document.on('end', () => resolve(Buffer.concat(chunks))));
+    document.fontSize(10).text([
+      'CIBC Credit Card',
+      'Statement Date August 24, 2026',
+      'Aug 01 Aug 04 APPLE.COM/BILL TORONTO ON Retail and Grocery 7.33',
+      'Aug 18 Aug 19 PRESTO FARE/SGPLLHX68L TORONTO ON Transportation 4.85',
+      'Aug 19 Aug 21 McDonalds 40024 OSHAWA ON Restaurants 2.10',
+    ].join('\n'));
+    document.end();
+
+    const result = await analyzeStatement({
+      ...base,
+      currency: 'CAD',
+      filename: 'card-statement.pdf',
+      mimeType: 'application/pdf',
+      bytes: await done,
+    });
+
+    expect(result.rows).toHaveLength(3);
+    expect(result.rows.map((row) => row.postedAt)).toEqual([
+      '2026-08-01', '2026-08-18', '2026-08-19',
+    ]);
+    expect(result.rows.map((row) => row.amount)).toEqual([-733, -485, -210]);
+    expect(result.rows.map((row) => row.direction)).toEqual(['debit', 'debit', 'debit']);
+    expect(result.rows.map((row) => row.decision)).toEqual(['include', 'include', 'include']);
+    expect(result.rows.map((row) => row.categorySlug)).toEqual(['subscriptions', 'transportation', 'fast_food']);
+  });
+
   it('rejects image payloads with an extension-only disguise', async () => {
     await expect(analyzeStatement({ ...base, filename: 'statement.png', mimeType: 'image/png', bytes: Buffer.from('not an image') })).rejects.toThrow(/image signature/);
   });
