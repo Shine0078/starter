@@ -19,6 +19,7 @@ import {
   InMemoryFxRateStore,
   InMemoryTransactionStore,
 } from '../infra/in-memory-store';
+import { InMemoryStatementImportStore } from '../infra/statement-import-store';
 import { MockAggregator } from '../infra/mock-aggregator';
 import { getAppPool } from '../infra/postgres/pool';
 import {
@@ -36,6 +37,8 @@ import {
   PostgresFxRateStore,
   PostgresTransactionStore,
 } from '../infra/postgres/stores';
+import { PostgresStatementImportStore } from '../infra/postgres/statement-import-stores';
+import { AesGcmStatementFileCipher } from '../infra/statement-file-cipher';
 import { Argon2PasswordHasher } from '../infra/auth/argon2-hasher';
 import {
   DisabledPasswordBreachChecker,
@@ -131,6 +134,8 @@ import {
   RULE_APPLICATION_STORE,
   FX_RATE_STORE,
   TRANSACTION_STORE,
+  STATEMENT_IMPORT_STORE,
+  STATEMENT_FILE_CIPHER,
 } from '../ports';
 import {
   ACCOUNT_DELETION_STORE,
@@ -189,6 +194,7 @@ function storeProviders(): Provider[] {
     const pushTokens = new InMemoryPushTokenStore();
     const webauthnCredentials = new InMemoryWebAuthnCredentialStore();
     const webauthnChallenges = new InMemoryWebAuthnChallengeStore();
+    const statementImports = new InMemoryStatementImportStore(transactions);
     const deletions = new InMemoryAccountDeletionStore(
       users,
       sessions,
@@ -208,6 +214,7 @@ function storeProviders(): Provider[] {
       receipts,
       pushTokens,
       webauthnCredentials,
+      statementImports,
     );
     return [
       { provide: ACCOUNT_STORE, useValue: accounts },
@@ -220,6 +227,7 @@ function storeProviders(): Provider[] {
       { provide: RECONCILIATION_STORE, useValue: new InMemoryReconciliationStore() },
       { provide: SAVED_VIEW_STORE, useValue: new InMemorySavedViewStore() },
       { provide: IMPORT_BATCH_STORE, useValue: new InMemoryImportBatchStore(transactions) },
+      { provide: STATEMENT_IMPORT_STORE, useValue: statementImports },
       { provide: SCHEDULE_STORE, useValue: new InMemoryScheduleStore() },
       { provide: RULE_APPLICATION_STORE, useValue: new InMemoryRuleApplicationStore(transactions) },
       { provide: FX_RATE_STORE, useValue: new InMemoryFxRateStore() },
@@ -267,6 +275,7 @@ function storeProviders(): Provider[] {
     { provide: RECONCILIATION_STORE, useFactory: () => new PostgresReconciliationStore(pool) },
     { provide: SAVED_VIEW_STORE, useFactory: () => new PostgresSavedViewStore(pool) },
     { provide: IMPORT_BATCH_STORE, useFactory: () => new PostgresImportBatchStore(pool) },
+    { provide: STATEMENT_IMPORT_STORE, useFactory: () => new PostgresStatementImportStore(pool) },
     { provide: SCHEDULE_STORE, useFactory: () => new PostgresScheduleStore(pool) },
     { provide: RULE_APPLICATION_STORE, useFactory: () => new PostgresRuleApplicationStore(pool) },
     { provide: FX_RATE_STORE, useFactory: () => new PostgresFxRateStore(pool) },
@@ -319,6 +328,12 @@ function storeProviders(): Provider[] {
       useFactory: () => process.env.MFA_ENCRYPTION_KEY
         ? AesGcmMfaSecretCipher.fromBase64(process.env.MFA_ENCRYPTION_KEY)
         : new UnavailableMfaSecretCipher(),
+    },
+    {
+      provide: STATEMENT_FILE_CIPHER,
+      useFactory: () => process.env.STATEMENT_IMPORT_ENCRYPTION_KEY
+        ? AesGcmStatementFileCipher.fromBase64(process.env.STATEMENT_IMPORT_ENCRYPTION_KEY)
+        : new AesGcmStatementFileCipher(randomBytes(32)),
     },
     {
       provide: BANK_PROVIDER,
@@ -431,6 +446,8 @@ function storeProviders(): Provider[] {
     RECONCILIATION_STORE,
     SAVED_VIEW_STORE,
     IMPORT_BATCH_STORE,
+    STATEMENT_IMPORT_STORE,
+    STATEMENT_FILE_CIPHER,
     SCHEDULE_STORE,
     RULE_APPLICATION_STORE,
     FX_RATE_STORE,

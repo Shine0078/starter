@@ -24,6 +24,7 @@ import type {
 } from '../domain/types';
 import type {
   SplitExpense,
+  SplitGroupInvitation,
   SplitGroup,
   SplitGroupMember,
   SplitSettlement,
@@ -32,6 +33,13 @@ import type { Reconciliation } from '../domain/reconciliation/types';
 import type { SavedView } from '../domain/transactions/saved-view';
 import type { ScheduledTransaction } from '../domain/scheduled/schedule';
 import type { FxRate } from '../domain/fx/rates';
+import type {
+  StatementImport,
+  StatementImportEvent,
+  StatementImportJob,
+  StatementRowRecord,
+} from '../domain/statement-import/types';
+export type { StatementFileCipher } from './statement-import';
 
 export const ACCOUNT_STORE = 'ACCOUNT_STORE';
 export const TRANSACTION_STORE = 'TRANSACTION_STORE';
@@ -48,6 +56,8 @@ export const RULE_APPLICATION_STORE = 'RULE_APPLICATION_STORE';
 export const FX_RATE_STORE = 'FX_RATE_STORE';
 export const AGGREGATOR = 'AGGREGATOR';
 export const CLOCK = 'CLOCK';
+export const STATEMENT_IMPORT_STORE = 'STATEMENT_IMPORT_STORE';
+export const STATEMENT_FILE_CIPHER = 'STATEMENT_FILE_CIPHER';
 
 export interface AccountStore {
   list(userId: string): Promise<Account[]>;
@@ -148,7 +158,17 @@ export interface SplitStore {
   ): Promise<SplitGroup>;
   archiveGroup(userId: string, groupId: string): Promise<boolean>;
   listMembers(userId: string, groupId: string): Promise<SplitGroupMember[]>;
-  addMember(userId: string, membership: SplitGroupMember): Promise<SplitGroupMember>;
+  createInvitation(userId: string, invitation: SplitGroupInvitation): Promise<SplitGroupInvitation>;
+  listInvitations(userId: string): Promise<SplitGroupInvitation[]>;
+  listGroupInvitations(userId: string, groupId: string): Promise<SplitGroupInvitation[]>;
+  acceptInvitation(userId: string, invitationId: string): Promise<SplitGroupMember | null>;
+  declineInvitation(userId: string, invitationId: string): Promise<boolean>;
+  revokeInvitation(userId: string, groupId: string, invitationId: string): Promise<boolean>;
+  removeMember(
+    userId: string,
+    groupId: string,
+    targetUserId: string,
+  ): Promise<'removed' | 'not_found' | 'creator' | 'balance_nonzero' | 'forbidden'>;
   listExpenses(userId: string, groupId: string): Promise<SplitExpense[]>;
   addExpense(userId: string, expense: SplitExpense): Promise<SplitExpense>;
   listSettlements(userId: string, groupId: string): Promise<SplitSettlement[]>;
@@ -219,6 +239,75 @@ export interface ImportBatchStore {
   ): Promise<ImportBatch>;
   /** Returns how many transactions were removed, or null when already reverted. */
   revert(userId: string, id: string, at: string): Promise<number | null>;
+}
+
+export interface StatementImportStore {
+  list(userId: string): Promise<StatementImport[]>;
+  get(userId: string, id: string): Promise<StatementImport | null>;
+  rows(userId: string, id: string): Promise<StatementRowRecord[]>;
+  create(
+    userId: string,
+    statement: StatementImport,
+    encryptedSource: string,
+    rows: readonly StatementRowRecord[],
+  ): Promise<StatementImport>;
+  /** Persist an encrypted source as durable work without parsing in the request. */
+  enqueue(
+    userId: string,
+    statement: StatementImport,
+    encryptedSource: string,
+  ): Promise<StatementImport>;
+  /** Atomically claim queued or stale processing work across users. */
+  claim(limit: number): Promise<StatementImportJob[]>;
+  /** Read a claimed source only inside that user's RLS scope. */
+  source(userId: string, importId: string): Promise<{ statement: StatementImport; encryptedSource: string } | null>;
+  /** Store extracted rows and the processed audit event atomically. */
+  completeProcessing(
+    userId: string,
+    importId: string,
+    rows: readonly StatementRowRecord[],
+    processedAt: string,
+    event: StatementImportEvent,
+  ): Promise<StatementImport | null>;
+  /** Mark irrecoverable analysis input failures without leaking source data. */
+  failProcessing(
+    userId: string,
+    importId: string,
+    error: string,
+    at: string,
+    event: StatementImportEvent,
+  ): Promise<boolean>;
+  updateRow(
+    userId: string,
+    importId: string,
+    rowId: string,
+    patch: Partial<StatementRowRecord>,
+    event: StatementImportEvent,
+  ): Promise<StatementRowRecord | null>;
+  splitRow(
+    userId: string,
+    importId: string,
+    rowId: string,
+    parts: readonly StatementRowRecord[],
+    event: StatementImportEvent,
+  ): Promise<StatementRowRecord[] | null>;
+  mergeRows(
+    userId: string,
+    importId: string,
+    rowIds: readonly string[],
+    merged: StatementRowRecord,
+    event: StatementImportEvent,
+  ): Promise<StatementRowRecord | null>;
+  finalize(
+    userId: string,
+    importId: string,
+    batch: ImportBatch,
+    transactions: readonly Transaction[],
+    event: StatementImportEvent,
+  ): Promise<StatementImport | null>;
+  deleteSource(userId: string, id: string, at: string, event: StatementImportEvent): Promise<boolean>;
+  delete(userId: string, id: string, at: string, event: StatementImportEvent): Promise<boolean>;
+  audit(userId: string, id: string): Promise<StatementImportEvent[]>;
 }
 
 /** Declared obligations. Archived rather than deleted, so history survives. */
