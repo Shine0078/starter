@@ -3,7 +3,7 @@
 ## Release Blockers
 
 - **Hosted rollout pending:** manual statement import and the white default UI
-  are merged to protected `main` at `2dbbc1d`. API PostgreSQL (1,065 tests),
+  are merged to protected `main` at `5ebff34`. API PostgreSQL (1,065 tests),
   API in-memory (882 tests), Flutter tests (119 tests), Flutter web, Android,
   CodeQL, dependency review, container scanning, image signing, and release
   artifact publication all pass. Cloud Run still needs the owner-authorized
@@ -40,7 +40,7 @@
   needs deployment and readback.
 - The currently advertised Cloud Run URL is still an older deployment: `/api/version`
   returns 404 and its `/app/` response contains the prior dark shell. Deploy
-  protected-main SHA `2dbbc1d` before directing users there.
+  protected-main SHA `5ebff34` before directing users there.
 - Production age recipient/private-key custody, key rotation, off-host storage,
   and a recorded restore/disaster-recovery exercise. Local scripts now encrypt
   and restrict permissions, but production operations are not yet verified.
