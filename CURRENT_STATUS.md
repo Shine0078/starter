@@ -1,22 +1,23 @@
 # FINVERSE Current Status
 
-**Verified:** 2026-08-30
-**Integration branch:** `codex/passkey-webauthn-p0` at its latest verified local
-state, including the statement-upload, light-theme, release-identity,
-parser-bound, split-authorization, split invitation-consent, balance-safe
-member-departure, duplicate-race, supply-chain, encrypted-backup, and
-durable-statement-worker milestones.
+**Verified:** 2026-09-05
+**Integration branch:** `codex/passkey-webauthn-p0` at local candidate SHA
+`3057fcf`, including the statement-upload, light-theme, release-identity,
+parser-bound, retention/quota, split-authorization, split invitation-consent,
+balance-safe member-departure, duplicate-race, supply-chain, encrypted-backup,
+and durable-statement-worker milestones. The worktree is clean and is 35
+commits ahead of its remote tracking ref.
 **Protected main observed:** `a21b3749164561db75f13f89cd3e9d9f7da07109`.
 
 ## Verified Today
 
 - API TypeScript typecheck and production build on the integration branch:
   passed.
-- API in-memory suite on the integration branch: 66 files passed, 878 tests
-  passed, 6 files and 9 tests skipped because they require PostgreSQL.
-- API PostgreSQL suite on a fresh embedded cluster: 72 files and 1,062 tests
+- API in-memory suite on the integration branch: 66 files passed, 881 tests
+  passed, 9 tests skipped because they require PostgreSQL.
+- API PostgreSQL suite on a fresh embedded cluster: 72 files and 1,065 tests
   passed using the restricted runtime role and forced RLS.
-- The fresh PostgreSQL test cluster applied all 39 numbered migrations and
+- The fresh PostgreSQL test cluster applied all 40 numbered migrations and
   provisioned `finverse_app`; migration repeat/idempotency is also a blocking
   CI step.
 - Production WebAuthn gate passed in that suite: unauthenticated options,
@@ -24,7 +25,7 @@ durable-statement-worker milestones.
   refresh issuance, `/auth/me`, replay rejection, eligibility checks, and
   management authorization.
 - Flutter analysis on the integration branch: passed with no issues.
-- Full Flutter test suite: 118 tests passed; Flutter web release build: passed.
+- Full Flutter test suite: 119 tests passed; Flutter web release build: passed.
 - Flutter Android release APK build: passed (`app-release.apk`).
 - Manual statement focused tests on the integration branch: extraction,
   summaries, encryption, and authenticated review flow passed after correcting
@@ -60,12 +61,14 @@ durable-statement-worker milestones.
 
 ## Not A Production Candidate Yet
 
-- The original `main` worktree has an unresolved, user-owned conflict in
-  `infra/scripts/deploy-cloud-run.sh`. It was not discarded or resolved during
-  this audit.
 - The integration branch is ahead of its remote. Full API PostgreSQL, API
   in-memory, Flutter, Flutter web, and Android regression gates pass locally;
-  the protected-main post-merge run remains outstanding.
+  the protected-main post-merge run and exact-SHA release publication remain
+  outstanding.
+- The canonical Cloud Run URL is stale: `/api/version` currently returns 404
+  and `/app/` serves an older dark bundle. The local candidate preview at
+  `http://localhost:3001/app/` is the only runtime verified against SHA
+  `3057fcf` in this workstation session.
 - A repository-wide adversarial security scan is sealed for protected `main`
   with five validated findings (two high, three medium). The report covers
   release identity, backup confidentiality, WebAuthn parser bounds, and split
@@ -79,8 +82,9 @@ durable-statement-worker milestones.
   not been rerun against this branch. Backup scripts now fail closed without
   age encryption, but production key custody is not locally verifiable.
 - Manual document analysis now has a durable, forced-RLS queue with stale-lease
-  recovery and bounded workers. Production OCR/load evidence and external
-  queue/worker observability remain to be established.
+  recovery, bounded workers, ZIP expansion limits, source retention expiry, and
+  active import quotas. Production OCR/load evidence and external queue/worker
+  observability remain to be established.
 - Plaid production access, live SMTP delivery, Stripe production configuration,
   domain association, mobile signing, physical-device testing, cloud IAM, encrypted
   off-host backups, and disaster-recovery evidence require owner or external

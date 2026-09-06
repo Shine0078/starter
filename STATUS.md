@@ -2,7 +2,7 @@
 
 Canonical current-state file. Older handovers are historical unless they match this file and the repository.
 
-Verified: 2026-08-27
+Verified: 2026-09-05
 
 ## Current branch
 
@@ -11,9 +11,9 @@ Protected default branch: `main`
 
 ## Current commit SHA
 
-- `main` / `origin/main`: `a21b374` (merge of [PR #16](https://github.com/Shine0078/starter/pull/16))
-- Working branch `codex/passkey-webauthn-p0` feature tip is `7a7fb8f` (this
-  status update is a documentation-only follow-up)
+- `main` / `origin/main`: the protected branch remains behind the candidate.
+- Working branch `codex/passkey-webauthn-p0` feature tip is `3057fcf` locally,
+  35 commits ahead of its remote tracking ref. The candidate worktree is clean.
 
 ## Canonical deployment
 
@@ -29,10 +29,15 @@ GitHub Pages and `finverse.onrender.com` are not the current API.
 
 ## Current API / DB / WebAuthn
 
-- Live readiness: HTTP 200, `service=finverse-api`, Postgres reachable
-- Live `/api/version`: HTTP 404 (old image, no identity yet)
-- Live legal: placeholder `example.com` URLs, `registrationRequired=true`
-- Live WebAuthn: `{"available":false}`
+- Live `/api/version`: HTTP 404, proving the public URL is still an older image.
+- Live `/app/`: HTTP 200, but it is the older dark bundle and does not declare
+  the candidate `/app/` base href. It must not be treated as the verified app.
+- Candidate preview: `http://localhost:3001/app/` with
+  `http://localhost:3001/api/version` reporting schema
+  `040_statement_import_retention.sql`; registration and `/api/auth/me` were
+  verified against this isolated in-memory runtime.
+- Live legal, Plaid, WebAuthn, SMTP, and Neon runtime-role settings remain
+  external deployment configuration and are not inferred from local tests.
 
 ## Test results
 
@@ -41,12 +46,15 @@ GitHub Pages and `finverse.onrender.com` are not the current API.
 
 - Main CI on merge commit `a21b374`: success
 
-Local verification on `b1974dd` (2026-08-27): API typecheck/build passed;
-manual-import focused tests passed (11 tests); full PostgreSQL suite passed
-(71 files, 1,045 tests); `npm audit --omit=dev` reported zero vulnerabilities;
-Flutter analyze passed; Flutter tests passed (118); Flutter web and debug APK
-builds passed. Migration application validated all 32 migrations and provisioned
-the restricted runtime role.
+Local verification on the current candidate (2026-09-05): API typecheck/build
+passed; API in-memory suite passed (66 files, 881 tests, 9 skipped); fresh
+PostgreSQL suite passed (72 files, 1,065 tests) under the restricted runtime
+role with forced RLS; Flutter analysis passed; Flutter tests passed (119);
+Flutter web release and Android release builds passed; focused statement
+parser/queue tests passed (10). The web-shell light-theme test passed (2).
+The candidate includes migration 040 for bounded statement-source retention,
+ZIP expansion limits, active import quotas, and the immutable-image release
+identity gates.
 
 ## Completed this session
 
@@ -95,13 +103,16 @@ CI follow-up 2:
   with forced RLS. API DB tests cover cross-user isolation, source retention,
   approval, and duplicate protection. No remote model-training path is used;
   user corrections feed only the same user's local classifier/rules.
-- Current extraction is synchronous and deliberately bounded. Scanned PDFs
-  without a text layer return a warning rather than guessed transactions; a
-  durable OCR worker is required before increasing limits for large-volume use.
+- Current extraction is durable and deliberately bounded. Scanned PDFs without
+  a text layer return a warning rather than guessed transactions; production
+  OCR/load evidence and external worker observability remain required before
+  increasing limits for large-volume use. Source retention is time-bounded and
+  user deletion preserves approved records and audit history.
 
 ## P0 remaining
 
-- Redeploy Cloud Run from a CI-green SHA with `GIT_SHA`
+- Push/merge the exact candidate SHA, then redeploy Cloud Run with `GIT_SHA`
+  and verify `/api/version` before calling the public URL current
 - Replace live legal URLs before real users
 - Configure live `WEBAUTHN_*`
 - Physical passkey proof

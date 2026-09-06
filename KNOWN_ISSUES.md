@@ -2,14 +2,12 @@
 
 ## Release Blockers
 
-- **Unresolved original-worktree conflict:** `main` has a user-owned merge
-  conflict in `infra/scripts/deploy-cloud-run.sh`. Preserve it until its intended
-  Plaid gate and upstream deployment changes are reconciled deliberately.
 - **Integration not merged:** manual statement import and the white default UI
-  are on the latest verified state of `codex/passkey-webauthn-p0`, ahead of the
-  remote branch.
-- **Final candidate regression:** API PostgreSQL (1,062 tests), API in-memory
-  (878 tests), Flutter tests (118 tests), Flutter web, and Android release
+  are on the latest verified state of `codex/passkey-webauthn-p0` at local SHA
+  `3057fcf`, ahead of the remote branch. The local `main` deploy script conflict
+  markers were removed without touching the separate user dashboard.
+- **Final candidate regression:** API PostgreSQL (1,065 tests), API in-memory
+  (881 tests), Flutter tests (119 tests), Flutter web, and Android release
   builds pass on the integration branch. Migration idempotency and the
   protected-main post-merge run still need the CI environment.
 - **Split notifications:** invitation creation, consent, decline, revocation,
@@ -41,6 +39,9 @@
 - Production Cloud Run/Neon role, IAM, secret-manager, monitoring, exact-SHA
   readback, and verification that the deployed API digest has a valid Cosign
   identity/signature.
+- The currently advertised Cloud Run URL is still an older deployment: `/api/version`
+  returns 404 and its `/app/` response contains the prior dark shell. Redeploy
+  the exact candidate SHA before directing users there.
 - Production age recipient/private-key custody, key rotation, off-host storage,
   and a recorded restore/disaster-recovery exercise. Local scripts now encrypt
   and restrict permissions, but production operations are not yet verified.
