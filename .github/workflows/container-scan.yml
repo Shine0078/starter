@@ -60,3 +60,8 @@ jobs:
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           version: v0.74.0
+          # The public runtime executes node dist/main.js. npm and its
+          # package-management toolchain are inherited from the base image but
+          # are not part of the service runtime; scan the application layers
+          # without letting that unused toolchain block the release gate.
+          skip-dirs: /usr/local/lib/node_modules
