@@ -1819,6 +1819,34 @@ class ReceiptRecord {
   final List<String> items;
 }
 
+class StatementDocumentDetails {
+  const StatementDocumentDetails({
+    this.issuer,
+    this.accountReferenceLast4,
+    this.statementDate,
+    this.periodStart,
+    this.periodEnd,
+    this.currency,
+  });
+
+  factory StatementDocumentDetails.fromJson(Map<String, dynamic> json) =>
+      StatementDocumentDetails(
+        issuer: json['issuer'] as String?,
+        accountReferenceLast4: json['accountReferenceLast4'] as String?,
+        statementDate: json['statementDate'] as String?,
+        periodStart: json['periodStart'] as String?,
+        periodEnd: json['periodEnd'] as String?,
+        currency: json['currency'] as String?,
+      );
+
+  final String? issuer;
+  final String? accountReferenceLast4;
+  final String? statementDate;
+  final String? periodStart;
+  final String? periodEnd;
+  final String? currency;
+}
+
 class StatementImport {
   const StatementImport({
     required this.id,
@@ -1834,6 +1862,7 @@ class StatementImport {
     required this.createdAt,
     this.sourceDeletedAt,
     this.error,
+    this.documentDetails,
   });
 
   factory StatementImport.fromJson(Map<String, dynamic> json) =>
@@ -1851,6 +1880,10 @@ class StatementImport {
         createdAt: json['createdAt'] as String? ?? '',
         sourceDeletedAt: json['sourceDeletedAt'] as String?,
         error: json['error'] as String?,
+        documentDetails: json['documentDetails'] is Map<String, dynamic>
+            ? StatementDocumentDetails.fromJson(
+                json['documentDetails'] as Map<String, dynamic>)
+            : null,
       );
 
   final String id;
@@ -1866,6 +1899,7 @@ class StatementImport {
   final String createdAt;
   final String? sourceDeletedAt;
   final String? error;
+  final StatementDocumentDetails? documentDetails;
 }
 
 class StatementRow {
@@ -1957,7 +1991,7 @@ class StatementSummary {
         expenses: (json['expenses'] as num?)?.toInt() ?? 0,
         netCashFlow: (json['netCashFlow'] as num?)?.toInt() ??
             ((json['income'] as num?)?.toInt() ?? 0) -
-            ((json['expenses'] as num?)?.toInt() ?? 0),
+                ((json['expenses'] as num?)?.toInt() ?? 0),
         savings: (json['savings'] as num?)?.toInt() ?? 0,
         recurringCount: (json['recurringCount'] as num?)?.toInt() ?? 0,
         duplicateCount: (json['duplicateCount'] as num?)?.toInt() ?? 0,
@@ -2041,7 +2075,8 @@ class SplitInvitation {
     this.createdAt,
   });
 
-  factory SplitInvitation.fromJson(Map<String, dynamic> json) => SplitInvitation(
+  factory SplitInvitation.fromJson(Map<String, dynamic> json) =>
+      SplitInvitation(
         id: json['id'] as String,
         groupId: json['groupId'] as String,
         status: json['status'] as String? ?? 'pending',

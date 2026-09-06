@@ -638,6 +638,8 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
                 const SizedBox(height: 24),
                 Text(detail.statement.filename,
                     style: Theme.of(context).textTheme.titleMedium),
+                if (detail.statement.documentDetails != null)
+                  _documentDetailsView(detail.statement.documentDetails!),
                 if (detail.statement.status == 'queued' ||
                     detail.statement.status == 'processing')
                   Padding(
@@ -745,33 +747,67 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
         padding: const EdgeInsets.only(top: 12),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Wrap(spacing: 8, runSpacing: 8, children: [
-          Chip(label: Text('Income ${_formatMinor(summary.income, summary.currency)}')),
-          Chip(label: Text('Expenses ${_formatMinor(summary.expenses, summary.currency)}')),
-          Chip(label: Text('Net cash flow ${_formatMinor(summary.netCashFlow, summary.currency)}')),
-          Chip(label: Text('Savings ${_formatMinor(summary.savings, summary.currency)}')),
-          Chip(label: Text('${summary.recurringCount} recurring')),
-          if (summary.unusualCount > 0)
-            Chip(label: Text('${summary.unusualCount} unusual')),
-          if (summary.duplicateCount > 0)
-            Chip(label: Text('${summary.duplicateCount} possible duplicates')),
+            Chip(
+                label: Text(
+                    'Income ${_formatMinor(summary.income, summary.currency)}')),
+            Chip(
+                label: Text(
+                    'Expenses ${_formatMinor(summary.expenses, summary.currency)}')),
+            Chip(
+                label: Text(
+                    'Net cash flow ${_formatMinor(summary.netCashFlow, summary.currency)}')),
+            Chip(
+                label: Text(
+                    'Savings ${_formatMinor(summary.savings, summary.currency)}')),
+            Chip(label: Text('${summary.recurringCount} recurring')),
+            if (summary.unusualCount > 0)
+              Chip(label: Text('${summary.unusualCount} unusual')),
+            if (summary.duplicateCount > 0)
+              Chip(
+                  label: Text('${summary.duplicateCount} possible duplicates')),
           ]),
           if (summary.categoryTotals.isNotEmpty) ...[
             const SizedBox(height: 8),
-            const Text('Category totals', style: TextStyle(fontWeight: FontWeight.w600)),
+            const Text('Category totals',
+                style: TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 4),
             ...summary.categoryTotals.map((category) => Padding(
                   padding: const EdgeInsets.only(bottom: 2),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Expanded(child: Text('${category['label']} (${category['count']})')),
-                      Text(_formatMinor(category['amount'] as int, summary.currency)),
+                      Expanded(
+                          child: Text(
+                              '${category['label']} (${category['count']})')),
+                      Text(_formatMinor(
+                          category['amount'] as int, summary.currency)),
                     ],
                   ),
                 )),
           ],
         ]),
       );
+
+  Widget _documentDetailsView(StatementDocumentDetails details) {
+    final lines = <String>[
+      if (details.issuer != null) 'Issuer: ${details.issuer}',
+      if (details.accountReferenceLast4 != null)
+        'Document account: ••••${details.accountReferenceLast4}',
+      if (details.periodStart != null && details.periodEnd != null)
+        'Statement period: ${details.periodStart} to ${details.periodEnd}',
+      if (details.statementDate != null)
+        'Statement date: ${details.statementDate}',
+    ];
+    if (lines.isEmpty) return const SizedBox.shrink();
+    return Card(
+      margin: const EdgeInsets.only(top: 12),
+      child: ListTile(
+        leading: const Icon(Icons.description_outlined),
+        title: const Text('Document details'),
+        subtitle: Text(lines.join('\n')),
+      ),
+    );
+  }
 }
 
 String _formatMinor(int amount, String currency) =>
