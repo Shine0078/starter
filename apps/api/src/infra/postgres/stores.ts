@@ -1439,6 +1439,7 @@ export class PostgresSavedViewStore implements SavedViewStore {
 interface ImportBatchRow {
   id: string;
   account_id: string;
+  statement_import_id: string | null;
   filename: string;
   status: string;
   rows_total: number;
@@ -1450,7 +1451,7 @@ interface ImportBatchRow {
 }
 
 const IMPORT_BATCH_COLUMNS = `
-  id, account_id, filename, status, rows_total, rows_imported,
+  id, account_id, statement_import_id, filename, status, rows_total, rows_imported,
   rows_duplicate, rows_invalid, created_at, reverted_at
 `;
 
@@ -1458,6 +1459,7 @@ function toImportBatch(row: ImportBatchRow): ImportBatch {
   return {
     id: row.id,
     accountId: row.account_id,
+    ...(row.statement_import_id ? { statementImportId: row.statement_import_id } : {}),
     filename: row.filename,
     status: row.status as ImportBatch['status'],
     rowsTotal: row.rows_total,
@@ -1510,14 +1512,15 @@ export class PostgresImportBatchStore implements ImportBatchStore {
 
       const { rows } = await client.query<ImportBatchRow>(
         `INSERT INTO import_batches (
-           id, user_id, account_id, filename, status,
+           id, user_id, account_id, statement_import_id, filename, status,
            rows_total, rows_imported, rows_duplicate, rows_invalid, created_at
-         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
          RETURNING ${IMPORT_BATCH_COLUMNS}`,
         [
           batch.id,
           userId,
           batch.accountId,
+          batch.statementImportId ?? null,
           batch.filename,
           batch.status,
           batch.rowsTotal,

@@ -211,6 +211,8 @@ export class DuplicateViewNameError extends Error {
 export interface ImportBatch {
   id: string;
   accountId: string;
+  /** Links manual ledger rows back to their reviewable source document. */
+  statementImportId?: string;
   filename: string;
   status: 'committed' | 'reverted';
   rowsTotal: number;
