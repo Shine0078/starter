@@ -226,7 +226,7 @@ describe('rule applications API', () => {
       const user = await signedInUser();
 
       const netflix = await request(http)
-        .get('/api/transactions?category=streaming&limit=1')
+        .get('/api/transactions?search=netflix&limit=1')
         .set('Authorization', `Bearer ${user.token}`)
         .expect(200);
 

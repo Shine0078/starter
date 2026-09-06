@@ -1068,7 +1068,7 @@ describe('auth API', () => {
         .send({ categorySlug: budgetable.categorySlug, limitAmount: 1 })
         .expect(201);
       const progress = await request(http)
-        .get('/api/budgets/progress')
+        .get('/api/budgets/progress?asOf=2026-08-07')
         .set('Authorization', `Bearer ${alice.tokens.accessToken}`)
         .expect(200);
       expect(progress.body.budgets[0].spentAmount).toBeGreaterThan(0);
