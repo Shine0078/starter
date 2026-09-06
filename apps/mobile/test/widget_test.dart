@@ -30,6 +30,7 @@ import 'package:finverse/screens/help_support_screen.dart';
 import 'package:finverse/screens/login_screen.dart';
 import 'package:finverse/screens/plan_screen.dart';
 import 'package:finverse/screens/split_screen.dart';
+import 'package:finverse/screens/statement_import_screen.dart';
 import 'package:finverse/screens/transaction_detail_screen.dart';
 import 'package:finverse/widgets/budget_tile.dart';
 import 'package:finverse/widgets/health_score_card.dart';
@@ -47,6 +48,10 @@ ApiClient clientWith(MockClient http,
       baseUrl: 'http://localhost:9999',
       sessionStore: store ?? InMemorySessionStore(),
       offlineCache: offlineCache,
+    );
+
+Widget statementImportHarness(ApiClient api) => MaterialApp(
+      home: StatementImportScreen(api: api),
     );
 
 class LocalizationProbe extends StatelessWidget {
@@ -709,6 +714,34 @@ void main() {
     semantics.dispose();
   });
 
+  testWidgets('financial visuals keep spoken labels under high contrast',
+      (tester) async {
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(MaterialApp(
+      home: MediaQuery(
+        data: const MediaQueryData(highContrast: true),
+        child: Scaffold(
+          body: SpendingChart(categories: [
+            CategorySpend(
+              categorySlug: 'groceries',
+              categoryName: 'Groceries',
+              total: 12550,
+              totalFormatted: r'$125.50',
+              transactionCount: 4,
+            ),
+          ]),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(
+      find.bySemanticsLabel(r'Groceries: $125.50 across 4 transactions.'),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+    semantics.dispose();
+  });
+
   testWidgets('spending heatmap exposes daily intensity semantics',
       (tester) async {
     final semantics = tester.ensureSemantics();
@@ -1003,7 +1036,9 @@ void main() {
     expect(await cache.pendingMutations('user-1'), isEmpty);
   });
 
-  test('keeps throttled offline mutations queued instead of permanently rejecting them', () async {
+  test(
+      'keeps throttled offline mutations queued instead of permanently rejecting them',
+      () async {
     final store = InMemorySessionStore();
     final cache = InMemoryOfflineCacheStore();
     await store.write(const SessionTokens(
@@ -1013,7 +1048,8 @@ void main() {
       userId: 'user-1',
     ));
     final api = clientWith(
-      MockClient((request) async => http.Response('{"message":"Too many requests"}', 429)),
+      MockClient((request) async =>
+          http.Response('{"message":"Too many requests"}', 429)),
       store: store,
       offlineCache: cache,
     );
@@ -1029,7 +1065,8 @@ void main() {
     expect(await cache.pendingMutations('user-1'), hasLength(1));
   });
 
-  test('keeps rejected offline mutations visible and isolated by account', () async {
+  test('keeps rejected offline mutations visible and isolated by account',
+      () async {
     final store = InMemorySessionStore();
     final cache = InMemoryOfflineCacheStore();
     await store.write(const SessionTokens(
@@ -1113,6 +1150,37 @@ void main() {
     expect(find.text('/transactions/txn-1/preferences'), findsOneWidget);
     expect(find.textContaining('no longer valid'), findsOneWidget);
   });
+
+  testWidgets('spending heatmap survives 200% text scaling', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(400, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(MaterialApp(
+      home: MediaQuery(
+        data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+        child: Scaffold(
+          body: SingleChildScrollView(
+            child: SpendingHeatmap(points: const [
+              AnalyticsTrendPoint(
+                date: '2026-08-02',
+                income: 0,
+                incomeFormatted: r'$0.00',
+                expenses: 5000,
+                expensesFormatted: r'$50.00',
+                refunds: 0,
+                refundsFormatted: r'$0.00',
+                net: -5000,
+                netFormatted: r'-$50.00',
+              ),
+            ]),
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Daily spending'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   test('portable export confirms the password and attaches the active session',
       () async {
     final store = InMemorySessionStore();
@@ -1887,7 +1955,8 @@ void main() {
     }));
 
     expect(await api.passkeysAvailable(), isTrue);
-    final options = await api.passkeyRegisterOptions(password: 'correct horse battery staple');
+    final options = await api.passkeyRegisterOptions(
+        password: 'correct horse battery staple');
     expect(options['challenge'], 'abc');
     expect(sawRegisterOptions, isTrue);
 
@@ -2466,5 +2535,32 @@ void main() {
     expect(find.text('Wallet cash'), findsOneWidget);
     expect(find.text('\$125.00'), findsOneWidget);
     semantics.dispose();
+  });
+
+  testWidgets(
+      'statement import offers account creation instead of a disabled upload',
+      (tester) async {
+    final api = clientWith(MockClient((request) async {
+      if (request.url.path == '/api/accounts') {
+        return http.Response('[]', 200);
+      }
+      if (request.url.path == '/api/imports/statements') {
+        return http.Response('[]', 200);
+      }
+      return http.Response('{}', 404);
+    }));
+
+    await tester.pumpWidget(statementImportHarness(api));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Add an account first'), findsOneWidget);
+    final action = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Add account and choose statement'),
+    );
+    expect(action.onPressed, isNotNull);
+
+    await tester.tap(find.text('Add account and choose statement'));
+    await tester.pumpAndSettle();
+    expect(find.text('Add account for this statement'), findsOneWidget);
   });
 }

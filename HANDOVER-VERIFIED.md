@@ -1,7 +1,7 @@
 # FINVERSE status - 2026-08-20 (verified)
 
 Canonical working branch: `codex/passkey-webauthn-p0`
-HEAD at write time: `main` is `eebfd1d` (merge of PR #1). Canonical current-state file is `STATUS.md`.
+HEAD at write time: `main` is `a21b374` (merge of PR #16). Canonical current-state file is `STATUS.md`.
 Do not treat older handover prose as current. This file is a dated evidence log; `STATUS.md` is the source of truth.
 
 ## Canonical deployment

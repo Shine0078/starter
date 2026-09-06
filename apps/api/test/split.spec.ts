@@ -96,8 +96,8 @@ describe('split math', () => {
       },
     ];
     const balances = computeNetBalances([], settlements, 'USD');
-    expect(balances.get('bob')).toBe(-5_000);
-    expect(balances.get('alice')).toBe(5_000);
+    expect(balances.get('bob')).toBe(5_000);
+    expect(balances.get('alice')).toBe(-5_000);
   });
 
   it('suggests the minimum number of settlements to zero everyone out', () => {

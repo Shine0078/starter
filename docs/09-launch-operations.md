@@ -22,10 +22,13 @@ provider, or legal approval already exists.
   takes a PostgreSQL advisory lock so hosting hooks and Actions cannot migrate
   the same database concurrently.
 - `infra/scripts/backup-postgres.ps1` creates a compressed custom-format PostgreSQL
-  backup, validates its archive structure, and rolls off files older than the chosen
-  retention window.
-- `infra/scripts/restore-drill-postgres.ps1` restores only to a database whose name
-  ends in `_restore_test`, then verifies migration history is readable.
+  backup, encrypts it with an `age1...` recipient before it becomes durable,
+  restricts local permissions, and rolls off files older than the chosen retention
+  window. The script refuses to run without the recipient and the `age` binary.
+- `infra/scripts/restore-drill-postgres.ps1` decrypts an archive with an approved
+  age identity, restores only to a database whose name ends in `_restore_test`,
+  then verifies migration history is readable. Decrypted dumps are temporary and
+  removed on exit.
 - CI performs a real backup/restore drill after applying migrations. The scheduled
   `.github/workflows/uptime.yml` probes production three times, opens one deduplicated
   GitHub incident, and closes it after recovery. It stays dormant until the
@@ -45,6 +48,9 @@ NODE_ENV=production
 STORE=postgres
 DATABASE_URL=postgresql://schema-owner:...@.../finverse
 DATABASE_APP_URL=postgresql://finverse-app:...@.../finverse
+# Backup jobs must receive a recipient; keep the private age identity outside the
+# backup host and use it only for an approved restore drill.
+FINVERSE_BACKUP_AGE_RECIPIENT=age1...
 JWT_SECRET=<at least 32 random characters>
 MFA_ENCRYPTION_KEY=<32 random bytes, base64 encoded>
 CORS_ORIGINS=https://your-domain.example

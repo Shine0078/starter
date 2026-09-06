@@ -278,6 +278,12 @@ abstract class AppLocalizations {
   /// **'Retry sync'**
   String get offlineConflictRetry;
 
+  /// No description provided for @offlineConflictQueuedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Queued {date}'**
+  String offlineConflictQueuedAt(String date);
+
   /// No description provided for @offlineConflictStatus.
   ///
   /// In en, this message translates to:
@@ -3598,6 +3604,84 @@ abstract class AppLocalizations {
   /// **'Enter a valid positive amount.'**
   String get splitInvalidAmount;
 
+  /// No description provided for @splitPendingInvitations.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending invitations'**
+  String get splitPendingInvitations;
+
+  /// No description provided for @splitInvitationSharedGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared group'**
+  String get splitInvitationSharedGroup;
+
+  /// No description provided for @splitInvitationInvitedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Invited by {email}'**
+  String splitInvitationInvitedBy(Object email);
+
+  /// No description provided for @splitInvitationAccept.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept'**
+  String get splitInvitationAccept;
+
+  /// No description provided for @splitInvitationDecline.
+  ///
+  /// In en, this message translates to:
+  /// **'Decline'**
+  String get splitInvitationDecline;
+
+  /// No description provided for @splitLeaveGroupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave group?'**
+  String get splitLeaveGroupTitle;
+
+  /// No description provided for @splitRemoveMemberTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove member?'**
+  String get splitRemoveMemberTitle;
+
+  /// No description provided for @splitLeaveGroupDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'You can leave only after your balance is settled.'**
+  String get splitLeaveGroupDetail;
+
+  /// No description provided for @splitRemoveMemberDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'This member can be removed only when their balance is zero.'**
+  String get splitRemoveMemberDetail;
+
+  /// No description provided for @splitLeaveGroupAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave'**
+  String get splitLeaveGroupAction;
+
+  /// No description provided for @splitRemoveMemberAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get splitRemoveMemberAction;
+
+  /// No description provided for @splitLeaveGroupTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave group'**
+  String get splitLeaveGroupTooltip;
+
+  /// No description provided for @splitRemoveMemberTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove member'**
+  String get splitRemoveMemberTooltip;
+
   /// No description provided for @profileSplitDetail.
   ///
   /// In en, this message translates to:
@@ -3789,36 +3873,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Continue'**
   String get settingsPasskeysContinue;
-
-  /// No description provided for @settingsDarkModeTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Dark mode'**
-  String get settingsDarkModeTitle;
-
-  /// No description provided for @settingsDarkModeOn.
-  ///
-  /// In en, this message translates to:
-  /// **'Always use the dark appearance.'**
-  String get settingsDarkModeOn;
-
-  /// No description provided for @settingsDarkModeOff.
-  ///
-  /// In en, this message translates to:
-  /// **'Always use the light appearance.'**
-  String get settingsDarkModeOff;
-
-  /// No description provided for @settingsDarkModeSystem.
-  ///
-  /// In en, this message translates to:
-  /// **'Follow your device appearance.'**
-  String get settingsDarkModeSystem;
-
-  /// No description provided for @settingsDarkModeUseDevice.
-  ///
-  /// In en, this message translates to:
-  /// **'Use device appearance'**
-  String get settingsDarkModeUseDevice;
 }
 
 class _AppLocalizationsDelegate

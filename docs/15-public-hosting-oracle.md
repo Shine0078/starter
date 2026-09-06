@@ -90,10 +90,14 @@ crontab (for example, every night at 02:30 UTC):
 ```sh
 sudo mkdir -p /var/backups/finverse
 sudo crontab -e
-30 2 * * * cd /home/ubuntu/finverse && FINVERSE_BACKUP_DIR=/var/backups/finverse /home/ubuntu/finverse/infra/scripts/backup-postgres.sh >> /var/log/finverse-backup.log 2>&1
+30 2 * * * cd /home/ubuntu/finverse && FINVERSE_BACKUP_DIR=/var/backups/finverse FINVERSE_BACKUP_AGE_RECIPIENT="$(cat /etc/finverse/backup-recipient)" /home/ubuntu/finverse/infra/scripts/backup-postgres.sh >> /var/log/finverse-backup.log 2>&1
 ```
 
-Copy backups to a second location. Updating the app is a rolling-safe rebuild:
+Generate the recipient with `age-keygen` on a controlled recovery workstation,
+store the public recipient at `/etc/finverse/backup-recipient` on the backup
+host, keep the matching identity off that host, and copy only the encrypted
+`.sql.gz.age` archives to a second location. Updating the app is a rolling-safe
+rebuild:
 
 ```sh
 git pull --ff-only

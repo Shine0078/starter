@@ -121,6 +121,11 @@ class AppLocalizationsFr extends AppLocalizations {
   String get offlineConflictRetry => 'Reessayer';
 
   @override
+  String offlineConflictQueuedAt(String date) {
+    return 'En file $date';
+  }
+
+  @override
   String offlineConflictStatus(int code) {
     return 'HTTP $code';
   }
@@ -2098,6 +2103,49 @@ class AppLocalizationsFr extends AppLocalizations {
   String get splitInvalidAmount => 'Saisissez un montant positif valide.';
 
   @override
+  String get splitPendingInvitations => 'Invitations en attente';
+
+  @override
+  String get splitInvitationSharedGroup => 'Groupe partagé';
+
+  @override
+  String splitInvitationInvitedBy(Object email) {
+    return 'Invité par $email';
+  }
+
+  @override
+  String get splitInvitationAccept => 'Accepter';
+
+  @override
+  String get splitInvitationDecline => 'Refuser';
+
+  @override
+  String get splitLeaveGroupTitle => 'Quitter le groupe ?';
+
+  @override
+  String get splitRemoveMemberTitle => 'Retirer le membre ?';
+
+  @override
+  String get splitLeaveGroupDetail =>
+      'Vous pouvez partir seulement lorsque votre solde est réglé.';
+
+  @override
+  String get splitRemoveMemberDetail =>
+      'Ce membre peut être retiré seulement lorsque son solde est nul.';
+
+  @override
+  String get splitLeaveGroupAction => 'Quitter';
+
+  @override
+  String get splitRemoveMemberAction => 'Retirer';
+
+  @override
+  String get splitLeaveGroupTooltip => 'Quitter le groupe';
+
+  @override
+  String get splitRemoveMemberTooltip => 'Retirer le membre';
+
+  @override
   String get profileSplitDetail =>
       'Partagez les factures et réglez vos comptes';
 
@@ -2202,20 +2250,4 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get settingsPasskeysContinue => 'Continuer';
-
-  @override
-  String get settingsDarkModeTitle => 'Mode sombre';
-
-  @override
-  String get settingsDarkModeOn => 'Toujours utiliser l\'apparence sombre.';
-
-  @override
-  String get settingsDarkModeOff => 'Toujours utiliser l\'apparence claire.';
-
-  @override
-  String get settingsDarkModeSystem => 'Suivre l\'apparence de votre appareil.';
-
-  @override
-  String get settingsDarkModeUseDevice =>
-      'Utiliser l\'apparence de l\'appareil';
 }

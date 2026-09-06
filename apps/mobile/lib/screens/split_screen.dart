@@ -21,6 +21,7 @@ class _SplitScreenState extends State<SplitScreen> {
   var _loading = true;
   String? _error;
   List<SplitGroup> _groups = const [];
+  List<SplitInvitation> _invitations = const [];
 
   @override
   void initState() {
@@ -34,10 +35,16 @@ class _SplitScreenState extends State<SplitScreen> {
       _error = null;
     });
     try {
-      final groups = await widget.api.splitGroups();
+      final results = await Future.wait([
+        widget.api.splitGroups(),
+        widget.api.splitInvitations(),
+      ]);
+      final groups = results[0] as List<SplitGroup>;
+      final invitations = results[1] as List<SplitInvitation>;
       if (!mounted) return;
       setState(() {
         _groups = groups;
+        _invitations = invitations;
         _loading = false;
       });
     } catch (error) {
@@ -46,6 +53,22 @@ class _SplitScreenState extends State<SplitScreen> {
         _error = friendlyErrorMessage(error);
         _loading = false;
       });
+    }
+  }
+
+  Future<void> _respondToInvitation(SplitInvitation invitation, bool accept) async {
+    try {
+      if (accept) {
+        await widget.api.acceptSplitInvitation(invitation.id);
+      } else {
+        await widget.api.declineSplitInvitation(invitation.id);
+      }
+      await _load();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(friendlyErrorMessage(error))),
+      );
     }
   }
 
@@ -142,7 +165,7 @@ class _SplitScreenState extends State<SplitScreen> {
         ),
       );
     }
-    if (_groups.isEmpty) {
+    if (_groups.isEmpty && _invitations.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -160,24 +183,53 @@ class _SplitScreenState extends State<SplitScreen> {
         ),
       );
     }
-    return ListView.builder(
+    return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-      itemCount: _groups.length,
-      itemBuilder: (context, index) {
-        final group = _groups[index];
-        return Card(
-          child: ListTile(
-            leading: const CircleAvatar(child: Icon(Icons.group_outlined)),
-            title: Text(group.name),
-            subtitle: Text(group.currency),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) =>
-                  SplitGroupDetailScreen(api: widget.api, groupId: group.id),
-            )),
-          ),
-        );
-      },
+      children: [
+        if (_invitations.isNotEmpty) ...[
+          Text(l10n.splitPendingInvitations, style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          ..._invitations.map((invitation) => Card(
+                child: ListTile(
+                  leading: const Icon(Icons.mail_outline),
+                  title: Text(invitation.groupName ?? l10n.splitInvitationSharedGroup),
+                  subtitle: Text([
+                    if (invitation.currency != null) invitation.currency!,
+                    if (invitation.invitedByEmail != null)
+                      l10n.splitInvitationInvitedBy(invitation.invitedByEmail!),
+                  ].join(' · ')),
+                  trailing: Wrap(
+                    spacing: 4,
+                    children: [
+                      IconButton(
+                        tooltip: l10n.splitInvitationDecline,
+                        onPressed: () => _respondToInvitation(invitation, false),
+                        icon: const Icon(Icons.close),
+                      ),
+                      IconButton(
+                        tooltip: l10n.splitInvitationAccept,
+                        onPressed: () => _respondToInvitation(invitation, true),
+                        icon: const Icon(Icons.check),
+                      ),
+                    ],
+                  ),
+                ),
+              )),
+          const SizedBox(height: 16),
+        ],
+        if (_groups.isNotEmpty)
+          ..._groups.map((group) => Card(
+                child: ListTile(
+                  leading: const CircleAvatar(child: Icon(Icons.group_outlined)),
+                  title: Text(group.name),
+                  subtitle: Text(group.currency),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => SplitGroupDetailScreen(api: widget.api, groupId: group.id),
+                  )),
+                ),
+              )),
+      ],
     );
   }
 }
@@ -278,13 +330,11 @@ class _SplitGroupDetailScreenState extends State<SplitGroupDetailScreen> {
     final description = TextEditingController();
     final amount = TextEditingController();
     final members = _detail?.members ?? const <SplitMember>[];
-    String paidBy = members.isNotEmpty ? members.first.userId : '';
     String method = 'equal';
     final shareControllers = {
       for (final m in members) m.userId: TextEditingController()
     };
-    final submitted = await showDialog<
-        (String, String, String, String, Map<String, String>)?>(
+    final submitted = await showDialog<(String, String, String, Map<String, String>)?>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(l10n.splitAddExpenseTitle),
@@ -312,19 +362,6 @@ class _SplitGroupDetailScreenState extends State<SplitGroupDetailScreen> {
             const SizedBox(height: 12),
             StatefulBuilder(
                 builder: (context, setDialogState) => Column(children: [
-                      DropdownButtonFormField<String>(
-                          initialValue: paidBy,
-                          decoration: InputDecoration(
-                              labelText: l10n.splitPaidByLabel,
-                              border: const OutlineInputBorder()),
-                          items: members
-                              .map((m) => DropdownMenuItem(
-                                  value: m.userId,
-                                  child: Text(m.email ?? m.userId)))
-                              .toList(),
-                          onChanged: (v) =>
-                              setDialogState(() => paidBy = v ?? paidBy)),
-                      const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
                           initialValue: method,
                           decoration: InputDecoration(
@@ -370,7 +407,6 @@ class _SplitGroupDetailScreenState extends State<SplitGroupDetailScreen> {
               Navigator.of(dialogContext).pop((
                 description.text.trim(),
                 amount.text.trim(),
-                paidBy,
                 method,
                 shares
               ));
@@ -390,8 +426,8 @@ class _SplitGroupDetailScreenState extends State<SplitGroupDetailScreen> {
     if (submitted.$1.isEmpty || major == null || major <= 0) return;
     final minor = (major * 100).round();
     final shares = <String, int>{};
-    if (submitted.$4 == 'shares') {
-      for (final entry in submitted.$5.entries) {
+    if (submitted.$3 == 'shares') {
+      for (final entry in submitted.$4.entries) {
         final value = double.tryParse(entry.value);
         if (value == null || value <= 0) return;
         shares[entry.key] = (value * 100).round();
@@ -403,9 +439,8 @@ class _SplitGroupDetailScreenState extends State<SplitGroupDetailScreen> {
         widget.groupId,
         description: submitted.$1,
         amount: minor,
-        paidByUserId: submitted.$3,
-        splitMethod: submitted.$4,
-        shares: submitted.$4 == 'shares' ? shares : null,
+        splitMethod: submitted.$3,
+        shares: submitted.$3 == 'shares' ? shares : null,
       );
       await _load();
     } catch (error) {
@@ -545,6 +580,43 @@ class _SplitGroupDetailScreenState extends State<SplitGroupDetailScreen> {
     }
   }
 
+  Future<void> _removeMember(SplitMember member) async {
+    final l10n = AppLocalizations.of(context);
+    final isSelf = member.userId == widget.api.sessionUserId;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(isSelf ? l10n.splitLeaveGroupTitle : l10n.splitRemoveMemberTitle),
+        content: Text(
+          isSelf
+              ? l10n.splitLeaveGroupDetail
+              : l10n.splitRemoveMemberDetail,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(AppLocalizations.of(context).commonCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(isSelf ? l10n.splitLeaveGroupAction : l10n.splitRemoveMemberAction),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await widget.api.removeSplitMember(widget.groupId, member.userId);
+      await _load();
+      if (isSelf && mounted) Navigator.of(context).pop();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(friendlyErrorMessage(error))),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -579,6 +651,8 @@ class _SplitGroupDetailScreenState extends State<SplitGroupDetailScreen> {
       );
     }
     final detail = _detail!;
+    final canManageMembers = detail.members.any((member) =>
+        member.userId == widget.api.sessionUserId && member.role == 'admin');
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
       children: [
@@ -588,16 +662,30 @@ class _SplitGroupDetailScreenState extends State<SplitGroupDetailScreen> {
               ListTile(
                 leading: const Icon(Icons.people_outline),
                 title: Text(l10n.splitMembersHeading),
-                trailing: TextButton(
-                  onPressed: _addMember,
-                  child: Text(l10n.splitAddMemberAction),
-                ),
+                trailing: canManageMembers
+                    ? TextButton(
+                        onPressed: _addMember,
+                        child: Text(l10n.splitAddMemberAction),
+                      )
+                    : null,
               ),
               ...detail.members.map(
                 (member) => ListTile(
                   dense: true,
                   title: Text(member.email ?? member.userId),
                   subtitle: Text(member.role),
+                  trailing: (member.userId == widget.api.sessionUserId || canManageMembers) &&
+                          member.userId != detail.group.createdBy
+                      ? IconButton(
+                          tooltip: member.userId == widget.api.sessionUserId
+                              ? l10n.splitLeaveGroupTooltip
+                              : l10n.splitRemoveMemberTooltip,
+                          icon: Icon(member.userId == widget.api.sessionUserId
+                              ? Icons.exit_to_app
+                              : Icons.person_remove_outlined),
+                          onPressed: () => _removeMember(member),
+                        )
+                      : null,
                 ),
               ),
             ],

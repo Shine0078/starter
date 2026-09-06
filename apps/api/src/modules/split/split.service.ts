@@ -10,6 +10,7 @@ import {
 import { assertSharesReconcile, balancesFor, computeNetBalances, splitEqually, suggestSettlements } from '../../domain/split/split';
 import type {
   SplitExpense,
+  SplitGroupInvitation,
   SplitGroup,
   SplitGroupMember,
   SplitSettlement,
@@ -25,6 +26,8 @@ export interface CreateSplitGroupInput {
 export interface AddSplitMemberInput {
   email?: string;
 }
+
+export type CreateSplitInvitationInput = AddSplitMemberInput;
 
 export interface AddSplitExpenseInput {
   description?: string;
@@ -80,28 +83,80 @@ export class SplitService {
     return group;
   }
 
-  async addMember(
+  async createInvitation(
     userId: string,
     groupId: string,
-    input: AddSplitMemberInput,
-  ): Promise<SplitGroupMember> {
-    await this.assertMember(userId, groupId);
+    input: CreateSplitInvitationInput,
+  ): Promise<SplitGroupInvitation> {
+    await this.assertAdmin(userId, groupId);
     const email = input.email?.trim().toLowerCase();
     if (!email) throw new BadRequestException('email is required.');
     const invitee = await this.users.findByEmail(email);
     if (!invitee) {
-      throw new NotFoundException('No FINVERSE account found for that email.');
+      // Keep account presence private to authenticated group administrators.
+      // A caller cannot use this endpoint as an email-enumeration oracle.
+      throw new BadRequestException('Unable to add that account.');
     }
     const existing = await this.splits.listMembers(userId, groupId);
     if (existing.some((member) => member.userId === invitee.id)) {
-      throw new BadRequestException('That user is already a member.');
+      throw new BadRequestException('Unable to add that account.');
     }
-    return this.splits.addMember(userId, {
+    const invitation = await this.splits.createInvitation(userId, {
+      id: randomUUID(),
       groupId,
-      userId: invitee.id,
-      role: 'member',
-      joinedAt: new Date().toISOString(),
+      inviteeUserId: invitee.id,
+      invitedByUserId: userId,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      decidedAt: null,
     });
+    return this.decorateInvitation(invitation);
+  }
+
+  async listInvitations(userId: string): Promise<SplitGroupInvitation[]> {
+    const invitations = await this.splits.listInvitations(userId);
+    return Promise.all(invitations.map((invitation) => this.decorateInvitation(invitation)));
+  }
+
+  async listGroupInvitations(userId: string, groupId: string): Promise<SplitGroupInvitation[]> {
+    await this.assertAdmin(userId, groupId);
+    const invitations = await this.splits.listGroupInvitations(userId, groupId);
+    return Promise.all(invitations.map((invitation) => this.decorateInvitation(invitation)));
+  }
+
+  async acceptInvitation(userId: string, invitationId: string): Promise<SplitGroupMember> {
+    const member = await this.splits.acceptInvitation(userId, invitationId);
+    if (!member) throw new NotFoundException('Invitation not found or no longer pending.');
+    return member;
+  }
+
+  async declineInvitation(userId: string, invitationId: string): Promise<void> {
+    if (!(await this.splits.declineInvitation(userId, invitationId))) {
+      throw new NotFoundException('Invitation not found or no longer pending.');
+    }
+  }
+
+  async revokeInvitation(userId: string, groupId: string, invitationId: string): Promise<void> {
+    await this.assertAdmin(userId, groupId);
+    if (!(await this.splits.revokeInvitation(userId, groupId, invitationId))) {
+      throw new NotFoundException('Invitation not found or no longer pending.');
+    }
+  }
+
+  async removeMember(userId: string, groupId: string, targetUserId: string): Promise<void> {
+    await this.assertActiveMember(userId, groupId);
+    const result = await this.splits.removeMember(userId, groupId, targetUserId);
+    if (result === 'removed') return;
+    if (result === 'balance_nonzero') {
+      throw new BadRequestException('The member must settle their balance before leaving.');
+    }
+    if (result === 'creator') {
+      throw new ForbiddenException('The group creator cannot be removed.');
+    }
+    if (result === 'forbidden') {
+      throw new ForbiddenException('Only a group administrator can remove another member.');
+    }
+    throw new NotFoundException('Member not found.');
   }
 
   async addExpense(
@@ -109,7 +164,7 @@ export class SplitService {
     groupId: string,
     input: AddSplitExpenseInput,
   ): Promise<SplitExpense> {
-    const group = await this.assertMember(userId, groupId);
+    const group = await this.assertActiveMember(userId, groupId);
     const description = input.description?.trim() ?? '';
     if (description.length < 1 || description.length > 200) {
       throw new BadRequestException('Description must be between 1 and 200 characters.');
@@ -123,8 +178,8 @@ export class SplitService {
     const memberIds = new Set(members.map((member) => member.userId));
 
     const paidByUserId = input.paidByUserId ?? userId;
-    if (!memberIds.has(paidByUserId)) {
-      throw new BadRequestException('paidByUserId must be a group member.');
+    if (paidByUserId !== userId) {
+      throw new ForbiddenException('Only the authenticated member can claim payment.');
     }
 
     const splitMethod = input.splitMethod ?? 'equal';
@@ -181,7 +236,7 @@ export class SplitService {
     groupId: string,
     input: AddSplitSettlementInput,
   ): Promise<SplitSettlement> {
-    const group = await this.assertMember(userId, groupId);
+    const group = await this.assertActiveMember(userId, groupId);
     const toUserId = input.toUserId;
     if (!toUserId) throw new BadRequestException('toUserId is required.');
     if (toUserId === userId) throw new BadRequestException('You cannot settle up with yourself.');
@@ -222,12 +277,9 @@ export class SplitService {
       this.splits.listExpenses(userId, groupId),
       this.splits.listSettlements(userId, groupId),
     ]);
-    const emails = await this.resolveEmails([
-      ...members.map((member) => member.userId),
-      ...expenses.map((expense) => expense.paidByUserId),
-      ...expenses.flatMap((expense) => expense.participants.map((p) => p.userId)),
-      ...settlements.flatMap((settlement) => [settlement.fromUserId, settlement.toUserId]),
-    ]);
+    // Historical rows may reference a former member. Active membership is the
+    // privacy boundary for identity enrichment; former IDs remain opaque.
+    const emails = await this.resolveEmails(members.map((member) => member.userId));
     const netBalances = computeNetBalances(expenses, settlements, group.currency);
     const balances = balancesFor(netBalances, members.map((member) => member.userId));
     const suggestions = suggestSettlements(netBalances);
@@ -240,6 +292,21 @@ export class SplitService {
     return group;
   }
 
+  private async assertActiveMember(userId: string, groupId: string): Promise<SplitGroup> {
+    const group = await this.assertMember(userId, groupId);
+    if (group.archivedAt) throw new ForbiddenException('This group is archived.');
+    return group;
+  }
+
+  private async assertAdmin(userId: string, groupId: string): Promise<SplitGroup> {
+    const group = await this.assertActiveMember(userId, groupId);
+    const members = await this.splits.listMembers(userId, groupId);
+    if (!members.some((member) => member.userId === userId && member.role === 'admin')) {
+      throw new ForbiddenException('Only a group administrator can manage invitations.');
+    }
+    return group;
+  }
+
   private async resolveEmails(ids: readonly string[]): Promise<Record<string, string>> {
     const unique = [...new Set(ids)];
     const emails: Record<string, string> = {};
@@ -248,5 +315,20 @@ export class SplitService {
       if (user?.email) emails[id] = user.email;
     }
     return emails;
+  }
+
+  private async decorateInvitation(invitation: SplitGroupInvitation): Promise<SplitGroupInvitation> {
+    const group = invitation.invitedByUserId
+      ? await this.splits.getGroup(invitation.invitedByUserId, invitation.groupId)
+      : null;
+    const inviter = invitation.invitedByUserId
+      ? await this.users.findById(invitation.invitedByUserId)
+      : null;
+    return {
+      ...invitation,
+      groupName: invitation.groupName ?? group?.name,
+      currency: invitation.currency ?? group?.currency,
+      invitedByEmail: invitation.invitedByEmail ?? inviter?.email ?? null,
+    };
   }
 }

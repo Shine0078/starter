@@ -11,6 +11,9 @@
   "engines": {
     "node": ">=20"
   },
+  "overrides": {
+    "qs": "6.16.0"
+  },
   "scripts": {
     "dev": "npm run dev --workspace @finverse/api",
     "build": "npm run build --workspace @finverse/api",

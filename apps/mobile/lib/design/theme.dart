@@ -18,42 +18,33 @@ abstract final class FinTheme {
   /// something when they appear.
   static const Color seed = Color(0xFF0E7C66);
 
-  static ThemeData light([Color? brandSeed]) =>
-      _build(Brightness.light, FinColors.light, brandSeed);
-  static ThemeData dark([Color? brandSeed]) =>
-      _build(Brightness.dark, FinColors.dark, brandSeed);
+  static ThemeData light([Color? brandSeed]) => _build(brandSeed);
 
-  static ThemeData _build(
-      Brightness brightness, FinColors fin, Color? brandSeed) {
+  static ThemeData _build(Color? brandSeed) {
     final selectedSeed = brandSeed ?? seed;
-    final scheme =
-        ColorScheme.fromSeed(seedColor: selectedSeed, brightness: brightness);
-    final heroBase = brightness == Brightness.light
-        ? scheme.primary
-        : scheme.primaryContainer;
+    final scheme = ColorScheme.fromSeed(
+      seedColor: selectedSeed,
+      brightness: Brightness.light,
+    ).copyWith(surface: Colors.white);
+    final heroBase = scheme.primary;
     final heroEnd = Color.lerp(heroBase, Colors.black, 0.2)!;
-    final themedFin = fin.copyWith(
+    final themedFin = FinColors.light.copyWith(
       heroGradientStart: heroBase,
       heroGradientEnd: heroEnd,
-      onHero: brightness == Brightness.light
-          ? scheme.onPrimary
-          : scheme.onPrimaryContainer,
-      onHeroMuted: (brightness == Brightness.light
-              ? scheme.onPrimary
-              : scheme.onPrimaryContainer)
-          .withValues(alpha: 0.78),
+      onHero: scheme.onPrimary,
+      onHeroMuted: scheme.onPrimary.withValues(alpha: 0.78),
     );
     final base = ThemeData(colorScheme: scheme, useMaterial3: true);
 
     return base.copyWith(
       extensions: [themedFin],
       textTheme: FinType.textTheme(base.textTheme),
-      scaffoldBackgroundColor: scheme.surface,
+      scaffoldBackgroundColor: Colors.white,
 
       appBarTheme: AppBarTheme(
         centerTitle: false,
         scrolledUnderElevation: 0.5,
-        backgroundColor: scheme.surface,
+        backgroundColor: Colors.white,
         surfaceTintColor: scheme.surfaceTint,
         titleTextStyle: base.textTheme.titleLarge?.copyWith(
           fontWeight: FontWeight.w600,

@@ -17,7 +17,14 @@ PROJECT_ID="${GOOGLE_CLOUD_PROJECT:-$(gcloud config get-value project 2>/dev/nul
 REGION="${CLOUD_RUN_REGION:-us-central1}"
 REPOSITORY="${ARTIFACT_REPOSITORY:-finverse}"
 SERVICE="${CLOUD_RUN_SERVICE:-finverse}"
-IMAGE="${FINVERSE_IMAGE:-${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${SERVICE}:$(git rev-parse --short HEAD)}"
+IMAGE_REPOSITORY="${FINVERSE_IMAGE_REPOSITORY:-${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${SERVICE}}"
+
+case "${IMAGE_REPOSITORY}" in
+  *:*|*@*)
+    echo "FINVERSE_IMAGE_REPOSITORY must be an untagged Artifact Registry repository path." >&2
+    exit 1
+    ;;
+esac
 
 if [[ -z "${PROJECT_ID}" || "${PROJECT_ID}" == "(unset)" ]]; then
   echo "No Google Cloud project is selected. Run: gcloud config set project PROJECT_ID" >&2
@@ -26,6 +33,37 @@ fi
 if [[ ! -f "${ENV_FILE}" ]]; then
   echo "Environment file not found: ${ENV_FILE}" >&2
   echo "Copy infra/cloudrun.env.example to a private YAML file and fill it in." >&2
+  exit 1
+fi
+
+# A Cloud Run process without Plaid credentials is healthy but cannot connect
+# any bank. Fail before building or deploying that misleading state. Values
+# are inspected only for presence/placeholders; never print them.
+yaml_value() {
+  local key="$1"
+  awk -v key="${key}" '
+    $0 ~ "^" key ":[[:space:]]*" {
+      value = $0
+      sub("^" key ":[[:space:]]*", "", value)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+      gsub(/^"|"$/, "", value)
+      print value
+      exit
+    }
+  ' "${ENV_FILE}"
+}
+
+for key in PLAID_CLIENT_ID PLAID_SECRET PLAID_ENVIRONMENT PLAID_COUNTRIES PLAID_WEBHOOK_URL PLAID_WEB_REDIRECT_URI BANK_TOKEN_ENCRYPTION_KEY; do
+  value="$(yaml_value "${key}")"
+  case "${value}" in
+    ""|REPLACE_*|replace-me|REPLACE_WITH_*)
+      echo "${key} must be configured in ${ENV_FILE}; refusing a bank-disabled deployment." >&2
+      exit 1
+      ;;
+  esac
+done
+if [[ "$(yaml_value PLAID_ENVIRONMENT)" != "production" ]]; then
+  echo "PLAID_ENVIRONMENT must be production for this Cloud Run deployment." >&2
   exit 1
 fi
 
@@ -44,16 +82,14 @@ cleanup_runtime_env() {
   fi
 }
 trap cleanup_runtime_env EXIT
-grep -v '^DATABASE_URL:' "${ENV_FILE}" > "${RUNTIME_ENV_FILE}"
+grep -Ev '^(DATABASE_URL|GIT_SHA):' "${ENV_FILE}" > "${RUNTIME_ENV_FILE}"
 if ! grep -q '^DATABASE_APP_URL:' "${RUNTIME_ENV_FILE}"; then
   echo "DATABASE_APP_URL is required in ${ENV_FILE}." >&2
   exit 1
 fi
 
 SHA="$(git rev-parse HEAD)"
-if ! grep -q '^GIT_SHA:' "${RUNTIME_ENV_FILE}"; then
-  printf 'GIT_SHA: "%s"\n' "${SHA}" >> "${RUNTIME_ENV_FILE}"
-fi
+IMAGE_TAG="${IMAGE_REPOSITORY}:${SHA}"
 
 gcloud artifacts repositories describe "${REPOSITORY}" \
   --location="${REGION}" --project="${PROJECT_ID}" >/dev/null 2>&1 || \
@@ -61,15 +97,21 @@ gcloud artifacts repositories describe "${REPOSITORY}" \
     --repository-format=docker --location="${REGION}" \
     --description="FINVERSE container images" --project="${PROJECT_ID}"
 
-if gcloud artifacts docker images describe "${IMAGE}" \
-  --project="${PROJECT_ID}" >/dev/null 2>&1; then
-  echo "Reusing existing image ${IMAGE}."
-else
-  gcloud builds submit . \
-    --project="${PROJECT_ID}" \
-    --config=cloudbuild.yaml \
-    --substitutions="_IMAGE=${IMAGE},_GIT_SHA=$(git rev-parse HEAD)"
+# Always build the checked-out commit. A mutable tag must never let old bytes
+# inherit the current runtime GIT_SHA and pass the identity readback.
+gcloud builds submit . \
+  --project="${PROJECT_ID}" \
+  --config=cloudbuild.yaml \
+  --substitutions="_IMAGE=${IMAGE_TAG},_GIT_SHA=${SHA}"
+
+DIGEST="$(gcloud artifacts docker images describe "${IMAGE_TAG}" \
+  --project="${PROJECT_ID}" --format='value(image_summary.digest)')"
+if [[ ! "${DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+  echo "Could not resolve an immutable digest for ${IMAGE_TAG}." >&2
+  exit 1
 fi
+IMAGE="${IMAGE_REPOSITORY}@${DIGEST}"
+echo "Deploying immutable image ${IMAGE}."
 
 # Migrations run once as a Cloud Run Job with the schema-owner URL. The
 # application service receives the same env file but never runs migrations on

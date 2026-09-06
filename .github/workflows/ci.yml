@@ -39,6 +39,15 @@ jobs:
 
       - run: npm ci
 
+      - name: Validate release and operations scripts
+        shell: bash
+        run: |
+          bash -n infra/scripts/*.sh
+          if git grep -n -E '^(<<<<<<< |=======|>>>>>>> )' -- .; then
+            echo "Unresolved merge-conflict marker found." >&2
+            exit 1
+          fi
+
       - name: Audit production npm dependencies
         run: npm audit --omit=dev --audit-level=high
 
@@ -67,8 +76,8 @@ jobs:
           DATABASE_URL: postgresql://finverse:finverse_dev_only@localhost:5432/finverse
           DATABASE_APP_URL: postgresql://finverse_app:finverse_app_dev_only@localhost:5432/finverse
 
-      - name: Install PostgreSQL client tools for backup drill
-        run: sudo apt-get update && sudo apt-get install --yes postgresql-client
+      - name: Install PostgreSQL client tools and age for backup drill
+        run: sudo apt-get update && sudo apt-get install --yes postgresql-client age
 
       - name: Back up and restore into an isolated drill database
         shell: pwsh
@@ -77,12 +86,20 @@ jobs:
           RESTORE_DATABASE_URL: postgresql://finverse:finverse_dev_only@localhost:5432/finverse_restore_test
         run: |
           psql $env:DATABASE_URL --command='CREATE DATABASE finverse_restore_test;'
+          $identity = Join-Path $env:RUNNER_TEMP 'finverse-age-key.txt'
+          age-keygen -o $identity | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'Could not generate the backup-drill age identity.' }
+          $recipientLine = Get-Content -LiteralPath $identity | Where-Object { $_ -like '# public key:*' }
+          $recipient = $recipientLine -replace '^# public key:\s*', ''
+          if ($recipient -notmatch '^age1[0-9a-z]+$') { throw 'Generated age recipient was invalid.' }
           $archive = ./infra/scripts/backup-postgres.ps1 `
             -DatabaseUrl $env:DATABASE_URL `
+            -AgeRecipient $recipient `
             -Destination $env:RUNNER_TEMP
           ./infra/scripts/restore-drill-postgres.ps1 `
             -Archive $archive `
-            -RestoreDatabaseUrl $env:RESTORE_DATABASE_URL
+            -RestoreDatabaseUrl $env:RESTORE_DATABASE_URL `
+            -AgeIdentity $identity
 
       - name: Authenticated PostgreSQL load smoke
         run: npm run load:smoke
@@ -111,6 +128,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
+          flutter-version: '3.44.9'
           channel: stable
           cache: true
       - run: flutter pub get
@@ -143,6 +161,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
+          flutter-version: '3.44.9'
           channel: stable
           cache: true
       - run: flutter pub get

@@ -33,6 +33,10 @@
   "offlineConflictRejectedTitle": "A traiter",
   "offlineConflictDismissOne": "Ignorer",
   "offlineConflictRetry": "Reessayer",
+  "offlineConflictQueuedAt": "En file {date}",
+  "@offlineConflictQueuedAt": {
+    "placeholders": {"date": {"type": "String"}}
+  },
   "offlineConflictStatus": "HTTP {code}",
   "@offlineConflictStatus": {
     "placeholders": {"code": {"type": "int"}}
@@ -819,6 +823,19 @@
   "splitSettlementToLabel": "Paiement à",
   "splitNoteLabel": "Note (facultative)",
   "splitInvalidAmount": "Saisissez un montant positif valide.",
+  "splitPendingInvitations": "Invitations en attente",
+  "splitInvitationSharedGroup": "Groupe partagé",
+  "splitInvitationInvitedBy": "Invité par {email}",
+  "splitInvitationAccept": "Accepter",
+  "splitInvitationDecline": "Refuser",
+  "splitLeaveGroupTitle": "Quitter le groupe ?",
+  "splitRemoveMemberTitle": "Retirer le membre ?",
+  "splitLeaveGroupDetail": "Vous pouvez partir seulement lorsque votre solde est réglé.",
+  "splitRemoveMemberDetail": "Ce membre peut être retiré seulement lorsque son solde est nul.",
+  "splitLeaveGroupAction": "Quitter",
+  "splitRemoveMemberAction": "Retirer",
+  "splitLeaveGroupTooltip": "Quitter le groupe",
+  "splitRemoveMemberTooltip": "Retirer le membre",
   "profileSplitDetail": "Partagez les factures et réglez vos comptes",
   "settingsThemeColorTitle": "Couleur du thème",
   "settingsThemeColorDetail": "Choisissez la couleur d'accent utilisée dans FINVERSE.",
@@ -850,10 +867,5 @@
   "settingsPasskeysPasswordTitle": "Confirmez votre mot de passe",
   "settingsPasskeysPasswordDetail": "L’ajout ou la suppression d’une clé d’accès exige votre mot de passe actuel.",
   "settingsPasskeysMfaLabel": "Code d’authentification ou de récupération",
-  "settingsPasskeysContinue": "Continuer",
-  "settingsDarkModeTitle": "Mode sombre",
-  "settingsDarkModeOn": "Toujours utiliser l'apparence sombre.",
-  "settingsDarkModeOff": "Toujours utiliser l'apparence claire.",
-  "settingsDarkModeSystem": "Suivre l'apparence de votre appareil.",
-  "settingsDarkModeUseDevice": "Utiliser l'apparence de l'appareil"
+  "settingsPasskeysContinue": "Continuer"
 }

@@ -84,8 +84,10 @@ export function computeNetBalances(
   }
   for (const settlement of settlements) {
     if (settlement.currency !== currency) continue;
-    bump(settlement.fromUserId, -settlement.amount);
-    bump(settlement.toUserId, settlement.amount);
+    // A settlement is money moving from the debtor to the creditor. It
+    // reduces the debtor's negative balance and the creditor's positive one.
+    bump(settlement.fromUserId, settlement.amount);
+    bump(settlement.toUserId, -settlement.amount);
   }
   return balances;
 }

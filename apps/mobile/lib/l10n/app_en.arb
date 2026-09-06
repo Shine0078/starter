@@ -33,6 +33,10 @@
   "offlineConflictRejectedTitle": "Needs attention",
   "offlineConflictDismissOne": "Dismiss",
   "offlineConflictRetry": "Retry sync",
+  "offlineConflictQueuedAt": "Queued {date}",
+  "@offlineConflictQueuedAt": {
+    "placeholders": {"date": {"type": "String"}}
+  },
   "offlineConflictStatus": "HTTP {code}",
   "@offlineConflictStatus": {
     "placeholders": {"code": {"type": "int"}}
@@ -819,6 +823,19 @@
   "splitSettlementToLabel": "Paying to",
   "splitNoteLabel": "Note (optional)",
   "splitInvalidAmount": "Enter a valid positive amount.",
+  "splitPendingInvitations": "Pending invitations",
+  "splitInvitationSharedGroup": "Shared group",
+  "splitInvitationInvitedBy": "Invited by {email}",
+  "splitInvitationAccept": "Accept",
+  "splitInvitationDecline": "Decline",
+  "splitLeaveGroupTitle": "Leave group?",
+  "splitRemoveMemberTitle": "Remove member?",
+  "splitLeaveGroupDetail": "You can leave only after your balance is settled.",
+  "splitRemoveMemberDetail": "This member can be removed only when their balance is zero.",
+  "splitLeaveGroupAction": "Leave",
+  "splitRemoveMemberAction": "Remove",
+  "splitLeaveGroupTooltip": "Leave group",
+  "splitRemoveMemberTooltip": "Remove member",
   "profileSplitDetail": "Split bills and settle up with others",
   "settingsThemeColorTitle": "Theme color",
   "settingsThemeColorDetail": "Choose the accent used throughout FINVERSE.",
@@ -850,10 +867,5 @@
   "settingsPasskeysPasswordTitle": "Confirm your password",
   "settingsPasskeysPasswordDetail": "Adding or removing a passkey requires your current password.",
   "settingsPasskeysMfaLabel": "Authenticator or recovery code",
-  "settingsPasskeysContinue": "Continue",
-  "settingsDarkModeTitle": "Dark mode",
-  "settingsDarkModeOn": "Always use the dark appearance.",
-  "settingsDarkModeOff": "Always use the light appearance.",
-  "settingsDarkModeSystem": "Follow your device appearance.",
-  "settingsDarkModeUseDevice": "Use device appearance"
+  "settingsPasskeysContinue": "Continue"
 }

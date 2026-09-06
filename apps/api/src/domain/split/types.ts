@@ -9,6 +9,13 @@
 
 export type SplitRole = 'admin' | 'member';
 export type SplitMethod = 'equal' | 'shares';
+export type SplitInvitationStatus =
+  | 'pending'
+  | 'accepted'
+  | 'declined'
+  | 'revoked'
+  | 'left'
+  | 'removed';
 
 export interface SplitGroup {
   id: string;
@@ -24,6 +31,20 @@ export interface SplitGroupMember {
   userId: string;
   role: SplitRole;
   joinedAt: string;
+}
+
+export interface SplitGroupInvitation {
+  id: string;
+  groupId: string;
+  inviteeUserId: string;
+  invitedByUserId: string | null;
+  status: SplitInvitationStatus;
+  createdAt: string;
+  decidedAt: string | null;
+  /** Present on list responses; never contains group financial data. */
+  groupName?: string;
+  currency?: string;
+  invitedByEmail?: string | null;
 }
 
 export interface SplitParticipant {

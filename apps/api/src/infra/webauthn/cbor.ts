@@ -18,16 +18,29 @@ export type CborValue =
   | CborValue[]
   | Map<CborValue, CborValue>;
 
+const MAX_CBOR_BYTES = 24 * 1024;
+const MAX_CBOR_DEPTH = 16;
+const MAX_CBOR_ITEMS = 1_024;
+
 export function decodeCbor(data: Uint8Array): CborValue {
+  if (data.length === 0 || data.length > MAX_CBOR_BYTES) {
+    throw new Error('CBOR: input size is outside the supported WebAuthn bounds');
+  }
   let offset = 0;
-  return decode();
+  let decodedItems = 0;
+  const value = decode(0);
+  if (offset !== data.length) throw new Error('CBOR: trailing input');
+  return value;
 
   function takeByte(): number {
     if (offset >= data.length) throw new Error('CBOR: truncated input');
     return data[offset++]!;
   }
 
-  function decode(): CborValue {
+  function decode(depth: number): CborValue {
+    if (depth > MAX_CBOR_DEPTH) throw new Error('CBOR: maximum nesting depth exceeded');
+    decodedItems += 1;
+    if (decodedItems > MAX_CBOR_ITEMS) throw new Error('CBOR: item limit exceeded');
     const initial = takeByte();
     const major = initial >> 5;
     let additional = initial & 0x1f;
@@ -77,8 +90,10 @@ export function decodeCbor(data: Uint8Array): CborValue {
       }
       case 4: {
         const length = Number(value);
+        if (length < 0) throw new Error('CBOR: indefinite arrays not supported');
+        if (length > MAX_CBOR_ITEMS - decodedItems) throw new Error('CBOR: item limit exceeded');
         const items: CborValue[] = [];
-        for (let i = 0; i < length; i += 1) items.push(decode());
+        for (let i = 0; i < length; i += 1) items.push(decode(depth + 1));
         return items;
       }
       case 5: {
@@ -90,21 +105,21 @@ export function decodeCbor(data: Uint8Array): CborValue {
               offset += 1;
               break;
             }
-            const key = decode();
-            map.set(key, decode());
+            const key = decode(depth + 1);
+            map.set(key, decode(depth + 1));
           }
         } else {
           const length = Number(value);
           for (let i = 0; i < length; i += 1) {
-            const key = decode();
-            map.set(key, decode());
+            const key = decode(depth + 1);
+            map.set(key, decode(depth + 1));
           }
         }
         return map;
       }
       case 6:
         // Tag: skip the tag, return the tagged item.
-        return decode();
+        return decode(depth + 1);
       case 7:
         if (additional === 20) return false;
         if (additional === 21) return true;

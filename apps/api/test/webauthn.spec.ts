@@ -28,6 +28,7 @@ import {
 } from '../src/domain/webauthn/verify';
 import { totpAt } from '../src/domain/auth/totp';
 import { Fido2Verifier } from '../src/infra/webauthn/fido2-verifier';
+import { decodeCbor } from '../src/infra/webauthn/cbor';
 
 process.env.STORE = 'memory';
 process.env.JWT_SECRET ??= 'test-secret-at-least-32-characters-long-for-hs256';
@@ -241,6 +242,13 @@ describe('webauthn verify core', () => {
     expect(userVerified(authData(CONFIG.rpId, 1, 0x05))).toBe(true);
     expect(userVerified(authData(CONFIG.rpId, 1, 0x01))).toBe(false);
     expect(authenticatorRpIdHash(authData(CONFIG.rpId))?.equals(hashRpId(CONFIG.rpId))).toBe(true);
+  });
+
+  it('bounds CBOR input, nesting depth, and trailing data', () => {
+    expect(() => decodeCbor(Buffer.alloc(24 * 1024 + 1))).toThrow(/input size/i);
+    const deeplyTagged = Buffer.concat([Buffer.alloc(17, 0xc0), Buffer.from([0xf6])]);
+    expect(() => decodeCbor(deeplyTagged)).toThrow(/nesting depth/i);
+    expect(() => decodeCbor(Buffer.from([0xf6, 0xf6]))).toThrow(/trailing input/i);
   });
 });
 
@@ -791,6 +799,21 @@ it('reports availability and requires a token for registration', async () => {
         ceremonyId: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
         password: 'correct horse battery staple',
         response: { clientDataJSON: 'not-base64!!', attestationObject: 'x' },
+      })
+      .expect(400);
+  });
+
+  it('rejects oversized WebAuthn response fields before decoding', async () => {
+    await request(http)
+      .post('/api/webauthn/login/verify')
+      .send({
+        id: 'credential',
+        ceremonyId: 'a'.repeat(32),
+        response: {
+          clientDataJSON: 'a'.repeat(4_097),
+          authenticatorData: 'a',
+          signature: 'a',
+        },
       })
       .expect(400);
   });

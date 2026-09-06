@@ -175,9 +175,16 @@ async function main(): Promise<void> {
     throw new Error('Usage: with-postgres.ts [--serve | <command> [args...]]');
   }
 
-  const child = spawn(command, rest, {
+  // `vitest` is a package binary. Windows exposes it as a `.cmd` shim, which
+  // must be named explicitly when shell execution is disabled. Keeping the
+  // shell off avoids concatenating variable arguments into a command string.
+  const usesWindowsVitestShim = process.platform === 'win32' && command === 'vitest';
+  const executable = usesWindowsVitestShim ? process.execPath : command;
+  const childArgs = usesWindowsVitestShim
+    ? [join(__dirname, '..', '..', '..', 'node_modules', 'vitest', 'vitest.mjs'), ...rest]
+    : rest;
+  const child = spawn(executable, childArgs, {
     stdio: 'inherit',
-    shell: true,
     env: {
       ...process.env,
       TEST_DATABASE_URL: CONNECTION_STRING,

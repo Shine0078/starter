@@ -11,6 +11,7 @@ import {
 import { formatMoney, money } from '../../domain/money';
 import type {
   SplitExpense,
+  SplitGroupInvitation,
   SplitGroup,
   SplitGroupMember,
   SplitSettlement,
@@ -19,7 +20,7 @@ import { CurrentUser } from '../auth/auth.guard';
 import {
   SplitService,
   type AddSplitExpenseInput,
-  type AddSplitMemberInput,
+  type CreateSplitInvitationInput,
   type AddSplitSettlementInput,
   type CreateSplitGroupInput,
 } from './split.service';
@@ -65,13 +66,64 @@ export class SplitController {
   }
 
   @Post('groups/:id/members')
-  async addMember(
+  async addMemberLegacy(
     @CurrentUser() userId: string,
     @Param('id') groupId: string,
-    @Body() body: AddSplitMemberInput,
+    @Body() body: CreateSplitInvitationInput,
   ) {
-    const member = await this.split.addMember(userId, groupId, body);
-    return presentMember(member, null);
+    return presentInvitation(await this.split.createInvitation(userId, groupId, body));
+  }
+
+  @Post('groups/:id/invitations')
+  async createInvitation(
+    @CurrentUser() userId: string,
+    @Param('id') groupId: string,
+    @Body() body: CreateSplitInvitationInput,
+  ) {
+    return presentInvitation(await this.split.createInvitation(userId, groupId, body));
+  }
+
+  @Get('invitations')
+  async listInvitations(@CurrentUser() userId: string) {
+    const invitations = await this.split.listInvitations(userId);
+    return { count: invitations.length, invitations: invitations.map(presentInvitation) };
+  }
+
+  @Get('groups/:id/invitations')
+  async listGroupInvitations(@CurrentUser() userId: string, @Param('id') groupId: string) {
+    const invitations = await this.split.listGroupInvitations(userId, groupId);
+    return { count: invitations.length, invitations: invitations.map(presentInvitation) };
+  }
+
+  @Post('invitations/:id/accept')
+  async acceptInvitation(@CurrentUser() userId: string, @Param('id') invitationId: string) {
+    return presentMember(await this.split.acceptInvitation(userId, invitationId), null);
+  }
+
+  @Post('invitations/:id/decline')
+  @HttpCode(204)
+  declineInvitation(@CurrentUser() userId: string, @Param('id') invitationId: string) {
+    return this.split.declineInvitation(userId, invitationId);
+  }
+
+  @Delete('groups/:groupId/invitations/:id')
+  @HttpCode(204)
+  revokeInvitation(
+    @CurrentUser() userId: string,
+    @Param('groupId') groupId: string,
+    @Param('id') invitationId: string,
+  ) {
+    return this.split.revokeInvitation(userId, groupId, invitationId);
+  }
+
+  @Delete('groups/:groupId/members/:userId')
+  @HttpCode(204)
+  removeMember(
+    @CurrentUser() userId: string,
+    @Param('groupId') groupId: string,
+    @Param('userId') targetUserId: string,
+  ) {
+    return this.split.removeMember(userId, groupId, targetUserId);
   }
 
   @Post('groups/:id/expenses')
@@ -105,6 +157,7 @@ function presentGroup(group: SplitGroup) {
     id: group.id,
     name: group.name,
     currency: group.currency,
+    createdBy: group.createdBy,
     createdAt: group.createdAt,
     archivedAt: group.archivedAt,
   };
@@ -116,6 +169,21 @@ function presentMember(member: SplitGroupMember, email: string | null | undefine
     role: member.role,
     joinedAt: member.joinedAt,
     email: email ?? null,
+  };
+}
+
+function presentInvitation(invitation: SplitGroupInvitation) {
+  return {
+    id: invitation.id,
+    groupId: invitation.groupId,
+    groupName: invitation.groupName ?? null,
+    currency: invitation.currency ?? null,
+    inviteeUserId: invitation.inviteeUserId,
+    invitedByUserId: invitation.invitedByUserId,
+    invitedByEmail: invitation.invitedByEmail ?? null,
+    status: invitation.status,
+    createdAt: invitation.createdAt,
+    decidedAt: invitation.decidedAt,
   };
 }
 
