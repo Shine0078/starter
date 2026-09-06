@@ -14,6 +14,7 @@ const MAX_ROWS = 10_000;
 const MAX_DECOMPRESSED_BYTES = 10 * 1024 * 1024;
 const MAX_ZIP_ENTRIES = 512;
 const MAX_XLSX_COLUMNS = 16_384; // Excel's XFD limit.
+const MAX_PDF_OCR_PAGES = 20;
 const IMAGE_MIME = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/tiff', 'image/bmp']);
 
 export function formatFor(filename: string, mimeType?: string): StatementFormat {
@@ -461,13 +462,39 @@ async function extractPdfText(bytes: Buffer): Promise<string> {
   const parser = new module.PDFParse({ data: bytes });
   try {
     const result = await parser.getText();
-    return result.text ?? '';
+    const text = result.text ?? '';
+    // Scanned statements have no text layer. Render a bounded number of pages
+    // and send only those in-memory images through the same local OCR path used
+    // for image uploads. If a text layer already contains transaction-shaped
+    // content, avoid OCR so we do not duplicate rows from hybrid PDFs.
+    if (hasTransactionText(text)) return text;
+    const screenshots = await parser.getScreenshot({
+      first: MAX_PDF_OCR_PAGES,
+      desiredWidth: 1600,
+      imageBuffer: true,
+      imageDataUrl: false,
+    });
+    const images = screenshots.pages
+      .map((page) => page.data)
+      .filter((image): image is Uint8Array => image instanceof Uint8Array && image.length > 0);
+    if (images.length === 0) return text;
+    const ocrText = await recognizeImages(images);
+    return [text.trim(), ocrText.trim()].filter(Boolean).join('\n');
   } finally {
     await parser.destroy();
   }
 }
 
 async function extractImageText(bytes: Buffer): Promise<string> {
+  return recognizeImages([bytes]);
+}
+
+function hasTransactionText(text: string): boolean {
+  return /\b\d{4}[\/-]\d{1,2}[\/-]\d{1,2}\b[^\r\n]*[-+]?[$€£]?\d[\d,.]*\.?\d{0,2}\s*$/m.test(text)
+    || /\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}\s+(?:[A-Za-z]{3,9}\s+\d{1,2}\s+)?[^\r\n]*[-+]?[$€£]?\d[\d,.]*\.?\d{0,2}\s*$/im.test(text);
+}
+
+async function recognizeImages(images: readonly Uint8Array[]): Promise<string> {
   // Tesseract ships with the English model in the application image. No
   // network request or third-party model service is involved.
   const tesseract = await import('tesseract.js');
@@ -477,8 +504,12 @@ async function extractImageText(bytes: Buffer): Promise<string> {
   const lang = require('@tesseract.js-data/eng') as { langPath: string };
   const worker = await tesseract.createWorker('eng', 1, { langPath: lang.langPath, gzip: true, logger: () => undefined });
   try {
-    const result = await worker.recognize(bytes);
-    return result.data.text ?? '';
+    const pages: string[] = [];
+    for (const image of images) {
+      const result = await worker.recognize(image);
+      if (result.data.text) pages.push(result.data.text);
+    }
+    return pages.join('\n');
   } finally {
     await worker.terminate();
   }
@@ -514,7 +545,28 @@ function xlsxToCsv(bytes: Buffer): string {
     }
     rows.push(cells);
   }
+  normalizeExcelDateColumns(rows);
   return rows.map((row) => row.map(csvEscape).join(',')).join('\n');
+}
+
+function normalizeExcelDateColumns(rows: string[][]): void {
+  const headers = rows[0] ?? [];
+  const dateColumns = headers
+    .map((header, index) => /\b(?:date|posted|posting|booking|completed|trans)\b/i.test(header) ? index : -1)
+    .filter((index) => index >= 0);
+  if (dateColumns.length === 0) return;
+
+  for (const row of rows.slice(1)) {
+    for (const column of dateColumns) {
+      const value = row[column]?.trim() ?? '';
+      if (!/^\d+(?:\.\d+)?$/.test(value)) continue;
+      const serial = Number(value);
+      if (!Number.isFinite(serial) || serial < 1 || serial > 100_000) continue;
+      const date = new Date(Date.UTC(1899, 11, 30) + Math.floor(serial) * 86_400_000);
+      if (Number.isNaN(date.getTime())) continue;
+      row[column] = `${date.getUTCFullYear().toString().padStart(4, '0')}-${(date.getUTCMonth() + 1).toString().padStart(2, '0')}-${date.getUTCDate().toString().padStart(2, '0')}`;
+    }
+  }
 }
 
 /**

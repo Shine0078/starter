@@ -53,6 +53,20 @@ describe('statement analysis', () => {
     expect(result.rows[0]?.postedAt).toBe('2026-03-01');
   });
 
+  it('normalizes Excel serial dates in recognized date columns', async () => {
+    const files = {
+      'xl/sharedStrings.xml': Buffer.from('<sst><si><t>Transaction Date</t></si><si><t>Description</t></si><si><t>Amount</t></si><si><t>Grocery</t></si></sst>'),
+      'xl/worksheets/sheet1.xml': Buffer.from('<worksheet><sheetData><row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c><c r="C1" t="s"><v>2</v></c></row><row r="2"><c r="A2"><v>46082</v></c><c r="B2" t="s"><v>3</v></c><c r="C2"><v>-12.50</v></c></row></sheetData></worksheet>'),
+    };
+    const result = await analyzeStatement({
+      ...base,
+      filename: 'serial-date.xlsx',
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      bytes: Buffer.from(zipSync(files)),
+    });
+    expect(result.rows[0]?.postedAt).toBe('2026-03-01');
+  });
+
   it('decodes XLSX XML entities once without double-unescaping', async () => {
     const files = {
       'xl/sharedStrings.xml': Buffer.from('<sst><si><t>Date</t></si><si><t>Description</t></si><si><t>Amount</t></si><si><t>AT&amp;amp;lt;B</t></si></sst>'),
