@@ -348,5 +348,16 @@ function csvEscape(value: string): string {
 }
 
 function decodeXml(value: string): string {
-  return value.replaceAll('&amp;', '&').replaceAll('&lt;', '<').replaceAll('&gt;', '>').replaceAll('&quot;', '"').replaceAll('&apos;', "'");
+  // Decode each entity exactly once. A chained replace can turn `&amp;lt;`
+  // into `<`, even though the XML source only encoded the literal `&lt;`.
+  return value.replace(/&(?:amp|lt|gt|quot|apos);/g, (entity) => {
+    switch (entity) {
+      case '&amp;': return '&';
+      case '&lt;': return '<';
+      case '&gt;': return '>';
+      case '&quot;': return '"';
+      case '&apos;': return "'";
+      default: return entity;
+    }
+  });
 }
