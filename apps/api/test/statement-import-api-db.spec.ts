@@ -129,6 +129,40 @@ if (!OWNER_URL) {
       expect(pdfDetail.body.rows[0]).toMatchObject({ description: 'GROCERY MART', categorySlug: 'groceries', decision: 'include' });
       await request(http).post(`/api/imports/statements/${pdfImport.body.statement.id}/approve`).set('Authorization', `Bearer ${token}`).expect(201);
 
+      const neoAccount = await request(http)
+        .post('/api/accounts/manual')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ name: 'Neo card', type: 'credit_card', currency: 'CAD', balanceCurrent: 0, creditLimit: 500000 })
+        .expect(201);
+      const neoPdf = await textPdf([
+        'Neo Financial Card Account',
+        'Card number XXXX XXXX XXXX 5837',
+        'Statement period July 16 to August 14, 2026',
+        'Transaction Date Posted Date Description Amount ($CAD)',
+        'Aug 08 Aug 08 Payment Received, Thank you 989.95',
+        'Aug 07 Aug 08 WAL-MART #3161 OSHAWA CAN -39.37',
+        'Aug 07 Aug 07 OPENAI *CHATGPT SUBSCR SAN FRANCISCO USA -28.25',
+      ]);
+      const neoImport = await request(http)
+        .post('/api/imports/statements')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ accountId: neoAccount.body.id, filename: 'neo.pdf', mimeType: 'application/pdf', contentBase64: neoPdf.toString('base64') })
+        .expect(202);
+      await app.get(StatementImportWorker).runOnce();
+      const neoDetail = await request(http)
+        .get(`/api/imports/statements/${neoImport.body.statement.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+      expect(neoDetail.body.statement).toMatchObject({ status: 'ready', rowsTotal: 3 });
+      expect(neoDetail.body.statement.documentDetails).toMatchObject({ issuer: 'Neo Financial', accountReferenceLast4: '5837', periodStart: '2026-07-16', periodEnd: '2026-08-14', currency: 'CAD' });
+      expect(neoDetail.body.rows.map((row: { categorySlug: string; amount: number }) => [row.categorySlug, row.amount])).toEqual([
+        ['credit_card_payment', 98995],
+        ['groceries', -3937],
+        ['software', -2825],
+      ]);
+      expect(neoDetail.body.rows.every((row: { decision: string }) => row.decision === 'include')).toBe(true);
+      await request(http).post(`/api/imports/statements/${neoImport.body.statement.id}/approve`).set('Authorization', `Bearer ${token}`).expect(201);
+
       const outflowCsv = 'Date,Description,Amount\n2026-03-03,ACME PAYROLL,-500.00';
       const outflow = await request(http)
         .post('/api/imports/statements')
