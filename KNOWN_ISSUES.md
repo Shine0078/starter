@@ -2,14 +2,12 @@
 
 ## Release Blockers
 
-- **Integration not merged:** manual statement import and the white default UI
-  are on the latest verified state of `codex/passkey-webauthn-p0` at SHA
-  `e1d29c5`. The local `main` deploy script conflict markers were removed
-  without touching the separate user dashboard.
-- **Final candidate regression:** API PostgreSQL (1,065 tests), API in-memory
-  (882 tests), Flutter tests (119 tests), Flutter web, and Android release
-  builds pass on the integration branch. Migration idempotency and the
-  protected-main post-merge run still need the CI environment.
+- **Hosted rollout pending:** manual statement import and the white default UI
+  are merged to protected `main` at `2dbbc1d`. API PostgreSQL (1,065 tests),
+  API in-memory (882 tests), Flutter tests (119 tests), Flutter web, Android,
+  CodeQL, dependency review, container scanning, image signing, and release
+  artifact publication all pass. Cloud Run still needs the owner-authorized
+  deployment and `/api/version` readback.
 - **Split notifications:** invitation creation, consent, decline, revocation,
   and balance-safe leave/remove are implemented and audited. Push/email
   notification delivery for invitations is not wired yet; users can see
@@ -38,10 +36,11 @@
   passkey/provider testing.
 - Production Cloud Run/Neon role, IAM, secret-manager, monitoring, exact-SHA
   readback, and verification that the deployed API digest has a valid Cosign
-  identity/signature.
+  identity/signature. The release image is signed; the live service still
+  needs deployment and readback.
 - The currently advertised Cloud Run URL is still an older deployment: `/api/version`
-  returns 404 and its `/app/` response contains the prior dark shell. Redeploy
-  the exact candidate SHA before directing users there.
+  returns 404 and its `/app/` response contains the prior dark shell. Deploy
+  protected-main SHA `2dbbc1d` before directing users there.
 - Production age recipient/private-key custody, key rotation, off-host storage,
   and a recorded restore/disaster-recovery exercise. Local scripts now encrypt
   and restrict permissions, but production operations are not yet verified.
