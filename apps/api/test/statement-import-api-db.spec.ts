@@ -162,6 +162,14 @@ if (!OWNER_URL) {
       ]);
       expect(neoDetail.body.rows.every((row: { decision: string }) => row.decision === 'include')).toBe(true);
       await request(http).post(`/api/imports/statements/${neoImport.body.statement.id}/approve`).set('Authorization', `Bearer ${token}`).expect(201);
+      const neoAnalytics = await request(http)
+        .get('/api/analytics?period=custom&from=2026-08-07&to=2026-08-08&currency=CAD')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+      expect(neoAnalytics.body.grossExpenses).toBe(6762);
+      expect(neoAnalytics.body.totalIncome).toBe(0);
+      expect(neoAnalytics.body.savings).toBe(-6762);
+      expect(neoAnalytics.body.spendingByCategory.map((row: { categorySlug: string }) => row.categorySlug)).toEqual(expect.arrayContaining(['groceries', 'software']));
 
       const outflowCsv = 'Date,Description,Amount\n2026-03-03,ACME PAYROLL,-500.00';
       const outflow = await request(http)
