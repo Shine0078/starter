@@ -2,7 +2,7 @@ import { zipSync } from 'fflate';
 import PDFDocument from 'pdfkit';
 import { describe, expect, it } from 'vitest';
 
-import { analyzeStatement, formatFor } from '../src/domain/statement-import/analyze';
+import { analyzeStatement, extractStatementDetails, formatFor } from '../src/domain/statement-import/analyze';
 
 const base = {
   currency: 'USD',
@@ -11,6 +11,20 @@ const base = {
 };
 
 describe('statement analysis', () => {
+  it('keeps only safe issuer, masked account, and period metadata', () => {
+    expect(extractStatementDetails(
+      'CIBC Aventura Visa Card\nAccount number 4502 XXXX XXXX 7175\nStatement Date August 24, 2026\nAugust statement period July 25 to August 24, 2026',
+      'CAD',
+    )).toEqual({
+      issuer: 'CIBC',
+      accountReferenceLast4: '7175',
+      statementDate: '2026-08-24',
+      periodStart: '2026-07-25',
+      periodEnd: '2026-08-24',
+      currency: 'CAD',
+    });
+  });
+
   it('extracts CSV rows and holds ambiguous dates for review', async () => {
     const result = await analyzeStatement({
       ...base,
@@ -126,6 +140,46 @@ describe('statement analysis', () => {
     expect(result.rows.map((row) => row.direction)).toEqual(['debit', 'debit', 'debit']);
     expect(result.rows.map((row) => row.decision)).toEqual(['include', 'include', 'include']);
     expect(result.rows.map((row) => row.categorySlug)).toEqual(['subscriptions', 'transportation', 'fast_food']);
+  });
+
+  it('reads signed Neo-style card rows without counting card payments as income', async () => {
+    const document = new PDFDocument();
+    const chunks: Buffer[] = [];
+    document.on('data', (chunk: Buffer) => chunks.push(chunk));
+    const done = new Promise<Buffer>((resolve) => document.on('end', () => resolve(Buffer.concat(chunks))));
+    document.fontSize(10).text([
+      'Neo Financial Card Account',
+      '•••• 5837',
+      'Statement period July 16 to August 14, 2026',
+      'Transaction Date Posted Date Description Amount ($CAD)',
+      'Aug 08 Aug 08 Payment Received, Thank you 989.95',
+      'Aug 07 Aug 08 WAL-MART #3161 OSHAWA CAN -39.37',
+      'Aug 07 Aug 07 OPENAI *CHATGPT SUBSCR SAN FRANCISCO USA -28.25',
+    ].join('\n'));
+    document.end();
+
+    const result = await analyzeStatement({
+      ...base,
+      currency: 'CAD',
+      filename: 'neo-statement.pdf',
+      mimeType: 'application/pdf',
+      bytes: await done,
+    });
+
+    expect(result.rows).toHaveLength(3);
+    expect(result.rows.map((row) => row.categorySlug)).toEqual([
+      'credit_card_payment', 'groceries', 'software',
+    ]);
+    expect(result.rows.map((row) => row.amount)).toEqual([98995, -3937, -2825]);
+    expect(result.rows.every((row) => row.decision === 'include')).toBe(true);
+    expect(result.documentDetails).toEqual({
+      issuer: 'Neo Financial',
+      accountReferenceLast4: '5837',
+      statementDate: null,
+      periodStart: '2026-07-16',
+      periodEnd: '2026-08-14',
+      currency: 'CAD',
+    });
   });
 
   it('rejects image payloads with an extension-only disguise', async () => {

@@ -110,13 +110,14 @@ export class InMemoryStatementImportStore implements StatementImportStore {
     return { statement: strip(statement), encryptedSource: statement.encryptedSource };
   }
 
-  async completeProcessing(userId: string, importId: string, rows: readonly StatementRowRecord[], processedAt: string, event: StatementImportEvent): Promise<StatementImport | null> {
+  async completeProcessing(userId: string, importId: string, rows: readonly StatementRowRecord[], processedAt: string, event: StatementImportEvent, documentDetails?: StatementImport['documentDetails']): Promise<StatementImport | null> {
     const statement = this.find(userId, importId);
     if (!statement || statement.status !== 'processing') return null;
     statement.rows = rows.map(cloneRow);
     statement.status = 'ready';
     statement.processedAt = processedAt;
     statement.error = null;
+    statement.documentDetails = documentDetails;
     statement.processingStartedAt = null;
     recalculate(statement);
     statement.events.push(cloneEvent(event));

@@ -68,6 +68,17 @@ if (!OWNER_URL) {
       }
       const approved = await request(http).post(`/api/imports/statements/${importId}/approve`).set('Authorization', `Bearer ${token}`).expect(201);
       expect(approved.body.status).toBe('approved');
+      const batch = await harness.owner.query<{ statement_import_id: string | null }>(
+        'SELECT statement_import_id FROM import_batches WHERE user_id = $1 AND statement_import_id = $2',
+        [createdUserId, importId],
+      );
+      expect(batch.rows).toHaveLength(1);
+      expect(batch.rows[0]?.statement_import_id).toBe(importId);
+      const details = await harness.owner.query<{ document_details: Record<string, unknown> }>(
+        'SELECT document_details FROM statement_imports WHERE user_id = $1 AND id = $2',
+        [createdUserId, importId],
+      );
+      expect(details.rows[0]?.document_details).toMatchObject({ currency: 'USD' });
       const me = await request(http).get('/api/auth/me').set('Authorization', `Bearer ${token}`).expect(200);
       expect(me.body.id).toBe(registered.body.user.id);
       const transactions = await request(http).get('/api/transactions?limit=100').set('Authorization', `Bearer ${token}`).expect(200);

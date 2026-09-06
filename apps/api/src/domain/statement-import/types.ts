@@ -3,6 +3,16 @@ import type { Transaction } from '../types';
 export type StatementFormat = 'csv' | 'xlsx' | 'pdf' | 'image';
 export type StatementRowDecision = 'include' | 'exclude' | 'needs_review';
 
+/** Safe, non-sensitive identity metadata derived from the document header. */
+export interface StatementDocumentDetails {
+  issuer: string | null;
+  accountReferenceLast4: string | null;
+  statementDate: string | null;
+  periodStart: string | null;
+  periodEnd: string | null;
+  currency: string | null;
+}
+
 /** Opaque routing data returned when the durable analysis worker claims work. */
 export interface StatementImportJob {
   id: string;
@@ -35,6 +45,7 @@ export interface StatementExtraction {
   rows: StatementRowDraft[];
   warnings: string[];
   statementHash: string;
+  documentDetails?: StatementDocumentDetails;
   sourceText?: string;
 }
 
@@ -55,6 +66,7 @@ export interface StatementImport {
   approvedAt: string | null;
   sourceDeletedAt: string | null;
   error: string | null;
+  documentDetails?: StatementDocumentDetails;
 }
 
 export interface StatementRowRecord extends StatementRowDraft {

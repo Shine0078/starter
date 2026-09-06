@@ -103,6 +103,7 @@ export class StatementImportService {
       rowsExcluded: rows.filter((row) => row.decision === 'exclude').length,
       rowsNeedsReview: rows.filter((row) => row.decision === 'needs_review').length,
       createdAt: now, processedAt: now, approvedAt: null, sourceDeletedAt: null, error: null,
+      documentDetails: extraction.documentDetails,
     };
     try {
       await this.imports.create(userId, statement, this.cipher.encrypt(encoded), rows);
@@ -157,6 +158,7 @@ export class StatementImportService {
           rows: rows.length,
           warnings: extraction.warnings.slice(0, 8),
         }),
+        extraction.documentDetails,
       );
     } catch (error) {
       const message = safeProcessingError(error);

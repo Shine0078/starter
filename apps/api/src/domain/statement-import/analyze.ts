@@ -8,7 +8,7 @@ import type { CategorizationRule, Transaction } from '../types';
 import { parseAmount, parseDate, suggestMapping, type ColumnMapping } from '../imports/mapping';
 import { parseCsv } from '../imports/csv-parse';
 import { reviewImport, type ReviewedRow } from '../imports/review';
-import type { StatementExtraction, StatementFormat, StatementRowDraft } from './types';
+import type { StatementDocumentDetails, StatementExtraction, StatementFormat, StatementRowDraft } from './types';
 
 const MAX_ROWS = 10_000;
 const MAX_DECOMPRESSED_BYTES = 10 * 1024 * 1024;
@@ -59,8 +59,63 @@ export async function analyzeStatement(input: StatementAnalyzeInput): Promise<St
     rows,
     warnings: rows.length === 0 ? ['No transaction rows could be identified. Check the statement quality or review it manually.'] : [],
     statementHash,
+    documentDetails: extractStatementDetails(text, input.currency),
     sourceText: text.slice(0, 200_000),
   };
+}
+
+/**
+ * Extract only safe header metadata. Full account/card numbers and addresses
+ * are deliberately discarded; the selected FINVERSE account remains the
+ * authoritative routing target.
+ */
+export function extractStatementDetails(text: string, currency: string): StatementDocumentDetails {
+  const lines = text.split(/\r?\n/).map((line) => line.replace(/\s+/g, ' ').trim()).filter(Boolean);
+  const issuer = [
+    ['cibc', 'CIBC'],
+    ['neo financial', 'Neo Financial'],
+    ['royal bank of canada|\\brbc\\b', 'RBC'],
+    ['toronto-dominion|\\btd bank\\b', 'TD'],
+    ['bank of montreal|\\bbmo\\b', 'BMO'],
+    ['scotiabank', 'Scotiabank'],
+    ['desjardins', 'Desjardins'],
+    ['tangerine', 'Tangerine'],
+    ['simplii', 'Simplii'],
+    ['capital one', 'Capital One'],
+  ].find(([pattern]) => new RegExp(pattern!, 'i').test(text))?.[1] ?? null;
+
+  const accountLine = lines.find((line) => /account number|card number|card account|••••/i.test(line) && /\d{4}/.test(line))
+    ?? lines.find((line) => {
+      const match = /^\D*(\d{4})\D*$/u.exec(line);
+      return Boolean(match && !/^20\d{2}$/.test(match[1]!));
+    });
+  const accountGroups = accountLine?.match(/\d{4}/g) ?? [];
+  const accountReferenceLast4 = accountGroups.at(-1) ?? null;
+
+  const statementDateMatch = /\bstatement\s+date\s*:?\s*([A-Za-z]{3,9}\s+\d{1,2},?\s+20\d{2})\b/i.exec(text);
+  const statementDate = statementDateMatch ? parseLongDate(statementDateMatch[1]!) : null;
+  const periodMatch = /\b([A-Za-z]{3,9}\s+\d{1,2})(?:,?\s*(20\d{2}))?\s+(?:to|[-–])\s+([A-Za-z]{3,9}\s+\d{1,2}),?\s*(20\d{2})\b/i.exec(text);
+  const endYear = periodMatch?.[4] ? Number(periodMatch[4]) : null;
+  const periodStart = periodMatch ? parseLongDate(periodMatch[1]!, periodMatch[2] ? Number(periodMatch[2]) : endYear) : null;
+  const periodEnd = periodMatch ? parseLongDate(periodMatch[3]!, endYear) : null;
+
+  return {
+    issuer,
+    accountReferenceLast4,
+    statementDate,
+    periodStart,
+    periodEnd,
+    currency: currency.trim().toUpperCase() || null,
+  };
+}
+
+function parseLongDate(value: string, fallbackYear?: number | null): string | null {
+  const match = /^([A-Za-z]{3,9})\s+(\d{1,2})(?:,?\s*(20\d{2}))?$/.exec(value.trim());
+  if (!match) return null;
+  const month = MONTHS[match[1]!.toLowerCase()];
+  const day = Number(match[2]);
+  const year = match[3] ? Number(match[3]) : fallbackYear;
+  return buildTextDate(year ?? null, month, day);
 }
 
 function assertFileSignature(format: StatementFormat, bytes: Buffer): void {
@@ -108,6 +163,7 @@ function analyzeTabular(
     rows: review.rows.map((row) => draftFromReviewed(row, input.currency, input.rules, ambiguousDates, model)),
     warnings: suggestion.warnings,
     statementHash,
+    documentDetails: extractStatementDetails(content, input.currency),
   };
 }
 

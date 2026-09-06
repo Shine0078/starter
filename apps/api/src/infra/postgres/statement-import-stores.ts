@@ -23,7 +23,7 @@ interface StatementDb {
   statement_hash: string; status: string; rows_total: number; rows_included: number;
   rows_excluded: number; rows_needs_review: number; created_at: Date;
   processed_at: Date | null; approved_at: Date | null; source_deleted_at: Date | null;
-  error: string | null;
+  error: string | null; document_details: unknown;
 }
 
 interface StatementJobDb {
@@ -35,7 +35,7 @@ interface StatementJobDb {
 
 const STATEMENT_COLUMNS = `id, account_id, filename, mime_type, format, statement_hash,
   status, rows_total, rows_included, rows_excluded, rows_needs_review, created_at,
-  processed_at, approved_at, source_deleted_at, error`;
+  processed_at, approved_at, source_deleted_at, error, document_details`;
 const ROW_COLUMNS = `id, import_id, source_line, posted_at, description, merchant, amount,
   currency, direction, category_slug, category_source, category_confidence,
   is_recurring, flags, decision, fingerprint, raw, edited_at`;
@@ -74,11 +74,11 @@ export class PostgresStatementImportStore implements StatementImportStore {
         await client.query(`INSERT INTO statement_imports (
           id, user_id, account_id, filename, mime_type, format, statement_hash,
           status, rows_total, rows_included, rows_excluded, rows_needs_review,
-          created_at, processed_at, encrypted_source, source_expires_at
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,'ready',$8,$9,$10,$11,$12,$12,$13,$12::timestamptz + interval '90 days')`, [
+          document_details, created_at, processed_at, encrypted_source, source_expires_at
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,'ready',$8,$9,$10,$11,$12,$13,$13,$14,$13::timestamptz + interval '90 days')`, [
           statement.id, userId, statement.accountId, statement.filename, statement.mimeType,
           statement.format, statement.statementHash, statement.rowsTotal, statement.rowsIncluded,
-          statement.rowsExcluded, statement.rowsNeedsReview, statement.createdAt, encryptedSource,
+          statement.rowsExcluded, statement.rowsNeedsReview, JSON.stringify(statement.documentDetails ?? {}), statement.createdAt, encryptedSource,
         ]);
       } catch (error) {
         if ((error as { code?: string }).code === '23505') throw new Error('STATEMENT_DUPLICATE');
@@ -105,10 +105,10 @@ export class PostgresStatementImportStore implements StatementImportStore {
         await client.query(`INSERT INTO statement_imports (
           id, user_id, account_id, filename, mime_type, format, statement_hash,
           status, rows_total, rows_included, rows_excluded, rows_needs_review,
-          created_at, encrypted_source, source_expires_at, attempts, processing_started_at
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,'queued',0,0,0,0,$8,$9,$8::timestamptz + interval '90 days',0,NULL)`, [
+          document_details, created_at, encrypted_source, source_expires_at, attempts, processing_started_at
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,'queued',0,0,0,0,$8,$9,$10,$9::timestamptz + interval '90 days',0,NULL)`, [
           statement.id, userId, statement.accountId, statement.filename, statement.mimeType,
-          statement.format, statement.statementHash, statement.createdAt, encryptedSource,
+          statement.format, statement.statementHash, JSON.stringify(statement.documentDetails ?? {}), statement.createdAt, encryptedSource,
         ]);
       } catch (error) {
         if ((error as { code?: string }).code === '23505') throw new Error('STATEMENT_DUPLICATE');
@@ -148,7 +148,7 @@ export class PostgresStatementImportStore implements StatementImportStore {
     });
   }
 
-  async completeProcessing(userId: string, importId: string, rows: readonly StatementRowRecord[], processedAt: string, event: StatementImportEvent): Promise<StatementImport | null> {
+  async completeProcessing(userId: string, importId: string, rows: readonly StatementRowRecord[], processedAt: string, event: StatementImportEvent, documentDetails?: StatementImport['documentDetails']): Promise<StatementImport | null> {
     return withUserScope(this.pg, userId, async (client) => {
       const { rows: statements } = await client.query<StatementDb>(
         `SELECT ${STATEMENT_COLUMNS} FROM statement_imports
@@ -161,10 +161,10 @@ export class PostgresStatementImportStore implements StatementImportStore {
       const { rows: updated } = await client.query<StatementDb>(
         `UPDATE statement_imports
             SET status='ready', processed_at=$3, error=NULL,
-                processing_started_at=NULL
+                processing_started_at=NULL, document_details=$4::jsonb
           WHERE user_id=$1 AND id=$2 AND status='processing'
-        RETURNING ${STATEMENT_COLUMNS}`,
-        [userId, importId, processedAt],
+          RETURNING ${STATEMENT_COLUMNS}`,
+        [userId, importId, processedAt, JSON.stringify(documentDetails ?? {})],
       );
       await insertEvent(client, userId, event);
       return updated[0] ? toStatement(updated[0]) : null;
@@ -328,7 +328,22 @@ async function insertTransactions(client: PoolClient, userId: string, transactio
 }
 
 function toStatement(row: StatementDb): StatementImport {
-  return { id: row.id, accountId: row.account_id, filename: row.filename, mimeType: row.mime_type, format: row.format as StatementImport['format'], statementHash: row.statement_hash, status: row.status as StatementImport['status'], rowsTotal: row.rows_total, rowsIncluded: row.rows_included, rowsExcluded: row.rows_excluded, rowsNeedsReview: row.rows_needs_review, createdAt: row.created_at.toISOString(), processedAt: row.processed_at?.toISOString() ?? null, approvedAt: row.approved_at?.toISOString() ?? null, sourceDeletedAt: row.source_deleted_at?.toISOString() ?? null, error: row.error };
+  const details = toDocumentDetails(row.document_details);
+  return { id: row.id, accountId: row.account_id, filename: row.filename, mimeType: row.mime_type, format: row.format as StatementImport['format'], statementHash: row.statement_hash, status: row.status as StatementImport['status'], rowsTotal: row.rows_total, rowsIncluded: row.rows_included, rowsExcluded: row.rows_excluded, rowsNeedsReview: row.rows_needs_review, createdAt: row.created_at.toISOString(), processedAt: row.processed_at?.toISOString() ?? null, approvedAt: row.approved_at?.toISOString() ?? null, sourceDeletedAt: row.source_deleted_at?.toISOString() ?? null, error: row.error, ...(details ? { documentDetails: details } : {}) };
+}
+
+function toDocumentDetails(value: unknown): NonNullable<StatementImport['documentDetails']> | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const candidate = value as Record<string, unknown>;
+  const details = {
+    issuer: typeof candidate.issuer === 'string' ? candidate.issuer : null,
+    accountReferenceLast4: typeof candidate.accountReferenceLast4 === 'string' ? candidate.accountReferenceLast4 : null,
+    statementDate: typeof candidate.statementDate === 'string' ? candidate.statementDate : null,
+    periodStart: typeof candidate.periodStart === 'string' ? candidate.periodStart : null,
+    periodEnd: typeof candidate.periodEnd === 'string' ? candidate.periodEnd : null,
+    currency: typeof candidate.currency === 'string' ? candidate.currency : null,
+  };
+  return Object.values(details).some((item) => item !== null) ? details : undefined;
 }
 
 function toRow(row: StatementRowDb): StatementRowRecord {
