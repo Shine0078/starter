@@ -15,6 +15,11 @@ XLSX, text PDFs, and PNG/JPEG/WEBP/TIFF/BMP images up to 10 MiB.
   Production must set `STATEMENT_IMPORT_ENCRYPTION_KEY` to canonical base64 for
   a 32-byte key. The key belongs in the deployment secret manager, never in the
   repository or a client build.
+- Staged descriptions, merchant names, and raw source lines are encrypted with
+  the same authenticated envelope before PostgreSQL persistence (migration
+  `043`). The row keeps only a placeholder plus dates, amounts, categories, and
+  decision state needed for scoped review and duplicate checks. Tampered staged
+  text fails closed instead of being returned to the client.
 - `statement_imports`, `statement_import_rows`, and
   `statement_import_events` use forced PostgreSQL RLS and user-scoped foreign
   keys. The runtime connection must be the restricted application role.
