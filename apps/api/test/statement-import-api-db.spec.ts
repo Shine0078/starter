@@ -1,5 +1,6 @@
 import { ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import PDFDocument from 'pdfkit';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -7,6 +8,18 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { appUrlFrom, OWNER_URL, startPgHarness, type PgHarness } from './pg-harness';
 import { closePool } from '../src/infra/postgres/pool';
 import { StatementImportWorker } from '../src/modules/imports/statement-import.worker';
+
+function textPdf(lines: readonly string[]): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const document = new PDFDocument({ margin: 36 });
+    const chunks: Buffer[] = [];
+    document.on('data', (chunk: Buffer) => chunks.push(chunk));
+    document.on('end', () => resolve(Buffer.concat(chunks)));
+    document.on('error', reject);
+    document.fontSize(10).text(lines.join('\n'));
+    document.end();
+  });
+}
 
 // Exercise the production request contract in a test process without starting
 // the worker's timer; the test invokes one deterministic drain below.
@@ -92,6 +105,29 @@ if (!OWNER_URL) {
       expect(analytics.body.totalIncome).toBe(0);
       expect(analytics.body.savings).toBe(-91250);
       expect(analytics.body.spendingByCategory.map((row: { categorySlug: string }) => row.categorySlug)).toEqual(expect.arrayContaining(['groceries', 'rent']));
+
+      const pdf = await textPdf([
+        'CIBC',
+        'Card number 4502 XXXX XXXX 7175',
+        'Statement date: August 24, 2026',
+        'Transactions from July 25 to August 24, 2026',
+        'Your new charges and credits',
+        'Aug 01 Aug 04 GROCERY MART 7.33',
+      ]);
+      const pdfImport = await request(http)
+        .post('/api/imports/statements')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ accountId: account.body.id, filename: 'cibc.pdf', mimeType: 'application/pdf', contentBase64: pdf.toString('base64') })
+        .expect(202);
+      await app.get(StatementImportWorker).runOnce();
+      const pdfDetail = await request(http)
+        .get(`/api/imports/statements/${pdfImport.body.statement.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+      expect(pdfDetail.body.statement).toMatchObject({ status: 'ready', rowsTotal: 1 });
+      expect(pdfDetail.body.statement.documentDetails).toMatchObject({ issuer: 'CIBC', accountReferenceLast4: '7175', statementDate: '2026-08-24' });
+      expect(pdfDetail.body.rows[0]).toMatchObject({ description: 'GROCERY MART', categorySlug: 'groceries', decision: 'include' });
+      await request(http).post(`/api/imports/statements/${pdfImport.body.statement.id}/approve`).set('Authorization', `Bearer ${token}`).expect(201);
 
       const outflowCsv = 'Date,Description,Amount\n2026-03-03,ACME PAYROLL,-500.00';
       const outflow = await request(http)
