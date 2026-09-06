@@ -1,7 +1,9 @@
 # FINVERSE Current Status
 
 **Verified:** 2026-09-06
-**Verified local main:** `29d0ee7`.
+**Verified source baseline:** `29d0ee7`.
+**Current local main:** documentation-only follow-up commits are ahead of that
+baseline; the executable source is unchanged.
 **Protected/public deployment:** requires an owner-controlled Cloud Run deploy
 and `/api/version` verification before it can be called current.
 
@@ -63,7 +65,7 @@ and `/api/version` verification before it can be called current.
 
 ## Not Live In Production Yet
 
-- Local `main` SHA `29d0ee7` has passed all locally feasible API/database/mobile
+- Verified source baseline `29d0ee7` has passed all locally feasible API/database/mobile
   gates, but it has not yet been deployed to the canonical Cloud Run service.
 - The canonical Cloud Run URL is stale: `/api/version` currently returns 404
   and `/app/` serves an older dark bundle. The local preview at

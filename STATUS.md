@@ -9,9 +9,11 @@ Verified: 2026-09-06
 Working branch: `main`
 Protected default branch: `main`
 
-## Current commit SHA
+## Verified source baseline
 
-- Local `main`: `29d0ee7` (`fix(imports): exclude transfer credits from statement income`).
+- Fully tested source baseline: `29d0ee7` (`fix(imports): exclude transfer credits from statement income`).
+- Documentation-only follow-up commits may be ahead of this baseline; they do
+  not change executable source or the recorded test evidence.
 - FINVERSE source, tests, migrations, mobile code, deployment controls, and
   documentation are committed. Three unrelated local artifact directories remain
   untracked and are intentionally excluded from release commits.
