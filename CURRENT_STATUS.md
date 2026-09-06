@@ -3,7 +3,7 @@
 **Verified:** 2026-09-06
 **Integration branch:** `codex/passkey-webauthn-p0` at `4601e7d`. Its changes
 were merged through PR #27.
-**Protected main observed:** `2dbbc1d3d29ba56a2149a63b8966eac7cf3272ee`.
+**Protected main observed:** `5ebff34cfedfd913ab9ed3ede638d81692f5418d`.
 
 ## Verified Today
 
@@ -41,8 +41,8 @@ were merged through PR #27.
   the public container scan is blocking and the release gate requires both the
   CI and Container scan workflows for the exact protected-main SHA. API images
   are published with SBOM/provenance attestations and signed by immutable
-  digest through keyless Cosign/OIDC. Release run `34012247104` completed for
-  `2dbbc1d`.
+  digest through keyless Cosign/OIDC. Release run `34013496867` completed for
+  `5ebff34`.
 - `npm audit --omit=dev` reported zero known production vulnerabilities for both
   current `main` and the integration branch.
 
@@ -60,7 +60,7 @@ were merged through PR #27.
 
 ## Not Live In Production Yet
 
-- Protected `main` SHA `2dbbc1d` has passed CI, CodeQL, dependency review,
+- Protected `main` SHA `5ebff34` has passed CI, CodeQL, dependency review,
   container scanning, and the release artifact workflow. It is published as a
   signed API image and verified Android/web artifacts, but it has not yet been
   deployed to the canonical Cloud Run service.

@@ -11,7 +11,7 @@ Protected default branch: `main`
 
 ## Current commit SHA
 
-- Protected `main` / `origin/main`: `2dbbc1d` (PR #27 merge).
+- Protected `main` / `origin/main`: `5ebff34` (PR #28 merge).
 - Working branch `codex/passkey-webauthn-p0` remains at `4601e7d`; its release
   workflow changes are included in protected `main`. The worktree is clean.
 
@@ -40,10 +40,10 @@ GitHub Pages and `finverse.onrender.com` are not the current API.
 
 ## Test results
 
-- Main CI on `2dbbc1d`: success (`34011891405`)
-- Container scan on `2dbbc1d`: success (`34011891461`)
-- CodeQL on `2dbbc1d`: success (`34011891375`)
-- Release artifacts on `2dbbc1d`: success (`34012247104`); API image build,
+- Main CI on `5ebff34`: success (`34013154838`)
+- Container scan on `5ebff34`: success (`34013154867`)
+- CodeQL on `5ebff34`: success (`34013154901`)
+- Release artifacts on `5ebff34`: success (`34013496867`); API image build,
   SBOM/provenance, GHCR publication, keyless Cosign signing, Android release,
   and installable web/PWA artifacts all completed.
 
@@ -112,7 +112,7 @@ CI follow-up 2:
 
 ## P0 remaining
 
-- Deploy the exact CI-green protected-main SHA `2dbbc1d` to Cloud Run with
+- Deploy the exact CI-green protected-main SHA `5ebff34` to Cloud Run with
   `GIT_SHA`, then verify `/api/version` before calling the public URL current
 - Replace live legal URLs before real users
 - Configure live `WEBAUTHN_*`
@@ -132,4 +132,4 @@ CI follow-up 2:
 
 ## Exact next action
 
-Set live `LEGAL_*` to the same-origin technical-beta documents (`/api/legal/terms/technical-beta-v1` and `/api/legal/privacy/technical-beta-v1`), then deploy `2dbbc1d` to Cloud Run with `GIT_SHA` set. Replace those documents with counsel-reviewed Terms/Privacy before a commercial launch.
+Set live `LEGAL_*` to the same-origin technical-beta documents (`/api/legal/terms/technical-beta-v1` and `/api/legal/privacy/technical-beta-v1`), then deploy `5ebff34` to Cloud Run with `GIT_SHA` set. Replace those documents with counsel-reviewed Terms/Privacy before a commercial launch.
