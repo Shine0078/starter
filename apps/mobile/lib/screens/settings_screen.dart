@@ -22,6 +22,7 @@ import 'help_support_screen.dart';
 import 'notifications_screen.dart';
 import 'plan_screen.dart';
 import 'subscriptions_screen.dart';
+import 'statement_import_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({
@@ -1176,6 +1177,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
           onPressed: _signOutAll,
           icon: const Icon(Icons.phonelink_erase),
           label: const Text('Sign out every device'),
+        ),
+        const SizedBox(height: 12),
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.upload_file_outlined),
+            title: const Text('Manual statement import'),
+            subtitle: const Text('Upload, review, and categorize a statement'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => StatementImportScreen(api: widget.api),
+            )),
+          ),
         ),
         if (themeColorController != null) ...[
           const SizedBox(height: 20),

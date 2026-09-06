@@ -36,7 +36,13 @@ String resolveBaseUrl() {
           : defaultTargetPlatform == TargetPlatform.android
               ? 'http://10.0.2.2:3000'
               : 'http://127.0.0.1:3000';
-  return normalizeBaseUrl(raw);
+  // A local release-web preview derives its API origin from the page itself.
+  // Keep the native release invariant intact while allowing that explicitly
+  // local, same-origin development case to use http://localhost.
+  final localWebPreview = kIsWeb &&
+      configured.isEmpty &&
+      {'localhost', '127.0.0.1', '::1', '[::1]'}.contains(Uri.base.host);
+  return normalizeBaseUrl(raw, release: kReleaseMode && !localWebPreview);
 }
 
 /// Validates and canonicalises an API origin before it is used to construct a
@@ -1031,6 +1037,91 @@ class ApiClient implements BackgroundSyncClient {
         .toList();
   }
 
+  Future<StatementImportDetail> createStatementImport({
+    required String accountId,
+    required String filename,
+    required String mimeType,
+    required List<int> bytes,
+  }) async {
+    final json = await _send('POST', '/imports/statements', {
+      'accountId': accountId,
+      'filename': filename,
+      'mimeType': mimeType,
+      'contentBase64': base64Encode(bytes),
+    }) as Map<String, dynamic>;
+    return StatementImportDetail.fromJson(json);
+  }
+
+  Future<List<StatementImport>> statementImports() async {
+    final json = await _get('/imports/statements') as List<dynamic>;
+    return json
+        .whereType<Map<String, dynamic>>()
+        .map(StatementImport.fromJson)
+        .toList();
+  }
+
+  Future<StatementImportDetail> statementImport(String id) async {
+    final json = await _get('/imports/statements/${Uri.encodeComponent(id)}')
+        as Map<String, dynamic>;
+    return StatementImportDetail.fromJson(json);
+  }
+
+  Future<StatementSummary> statementImportSummary(String id) async {
+    final json = await _get('/imports/statements/${Uri.encodeComponent(id)}/summary')
+        as Map<String, dynamic>;
+    return StatementSummary.fromJson(json);
+  }
+
+  Future<StatementRow> editStatementRow(
+    String importId,
+    String rowId,
+    Map<String, dynamic> patch,
+  ) async {
+    final json = await _send(
+      'PATCH',
+      '/imports/statements/${Uri.encodeComponent(importId)}/rows/${Uri.encodeComponent(rowId)}',
+      patch,
+    ) as Map<String, dynamic>;
+    return StatementRow.fromJson(json);
+  }
+
+  Future<StatementImport> approveStatementImport(String id) async {
+    final json = await _send(
+      'POST',
+      '/imports/statements/${Uri.encodeComponent(id)}/approve',
+    ) as Map<String, dynamic>;
+    return StatementImport.fromJson(json);
+  }
+
+  Future<List<StatementRow>> splitStatementRow(
+    String importId,
+    String rowId,
+    List<Map<String, dynamic>> parts,
+  ) async {
+    final json = await _send(
+      'POST',
+      '/imports/statements/${Uri.encodeComponent(importId)}/rows/${Uri.encodeComponent(rowId)}/split',
+      {'parts': parts},
+    ) as List<dynamic>;
+    return json.whereType<Map<String, dynamic>>().map(StatementRow.fromJson).toList();
+  }
+
+  Future<StatementRow> mergeStatementRows(String importId, List<String> rowIds) async {
+    final json = await _send(
+      'POST',
+      '/imports/statements/${Uri.encodeComponent(importId)}/rows/merge',
+      {'rowIds': rowIds},
+    ) as Map<String, dynamic>;
+    return StatementRow.fromJson(json);
+  }
+
+  Future<void> deleteStatementSource(String id) async {
+    await _send(
+      'DELETE',
+      '/imports/statements/${Uri.encodeComponent(id)}/source',
+    );
+  }
+
   Future<List<NetWorthSnapshot>> netWorthHistory({
     required String currency,
     int limit = 365,
@@ -1437,7 +1528,43 @@ class ApiClient implements BackgroundSyncClient {
   }
 
   Future<void> addSplitMember(String groupId, String email) async {
-    await _send('POST', '/split/groups/$groupId/members', {'email': email});
+    await _send('POST', '/split/groups/$groupId/invitations', {'email': email});
+  }
+
+  Future<SplitInvitation> createSplitInvitation(String groupId, String email) async {
+    final json = await _send(
+      'POST',
+      '/split/groups/$groupId/invitations',
+      {'email': email},
+    ) as Map<String, dynamic>;
+    return SplitInvitation.fromJson(json);
+  }
+
+  Future<List<SplitInvitation>> splitInvitations() async {
+    final json = await _get('/split/invitations') as Map<String, dynamic>;
+    return (json['invitations'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(SplitInvitation.fromJson)
+        .toList();
+  }
+
+  Future<void> acceptSplitInvitation(String invitationId) async {
+    await _send('POST', '/split/invitations/$invitationId/accept');
+  }
+
+  Future<void> declineSplitInvitation(String invitationId) async {
+    await _send('POST', '/split/invitations/$invitationId/decline');
+  }
+
+  Future<void> revokeSplitInvitation(String groupId, String invitationId) async {
+    await _send('DELETE', '/split/groups/$groupId/invitations/$invitationId');
+  }
+
+  Future<void> removeSplitMember(String groupId, String userId) async {
+    await _send(
+      'DELETE',
+      '/split/groups/$groupId/members/${Uri.encodeComponent(userId)}',
+    );
   }
 
   Future<void> addSplitExpense(

@@ -118,6 +118,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get offlineConflictRetry => 'Retry sync';
 
   @override
+  String offlineConflictQueuedAt(String date) {
+    return 'Queued $date';
+  }
+
+  @override
   String offlineConflictStatus(int code) {
     return 'HTTP $code';
   }
@@ -2068,6 +2073,49 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get splitInvalidAmount => 'Enter a valid positive amount.';
+
+  @override
+  String get splitPendingInvitations => 'Pending invitations';
+
+  @override
+  String get splitInvitationSharedGroup => 'Shared group';
+
+  @override
+  String splitInvitationInvitedBy(Object email) {
+    return 'Invited by $email';
+  }
+
+  @override
+  String get splitInvitationAccept => 'Accept';
+
+  @override
+  String get splitInvitationDecline => 'Decline';
+
+  @override
+  String get splitLeaveGroupTitle => 'Leave group?';
+
+  @override
+  String get splitRemoveMemberTitle => 'Remove member?';
+
+  @override
+  String get splitLeaveGroupDetail =>
+      'You can leave only after your balance is settled.';
+
+  @override
+  String get splitRemoveMemberDetail =>
+      'This member can be removed only when their balance is zero.';
+
+  @override
+  String get splitLeaveGroupAction => 'Leave';
+
+  @override
+  String get splitRemoveMemberAction => 'Remove';
+
+  @override
+  String get splitLeaveGroupTooltip => 'Leave group';
+
+  @override
+  String get splitRemoveMemberTooltip => 'Remove member';
 
   @override
   String get profileSplitDetail => 'Split bills and settle up with others';
