@@ -11,6 +11,8 @@ describe('light-only web shell', () => {
   it('keeps the browser shell light regardless of device preference', () => {
     expect(indexHtml).toContain('background-color: #FFFFFF');
     expect(indexHtml).toContain('color: #17213A');
+    expect(indexHtml).toContain('<meta name="color-scheme" content="light">');
+    expect(indexHtml).toContain('color-scheme: light;');
     expect(indexHtml).toContain('content="#FFFFFF"');
     expect(indexHtml).toContain('apple-mobile-web-app-status-bar-style" content="default"');
     expect(indexHtml).not.toContain('prefers-color-scheme');
