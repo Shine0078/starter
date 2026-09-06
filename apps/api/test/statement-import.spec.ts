@@ -50,7 +50,7 @@ describe('manual statement imports', () => {
     expect(response.body.statement.rowsTotal).toBe(3);
     expect(response.body.rows).toHaveLength(3);
     expect(response.body.statement).not.toHaveProperty('encryptedSource');
-    expect(response.body.rows.some((row: { decision: string }) => row.decision === 'needs_review')).toBe(true);
+    expect(response.body.rows.every((row: { decision: string }) => row.decision === 'include')).toBe(true);
     const summary = await request(http).get(`/api/imports/statements/${response.body.statement.id}/summary`).set('Authorization', `Bearer ${signedIn.token}`).expect(200);
     expect(summary.body.currency).toBe('USD');
     expect(summary.body.categoryTotals).toEqual(expect.any(Array));

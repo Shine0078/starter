@@ -298,7 +298,7 @@ function parseCreditCardRows(
   // Require a statement-year anchor. A month/day without a year is not safe
   // to import because a statement can span December and January.
   const year = findStatementYear(text);
-  if (year === null || !/(?:credit card|card number|spend categories|new charges and credits)/i.test(text)) return [];
+  if (year === null || !/(?:credit card|card account|card number|spend categories|new charges and credits)/i.test(text)) return [];
 
   const rows: StatementRowDraft[] = [];
   const datePattern = Object.keys(MONTHS).join('|');
@@ -372,7 +372,7 @@ function textDraft(input: {
   model: UserCorrectionClassifier;
 }): StatementRowDraft {
   const categorizedByMerchant = input.description
-    ? categorizeDescriptor(input.description, { rules: input.rules, model: input.model })
+    ? categorizeStatementDescriptor(input.description, { rules: input.rules, model: input.model })
     : null;
   const categorized = categorizedByMerchant?.categorySlug !== UNKNOWN_CATEGORY
     ? categorizedByMerchant
@@ -407,6 +407,40 @@ function textDraft(input: {
     fingerprint,
     raw: input.raw.slice(0, 2_000),
   };
+}
+
+/**
+ * Apply statement-specific semantics that a merchant lexicon cannot safely
+ * infer. Card payments and account transfers are money movement, not income;
+ * leaving a positive payment as unknown would inflate cash flow.
+ */
+function categorizeStatementDescriptor(
+  description: string,
+  options: { rules: readonly CategorizationRule[]; model: UserCorrectionClassifier },
+): ReturnType<typeof categorizeDescriptor> {
+  const categorized = categorizeDescriptor(description, options);
+  if (categorized.categorySlug !== UNKNOWN_CATEGORY) return categorized;
+
+  const normalized = normalizeDescriptor(description);
+  if (/\b(payment received|payment thank you|card payment|credit card payment|minimum payment)\b/i.test(normalized)) {
+    return {
+      categorySlug: 'credit_card_payment',
+      source: 'lexicon',
+      confidence: 0.99,
+      merchant: 'Credit card payment',
+      reason: 'Identified as a payment toward a credit-card balance; excluded from income and spending.',
+    };
+  }
+  if (/\b(e transfer|etransfer|interac|transfer from|transfer to|internal transfer)\b/i.test(normalized)) {
+    return {
+      categorySlug: 'transfer',
+      source: 'lexicon',
+      confidence: 0.96,
+      merchant: 'Account transfer',
+      reason: 'Identified as money movement between accounts, not income or spending.',
+    };
+  }
+  return categorized;
 }
 
 function issuerCategoryResult(label: string | undefined): { categorySlug: string; source: 'lexicon'; confidence: number; merchant?: string; reason: string } | null {
