@@ -63,8 +63,9 @@ if (!OWNER_URL) {
       await app.get(StatementImportWorker).runOnce();
       const processed = await request(http).get(`/api/imports/statements/${importId}`).set('Authorization', `Bearer ${token}`).expect(200);
       expect(processed.body.statement.status).toBe('ready');
-      for (const row of processed.body.rows as Array<{ id: string }>) {
-        await request(http).patch(`/api/imports/statements/${importId}/rows/${row.id}`).set('Authorization', `Bearer ${token}`).send({ categorySlug: 'groceries', decision: 'include' }).expect(200);
+      for (const row of processed.body.rows as Array<{ id: string; description: string }>) {
+        const categorySlug = /rent/i.test(row.description) ? 'rent' : 'groceries';
+        await request(http).patch(`/api/imports/statements/${importId}/rows/${row.id}`).set('Authorization', `Bearer ${token}`).send({ categorySlug, decision: 'include' }).expect(200);
       }
       const approved = await request(http).post(`/api/imports/statements/${importId}/approve`).set('Authorization', `Bearer ${token}`).expect(201);
       expect(approved.body.status).toBe('approved');
@@ -83,6 +84,14 @@ if (!OWNER_URL) {
       expect(me.body.id).toBe(registered.body.user.id);
       const transactions = await request(http).get('/api/transactions?limit=100').set('Authorization', `Bearer ${token}`).expect(200);
       expect(transactions.body.transactions.filter((row: { importBatchId?: string }) => row.importBatchId)).toHaveLength(2);
+      const analytics = await request(http)
+        .get('/api/analytics?period=custom&from=2026-03-01&to=2026-03-02&currency=USD')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+      expect(analytics.body.grossExpenses).toBe(91250);
+      expect(analytics.body.totalIncome).toBe(0);
+      expect(analytics.body.savings).toBe(-91250);
+      expect(analytics.body.spendingByCategory.map((row: { categorySlug: string }) => row.categorySlug)).toEqual(expect.arrayContaining(['groceries', 'rent']));
 
       const outflowCsv = 'Date,Description,Amount\n2026-03-03,ACME PAYROLL,-500.00';
       const outflow = await request(http)
