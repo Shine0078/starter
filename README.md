@@ -14,18 +14,25 @@ insights, and account lifecycle controls. Production Plaid access,
 hosting, legal review, store approval, and billing remain external launch gates
 ([selling audit](docs/08-what-blocks-selling.md)).
 
-## Public technical beta
+## Deployment status
 
-Canonical same-origin deployment is Google Cloud Run + Neon:
+The canonical production path is Google Cloud Run + Neon, but the advertised
+Cloud Run URL is currently an older deployment and is not the verified
+candidate:
 
-- **Web / PWA** — <https://finverse-d6vqs5iu7q-uc.a.run.app/app/>
-- **Readiness** — <https://finverse-d6vqs5iu7q-uc.a.run.app/api/readiness>
-- **Identity** — <https://finverse-d6vqs5iu7q-uc.a.run.app/api/version>
-- **Source** — this repository.
+- **Stale public URL** — <https://finverse-d6vqs5iu7q-uc.a.run.app/app/>
+- **Candidate preview** — <http://localhost:3001/app/> when the local preview
+  server is running.
+- **Candidate identity** — `http://localhost:3001/api/version` reports the
+  locally verified schema and build state.
+- **Required before launch** — deploy the exact CI-green candidate SHA, then
+  verify `/api/readiness`, `/api/version`, and `/app/` from the same Cloud Run
+  origin before directing users to it.
 
 GitHub Pages and `finverse.onrender.com` are **not** the current API. Render still
 serves an unrelated Express placeholder (`/healthz` is 404). Release Android
-builds now receive `API_BASE_URL=https://finverse-d6vqs5iu7q-uc.a.run.app`.
+builds are configured for the canonical Cloud Run origin, which must be
+redeployed from the verified candidate before production use.
 See [`docs/17-public-hosting-google-cloud-run.md`](docs/17-public-hosting-google-cloud-run.md).
 
 ## Quick start
@@ -144,6 +151,8 @@ last 15 minutes; exchange the refresh token at `/api/auth/refresh` for a new pai
 | `GET` | `/transactions` | `?search=&category=&account=&kind=&pending=&recurring=&minAmount=&maxAmount=&from=&to=&before=&limit=` |
 | `GET` | `/transactions/export.csv` | Download the user-owned ledger as a CSV; spreadsheet-formula-safe text fields |
 | `GET` | `/transactions/needs-review` | What we refused to guess at |
+| `POST` | `/imports/statements` | Upload and stage a CSV, XLSX, PDF, or supported image statement for review |
+| `GET`/`PATCH`/`POST`/`DELETE` | `/imports/statements/:id...` | Review rows, split/merge, approve, inspect audit, and remove the original source |
 | `PATCH` | `/transactions/:id/category` | Correct a category, optionally create a rule |
 | `GET`/`DELETE` | `/categorization-rules[/:id]` | Review or remove durable merchant categorization rules |
 | `GET`/`POST` | `/budgets` | List / create |
