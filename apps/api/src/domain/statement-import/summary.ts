@@ -23,7 +23,10 @@ export function summarizeStatementRows(rows: readonly StatementRowRecord[]): Sta
   let savings = 0;
   for (const row of included) {
     const amount = row.amount!;
-    if (isIncomeCategory(row.categorySlug) || amount > 0) income += Math.max(amount, 0);
+    // Sign alone is not enough to call a credit income: card payments and
+    // account transfers are positive money movement and must stay outside
+    // cash-flow income until a user explicitly categorizes an item as income.
+    if (isIncomeCategory(row.categorySlug)) income += Math.max(amount, 0);
     else if (getCategory(row.categorySlug)?.kind === 'expense') expenses += Math.max(-amount, 0);
     if (row.categorySlug === 'savings' || row.categorySlug === 'investments') savings += Math.abs(amount);
     const previous = categories.get(row.categorySlug) ?? { amount: 0, count: 0 };
