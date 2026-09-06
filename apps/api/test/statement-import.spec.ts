@@ -105,6 +105,85 @@ describe('manual statement imports', () => {
     expect(audit.body.some((event: { kind: string }) => event.kind === 'approved')).toBe(true);
   });
 
+  it('invalidates cash-flow analytics after approval', async () => {
+    const signedIn = await user();
+    const before = await request(http)
+      .get('/api/insights?asOf=2026-03-31&currency=USD')
+      .set('Authorization', `Bearer ${signedIn.token}`)
+      .expect(200);
+    expect(before.body.raw.summary.income).toBe(0);
+    expect(before.body.raw.summary.expenses).toBe(0);
+
+    const csvWithCashFlow = [
+      'Date,Description,Amount',
+      '2026-03-01,ACME PAYROLL,2500.00',
+      '2026-03-02,WALMART,-12.50',
+    ].join('\n');
+    const created = await request(http)
+      .post('/api/imports/statements')
+      .set('Authorization', `Bearer ${signedIn.token}`)
+      .send({ accountId: signedIn.accountId, filename: 'cash-flow.csv', mimeType: 'text/csv', contentBase64: Buffer.from(csvWithCashFlow).toString('base64') })
+      .expect(201);
+    const importId = created.body.statement.id as string;
+    expect(created.body.statement.rowsNeedsReview).toBe(0);
+    await request(http)
+      .post(`/api/imports/statements/${importId}/approve`)
+      .set('Authorization', `Bearer ${signedIn.token}`)
+      .expect(201);
+
+    const after = await request(http)
+      .get('/api/insights?asOf=2026-03-31&currency=USD')
+      .set('Authorization', `Bearer ${signedIn.token}`)
+      .expect(200);
+    expect(after.body.raw.summary.income).toBe(250000);
+    expect(after.body.raw.summary.expenses).toBe(1250);
+    expect(after.body.raw.summary.netCashFlow).toBe(248750);
+  });
+
+  it('pairs matching cross-account statement rows as internal transfers after approval', async () => {
+    const signedIn = await user();
+    const secondAccount = await request(http)
+      .post('/api/accounts/manual')
+      .set('Authorization', `Bearer ${signedIn.token}`)
+      .send({ name: 'Statement savings', type: 'savings', currency: 'USD', balanceCurrent: 0 })
+      .expect(201);
+
+    const transfer = (accountId: string, description: string, amount: string) =>
+      request(http)
+        .post('/api/imports/statements')
+        .set('Authorization', `Bearer ${signedIn.token}`)
+        .send({
+          accountId,
+          filename: `${description}.csv`,
+          mimeType: 'text/csv',
+          contentBase64: Buffer.from(`Date,Description,Amount\n2026-05-01,${description},${amount}`).toString('base64'),
+        })
+        .expect(201);
+
+    const outflow = await transfer(signedIn.accountId, 'ACME PAYROLL', '-500.00');
+    await request(http)
+      .post(`/api/imports/statements/${outflow.body.statement.id}/approve`)
+      .set('Authorization', `Bearer ${signedIn.token}`)
+      .expect(201);
+
+    const inflow = await transfer(secondAccount.body.id, 'ACME PAYROLL', '500.00');
+    await request(http)
+      .post(`/api/imports/statements/${inflow.body.statement.id}/approve`)
+      .set('Authorization', `Bearer ${signedIn.token}`)
+      .expect(201);
+
+    const transactions = await request(http)
+      .get('/api/transactions?limit=1000')
+      .set('Authorization', `Bearer ${signedIn.token}`)
+      .expect(200);
+    const matched = transactions.body.transactions.filter(
+      (transaction: { rawDescriptor: string }) => transaction.rawDescriptor === 'ACME PAYROLL',
+    );
+    expect(matched).toHaveLength(2);
+    expect(matched.every((transaction: { categorySlug: string; categorySource: string }) =>
+      transaction.categorySlug === 'transfer' && transaction.categorySource === 'transfer_pairing')).toBe(true);
+  });
+
   it('does not allow cross-user reads or source deletion to erase approved rows', async () => {
     const first = await user();
     const second = await user();

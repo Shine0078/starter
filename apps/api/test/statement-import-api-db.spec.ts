@@ -83,6 +83,34 @@ if (!OWNER_URL) {
       expect(me.body.id).toBe(registered.body.user.id);
       const transactions = await request(http).get('/api/transactions?limit=100').set('Authorization', `Bearer ${token}`).expect(200);
       expect(transactions.body.transactions.filter((row: { importBatchId?: string }) => row.importBatchId)).toHaveLength(2);
+
+      const outflowCsv = 'Date,Description,Amount\n2026-03-03,ACME PAYROLL,-500.00';
+      const outflow = await request(http)
+        .post('/api/imports/statements')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ accountId: account.body.id, filename: 'transfer-out.csv', mimeType: 'text/csv', contentBase64: Buffer.from(outflowCsv).toString('base64') })
+        .expect(202);
+      await app.get(StatementImportWorker).runOnce();
+      await request(http).post(`/api/imports/statements/${outflow.body.statement.id}/approve`).set('Authorization', `Bearer ${token}`).expect(201);
+
+      const savings = await request(http)
+        .post('/api/accounts/manual')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ name: 'Statement savings', type: 'savings', currency: 'USD', balanceCurrent: 0 })
+        .expect(201);
+      const inflowCsv = 'Date,Description,Amount\n2026-03-03,ACME PAYROLL,500.00';
+      const inflow = await request(http)
+        .post('/api/imports/statements')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ accountId: savings.body.id, filename: 'transfer-in.csv', mimeType: 'text/csv', contentBase64: Buffer.from(inflowCsv).toString('base64') })
+        .expect(202);
+      await app.get(StatementImportWorker).runOnce();
+      await request(http).post(`/api/imports/statements/${inflow.body.statement.id}/approve`).set('Authorization', `Bearer ${token}`).expect(201);
+
+      const paired = await request(http).get('/api/transactions?limit=100').set('Authorization', `Bearer ${token}`).expect(200);
+      const matched = paired.body.transactions.filter((row: { rawDescriptor: string }) => row.rawDescriptor === 'ACME PAYROLL');
+      expect(matched).toHaveLength(2);
+      expect(matched.every((row: { categorySlug: string; categorySource: string }) => row.categorySlug === 'transfer' && row.categorySource === 'transfer_pairing')).toBe(true);
     });
   });
 }
