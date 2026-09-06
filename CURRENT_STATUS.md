@@ -1,7 +1,7 @@
 # FINVERSE Current Status
 
 **Verified:** 2026-09-06
-**Verified source baseline:** `d465b26`.
+**Verified source baseline:** `65455e1`.
 **Current local main:** documentation-only follow-up commits are ahead of that
 baseline; the executable source is unchanged.
 **Protected/public deployment:** requires an owner-controlled Cloud Run deploy
@@ -65,7 +65,7 @@ and `/api/version` verification before it can be called current.
 
 ## Not Live In Production Yet
 
-- Verified source baseline `d465b26` has passed all locally feasible API/database/mobile
+- Verified source baseline `65455e1` has passed all locally feasible API/database/mobile
   gates, but it has not yet been deployed to the canonical Cloud Run service.
 - The canonical Cloud Run URL is stale: `/api/version` currently returns 404
   and `/app/` serves an older dark bundle. The local preview at
@@ -80,7 +80,7 @@ and `/api/version` verification before it can be called current.
   resource bounds, and shared-expense invitation/consent risks. Actor,
   non-admin write paths, direct split-membership deletes, invitation consent,
   revocation, and balance-checked removal are now hardened on local `main`. The
-  sealed report has not been rerun against `d465b26`. Backup scripts now fail closed without
+  sealed report has not been rerun against `65455e1`. Backup scripts now fail closed without
   age encryption, but production key custody is not locally verifiable.
 - Manual document analysis now has a durable, forced-RLS queue with stale-lease
   recovery, bounded workers, ZIP expansion limits, source retention expiry, and

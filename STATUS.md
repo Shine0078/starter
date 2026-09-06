@@ -11,7 +11,7 @@ Protected default branch: `main`
 
 ## Verified source baseline
 
-- Fully tested source baseline: `d465b26` (`test(imports): cover Neo card approval under forced RLS`).
+- Fully tested source baseline: `65455e1` (`test(imports): verify PDF cash-flow analytics`).
 - Documentation-only follow-up commits may be ahead of this baseline; they do
   not change executable source or the recorded test evidence.
 - FINVERSE source, tests, migrations, mobile code, deployment controls, and
@@ -124,7 +124,7 @@ CI follow-up 2:
 
 ## P0 remaining
 
-- Deploy the exact verified `main` SHA `d465b26` to Cloud Run with `GIT_SHA`,
+- Deploy the exact verified `main` SHA `65455e1` to Cloud Run with `GIT_SHA`,
   then verify `/api/readiness`, `/api/version`, and `/app/` from the same origin
 - Supply reviewed production legal URLs and live `WEBAUTHN_*` configuration
 - Complete physical-device passkey proof and real Neon runtime-role attestation
@@ -146,7 +146,7 @@ CI follow-up 2:
 
 Set live `LEGAL_*` to the same-origin technical-beta documents
 (`/api/legal/terms/technical-beta-v1` and
-`/api/legal/privacy/technical-beta-v1`), then deploy `d465b26` to Cloud Run
+`/api/legal/privacy/technical-beta-v1`), then deploy `65455e1` to Cloud Run
 with `GIT_SHA` set. Verify `/api/readiness`, `/api/version`, and `/app/` from
 the same origin. Replace those documents with counsel-reviewed Terms/Privacy
 before a commercial launch.
