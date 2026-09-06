@@ -238,7 +238,7 @@ export class PostgresStatementImportStore implements StatementImportStore {
       if (!statement || statement.status !== 'ready') return null;
       const pending = await client.query(`SELECT 1 FROM statement_import_rows WHERE user_id=$1 AND import_id=$2 AND decision='needs_review' LIMIT 1`, [userId, importId]);
       if ((pending.rowCount ?? 0) > 0) throw new Error('STATEMENT_REVIEW_REQUIRED');
-      await client.query(`INSERT INTO import_batches (id,user_id,account_id,filename,status,rows_total,rows_imported,rows_duplicate,rows_invalid,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`, [batch.id,userId,batch.accountId,batch.filename,batch.status,batch.rowsTotal,batch.rowsImported,batch.rowsDuplicate,batch.rowsInvalid,batch.createdAt]);
+      await client.query(`INSERT INTO import_batches (id,user_id,account_id,statement_import_id,filename,status,rows_total,rows_imported,rows_duplicate,rows_invalid,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`, [batch.id,userId,batch.accountId,batch.statementImportId ?? importId,batch.filename,batch.status,batch.rowsTotal,batch.rowsImported,batch.rowsDuplicate,batch.rowsInvalid,batch.createdAt]);
       const inserted = await insertTransactions(client, userId, transactions);
       if (inserted !== transactions.length) {
         throw new Error('STATEMENT_DUPLICATE');
