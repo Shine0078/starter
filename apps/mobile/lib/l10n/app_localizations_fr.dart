@@ -2202,20 +2202,4 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get settingsPasskeysContinue => 'Continuer';
-
-  @override
-  String get settingsDarkModeTitle => 'Mode sombre';
-
-  @override
-  String get settingsDarkModeOn => 'Toujours utiliser l\'apparence sombre.';
-
-  @override
-  String get settingsDarkModeOff => 'Toujours utiliser l\'apparence claire.';
-
-  @override
-  String get settingsDarkModeSystem => 'Suivre l\'apparence de votre appareil.';
-
-  @override
-  String get settingsDarkModeUseDevice =>
-      'Utiliser l\'apparence de l\'appareil';
 }

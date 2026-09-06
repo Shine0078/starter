@@ -2169,19 +2169,4 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsPasskeysContinue => 'Continue';
-
-  @override
-  String get settingsDarkModeTitle => 'Dark mode';
-
-  @override
-  String get settingsDarkModeOn => 'Always use the dark appearance.';
-
-  @override
-  String get settingsDarkModeOff => 'Always use the light appearance.';
-
-  @override
-  String get settingsDarkModeSystem => 'Follow your device appearance.';
-
-  @override
-  String get settingsDarkModeUseDevice => 'Use device appearance';
 }

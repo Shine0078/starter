@@ -4,8 +4,8 @@
 /// what it is for; `green` says what it is, and then somebody uses green for a
 /// success toast and the two drift apart.
 ///
-/// These live in a [ThemeExtension] so light and dark each supply their own
-/// values and no widget has to ask which mode it is in.
+/// These live in a [ThemeExtension] so financial semantics stay centralized
+/// and no widget has to choose its own colors.
 ///
 /// **Colour is never the only signal** (MISSION2 §41). Every place these are
 /// used also carries a sign, an arrow, or a word, because roughly one in twelve
@@ -122,41 +122,6 @@ class FinColors extends ThemeExtension<FinColors> {
     heroDebt: Color(0xFFFFD0C9),
   );
 
-  /// Not the light palette dimmed. Saturated reds and greens vibrate against a
-  /// dark background and fail contrast; these are lifted in lightness and
-  /// pulled back in chroma so they stay legible at 4.5:1 on the dark surface.
-  static const dark = FinColors(
-    income: Color(0xFF62D9AE),
-    incomeContainer: Color(0xFF00513F),
-    onIncomeContainer: Color(0xFFBFF2DD),
-    expense: Color(0xFFFFB4AB),
-    expenseContainer: Color(0xFF690005),
-    onExpenseContainer: Color(0xFFFFDAD5),
-    warning: Color(0xFFFFC46B),
-    warningContainer: Color(0xFF5C3A00),
-    onWarningContainer: Color(0xFFFFEBD1),
-    positiveTrend: Color(0xFF62D9AE),
-    negativeTrend: Color(0xFFFFB4AB),
-    neutral: Color(0xFFA8AEBB),
-    skeleton: Color(0xFF232A36),
-    skeletonHighlight: Color(0xFF2E3746),
-    chartSeries: [
-      Color(0xFF34D399),
-      Color(0xFF60A5FA),
-      Color(0xFFA78BFA),
-      Color(0xFFFBBF24),
-      Color(0xFFF472B6),
-      Color(0xFF2DD4BF),
-      Color(0xFF94A3B8),
-      Color(0xFFF59E0B),
-    ],
-    heroGradientStart: Color(0xFF0F3D34),
-    heroGradientEnd: Color(0xFF0E3A42),
-    onHero: Color(0xFFE4FFF2),
-    onHeroMuted: Color(0xFFA8D9C5),
-    heroDebt: Color(0xFFFFC9C0),
-  );
-
   @override
   FinColors copyWith({
     Color? income,
@@ -209,20 +174,27 @@ class FinColors extends ThemeExtension<FinColors> {
     return FinColors(
       income: Color.lerp(income, other.income, t)!,
       incomeContainer: Color.lerp(incomeContainer, other.incomeContainer, t)!,
-      onIncomeContainer: Color.lerp(onIncomeContainer, other.onIncomeContainer, t)!,
+      onIncomeContainer:
+          Color.lerp(onIncomeContainer, other.onIncomeContainer, t)!,
       expense: Color.lerp(expense, other.expense, t)!,
-      expenseContainer: Color.lerp(expenseContainer, other.expenseContainer, t)!,
-      onExpenseContainer: Color.lerp(onExpenseContainer, other.onExpenseContainer, t)!,
+      expenseContainer:
+          Color.lerp(expenseContainer, other.expenseContainer, t)!,
+      onExpenseContainer:
+          Color.lerp(onExpenseContainer, other.onExpenseContainer, t)!,
       warning: Color.lerp(warning, other.warning, t)!,
-      warningContainer: Color.lerp(warningContainer, other.warningContainer, t)!,
-      onWarningContainer: Color.lerp(onWarningContainer, other.onWarningContainer, t)!,
+      warningContainer:
+          Color.lerp(warningContainer, other.warningContainer, t)!,
+      onWarningContainer:
+          Color.lerp(onWarningContainer, other.onWarningContainer, t)!,
       positiveTrend: Color.lerp(positiveTrend, other.positiveTrend, t)!,
       negativeTrend: Color.lerp(negativeTrend, other.negativeTrend, t)!,
       neutral: Color.lerp(neutral, other.neutral, t)!,
       skeleton: Color.lerp(skeleton, other.skeleton, t)!,
-      skeletonHighlight: Color.lerp(skeletonHighlight, other.skeletonHighlight, t)!,
+      skeletonHighlight:
+          Color.lerp(skeletonHighlight, other.skeletonHighlight, t)!,
       chartSeries: t < 0.5 ? chartSeries : other.chartSeries,
-      heroGradientStart: Color.lerp(heroGradientStart, other.heroGradientStart, t)!,
+      heroGradientStart:
+          Color.lerp(heroGradientStart, other.heroGradientStart, t)!,
       heroGradientEnd: Color.lerp(heroGradientEnd, other.heroGradientEnd, t)!,
       onHero: Color.lerp(onHero, other.onHero, t)!,
       onHeroMuted: Color.lerp(onHeroMuted, other.onHeroMuted, t)!,
