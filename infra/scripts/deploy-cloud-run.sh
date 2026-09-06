@@ -17,7 +17,14 @@ PROJECT_ID="${GOOGLE_CLOUD_PROJECT:-$(gcloud config get-value project 2>/dev/nul
 REGION="${CLOUD_RUN_REGION:-us-central1}"
 REPOSITORY="${ARTIFACT_REPOSITORY:-finverse}"
 SERVICE="${CLOUD_RUN_SERVICE:-finverse}"
-IMAGE="${FINVERSE_IMAGE:-${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${SERVICE}:$(git rev-parse --short HEAD)}"
+IMAGE_REPOSITORY="${FINVERSE_IMAGE_REPOSITORY:-${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${SERVICE}}"
+
+case "${IMAGE_REPOSITORY}" in
+  *:*|*@*)
+    echo "FINVERSE_IMAGE_REPOSITORY must be an untagged Artifact Registry repository path." >&2
+    exit 1
+    ;;
+esac
 
 if [[ -z "${PROJECT_ID}" || "${PROJECT_ID}" == "(unset)" ]]; then
   echo "No Google Cloud project is selected. Run: gcloud config set project PROJECT_ID" >&2
@@ -49,7 +56,7 @@ yaml_value() {
 for key in PLAID_CLIENT_ID PLAID_SECRET PLAID_ENVIRONMENT PLAID_COUNTRIES PLAID_WEBHOOK_URL PLAID_WEB_REDIRECT_URI BANK_TOKEN_ENCRYPTION_KEY; do
   value="$(yaml_value "${key}")"
   case "${value}" in
-    ""|*REPLACE_*|*replace-me*)
+    ""|*REPLACE_*|REPLACE_WITH_*|*replace-me*|replace-me)
       echo "${key} must be configured in ${ENV_FILE}; refusing a bank-disabled deployment." >&2
       exit 1
       ;;
@@ -75,16 +82,14 @@ cleanup_runtime_env() {
   fi
 }
 trap cleanup_runtime_env EXIT
-grep -v '^DATABASE_URL:' "${ENV_FILE}" > "${RUNTIME_ENV_FILE}"
+grep -Ev '^(DATABASE_URL|GIT_SHA):' "${ENV_FILE}" > "${RUNTIME_ENV_FILE}"
 if ! grep -q '^DATABASE_APP_URL:' "${RUNTIME_ENV_FILE}"; then
   echo "DATABASE_APP_URL is required in ${ENV_FILE}." >&2
   exit 1
 fi
 
 SHA="$(git rev-parse HEAD)"
-if ! grep -q '^GIT_SHA:' "${RUNTIME_ENV_FILE}"; then
-  printf 'GIT_SHA: "%s"\n' "${SHA}" >> "${RUNTIME_ENV_FILE}"
-fi
+IMAGE_TAG="${IMAGE_REPOSITORY}:${SHA}"
 
 gcloud artifacts repositories describe "${REPOSITORY}" \
   --location="${REGION}" --project="${PROJECT_ID}" >/dev/null 2>&1 || \
@@ -92,15 +97,21 @@ gcloud artifacts repositories describe "${REPOSITORY}" \
     --repository-format=docker --location="${REGION}" \
     --description="FINVERSE container images" --project="${PROJECT_ID}"
 
-if gcloud artifacts docker images describe "${IMAGE}" \
-  --project="${PROJECT_ID}" >/dev/null 2>&1; then
-  echo "Reusing existing image ${IMAGE}."
-else
-  gcloud builds submit . \
-    --project="${PROJECT_ID}" \
-    --config=cloudbuild.yaml \
-    --substitutions="_IMAGE=${IMAGE},_GIT_SHA=$(git rev-parse HEAD)"
+# Always build the checked-out commit. A mutable tag must never let old bytes
+# inherit the current runtime GIT_SHA and pass the identity readback.
+gcloud builds submit . \
+  --project="${PROJECT_ID}" \
+  --config=cloudbuild.yaml \
+  --substitutions="_IMAGE=${IMAGE_TAG},_GIT_SHA=${SHA}"
+
+DIGEST="$(gcloud artifacts docker images describe "${IMAGE_TAG}" \
+  --project="${PROJECT_ID}" --format='value(image_summary.digest)')"
+if [[ ! "${DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+  echo "Could not resolve an immutable digest for ${IMAGE_TAG}." >&2
+  exit 1
 fi
+IMAGE="${IMAGE_REPOSITORY}@${DIGEST}"
+echo "Deploying immutable image ${IMAGE}."
 
 # Migrations run once as a Cloud Run Job with the schema-owner URL. The
 # application service receives the same env file but never runs migrations on

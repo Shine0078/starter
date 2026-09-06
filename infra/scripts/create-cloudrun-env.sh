@@ -33,17 +33,63 @@ fi
 read -r -p "From address [FINVERSE <${SMTP_USER}>]: " EMAIL_FROM
 EMAIL_FROM="${EMAIL_FROM:-FINVERSE <${SMTP_USER}>}"
 
+# Bank linking is part of the production candidate, so do not generate a
+# Cloud Run env file that silently disables Plaid. Read the credential values
+# without echoing them and keep them under prefixed shell variables until the
+# private YAML file is written.
+read -r -s -p "Plaid production client ID (hidden): " PLAID_CLIENT_ID
+echo
+if [[ -z "${PLAID_CLIENT_ID}" ]]; then
+  echo "A Plaid client ID is required." >&2
+  exit 1
+fi
+read -r -s -p "Plaid production secret (hidden): " PLAID_SECRET
+echo
+if [[ -z "${PLAID_SECRET}" ]]; then
+  echo "A Plaid secret is required." >&2
+  exit 1
+fi
+read -r -p "Plaid environment [production]: " PLAID_ENVIRONMENT
+PLAID_ENVIRONMENT="${PLAID_ENVIRONMENT:-production}"
+if [[ "${PLAID_ENVIRONMENT}" != "production" ]]; then
+  echo "This script creates a production Cloud Run env file; PLAID_ENVIRONMENT must be production." >&2
+  exit 1
+fi
+read -r -p "Plaid countries [CA,US]: " PLAID_COUNTRIES
+PLAID_COUNTRIES="${PLAID_COUNTRIES:-CA,US}"
+read -r -p "Plaid HTTPS webhook URL: " PLAID_WEBHOOK_URL
+if [[ "${PLAID_WEBHOOK_URL}" != https://* ]]; then
+  echo "A Plaid HTTPS webhook URL is required for production." >&2
+  exit 1
+fi
+read -r -p "Plaid HTTPS web redirect URI: " PLAID_WEB_REDIRECT_URI
+if [[ "${PLAID_WEB_REDIRECT_URI}" != https://* ]]; then
+  echo "A Plaid HTTPS web redirect URI is required for production web linking." >&2
+  exit 1
+fi
+read -r -p "Plaid iOS Universal Link (optional): " PLAID_IOS_REDIRECT_URI
+read -r -p "Apple Developer Team ID (optional): " IOS_TEAM_ID
+
 export FINVERSE_OWNER_URL="${OWNER_URL}"
 export FINVERSE_APP_PASSWORD="$(openssl rand -hex 24)"
 export FINVERSE_JWT_SECRET="$(node -e "process.stdout.write(require('crypto').randomBytes(48).toString('base64url'))")"
 export FINVERSE_MFA_KEY="$(node -e "process.stdout.write(require('crypto').randomBytes(32).toString('base64'))")"
 export FINVERSE_BANK_KEY="$(node -e "process.stdout.write(require('crypto').randomBytes(32).toString('base64'))")"
+export FINVERSE_STATEMENT_KEY="$(node -e "process.stdout.write(require('crypto').randomBytes(32).toString('base64'))")"
 export FINVERSE_SMTP_HOST="${SMTP_HOST}"
 export FINVERSE_SMTP_PORT="${SMTP_PORT}"
 export FINVERSE_SMTP_SECURE="${SMTP_SECURE}"
 export FINVERSE_SMTP_USER="${SMTP_USER}"
 export FINVERSE_SMTP_PASSWORD="${SMTP_PASSWORD}"
 export FINVERSE_EMAIL_FROM="${EMAIL_FROM}"
+export FINVERSE_PLAID_CLIENT_ID="${PLAID_CLIENT_ID}"
+export FINVERSE_PLAID_SECRET="${PLAID_SECRET}"
+export FINVERSE_PLAID_ENVIRONMENT="${PLAID_ENVIRONMENT}"
+export FINVERSE_PLAID_COUNTRIES="${PLAID_COUNTRIES}"
+export FINVERSE_PLAID_WEBHOOK_URL="${PLAID_WEBHOOK_URL}"
+export FINVERSE_PLAID_WEB_REDIRECT_URI="${PLAID_WEB_REDIRECT_URI}"
+export FINVERSE_PLAID_IOS_REDIRECT_URI="${PLAID_IOS_REDIRECT_URI}"
+export FINVERSE_IOS_TEAM_ID="${IOS_TEAM_ID}"
 unset OWNER_URL
 
 mkdir -p "$(dirname "${OUT_FILE}")"
@@ -83,6 +129,7 @@ const values = {
   JWT_SECRET: process.env.FINVERSE_JWT_SECRET,
   MFA_ENCRYPTION_KEY: process.env.FINVERSE_MFA_KEY,
   BANK_TOKEN_ENCRYPTION_KEY: process.env.FINVERSE_BANK_KEY,
+  STATEMENT_IMPORT_ENCRYPTION_KEY: process.env.FINVERSE_STATEMENT_KEY,
   HIBP_PASSWORD_CHECK: 'required',
   SMTP_HOST: process.env.FINVERSE_SMTP_HOST,
   SMTP_PORT: process.env.FINVERSE_SMTP_PORT,
@@ -90,14 +137,28 @@ const values = {
   SMTP_USER: process.env.FINVERSE_SMTP_USER,
   SMTP_PASSWORD: process.env.FINVERSE_SMTP_PASSWORD,
   EMAIL_FROM: process.env.FINVERSE_EMAIL_FROM,
+  PLAID_CLIENT_ID: process.env.FINVERSE_PLAID_CLIENT_ID,
+  PLAID_SECRET: process.env.FINVERSE_PLAID_SECRET,
+  PLAID_ENVIRONMENT: process.env.FINVERSE_PLAID_ENVIRONMENT,
+  PLAID_COUNTRIES: process.env.FINVERSE_PLAID_COUNTRIES,
+  PLAID_WEBHOOK_URL: process.env.FINVERSE_PLAID_WEBHOOK_URL,
+  PLAID_WEB_REDIRECT_URI: process.env.FINVERSE_PLAID_WEB_REDIRECT_URI,
 };
+if (process.env.FINVERSE_PLAID_IOS_REDIRECT_URI) {
+  values.PLAID_IOS_REDIRECT_URI = process.env.FINVERSE_PLAID_IOS_REDIRECT_URI;
+}
+if (process.env.FINVERSE_IOS_TEAM_ID) {
+  values.IOS_TEAM_ID = process.env.FINVERSE_IOS_TEAM_ID;
+}
 for (const [key, value] of Object.entries(values)) {
   if (value === undefined) throw new Error(`Missing generated value for ${key}`);
   console.log(`${key}: ${JSON.stringify(value)}`);
 }
 NODE
 
-unset FINVERSE_OWNER_URL FINVERSE_APP_PASSWORD FINVERSE_JWT_SECRET FINVERSE_MFA_KEY FINVERSE_BANK_KEY
+unset FINVERSE_OWNER_URL FINVERSE_APP_PASSWORD FINVERSE_JWT_SECRET FINVERSE_MFA_KEY FINVERSE_BANK_KEY FINVERSE_STATEMENT_KEY
 unset FINVERSE_SMTP_HOST FINVERSE_SMTP_PORT FINVERSE_SMTP_SECURE FINVERSE_SMTP_USER FINVERSE_SMTP_PASSWORD FINVERSE_EMAIL_FROM
+unset FINVERSE_PLAID_CLIENT_ID FINVERSE_PLAID_SECRET FINVERSE_PLAID_ENVIRONMENT FINVERSE_PLAID_COUNTRIES
+unset FINVERSE_PLAID_WEBHOOK_URL FINVERSE_PLAID_WEB_REDIRECT_URI FINVERSE_PLAID_IOS_REDIRECT_URI FINVERSE_IOS_TEAM_ID
 echo "Created ${OUT_FILE} with mode 600. It contains secrets; never commit or paste it."
-echo "Set LEGAL_TERMS_VERSION, LEGAL_TERMS_URL, LEGAL_PRIVACY_VERSION, and LEGAL_PRIVACY_URL to reviewed HTTPS documents before collecting real-user data. Placeholder example.com hosts are refused."
+echo "Set LEGAL_* to the same-origin technical-beta documents at /api/legal/terms/technical-beta-v1 and /api/legal/privacy/technical-beta-v1 before collecting tester data. Placeholder example.com hosts are refused. Replace those documents with counsel-reviewed Terms/Privacy before a commercial launch."

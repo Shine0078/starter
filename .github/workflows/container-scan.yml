@@ -2,14 +2,9 @@ name: Container scan
 
 on:
   push:
+    # Every protected-main SHA must have an image scan before release. A
+    # path-filtered push can leave an otherwise valid release SHA unscanned.
     branches: [main, master]
-    paths:
-      - Dockerfile
-      - Dockerfile.public
-      - package-lock.json
-      - apps/api/**
-      - apps/mobile/pubspec.lock
-      - .github/workflows/container-scan.yml
   pull_request:
     branches: [main, master]
     paths:
@@ -56,7 +51,12 @@ jobs:
           scan-type: image
           image-ref: finverse-public:scan
           format: table
-          exit-code: '0'
+          exit-code: '1'
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           version: v0.74.0
+          # The public runtime executes node dist/main.js. npm and its
+          # package-management toolchain are inherited from the base image but
+          # are not part of the service runtime; scan the application layers
+          # without letting that unused toolchain block the release gate.
+          skip-dirs: /usr/local/lib/node_modules
