@@ -39,6 +39,8 @@ authoritative detail; `CURRENT_STATUS.md` records current gates and blockers.
   durable, and restore drills decrypt only into temporary files.
 - Public edge images are digest-pinned, and release publication now requires a
   successful blocking Container scan in addition to the exact-SHA CI run.
+- API release images now publish SBOM/provenance attestations and receive a
+  keyless Cosign signature for the exact pushed digest.
 - Flutter CI/release builds pin the toolchain to Flutter 3.44.9.
 
 ### Verified

@@ -42,7 +42,9 @@ durable-statement-worker milestones.
   exit; production recipient custody and restore-key controls remain external.
 - Public and Oracle edge images are pinned to immutable Caddy/Nginx digests;
   the public container scan is blocking and the release gate requires both the
-  CI and Container scan workflows for the exact candidate SHA.
+  CI and Container scan workflows for the exact candidate SHA. API images are
+  now published with SBOM/provenance attestations and signed by immutable
+  digest through keyless Cosign/OIDC.
 - `npm audit --omit=dev` reported zero known production vulnerabilities for both
   current `main` and the integration branch.
 
@@ -80,7 +82,7 @@ durable-statement-worker milestones.
   recovery and bounded workers. Production OCR/load evidence and external
   queue/worker observability remain to be established.
 - Plaid production access, live SMTP delivery, Stripe production configuration,
-  domain association, signing, physical-device testing, cloud IAM, encrypted
+  domain association, mobile signing, physical-device testing, cloud IAM, encrypted
   off-host backups, and disaster-recovery evidence require owner or external
   infrastructure action.
 

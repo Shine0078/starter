@@ -38,8 +38,9 @@
 - Registered domain/TLS and Android/iOS association readback.
 - Android/iOS signing custody, App Store/Play approvals, and physical-device
   passkey/provider testing.
-- Production Cloud Run/Neon role, IAM, secret-manager, monitoring, and exact-SHA
-  readback.
+- Production Cloud Run/Neon role, IAM, secret-manager, monitoring, exact-SHA
+  readback, and verification that the deployed API digest has a valid Cosign
+  identity/signature.
 - Production age recipient/private-key custody, key rotation, off-host storage,
   and a recorded restore/disaster-recovery exercise. Local scripts now encrypt
   and restrict permissions, but production operations are not yet verified.
