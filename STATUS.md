@@ -11,7 +11,7 @@ Protected default branch: `main`
 
 ## Current commit SHA
 
-- Local `main`: `2c9bf81` (`fix(imports): link PostgreSQL approval batches to statements`).
+- Local `main`: `29d0ee7` (`fix(imports): exclude transfer credits from statement income`).
 - FINVERSE source, tests, migrations, mobile code, deployment controls, and
   documentation are committed. Three unrelated local artifact directories remain
   untracked and are intentionally excluded from release commits.
@@ -49,15 +49,21 @@ GitHub Pages and `finverse.onrender.com` are not the current API.
   and installable web/PWA artifacts all completed.
 
 Local verification on `main` (2026-09-06): API typecheck and production build
-passed; API in-memory suite passed (67 files, 891 tests, 9 skipped); fresh
-PostgreSQL suite passed (73 files, 1,076 tests) under the restricted runtime
+passed; API in-memory suite passed (68 files, 894 tests, 9 skipped); fresh
+PostgreSQL suite passed (74 files, 1,079 tests) under the restricted runtime
 role with forced RLS; the statement-import PostgreSQL E2E passed, including
 queued processing, approval, batch provenance, analytics updates, and `/auth/me`;
 Flutter analysis passed; all Flutter tests passed (119); Flutter web release
 build passed. Focused statement analysis/import/categorization/encryption tests
-passed (50/50). The candidate includes migrations 041-043 for ledger-to-source
+passed. The candidate includes migrations 041-043 for ledger-to-source
 provenance, safe document metadata, and authenticated encryption of staged
 statement text.
+
+The latest statement-analysis verification also covered bounded OCR fallback
+for scanned PDFs, numeric Excel date normalization, and two local sample card
+statement PDFs. One produced 15 rows and the other 71 rows, with parsed totals
+matching their visible statement summaries. The source documents were not added
+to the repository.
 
 ## Completed this session
 
@@ -92,7 +98,7 @@ CI follow-up 2:
 
 - Leave-one-out evaluation for the user-correction categorizer
 
-## Manual statement import (verified 2026-08-27)
+## Manual statement import (verified 2026-09-06)
 
 - CSV, XLSX, text-PDF, and PNG/JPEG/WEBP/TIFF/BMP uploads are authenticated,
   bounded, signature-checked, encrypted at rest, and staged for review. OCR is
@@ -108,15 +114,15 @@ CI follow-up 2:
   approval, batch provenance, and duplicate protection. No remote model-training
   path is used;
   user corrections feed only the same user's local classifier/rules.
-- Current extraction is durable and deliberately bounded. Scanned PDFs without
-  a text layer return a warning rather than guessed transactions; production
+- Current extraction is durable and deliberately bounded. Scanned PDFs now use a
+  bounded OCR fallback when the text layer has no transaction-shaped content;
   OCR/load evidence and external worker observability remain required before
   increasing limits for large-volume use. Source retention is time-bounded and
   user deletion preserves approved records and audit history.
 
 ## P0 remaining
 
-- Deploy the exact verified `main` SHA `2c9bf81` to Cloud Run with `GIT_SHA`,
+- Deploy the exact verified `main` SHA `29d0ee7` to Cloud Run with `GIT_SHA`,
   then verify `/api/readiness`, `/api/version`, and `/app/` from the same origin
 - Supply reviewed production legal URLs and live `WEBAUTHN_*` configuration
 - Complete physical-device passkey proof and real Neon runtime-role attestation
@@ -138,7 +144,7 @@ CI follow-up 2:
 
 Set live `LEGAL_*` to the same-origin technical-beta documents
 (`/api/legal/terms/technical-beta-v1` and
-`/api/legal/privacy/technical-beta-v1`), then deploy `2c9bf81` to Cloud Run
+`/api/legal/privacy/technical-beta-v1`), then deploy `29d0ee7` to Cloud Run
 with `GIT_SHA` set. Verify `/api/readiness`, `/api/version`, and `/app/` from
 the same origin. Replace those documents with counsel-reviewed Terms/Privacy
 before a commercial launch.

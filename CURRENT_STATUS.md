@@ -1,16 +1,16 @@
 # FINVERSE Current Status
 
 **Verified:** 2026-09-06
-**Verified local main:** `2c9bf81`.
+**Verified local main:** `29d0ee7`.
 **Protected/public deployment:** requires an owner-controlled Cloud Run deploy
 and `/api/version` verification before it can be called current.
 
 ## Verified Today
 
 - API TypeScript typecheck and production build on local `main`: passed.
-- API in-memory suite on local `main`: 67 files passed, 891 tests passed, 9
+- API in-memory suite on local `main`: 68 files passed, 894 tests passed, 9
   tests skipped because they require PostgreSQL.
-- API PostgreSQL suite on a fresh embedded cluster: 73 files and 1,076 tests
+- API PostgreSQL suite on a fresh embedded cluster: 74 files and 1,079 tests
   passed using the restricted runtime role and forced RLS.
 - The fresh PostgreSQL test cluster applied all 43 numbered migrations and
   provisioned `finverse_app`; migration repeat/idempotency is also a blocking
@@ -23,7 +23,12 @@ and `/api/version` verification before it can be called current.
 - Full Flutter test suite: 119 tests passed; Flutter web release build: passed.
 - Flutter Android release APK build: passed (`app-release.apk`).
 - Manual statement focused tests on local `main`: extraction, summaries,
-  encryption, card-payment handling, and authenticated review flow passed.
+  scanned-PDF OCR fallback, Excel date normalization, encryption,
+  card-payment handling, and authenticated review flow passed.
+- Two local sample card-statement PDFs were analyzed end to end without
+  warnings: the text-layer statement produced 15 rows and the second statement
+  produced 71 rows. Their parsed debit/credit totals matched the visible
+  statement summaries. The source documents remain outside the repository.
 - Durable statement queue tests passed under both in-memory and PostgreSQL
   restricted-role paths, including stale-lease recovery and the production
   `202` upload contract.
@@ -58,7 +63,7 @@ and `/api/version` verification before it can be called current.
 
 ## Not Live In Production Yet
 
-- Local `main` SHA `2c9bf81` has passed all locally feasible API/database/mobile
+- Local `main` SHA `29d0ee7` has passed all locally feasible API/database/mobile
   gates, but it has not yet been deployed to the canonical Cloud Run service.
 - The canonical Cloud Run URL is stale: `/api/version` currently returns 404
   and `/app/` serves an older dark bundle. The local preview at
@@ -73,7 +78,7 @@ and `/api/version` verification before it can be called current.
   resource bounds, and shared-expense invitation/consent risks. Actor,
   non-admin write paths, direct split-membership deletes, invitation consent,
   revocation, and balance-checked removal are now hardened on local `main`. The
-  sealed report has not been rerun against `2c9bf81`. Backup scripts now fail closed without
+  sealed report has not been rerun against `29d0ee7`. Backup scripts now fail closed without
   age encryption, but production key custody is not locally verifiable.
 - Manual document analysis now has a durable, forced-RLS queue with stale-lease
   recovery, bounded workers, ZIP expansion limits, source retention expiry, and
