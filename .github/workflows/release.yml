@@ -130,7 +130,8 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$DIGEST"
-          cosign sign --yes "${IMAGE}@${DIGEST}"
+          IMAGE_REF=$(printf '%s' "$IMAGE" | tr '[:upper:]' '[:lower:]')
+          cosign sign --yes "${IMAGE_REF}@${DIGEST}"
 
   android:
     name: Build Android release APK
