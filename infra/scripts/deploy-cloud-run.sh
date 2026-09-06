@@ -29,8 +29,6 @@ if [[ ! -f "${ENV_FILE}" ]]; then
   exit 1
 fi
 
-<<<<<<< Updated upstream
-=======
 # A Cloud Run process without Plaid credentials is healthy but cannot connect
 # any bank. Fail before building or deploying that misleading state. Values
 # are inspected only for presence/placeholders; never print them.
@@ -62,7 +60,6 @@ if [[ "$(yaml_value PLAID_ENVIRONMENT)" != "production" ]]; then
   exit 1
 fi
 
->>>>>>> Stashed changes
 # The migration job needs the schema-owner URL; the serving process must not
 # receive it. Build a private, short-lived runtime env file containing only the
 # least-privileged application URL and the ordinary service settings.
