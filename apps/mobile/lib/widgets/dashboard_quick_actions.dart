@@ -16,6 +16,7 @@ class DashboardQuickActions extends StatelessWidget {
     required this.onTransactions,
     required this.onPlanning,
     required this.onAnalytics,
+    required this.onImportStatement,
     super.key,
   });
 
@@ -24,6 +25,7 @@ class DashboardQuickActions extends StatelessWidget {
   final VoidCallback onTransactions;
   final VoidCallback onPlanning;
   final VoidCallback onAnalytics;
+  final VoidCallback onImportStatement;
 
   @override
   Widget build(BuildContext context) {
@@ -48,6 +50,11 @@ class DashboardQuickActions extends StatelessWidget {
         icon: Icons.insights_outlined,
         label: 'Explore reports',
         onPressed: onAnalytics,
+      ),
+      _Action(
+        icon: Icons.upload_file_outlined,
+        label: 'Upload statement',
+        onPressed: onImportStatement,
       ),
     ];
 

@@ -19,6 +19,7 @@ import 'bank_connections_screen.dart';
 import 'notifications_screen.dart';
 import 'planning_screen.dart';
 import 'settings_screen.dart';
+import 'statement_import_screen.dart';
 import 'subscriptions_screen.dart';
 import 'transaction_detail_screen.dart';
 import 'transactions_screen.dart';
@@ -531,6 +532,9 @@ class _DashboardScreenState extends State<DashboardScreen>
       )),
       onAnalytics: () => Navigator.of(context).push(MaterialPageRoute(
         builder: (_) => AnalyticsScreen(api: widget.api),
+      )),
+      onImportStatement: () => Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => StatementImportScreen(api: widget.api),
       )),
     );
     final dataQuality = (_dataQuality?.needsAttention == true)
