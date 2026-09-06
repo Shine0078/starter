@@ -1,13 +1,9 @@
 # FINVERSE Current Status
 
-**Verified:** 2026-09-05
-**Integration branch:** `codex/passkey-webauthn-p0` at local candidate SHA
-`e1d29c5`, including the statement-upload, light-theme, release-identity,
-parser-bound, retention/quota, split-authorization, split invitation-consent,
-balance-safe member-departure, duplicate-race, supply-chain, encrypted-backup,
-and durable-statement-worker milestones. The worktree is clean and matches its
-remote tracking ref.
-**Protected main observed:** `a21b3749164561db75f13f89cd3e9d9f7da07109`.
+**Verified:** 2026-09-06
+**Integration branch:** `codex/passkey-webauthn-p0` at `4601e7d`. Its changes
+were merged through PR #27.
+**Protected main observed:** `2dbbc1d3d29ba56a2149a63b8966eac7cf3272ee`.
 
 ## Verified Today
 
@@ -43,13 +39,14 @@ remote tracking ref.
   exit; production recipient custody and restore-key controls remain external.
 - Public and Oracle edge images are pinned to immutable Caddy/Nginx digests;
   the public container scan is blocking and the release gate requires both the
-  CI and Container scan workflows for the exact candidate SHA. API images are
-  now published with SBOM/provenance attestations and signed by immutable
-  digest through keyless Cosign/OIDC.
+  CI and Container scan workflows for the exact protected-main SHA. API images
+  are published with SBOM/provenance attestations and signed by immutable
+  digest through keyless Cosign/OIDC. Release run `34012247104` completed for
+  `2dbbc1d`.
 - `npm audit --omit=dev` reported zero known production vulnerabilities for both
   current `main` and the integration branch.
 
-## Integrated But Not Yet On Main
+## Integrated On Main
 
 - Encrypted manual statement import and review workflow.
 - Statement import migrations `031`, `032`, and durable queue migration `037`,
@@ -58,16 +55,19 @@ remote tracking ref.
 - First-use account creation from the statement picker.
 - Light-only Flutter theme.
 - Additional operations, provider, device, incident, and privacy documentation.
+- Release identity, supply-chain scanning, signed API image, Android artifact,
+  and installable web/PWA artifact gates.
 
 ## Not Live In Production Yet
 
-- The exact candidate SHA `e1d29c5` is pushed and its required CI, CodeQL,
-  dependency-review, and container-scan gates pass. It has not yet been merged
-  to protected `main` or published to the canonical Cloud Run service.
+- Protected `main` SHA `2dbbc1d` has passed CI, CodeQL, dependency review,
+  container scanning, and the release artifact workflow. It is published as a
+  signed API image and verified Android/web artifacts, but it has not yet been
+  deployed to the canonical Cloud Run service.
 - The canonical Cloud Run URL is stale: `/api/version` currently returns 404
-  and `/app/` serves an older dark bundle. The local candidate preview at
-  `http://localhost:3001/app/` is the only runtime verified against SHA
-  `e1d29c5` in this workstation session.
+  and `/app/` serves an older dark bundle. The local preview at
+  `http://localhost:3001/app/` is the only runtime verified in this workstation
+  session.
 - A repository-wide adversarial security scan is sealed for protected `main`
   with five validated findings (two high, three medium). The report covers
   release identity, backup confidentiality, WebAuthn parser bounds, and split

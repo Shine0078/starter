@@ -2,7 +2,7 @@
 
 Canonical current-state file. Older handovers are historical unless they match this file and the repository.
 
-Verified: 2026-09-05
+Verified: 2026-09-06
 
 ## Current branch
 
@@ -11,9 +11,9 @@ Protected default branch: `main`
 
 ## Current commit SHA
 
-- `main` / `origin/main`: the protected branch remains behind the candidate.
-- Working branch `codex/passkey-webauthn-p0` feature tip is `e1d29c5`, pushed to
-  its remote tracking ref. The candidate worktree is clean.
+- Protected `main` / `origin/main`: `2dbbc1d` (PR #27 merge).
+- Working branch `codex/passkey-webauthn-p0` remains at `4601e7d`; its release
+  workflow changes are included in protected `main`. The worktree is clean.
 
 ## Canonical deployment
 
@@ -32,21 +32,22 @@ GitHub Pages and `finverse.onrender.com` are not the current API.
 - Live `/api/version`: HTTP 404, proving the public URL is still an older image.
 - Live `/app/`: HTTP 200, but it is the older dark bundle and has no matching
   `/api/version` candidate identity. It must not be treated as the verified app.
-- Candidate preview: `http://localhost:3001/app/` with
-  `http://localhost:3001/api/version` reporting schema
-  `040_statement_import_retention.sql`; registration and `/api/auth/me` were
-  verified against this isolated in-memory runtime.
+- Local preview: `http://localhost:3001/app/` serves the light bundle and the
+  statement-import review flow; it is an isolated in-memory runtime and is not
+  the hosted deployment.
 - Live legal, Plaid, WebAuthn, SMTP, and Neon runtime-role settings remain
   external deployment configuration and are not inferred from local tests.
 
 ## Test results
 
-- Main CI on `eebfd1d`: success
-- PR #16 CI on `db0e879`: success (API, Flutter analyze/tests/Android/PWA, unsigned iOS, CodeQL, Trivy runtime image)
+- Main CI on `2dbbc1d`: success (`34011891405`)
+- Container scan on `2dbbc1d`: success (`34011891461`)
+- CodeQL on `2dbbc1d`: success (`34011891375`)
+- Release artifacts on `2dbbc1d`: success (`34012247104`); API image build,
+  SBOM/provenance, GHCR publication, keyless Cosign signing, Android release,
+  and installable web/PWA artifacts all completed.
 
-- Main CI on merge commit `a21b374`: success
-
-Local verification on the current candidate (2026-09-05): API typecheck/build
+Local verification on the current candidate (2026-09-06): API typecheck/build
 passed; API in-memory suite passed (66 files, 882 tests, 9 skipped); fresh
 PostgreSQL suite passed (72 files, 1,065 tests) under the restricted runtime
 role with forced RLS; Flutter analysis passed; Flutter tests passed (119);
@@ -111,7 +112,7 @@ CI follow-up 2:
 
 ## P0 remaining
 
-- Merge/deploy the exact CI-green candidate SHA `e1d29c5` to Cloud Run with
+- Deploy the exact CI-green protected-main SHA `2dbbc1d` to Cloud Run with
   `GIT_SHA`, then verify `/api/version` before calling the public URL current
 - Replace live legal URLs before real users
 - Configure live `WEBAUTHN_*`
@@ -131,4 +132,4 @@ CI follow-up 2:
 
 ## Exact next action
 
-Set live `LEGAL_*` to the same-origin technical-beta documents (`/api/legal/terms/technical-beta-v1` and `/api/legal/privacy/technical-beta-v1`), then deploy a CI-green SHA to Cloud Run with `GIT_SHA` set. Replace those documents with counsel-reviewed Terms/Privacy before a commercial launch.
+Set live `LEGAL_*` to the same-origin technical-beta documents (`/api/legal/terms/technical-beta-v1` and `/api/legal/privacy/technical-beta-v1`), then deploy `2dbbc1d` to Cloud Run with `GIT_SHA` set. Replace those documents with counsel-reviewed Terms/Privacy before a commercial launch.
