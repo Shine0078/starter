@@ -25,6 +25,13 @@ describe('statement analysis', () => {
     });
   });
 
+  it('uses the trailing four digits of a hyphenated deposit account number', () => {
+    expect(extractStatementDetails(
+      'CIBC Account Statement\nFor Aug 1 to Aug 31, 2026\nAccount number\n56-44798',
+      'CAD',
+    ).accountReferenceLast4).toBe('4798');
+  });
+
   it('detects the statement currency from a labelled amount column', () => {
     expect(detectStatementCurrency(
       'Neo Financial\nTransaction Date Posted Date Description Amount ($CAD)\nAug 08 Payment Received 989.95',
@@ -178,6 +185,78 @@ describe('statement analysis', () => {
     expect(result.rows.map((row) => row.direction)).toEqual(['debit', 'debit', 'debit']);
     expect(result.rows.map((row) => row.decision)).toEqual(['include', 'include', 'include']);
     expect(result.rows.map((row) => row.categorySlug)).toEqual(['subscriptions', 'transportation', 'fast_food']);
+  });
+
+  it('reconstructs multiline CIBC account rows across continuation pages', async () => {
+    const document = new PDFDocument({ margin: 36 });
+    const chunks: Buffer[] = [];
+    document.on('data', (chunk: Buffer) => chunks.push(chunk));
+    const done = new Promise<Buffer>((resolve) => document.on('end', () => resolve(Buffer.concat(chunks))));
+    const header = [
+      'CIBC Account Statement',
+      'For Aug 1 to Aug 31, 2026',
+      'Account number',
+      '56-44798',
+      'Transaction details',
+      'Date Description Withdrawals ($) Deposits ($) Balance ($)',
+    ];
+    document.fontSize(10).text([...header,
+      'Aug 1 Opening balance $0.00',
+      'Aug 5 E-TRANSFER 011666666636',
+      'Joyal Jose',
+      '50.00 50.00',
+      'Aug 13 VISA DEBIT RETAIL PURCHASE',
+      'Lyft *Temp Auth 622503481727',
+      '8.34 41.66',
+    ].join('\n'));
+    document.addPage().fontSize(10).text([
+      ...header,
+      'Aug 13 Balance forward $41.66',
+      'Aug 14 PAY',
+      '10692242497',
+      'GEODIS FF CANADA LTD',
+      '1,295.37 1,337.03',
+      'Aug 17 INTERNET BILL PAY 000000202027',
+      'MASTERCARD, CAPITAL ONE',
+      '271.54 1,065.49',
+      'E-TRANSFER RECLAIM011677882812 300.00 1,365.49',
+    ].join('\n'));
+    document.addPage().fontSize(10).text([
+      ...header,
+      'Aug 17 Balance forward $1,365.49',
+      'Aug 31 SERVICE CHARGE',
+      'CAPPED MONTHLY FEE$16.95',
+      'RECORD-KEEPING N/A',
+      '16.95 1,348.54',
+      'SERVICE CHARGE DISCOUNT 16.95 1,365.49',
+      'Closing balance $1,365.49',
+      'Important: End of transaction details.',
+    ].join('\n'));
+    document.end();
+
+    const result = await analyzeStatement({
+      ...base,
+      currency: 'CAD',
+      filename: 'cibc-account-statement.pdf',
+      mimeType: 'application/pdf',
+      bytes: await done,
+    });
+
+    expect(result.rows).toHaveLength(7);
+    expect(result.rows.map((row) => row.amount)).toEqual([
+      5000, -834, 129537, -27154, 30000, -1695, 1695,
+    ]);
+    expect(result.rows.map((row) => row.postedAt)).toEqual([
+      '2026-08-05', '2026-08-13', '2026-08-14', '2026-08-17',
+      '2026-08-17', '2026-08-31', '2026-08-31',
+    ]);
+    expect(result.rows.map((row) => row.categorySlug)).toEqual([
+      'transfer', 'rideshare', 'salary', 'credit_card_payment',
+      'transfer', 'fees', 'refunds',
+    ]);
+    expect(result.documentDetails?.accountReferenceLast4).toBe('4798');
+    expect(result.rows[0]?.raw).toContain('Joyal Jose | 50.00 50.00');
+    expect(result.warnings).toEqual([]);
   });
 
   it('reads signed Neo-style card rows without counting card payments as income', async () => {

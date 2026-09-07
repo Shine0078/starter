@@ -359,7 +359,10 @@ export class StatementImportService {
 
   async summary(userId: string, id: string) {
     const found = await this.get(userId, id);
-    return summarizeStatementRows(found.rows);
+    return summarizeStatementRows(
+      found.rows,
+      found.statement.documentDetails?.currency ?? 'USD',
+    );
   }
 
   private async findRow(userId: string, importId: string, rowId: string): Promise<StatementRowRecord> {

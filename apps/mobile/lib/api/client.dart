@@ -1138,6 +1138,13 @@ class ApiClient implements BackgroundSyncClient {
     );
   }
 
+  Future<void> deleteStatementImport(String id) async {
+    await _send(
+      'DELETE',
+      '/imports/statements/${Uri.encodeComponent(id)}',
+    );
+  }
+
   Future<List<NetWorthSnapshot>> netWorthHistory({
     required String currency,
     int limit = 365,

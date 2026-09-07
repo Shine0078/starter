@@ -13,6 +13,10 @@ function row(partial: Partial<StatementRowRecord>): StatementRowRecord {
 }
 
 describe('statement summaries', () => {
+  it('uses the detected statement currency when no rows were extracted', () => {
+    expect(summarizeStatementRows([], 'CAD').currency).toBe('CAD');
+  });
+
   it('excludes rejected rows and separates income, expenses, savings, and flags', () => {
     const summary = summarizeStatementRows([
       row({ amount: -100, categorySlug: 'groceries', flags: ['recurring_payment'] }),

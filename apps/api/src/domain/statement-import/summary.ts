@@ -15,7 +15,10 @@ export interface StatementSummary {
   unusualCount: number;
 }
 
-export function summarizeStatementRows(rows: readonly StatementRowRecord[]): StatementSummary {
+export function summarizeStatementRows(
+  rows: readonly StatementRowRecord[],
+  fallbackCurrency = 'USD',
+): StatementSummary {
   const included = rows.filter((row) => row.decision === 'include' && row.amount !== null);
   const categories = new Map<string, { amount: number; count: number }>();
   let income = 0;
@@ -33,7 +36,7 @@ export function summarizeStatementRows(rows: readonly StatementRowRecord[]): Sta
     categories.set(row.categorySlug, { amount: previous.amount + Math.abs(amount), count: previous.count + 1 });
   }
   const dates = included.map((row) => row.postedAt).filter((value): value is string => value !== null).sort();
-  const currency = included[0]?.currency ?? rows[0]?.currency ?? 'USD';
+  const currency = included[0]?.currency ?? rows[0]?.currency ?? fallbackCurrency;
   return {
     currency,
     dateRange: dates.length ? { start: dates[0]!, end: dates[dates.length - 1]! } : null,

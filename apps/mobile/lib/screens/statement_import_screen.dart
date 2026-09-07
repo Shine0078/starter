@@ -601,6 +601,46 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
     }
   }
 
+  Future<void> _deleteEmptyImport() async {
+    final detail = _detail;
+    if (detail == null || detail.rows.isNotEmpty) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Remove empty import?'),
+        content: const Text(
+            'No transactions were saved from this attempt. Remove it so the statement can be analyzed again.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Remove import')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    setState(() => _working = true);
+    try {
+      await widget.api.deleteStatementImport(detail.statement.id);
+      if (!mounted) return;
+      setState(() {
+        _detail = null;
+        _summary = null;
+        _selected.clear();
+      });
+      await _loadAccounts();
+      if (mounted) {
+        _showMessage('Empty import removed. Choose the statement again.');
+      }
+    } catch (error) {
+      if (mounted) _showError(error);
+    } finally {
+      if (mounted) setState(() => _working = false);
+    }
+  }
+
   void _showError(Object error) => ScaffoldMessenger.of(context)
       .showSnackBar(SnackBar(content: Text(friendlyErrorMessage(error))));
 
@@ -713,6 +753,20 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
                 Text(
                     '${detail.statement.rowsTotal} rows · ${detail.statement.rowsNeedsReview} need review',
                     style: Theme.of(context).textTheme.bodySmall),
+                if (detail.statement.status == 'ready' && detail.rows.isEmpty)
+                  Card(
+                    margin: const EdgeInsets.only(top: 12),
+                    child: ListTile(
+                      leading: const Icon(Icons.error_outline),
+                      title: const Text('No transactions were extracted'),
+                      subtitle: const Text(
+                          'Remove this empty result, then choose the statement again to reanalyze it.'),
+                      trailing: TextButton(
+                        onPressed: _working ? null : _deleteEmptyImport,
+                        child: const Text('Remove empty import'),
+                      ),
+                    ),
+                  ),
                 if (_summary != null) _summaryView(_summary!),
                 const SizedBox(height: 8),
                 if (detail.statement.status == 'ready' && detail.rows.isNotEmpty) ...[
@@ -763,6 +817,7 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
                 const SizedBox(height: 12),
                 FilledButton.icon(
                     onPressed: _working ||
+                            detail.rows.isEmpty ||
                             detail.statement.rowsNeedsReview > 0 ||
                             detail.statement.status != 'ready'
                         ? null

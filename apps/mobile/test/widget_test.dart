@@ -2633,4 +2633,53 @@ void main() {
     expect(find.text('Include selected'), findsOneWidget);
     expect(find.text('Exclude selected'), findsOneWidget);
   });
+
+  testWidgets('statement import can remove an empty result for reanalysis',
+      (tester) async {
+    var deleted = false;
+    const statement =
+        '{"id":"stmt-empty","accountId":"acc-1","filename":"statement.pdf","mimeType":"application/pdf","format":"pdf","status":"ready","rowsTotal":0,"rowsIncluded":0,"rowsExcluded":0,"rowsNeedsReview":0,"createdAt":"2026-09-07T00:00:00Z"}';
+    final api = clientWith(MockClient((request) async {
+      if (request.method == 'GET' && request.url.path == '/api/accounts') {
+        return http.Response(
+            '[{"id":"acc-1","name":"CAD checking","type":"checking","mask":"manual","currency":"CAD","balanceCurrent":0,"balanceFormatted":"CA\$0.00","source":"manual"}]',
+            200);
+      }
+      if (request.method == 'GET' &&
+          request.url.path == '/api/imports/statements') {
+        return http.Response(deleted ? '[]' : '[$statement]', 200);
+      }
+      if (request.method == 'GET' &&
+          request.url.path == '/api/imports/statements/stmt-empty') {
+        return http.Response('{"statement":$statement,"rows":[]}', 200);
+      }
+      if (request.method == 'GET' &&
+          request.url.path == '/api/imports/statements/stmt-empty/summary') {
+        return http.Response(
+            '{"currency":"CAD","income":0,"expenses":0,"netCashFlow":0,"savings":0,"recurringCount":0,"duplicateCount":0,"unusualCount":0,"categoryTotals":[]}',
+            200);
+      }
+      if (request.method == 'DELETE' &&
+          request.url.path == '/api/imports/statements/stmt-empty') {
+        deleted = true;
+        return http.Response('', 204);
+      }
+      return http.Response('{}', 404);
+    }));
+
+    await tester.pumpWidget(statementImportHarness(api));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('statement.pdf'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No transactions were extracted'), findsOneWidget);
+
+    await tester.tap(find.text('Remove empty import'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Remove import'));
+    await tester.pumpAndSettle();
+
+    expect(deleted, isTrue);
+    expect(find.text('Previous imports'), findsNothing);
+  });
 }

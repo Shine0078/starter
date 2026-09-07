@@ -88,13 +88,23 @@ export function extractStatementDetails(text: string, currency: string): Stateme
     ['capital one', 'Capital One'],
   ].find(([pattern]) => new RegExp(pattern!, 'i').test(text))?.[1] ?? null;
 
-  const accountLine = lines.find((line) => /account number|card number|card account|••••/i.test(line) && /\d{4}/.test(line))
-    ?? lines.find((line) => {
-      const match = /^\D*(\d{4})\D*$/u.exec(line);
-      return Boolean(match && !/^20\d{2}$/.test(match[1]!));
-    });
-  const accountGroups = accountLine?.match(/\d{4}/g) ?? [];
-  const accountReferenceLast4 = accountGroups.at(-1) ?? null;
+  const accountLabelIndex = lines.findIndex((line) => /account number|card number|card account|••••/i.test(line));
+  const labelledAccountLine = accountLabelIndex < 0 ? '' : lines[accountLabelIndex]!;
+  const labelledAccountContext = /\d{4}/.test(labelledAccountLine)
+    ? labelledAccountLine
+    : accountLabelIndex < 0
+      ? ''
+      : lines.slice(accountLabelIndex, accountLabelIndex + 2).join(' ');
+  const accountLine = labelledAccountContext || (lines.find((line) => {
+    const digits = line.replace(/\D/g, '');
+    return digits.length >= 4 && digits.length <= 19 && !/^20\d{2}$/.test(digits);
+  }) ?? '');
+  const accountDigits = accountLine
+    .match(/(?:\d[\s-]*){4,}/g)
+    ?.map((candidate) => candidate.replace(/\D/g, ''))
+    .filter((candidate) => candidate.length >= 4)
+    .at(-1);
+  const accountReferenceLast4 = accountDigits?.slice(-4) ?? null;
 
   const statementDateMatch = /\bstatement\s+date\s*:?\s*([A-Za-z]{3,9}\s+\d{1,2},?\s+20\d{2})\b/i.exec(text);
   const statementDate = statementDateMatch ? parseLongDate(statementDateMatch[1]!) : null;
@@ -253,6 +263,12 @@ function parseTextRows(
   model: UserCorrectionClassifier,
 ): StatementRowDraft[] {
   const lines = text.split(/\r?\n/).map((line) => line.replace(/\s+/g, ' ').trim()).filter(Boolean);
+  // Deposit-account statements often separate a multiline description from
+  // an amount/balance pair and omit the date on subsequent same-day rows.
+  // Reconstruct those rows using exact balance arithmetic before trying the
+  // generic one-line parser.
+  const bankRows = parseBankAccountRows(lines, text, currency, rules, existing, model);
+  if (bankRows.length > 0) return bankRows;
   // Many card issuers put two textual dates and a positive charge amount on
   // each row (for example, "Aug 01 Aug 04 MERCHANT Restaurants 7.33").
   // Those amounts are debits even though they do not carry a minus sign. Parse
@@ -326,6 +342,121 @@ const CARD_CATEGORY_LABELS = [
   'Personal and Household Expenses', 'Professional and Financial Services',
   'Home and Office Improvement', 'Entertainment', 'Travel', 'Other',
 ];
+
+function parseBankAccountRows(
+  lines: readonly string[],
+  text: string,
+  currency: string,
+  rules: readonly CategorizationRule[],
+  existing: readonly Transaction[],
+  model: UserCorrectionClassifier,
+): StatementRowDraft[] {
+  if (!/\btransaction details\b/i.test(text)
+    || !/\bwithdrawals?\s*\([^)]*\)\s+deposits?\s*\([^)]*\)\s+balance\s*\(/i.test(text)
+    || !/\baccount statement\b/i.test(text)) return [];
+
+  const details = extractStatementDetails(text, currency);
+  const endDate = details.periodEnd ? new Date(`${details.periodEnd}T00:00:00Z`) : null;
+  const startDate = details.periodStart ? new Date(`${details.periodStart}T00:00:00Z`) : null;
+  const fallbackYear = findStatementYear(text);
+  const rows: StatementRowDraft[] = [];
+  const pendingDescription: string[] = [];
+  const monthPattern = Object.keys(MONTHS).join('|');
+  const datedLine = new RegExp(`^(${monthPattern})\\s+(\\d{1,2})(?:\\s+(.+))?$`, 'i');
+  const amountBalance = /^(.*?)(?:\$)?(\d[\d,]*\.\d{2})\s+(?:\$)?(\d[\d,]*\.\d{2})$/;
+  let inTransactions = false;
+  let postedAt: string | null = null;
+  let previousBalance: number | null = null;
+
+  const dateFor = (monthName: string, dayText: string): string | null => {
+    const month = MONTHS[monthName.toLowerCase()];
+    if (month === undefined) return null;
+    let year = fallbackYear;
+    if (startDate && endDate && startDate.getUTCFullYear() !== endDate.getUTCFullYear()) {
+      year = month >= startDate.getUTCMonth() + 1
+        ? startDate.getUTCFullYear()
+        : endDate.getUTCFullYear();
+    }
+    return buildTextDate(year, month, Number(dayText));
+  };
+
+  const setBalanceMarker = (line: string): boolean => {
+    if (!/\b(?:opening|balance forward|closing) balance\b/i.test(line)) return false;
+    const balanceText = /(?:\$)?(\d[\d,]*\.\d{2})\s*$/.exec(line)?.[1];
+    const balance = balanceText ? parseAmount(balanceText, currency) : null;
+    if (balance !== null) previousBalance = balance;
+    pendingDescription.length = 0;
+    return true;
+  };
+
+  for (let index = 0; index < lines.length && rows.length < MAX_ROWS; index += 1) {
+    let line = lines[index]!;
+    if (/^Transaction details/i.test(line)) {
+      inTransactions = true;
+      pendingDescription.length = 0;
+      continue;
+    }
+    if (!inTransactions) continue;
+    if (/^Important:/i.test(line)) break;
+    if (/^Date Description Withdrawals/i.test(line)
+      || /^\(continued on next page\)$/i.test(line)
+      || /^-- \d+ of \d+ --$/i.test(line)
+      || /^CIBC Account Statement/i.test(line)
+      || /^Account number:/i.test(line)
+      || /^Branch transit number:/i.test(line)
+      || /^\w+ PER-\d/i.test(line)) continue;
+
+    const dateMatch = datedLine.exec(line);
+    if (dateMatch) {
+      postedAt = dateFor(dateMatch[1]!, dateMatch[2]!);
+      pendingDescription.length = 0;
+      line = dateMatch[3]?.trim() ?? '';
+      if (!line) continue;
+    }
+    if (setBalanceMarker(line)) continue;
+
+    const pair = amountBalance.exec(line);
+    if (!pair) {
+      pendingDescription.push(line);
+      continue;
+    }
+
+    const unsignedAmount = parseAmount(pair[2]!, currency);
+    const endingBalance = parseAmount(pair[3]!, currency);
+    const inlineDescription = pair[1]!.trim();
+    const raw = [...pendingDescription, line].join(' | ');
+    const description = [...pendingDescription, inlineDescription]
+      .filter(Boolean)
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    pendingDescription.length = 0;
+    if (!description || unsignedAmount === null || endingBalance === null) {
+      if (endingBalance !== null) previousBalance = endingBalance;
+      continue;
+    }
+
+    let signedAmount: number | null = null;
+    if (previousBalance !== null) {
+      const isCredit = previousBalance + Math.abs(unsignedAmount) === endingBalance;
+      const isDebit = previousBalance - Math.abs(unsignedAmount) === endingBalance;
+      if (isCredit !== isDebit) signedAmount = isCredit ? Math.abs(unsignedAmount) : -Math.abs(unsignedAmount);
+    }
+    rows.push(textDraft({
+      sourceLine: index + 1,
+      raw,
+      postedAt,
+      amount: signedAmount,
+      currency,
+      description,
+      rules,
+      existing,
+      model,
+    }));
+    previousBalance = endingBalance;
+  }
+  return rows;
+}
 
 function parseCreditCardRows(
   lines: readonly string[],
@@ -412,7 +543,11 @@ function textDraft(input: {
   model: UserCorrectionClassifier;
 }): StatementRowDraft {
   const categorizedByMerchant = input.description
-    ? categorizeStatementDescriptor(input.description, { rules: input.rules, model: input.model })
+    ? categorizeStatementDescriptor(input.description, {
+      rules: input.rules,
+      model: input.model,
+      amount: input.amount,
+    })
     : null;
   const categorized = categorizedByMerchant?.categorySlug !== UNKNOWN_CATEGORY
     ? categorizedByMerchant
@@ -456,7 +591,11 @@ function textDraft(input: {
  */
 function categorizeStatementDescriptor(
   description: string,
-  options: { rules: readonly CategorizationRule[]; model: UserCorrectionClassifier },
+  options: {
+    rules: readonly CategorizationRule[];
+    model: UserCorrectionClassifier;
+    amount?: number | null;
+  },
 ): ReturnType<typeof categorizeDescriptor> {
   const categorized = categorizeDescriptor(description, options);
   if (categorized.categorySlug !== UNKNOWN_CATEGORY) return categorized;
@@ -471,13 +610,58 @@ function categorizeStatementDescriptor(
       reason: 'Identified as a payment toward a credit-card balance; excluded from income and spending.',
     };
   }
-  if (/\b(e transfer|etransfer|interac|transfer from|transfer to|internal transfer)\b/i.test(normalized)) {
+  if (/\b(e[- ]?transfer|etransfer|interac|transfer from|transfer to|internal transfer)\b/i.test(normalized)) {
     return {
       categorySlug: 'transfer',
       source: 'lexicon',
       confidence: 0.96,
       merchant: 'Account transfer',
       reason: 'Identified as money movement between accounts, not income or spending.',
+    };
+  }
+  if ((options.amount ?? 0) > 0 && /^pay\b/i.test(normalized)) {
+    return {
+      categorySlug: 'salary',
+      source: 'lexicon',
+      confidence: 0.78,
+      merchant: normalized.replace(/^pay\s+\d+\s*/i, '').trim() || 'Payroll deposit',
+      reason: 'Identified as a payroll-style bank deposit; review if this is not employment income.',
+    };
+  }
+  if ((options.amount ?? 0) > 0 && /\bservice charge discount\b/i.test(normalized)) {
+    return {
+      categorySlug: 'refunds',
+      source: 'lexicon',
+      confidence: 0.94,
+      merchant: 'Fee reversal',
+      reason: 'Identified as a reversal of a bank service charge.',
+    };
+  }
+  if ((options.amount ?? 0) < 0 && /\bservice charge\b/i.test(normalized)) {
+    return {
+      categorySlug: 'fees',
+      source: 'lexicon',
+      confidence: 0.96,
+      merchant: 'Bank service charge',
+      reason: 'Identified as a bank service charge.',
+    };
+  }
+  if ((options.amount ?? 0) < 0 && /\binternet bill pay\b.*\b(mastercard|capital one|visa)\b/i.test(normalized)) {
+    return {
+      categorySlug: 'credit_card_payment',
+      source: 'lexicon',
+      confidence: 0.96,
+      merchant: 'Credit card payment',
+      reason: 'Identified as a bill payment toward a credit-card balance.',
+    };
+  }
+  if ((options.amount ?? 0) > 0 && /\bdeposit\b/i.test(normalized)) {
+    return {
+      categorySlug: 'income',
+      source: 'lexicon',
+      confidence: 0.62,
+      merchant: 'Deposit',
+      reason: 'Identified as money deposited; review whether this is income or a transfer.',
     };
   }
   return categorized;
