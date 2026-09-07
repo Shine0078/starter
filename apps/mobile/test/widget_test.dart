@@ -2563,4 +2563,38 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Add account for this statement'), findsOneWidget);
   });
+
+  testWidgets('statement import selects all rows for one bulk decision',
+      (tester) async {
+    const detail = '{"statement":{"id":"stmt-1","accountId":"acc-1","filename":"july.csv","mimeType":"text/csv","format":"csv","status":"ready","rowsTotal":2,"rowsIncluded":2,"rowsExcluded":0,"rowsNeedsReview":0,"createdAt":"2026-08-01T00:00:00Z","documentDetails":{"currency":"CAD","periodStart":"2026-07-01","periodEnd":"2026-07-31"}},"rows":[{"id":"row-1","importId":"stmt-1","sourceLine":2,"description":"Grocery","amount":-1000,"currency":"CAD","direction":"debit","categorySlug":"groceries","categoryConfidence":0.9,"decision":"include","flags":[],"postedAt":"2026-07-01","isRecurring":false},{"id":"row-2","importId":"stmt-1","sourceLine":3,"description":"Transit","amount":-500,"currency":"CAD","direction":"debit","categorySlug":"transportation","categoryConfidence":0.9,"decision":"include","flags":[],"postedAt":"2026-07-02","isRecurring":false}]}';
+    final api = clientWith(MockClient((request) async {
+      if (request.method == 'GET' && request.url.path == '/api/accounts') {
+        return http.Response('[{"id":"acc-1","name":"CAD checking","type":"checking","mask":"manual","currency":"CAD","balanceCurrent":0,"balanceFormatted":"CA\$0.00","source":"manual"}]', 200);
+      }
+      if (request.method == 'GET' && request.url.path == '/api/imports/statements') {
+        return http.Response('[{"id":"stmt-1","accountId":"acc-1","filename":"july.csv","mimeType":"text/csv","format":"csv","status":"ready","rowsTotal":2,"rowsIncluded":2,"rowsExcluded":0,"rowsNeedsReview":0,"createdAt":"2026-08-01T00:00:00Z"}]', 200);
+      }
+      if (request.method == 'GET' && request.url.path == '/api/imports/statements/stmt-1') {
+        return http.Response(detail, 200);
+      }
+      if (request.method == 'GET' && request.url.path == '/api/imports/statements/stmt-1/summary') {
+        return http.Response('{"currency":"CAD","income":0,"expenses":1500,"netCashFlow":-1500,"savings":0,"recurringCount":0,"duplicateCount":0,"unusualCount":0,"categoryTotals":[]}', 200);
+      }
+      return http.Response('{}', 404);
+    }));
+
+    await tester.pumpWidget(statementImportHarness(api));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('july.csv'));
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('Select all transactions'), findsOneWidget);
+    await tester.ensureVisible(find.text('Select all transactions'));
+    await tester.pump();
+    await tester.tap(find.text('Select all transactions'));
+    await tester.pump();
+    expect(find.text('Include selected'), findsOneWidget);
+    expect(find.text('Exclude selected'), findsOneWidget);
+  });
 }
