@@ -206,6 +206,29 @@ export class PostgresStatementImportStore implements StatementImportStore {
     });
   }
 
+  async updateRowsDecision(userId: string, importId: string, rowIds: readonly string[], decision: StatementRowRecord['decision'], event: StatementImportEvent): Promise<StatementRowRecord[] | null> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const status = await isReady(client, userId, importId);
+      if (!status || rowIds.length === 0) return null;
+      const { rows } = await client.query<StatementRowDb>(
+        `SELECT ${ROW_COLUMNS} FROM statement_import_rows WHERE user_id=$1 AND import_id=$2 AND id = ANY($3::text[]) ORDER BY source_line, id FOR UPDATE`,
+        [userId, importId, [...new Set(rowIds)]],
+      );
+      if (rows.length !== new Set(rowIds).size) return null;
+      await client.query(
+        `UPDATE statement_import_rows SET decision=$4, edited_at=$5 WHERE user_id=$1 AND import_id=$2 AND id = ANY($3::text[])`,
+        [userId, importId, [...new Set(rowIds)], decision, event.createdAt],
+      );
+      await refreshCounts(client, userId, importId);
+      await insertEvent(client, userId, event);
+      const updated = await client.query<StatementRowDb>(
+        `SELECT ${ROW_COLUMNS} FROM statement_import_rows WHERE user_id=$1 AND import_id=$2 AND id = ANY($3::text[]) ORDER BY source_line, id`,
+        [userId, importId, [...new Set(rowIds)]],
+      );
+      return updated.rows.map((row) => toRow(row, this.cipher));
+    });
+  }
+
   async splitRow(userId: string, importId: string, rowId: string, parts: readonly StatementRowRecord[], event: StatementImportEvent): Promise<StatementRowRecord[] | null> {
     return withUserScope(this.pg, userId, async (client) => {
       const current = await getRow(client, userId, importId, rowId, this.cipher);

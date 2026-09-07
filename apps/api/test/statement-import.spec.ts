@@ -73,6 +73,36 @@ describe('manual statement imports', () => {
     expect(response.body.rows.every((row: { flags: string[]; decision: string }) => row.flags.includes('recurring_payment') && row.decision === 'include')).toBe(true);
   });
 
+  it('changes a selected set of rows in one audited bulk decision', async () => {
+    const signedIn = await user();
+    const response = await request(http)
+      .post('/api/imports/statements')
+      .set('Authorization', `Bearer ${signedIn.token}`)
+      .send({
+        accountId: signedIn.accountId,
+        filename: 'bulk-review.csv',
+        mimeType: 'text/csv',
+        contentBase64: Buffer.from(csv).toString('base64'),
+      })
+      .expect(201);
+    const id = response.body.statement.id as string;
+    const rowIds = (response.body.rows as Array<{ id: string }>).map((row) => row.id);
+
+    const excluded = await request(http)
+      .patch(`/api/imports/statements/${id}/rows`)
+      .set('Authorization', `Bearer ${signedIn.token}`)
+      .send({ rowIds, decision: 'exclude' })
+      .expect(200);
+    expect(excluded.body).toHaveLength(3);
+    expect(excluded.body.every((row: { decision: string }) => row.decision === 'exclude')).toBe(true);
+
+    const audit = await request(http)
+      .get(`/api/imports/statements/${id}/audit`)
+      .set('Authorization', `Bearer ${signedIn.token}`)
+      .expect(200);
+    expect(audit.body.some((event: { kind: string; detail: { rows?: number } }) => event.kind === 'row_edited' && event.detail.rows === 3)).toBe(true);
+  });
+
   it('supports edit, split, merge, approval, and duplicate identity protection', async () => {
     const signedIn = await user();
     const created = await request(http).post('/api/imports/statements').set('Authorization', `Bearer ${signedIn.token}`).send({ accountId: signedIn.accountId, filename: 'march.csv', mimeType: 'text/csv', contentBase64: Buffer.from(csv).toString('base64') }).expect(201);

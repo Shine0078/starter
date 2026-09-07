@@ -288,6 +288,13 @@ export interface StatementImportStore {
     patch: Partial<StatementRowRecord>,
     event: StatementImportEvent,
   ): Promise<StatementRowRecord | null>;
+  updateRowsDecision(
+    userId: string,
+    importId: string,
+    rowIds: readonly string[],
+    decision: StatementRowRecord['decision'],
+    event: StatementImportEvent,
+  ): Promise<StatementRowRecord[] | null>;
   splitRow(
     userId: string,
     importId: string,

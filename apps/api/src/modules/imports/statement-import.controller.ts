@@ -39,6 +39,12 @@ export class StatementImportController {
     return this.statements.editRow(userId, id, rowId, body);
   }
 
+  @Patch(':id/rows')
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  decideRows(@CurrentUser() userId: string, @Param('id') id: string, @Body() body: { rowIds?: unknown; decision?: unknown }) {
+    return this.statements.decideRows(userId, id, body);
+  }
+
   @Post(':id/rows/:rowId/split')
   split(@CurrentUser() userId: string, @Param('id') id: string, @Param('rowId') rowId: string, @Body() body: { parts?: unknown }) {
     return this.statements.splitRow(userId, id, rowId, body);

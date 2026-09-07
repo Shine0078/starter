@@ -2,7 +2,7 @@ import { zipSync } from 'fflate';
 import PDFDocument from 'pdfkit';
 import { describe, expect, it } from 'vitest';
 
-import { analyzeStatement, extractStatementDetails, formatFor } from '../src/domain/statement-import/analyze';
+import { analyzeStatement, detectStatementCurrency, extractStatementDetails, formatFor } from '../src/domain/statement-import/analyze';
 
 const base = {
   currency: 'USD',
@@ -23,6 +23,30 @@ describe('statement analysis', () => {
       periodEnd: '2026-08-24',
       currency: 'CAD',
     });
+  });
+
+  it('detects the statement currency from a labelled amount column', () => {
+    expect(detectStatementCurrency(
+      'Neo Financial\nTransaction Date Posted Date Description Amount ($CAD)\nAug 08 Payment Received 989.95',
+      'USD',
+    )).toBe('CAD');
+    expect(extractStatementDetails('Amount ($CAD)\nStatement Date August 24, 2026', 'USD').currency).toBe('CAD');
+  });
+
+  it('fails closed when the document currency differs from the selected account', async () => {
+    const document = new PDFDocument();
+    const chunks: Buffer[] = [];
+    document.on('data', (chunk: Buffer) => chunks.push(chunk));
+    const done = new Promise<Buffer>((resolve) => document.on('end', () => resolve(Buffer.concat(chunks))));
+    document.fontSize(10).text('Neo Financial Card Account\nTransaction Date Posted Date Description Amount ($CAD)\nAug 08 Aug 08 GROCERIES -39.37');
+    document.end();
+
+    await expect(analyzeStatement({
+      ...base,
+      filename: 'neo-cad.pdf',
+      mimeType: 'application/pdf',
+      bytes: await done,
+    })).rejects.toThrow('statement is in CAD, but the selected account is USD');
   });
 
   it('extracts CSV rows and holds ambiguous dates for review', async () => {

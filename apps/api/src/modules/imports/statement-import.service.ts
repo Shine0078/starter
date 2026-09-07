@@ -233,6 +233,30 @@ export class StatementImportService {
     return updated;
   }
 
+  async decideRows(userId: string, importId: string, input: { rowIds?: unknown; decision?: unknown }): Promise<StatementRowRecord[]> {
+    if (!Array.isArray(input.rowIds) || input.rowIds.length < 1 || input.rowIds.length > 10_000 || input.rowIds.some((value) => typeof value !== 'string')) {
+      throw new BadRequestException('Provide one or more row ids.');
+    }
+    const rowIds = [...new Set(input.rowIds as string[])];
+    if (rowIds.length !== input.rowIds.length) throw new BadRequestException('rowIds must not contain duplicates.');
+    if (input.decision !== 'include' && input.decision !== 'exclude' && input.decision !== 'needs_review') {
+      throw new BadRequestException('decision must be include, exclude, or needs_review.');
+    }
+    const existing = await this.imports.rows(userId, importId);
+    if (existing.length === 0 || existing.some((row) => row.importId !== importId) || rowIds.some((id) => !existing.some((row) => row.id === id))) {
+      throw new NotFoundException('One or more statement rows were not found.');
+    }
+    const updated = await this.imports.updateRowsDecision(
+      userId,
+      importId,
+      rowIds,
+      input.decision as StatementRowRecord['decision'],
+      this.event(importId, null, 'row_edited', { fields: ['decision'], rows: rowIds.length, decision: input.decision }),
+    );
+    if (!updated) throw new ConflictException('This statement is no longer awaiting row review.');
+    return updated;
+  }
+
   async splitRow(userId: string, importId: string, rowId: string, input: { parts?: unknown }): Promise<StatementRowRecord[]> {
     const current = await this.findRow(userId, importId, rowId);
     if (!Array.isArray(input.parts) || input.parts.length < 2 || input.parts.length > 10 || current.amount === null) throw new BadRequestException('Provide between 2 and 10 parts for a valid transaction.');

@@ -16,6 +16,7 @@ const MAX_ZIP_ENTRIES = 512;
 const MAX_XLSX_COLUMNS = 16_384; // Excel's XFD limit.
 const MAX_PDF_OCR_PAGES = 20;
 const IMAGE_MIME = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/tiff', 'image/bmp']);
+const CURRENCY_CODES = ['CAD', 'USD', 'EUR', 'GBP', 'AUD', 'NZD', 'JPY', 'CHF', 'CNY', 'INR', 'MXN', 'BRL', 'SGD', 'HKD'] as const;
 
 export function formatFor(filename: string, mimeType?: string): StatementFormat {
   const ext = filename.toLowerCase().split('.').pop();
@@ -54,13 +55,15 @@ export async function analyzeStatement(input: StatementAnalyzeInput): Promise<St
   }
 
   const text = format === 'pdf' ? await extractPdfText(input.bytes) : await extractImageText(input.bytes);
+  const documentDetails = extractStatementDetails(text, input.currency);
+  assertCurrencyMatchesAccount(documentDetails.currency, input.currency);
   const rows = parseTextRows(text, input.currency, input.rules, input.existing, model);
   return {
     format,
     rows,
     warnings: rows.length === 0 ? ['No transaction rows could be identified. Check the statement quality or review it manually.'] : [],
     statementHash,
-    documentDetails: extractStatementDetails(text, input.currency),
+    documentDetails,
     sourceText: text.slice(0, 200_000),
   };
 }
@@ -106,8 +109,42 @@ export function extractStatementDetails(text: string, currency: string): Stateme
     statementDate,
     periodStart,
     periodEnd,
-    currency: currency.trim().toUpperCase() || null,
+    currency: detectStatementCurrency(text, currency),
   };
+}
+
+/**
+ * Detect a currency only from statement-style labels. A merchant description
+ * may contain an ISO code, so a broad `\\b[A-Z]{3}\\b` search would silently
+ * mislabel an account. The selected account currency remains the fallback and
+ * is checked before any rows are staged.
+ */
+export function detectStatementCurrency(text: string, fallback: string): string | null {
+  const normalizedFallback = fallback.trim().toUpperCase();
+  const codes = CURRENCY_CODES.join('|');
+  const labelled = new RegExp(
+    `(?:amount|balance|currency|total|debit|credit|payment)[^\\n]{0,36}\\(\\s*\\$?\\s*(${codes})\\s*\\)`,
+    'i',
+  ).exec(text)?.[1];
+  if (labelled) return labelled.toUpperCase();
+
+  const symbol = /(?:CA\$|C\$)\s*[-+]?\d|(?:US\$)\s*[-+]?\d/i.test(text)
+    ? (/(?:CA\$|C\$)\s*[-+]?\d/i.test(text) ? 'CAD' : 'USD')
+    : null;
+  if (symbol) return symbol;
+
+  const explicit = new RegExp(`(?:statement\\s+)?currency\\s*[:=]?\\s*(${codes})\\b`, 'i').exec(text)?.[1];
+  return explicit?.toUpperCase() ?? (normalizedFallback || null);
+}
+
+function assertCurrencyMatchesAccount(documentCurrency: string | null, accountCurrency: string): void {
+  const documentCode = documentCurrency?.trim().toUpperCase();
+  const accountCode = accountCurrency.trim().toUpperCase();
+  if (documentCode && accountCode && documentCode !== accountCode) {
+    throw new Error(
+      `This statement is in ${documentCode}, but the selected account is ${accountCode}. Select or create a ${documentCode} account before uploading it.`,
+    );
+  }
 }
 
 function parseLongDate(value: string, fallbackYear?: number | null): string | null {
@@ -144,6 +181,8 @@ function analyzeTabular(
   input: StatementAnalyzeInput,
   model: UserCorrectionClassifier,
 ): StatementExtraction {
+  const documentDetails = extractStatementDetails(content, input.currency);
+  assertCurrencyMatchesAccount(documentDetails.currency, input.currency);
   const parsed = parseCsv(content);
   if (parsed.rows.length > MAX_ROWS) throw new Error(`A statement may contain at most ${MAX_ROWS} rows.`);
   const suggestion = suggestMapping(parsed.headers, parsed.rows.slice(0, 25));
@@ -164,7 +203,7 @@ function analyzeTabular(
     rows: review.rows.map((row) => draftFromReviewed(row, input.currency, input.rules, ambiguousDates, model)),
     warnings: suggestion.warnings,
     statementHash,
-    documentDetails: extractStatementDetails(content, input.currency),
+    documentDetails,
   };
 }
 
