@@ -56,7 +56,7 @@ yaml_value() {
 for key in PLAID_CLIENT_ID PLAID_SECRET PLAID_ENVIRONMENT PLAID_COUNTRIES PLAID_WEBHOOK_URL PLAID_WEB_REDIRECT_URI BANK_TOKEN_ENCRYPTION_KEY; do
   value="$(yaml_value "${key}")"
   case "${value}" in
-    ""|REPLACE_*|replace-me|REPLACE_WITH_*)
+    ""|*REPLACE_*|REPLACE_WITH_*|*replace-me*|replace-me)
       echo "${key} must be configured in ${ENV_FILE}; refusing a bank-disabled deployment." >&2
       exit 1
       ;;

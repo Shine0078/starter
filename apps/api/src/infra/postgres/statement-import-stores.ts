@@ -7,6 +7,7 @@ import type {
   StatementRowRecord,
 } from '../../domain/statement-import/types';
 import type { ImportBatch, StatementImportStore } from '../../ports';
+import type { StatementFileCipher } from '../../ports/statement-import';
 import type { Transaction } from '../../domain/types';
 import { withUserScope } from './pool';
 
@@ -15,7 +16,8 @@ interface StatementRowDb {
   description: string; merchant: string | null; amount: number | null; currency: string;
   direction: string; category_slug: string; category_source: string;
   category_confidence: number; is_recurring: boolean; flags: string[];
-  decision: string; fingerprint: string; raw: string; edited_at: Date | null;
+  decision: string; fingerprint: string; raw: string; encrypted_fields: string | null;
+  edited_at: Date | null;
 }
 
 interface StatementDb {
@@ -23,7 +25,7 @@ interface StatementDb {
   statement_hash: string; status: string; rows_total: number; rows_included: number;
   rows_excluded: number; rows_needs_review: number; created_at: Date;
   processed_at: Date | null; approved_at: Date | null; source_deleted_at: Date | null;
-  error: string | null;
+  error: string | null; document_details: unknown;
 }
 
 interface StatementJobDb {
@@ -35,15 +37,15 @@ interface StatementJobDb {
 
 const STATEMENT_COLUMNS = `id, account_id, filename, mime_type, format, statement_hash,
   status, rows_total, rows_included, rows_excluded, rows_needs_review, created_at,
-  processed_at, approved_at, source_deleted_at, error`;
+  processed_at, approved_at, source_deleted_at, error, document_details`;
 const ROW_COLUMNS = `id, import_id, source_line, posted_at, description, merchant, amount,
   currency, direction, category_slug, category_source, category_confidence,
-  is_recurring, flags, decision, fingerprint, raw, edited_at`;
+  is_recurring, flags, decision, fingerprint, raw, encrypted_fields, edited_at`;
 const MAX_STAGED_SOURCE_BYTES = 64 * 1024 * 1024;
 const MAX_ACTIVE_IMPORTS = 5;
 
 export class PostgresStatementImportStore implements StatementImportStore {
-  constructor(private readonly pg: Pool) {}
+  constructor(private readonly pg: Pool, private readonly cipher: StatementFileCipher) {}
 
   async list(userId: string): Promise<StatementImport[]> {
     return withUserScope(this.pg, userId, async (client) => {
@@ -62,7 +64,7 @@ export class PostgresStatementImportStore implements StatementImportStore {
   async rows(userId: string, id: string): Promise<StatementRowRecord[]> {
     return withUserScope(this.pg, userId, async (client) => {
       const { rows } = await client.query<StatementRowDb>(`SELECT ${ROW_COLUMNS} FROM statement_import_rows WHERE user_id = $1 AND import_id = $2 ORDER BY source_line, id`, [userId, id]);
-      return rows.map(toRow);
+      return rows.map((row) => toRow(row, this.cipher));
     });
   }
 
@@ -74,17 +76,17 @@ export class PostgresStatementImportStore implements StatementImportStore {
         await client.query(`INSERT INTO statement_imports (
           id, user_id, account_id, filename, mime_type, format, statement_hash,
           status, rows_total, rows_included, rows_excluded, rows_needs_review,
-          created_at, processed_at, encrypted_source, source_expires_at
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,'ready',$8,$9,$10,$11,$12,$12,$13,$12::timestamptz + interval '90 days')`, [
+          document_details, created_at, processed_at, encrypted_source, source_expires_at
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,'ready',$8,$9,$10,$11,$12,$13,$13,$14,$13::timestamptz + interval '90 days')`, [
           statement.id, userId, statement.accountId, statement.filename, statement.mimeType,
           statement.format, statement.statementHash, statement.rowsTotal, statement.rowsIncluded,
-          statement.rowsExcluded, statement.rowsNeedsReview, statement.createdAt, encryptedSource,
+          statement.rowsExcluded, statement.rowsNeedsReview, JSON.stringify(statement.documentDetails ?? {}), statement.createdAt, encryptedSource,
         ]);
       } catch (error) {
         if ((error as { code?: string }).code === '23505') throw new Error('STATEMENT_DUPLICATE');
         throw error;
       }
-      await insertRows(client, userId, rows);
+      await insertRows(client, userId, rows, this.cipher);
       await insertEvent(client, userId, {
         id: `evt_${statement.id}_created`, importId: statement.id, rowId: null,
         kind: 'created', detail: { format: statement.format, rows: rows.length }, createdAt: statement.createdAt,
@@ -105,10 +107,10 @@ export class PostgresStatementImportStore implements StatementImportStore {
         await client.query(`INSERT INTO statement_imports (
           id, user_id, account_id, filename, mime_type, format, statement_hash,
           status, rows_total, rows_included, rows_excluded, rows_needs_review,
-          created_at, encrypted_source, source_expires_at, attempts, processing_started_at
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,'queued',0,0,0,0,$8,$9,$8::timestamptz + interval '90 days',0,NULL)`, [
+          document_details, created_at, encrypted_source, source_expires_at, attempts, processing_started_at
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,'queued',0,0,0,0,$8,$9,$10,$9::timestamptz + interval '90 days',0,NULL)`, [
           statement.id, userId, statement.accountId, statement.filename, statement.mimeType,
-          statement.format, statement.statementHash, statement.createdAt, encryptedSource,
+          statement.format, statement.statementHash, JSON.stringify(statement.documentDetails ?? {}), statement.createdAt, encryptedSource,
         ]);
       } catch (error) {
         if ((error as { code?: string }).code === '23505') throw new Error('STATEMENT_DUPLICATE');
@@ -148,7 +150,7 @@ export class PostgresStatementImportStore implements StatementImportStore {
     });
   }
 
-  async completeProcessing(userId: string, importId: string, rows: readonly StatementRowRecord[], processedAt: string, event: StatementImportEvent): Promise<StatementImport | null> {
+  async completeProcessing(userId: string, importId: string, rows: readonly StatementRowRecord[], processedAt: string, event: StatementImportEvent, documentDetails?: StatementImport['documentDetails']): Promise<StatementImport | null> {
     return withUserScope(this.pg, userId, async (client) => {
       const { rows: statements } = await client.query<StatementDb>(
         `SELECT ${STATEMENT_COLUMNS} FROM statement_imports
@@ -156,15 +158,15 @@ export class PostgresStatementImportStore implements StatementImportStore {
         [userId, importId],
       );
       if (statements[0]?.status !== 'processing') return null;
-      await insertRows(client, userId, rows);
+      await insertRows(client, userId, rows, this.cipher);
       await refreshCounts(client, userId, importId);
       const { rows: updated } = await client.query<StatementDb>(
         `UPDATE statement_imports
             SET status='ready', processed_at=$3, error=NULL,
-                processing_started_at=NULL
+                processing_started_at=NULL, document_details=$4::jsonb
           WHERE user_id=$1 AND id=$2 AND status='processing'
-        RETURNING ${STATEMENT_COLUMNS}`,
-        [userId, importId, processedAt],
+          RETURNING ${STATEMENT_COLUMNS}`,
+        [userId, importId, processedAt, JSON.stringify(documentDetails ?? {})],
       );
       await insertEvent(client, userId, event);
       return updated[0] ? toStatement(updated[0]) : null;
@@ -188,13 +190,15 @@ export class PostgresStatementImportStore implements StatementImportStore {
 
   async updateRow(userId: string, importId: string, rowId: string, patch: Partial<StatementRowRecord>, event: StatementImportEvent): Promise<StatementRowRecord | null> {
     return withUserScope(this.pg, userId, async (client) => {
-      const current = await getRow(client, userId, importId, rowId);
+      const current = await getRow(client, userId, importId, rowId, this.cipher);
       if (!current || !(await isReady(client, userId, importId))) return null;
       const next = { ...current, ...patch, id: rowId, importId, editedAt: event.createdAt };
-      await client.query(`UPDATE statement_import_rows SET posted_at=$4, description=$5, merchant=$6, amount=$7, currency=$8, direction=$9, category_slug=$10, category_source=$11, category_confidence=$12, is_recurring=$13, flags=$14, decision=$15, fingerprint=$16, raw=$17, edited_at=$18 WHERE user_id=$1 AND import_id=$2 AND id=$3`, [
-        userId, importId, rowId, next.postedAt, next.description, next.merchant, next.amount,
+      const encrypted = encryptRowFields(next, this.cipher);
+      await client.query(`UPDATE statement_import_rows SET posted_at=$4, description=$5, merchant=$6, amount=$7, currency=$8, direction=$9, category_slug=$10, category_source=$11, category_confidence=$12, is_recurring=$13, flags=$14, decision=$15, fingerprint=$16, raw=$17, encrypted_fields=$18, edited_at=$19 WHERE user_id=$1 AND import_id=$2 AND id=$3`, [
+        userId, importId, rowId, next.postedAt, encrypted.placeholderDescription, null, next.amount,
         next.currency, next.direction, next.categorySlug, next.categorySource, next.categoryConfidence,
-        next.isRecurring, next.flags, next.decision, next.fingerprint, next.raw, event.createdAt,
+        next.isRecurring, next.flags, next.decision, next.fingerprint, encrypted.placeholderRaw,
+        encrypted.payload, event.createdAt,
       ]);
       await refreshCounts(client, userId, importId);
       await insertEvent(client, userId, event);
@@ -202,12 +206,35 @@ export class PostgresStatementImportStore implements StatementImportStore {
     });
   }
 
+  async updateRowsDecision(userId: string, importId: string, rowIds: readonly string[], decision: StatementRowRecord['decision'], event: StatementImportEvent): Promise<StatementRowRecord[] | null> {
+    return withUserScope(this.pg, userId, async (client) => {
+      const status = await isReady(client, userId, importId);
+      if (!status || rowIds.length === 0) return null;
+      const { rows } = await client.query<StatementRowDb>(
+        `SELECT ${ROW_COLUMNS} FROM statement_import_rows WHERE user_id=$1 AND import_id=$2 AND id = ANY($3::text[]) ORDER BY source_line, id FOR UPDATE`,
+        [userId, importId, [...new Set(rowIds)]],
+      );
+      if (rows.length !== new Set(rowIds).size) return null;
+      await client.query(
+        `UPDATE statement_import_rows SET decision=$4, edited_at=$5 WHERE user_id=$1 AND import_id=$2 AND id = ANY($3::text[])`,
+        [userId, importId, [...new Set(rowIds)], decision, event.createdAt],
+      );
+      await refreshCounts(client, userId, importId);
+      await insertEvent(client, userId, event);
+      const updated = await client.query<StatementRowDb>(
+        `SELECT ${ROW_COLUMNS} FROM statement_import_rows WHERE user_id=$1 AND import_id=$2 AND id = ANY($3::text[]) ORDER BY source_line, id`,
+        [userId, importId, [...new Set(rowIds)]],
+      );
+      return updated.rows.map((row) => toRow(row, this.cipher));
+    });
+  }
+
   async splitRow(userId: string, importId: string, rowId: string, parts: readonly StatementRowRecord[], event: StatementImportEvent): Promise<StatementRowRecord[] | null> {
     return withUserScope(this.pg, userId, async (client) => {
-      const current = await getRow(client, userId, importId, rowId);
+      const current = await getRow(client, userId, importId, rowId, this.cipher);
       if (!current || !(await isReady(client, userId, importId))) return null;
       await client.query(`UPDATE statement_import_rows SET decision='exclude', flags=array_append(flags,'split_parent'), edited_at=$4 WHERE user_id=$1 AND import_id=$2 AND id=$3`, [userId, importId, rowId, event.createdAt]);
-      await insertRows(client, userId, parts);
+      await insertRows(client, userId, parts, this.cipher);
       await refreshCounts(client, userId, importId);
       await insertEvent(client, userId, event);
       return [...parts];
@@ -220,7 +247,7 @@ export class PostgresStatementImportStore implements StatementImportStore {
       const { rows } = await client.query<StatementRowDb>(`SELECT ${ROW_COLUMNS} FROM statement_import_rows WHERE user_id=$1 AND import_id=$2 AND id=ANY($3::text[]) FOR UPDATE`, [userId, importId, rowIds]);
       if (rows.length !== rowIds.length) return null;
       await client.query(`UPDATE statement_import_rows SET decision='exclude', flags=array_append(flags,'merged_parent'), edited_at=$4 WHERE user_id=$1 AND import_id=$2 AND id=ANY($3::text[])`, [userId, importId, rowIds, event.createdAt]);
-      await insertRows(client, userId, [merged]);
+      await insertRows(client, userId, [merged], this.cipher);
       await refreshCounts(client, userId, importId);
       await insertEvent(client, userId, event);
       return merged;
@@ -234,7 +261,7 @@ export class PostgresStatementImportStore implements StatementImportStore {
       if (!statement || statement.status !== 'ready') return null;
       const pending = await client.query(`SELECT 1 FROM statement_import_rows WHERE user_id=$1 AND import_id=$2 AND decision='needs_review' LIMIT 1`, [userId, importId]);
       if ((pending.rowCount ?? 0) > 0) throw new Error('STATEMENT_REVIEW_REQUIRED');
-      await client.query(`INSERT INTO import_batches (id,user_id,account_id,filename,status,rows_total,rows_imported,rows_duplicate,rows_invalid,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`, [batch.id,userId,batch.accountId,batch.filename,batch.status,batch.rowsTotal,batch.rowsImported,batch.rowsDuplicate,batch.rowsInvalid,batch.createdAt]);
+      await client.query(`INSERT INTO import_batches (id,user_id,account_id,statement_import_id,filename,status,rows_total,rows_imported,rows_duplicate,rows_invalid,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`, [batch.id,userId,batch.accountId,batch.statementImportId ?? importId,batch.filename,batch.status,batch.rowsTotal,batch.rowsImported,batch.rowsDuplicate,batch.rowsInvalid,batch.createdAt]);
       const inserted = await insertTransactions(client, userId, transactions);
       if (inserted !== transactions.length) {
         throw new Error('STATEMENT_DUPLICATE');
@@ -294,9 +321,9 @@ async function assertStatementQuota(client: PoolClient, userId: string, encrypte
   }
 }
 
-async function getRow(client: PoolClient, userId: string, importId: string, rowId: string): Promise<StatementRowRecord | null> {
+async function getRow(client: PoolClient, userId: string, importId: string, rowId: string, cipher: StatementFileCipher): Promise<StatementRowRecord | null> {
   const { rows } = await client.query<StatementRowDb>(`SELECT ${ROW_COLUMNS} FROM statement_import_rows WHERE user_id=$1 AND import_id=$2 AND id=$3 FOR UPDATE`, [userId, importId, rowId]);
-  return rows[0] ? toRow(rows[0]) : null;
+  return rows[0] ? toRow(rows[0], cipher) : null;
 }
 
 async function isReady(client: PoolClient, userId: string, importId: string): Promise<boolean> {
@@ -308,9 +335,10 @@ async function refreshCounts(client: PoolClient, userId: string, importId: strin
   await client.query(`UPDATE statement_imports SET rows_total=(SELECT count(*) FROM statement_import_rows WHERE user_id=$1 AND import_id=$2), rows_included=(SELECT count(*) FROM statement_import_rows WHERE user_id=$1 AND import_id=$2 AND decision='include'), rows_excluded=(SELECT count(*) FROM statement_import_rows WHERE user_id=$1 AND import_id=$2 AND decision='exclude'), rows_needs_review=(SELECT count(*) FROM statement_import_rows WHERE user_id=$1 AND import_id=$2 AND decision='needs_review') WHERE user_id=$1 AND id=$2`, [userId, importId]);
 }
 
-async function insertRows(client: PoolClient, userId: string, rows: readonly StatementRowRecord[]): Promise<void> {
+async function insertRows(client: PoolClient, userId: string, rows: readonly StatementRowRecord[], cipher: StatementFileCipher): Promise<void> {
   for (const row of rows) {
-    await client.query(`INSERT INTO statement_import_rows (id, import_id, user_id, source_line, posted_at, description, merchant, amount, currency, direction, category_slug, category_source, category_confidence, is_recurring, flags, decision, fingerprint, raw, edited_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)`, [row.id,row.importId,userId,row.sourceLine,row.postedAt,row.description,row.merchant,row.amount,row.currency,row.direction,row.categorySlug,row.categorySource,row.categoryConfidence,row.isRecurring,row.flags,row.decision,row.fingerprint,row.raw,row.editedAt]);
+    const encrypted = encryptRowFields(row, cipher);
+    await client.query(`INSERT INTO statement_import_rows (id, import_id, user_id, source_line, posted_at, description, merchant, amount, currency, direction, category_slug, category_source, category_confidence, is_recurring, flags, decision, fingerprint, raw, encrypted_fields, edited_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)`, [row.id,row.importId,userId,row.sourceLine,row.postedAt,encrypted.placeholderDescription,null,row.amount,row.currency,row.direction,row.categorySlug,row.categorySource,row.categoryConfidence,row.isRecurring,row.flags,row.decision,row.fingerprint,encrypted.placeholderRaw,encrypted.payload,row.editedAt]);
   }
 }
 
@@ -328,9 +356,47 @@ async function insertTransactions(client: PoolClient, userId: string, transactio
 }
 
 function toStatement(row: StatementDb): StatementImport {
-  return { id: row.id, accountId: row.account_id, filename: row.filename, mimeType: row.mime_type, format: row.format as StatementImport['format'], statementHash: row.statement_hash, status: row.status as StatementImport['status'], rowsTotal: row.rows_total, rowsIncluded: row.rows_included, rowsExcluded: row.rows_excluded, rowsNeedsReview: row.rows_needs_review, createdAt: row.created_at.toISOString(), processedAt: row.processed_at?.toISOString() ?? null, approvedAt: row.approved_at?.toISOString() ?? null, sourceDeletedAt: row.source_deleted_at?.toISOString() ?? null, error: row.error };
+  const details = toDocumentDetails(row.document_details);
+  return { id: row.id, accountId: row.account_id, filename: row.filename, mimeType: row.mime_type, format: row.format as StatementImport['format'], statementHash: row.statement_hash, status: row.status as StatementImport['status'], rowsTotal: row.rows_total, rowsIncluded: row.rows_included, rowsExcluded: row.rows_excluded, rowsNeedsReview: row.rows_needs_review, createdAt: row.created_at.toISOString(), processedAt: row.processed_at?.toISOString() ?? null, approvedAt: row.approved_at?.toISOString() ?? null, sourceDeletedAt: row.source_deleted_at?.toISOString() ?? null, error: row.error, ...(details ? { documentDetails: details } : {}) };
 }
 
-function toRow(row: StatementRowDb): StatementRowRecord {
-  return { id: row.id, importId: row.import_id, sourceLine: row.source_line, postedAt: row.posted_at, description: row.description, merchant: row.merchant, amount: row.amount, currency: row.currency, direction: row.direction as StatementRowRecord['direction'], categorySlug: row.category_slug, categorySource: row.category_source as StatementRowRecord['categorySource'], categoryConfidence: row.category_confidence, isRecurring: row.is_recurring, flags: [...row.flags], decision: row.decision as StatementRowRecord['decision'], fingerprint: row.fingerprint, raw: row.raw, editedAt: row.edited_at?.toISOString() ?? null };
+function toDocumentDetails(value: unknown): NonNullable<StatementImport['documentDetails']> | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const candidate = value as Record<string, unknown>;
+  const details = {
+    issuer: typeof candidate.issuer === 'string' ? candidate.issuer : null,
+    accountReferenceLast4: typeof candidate.accountReferenceLast4 === 'string' ? candidate.accountReferenceLast4 : null,
+    statementDate: typeof candidate.statementDate === 'string' ? candidate.statementDate : null,
+    periodStart: typeof candidate.periodStart === 'string' ? candidate.periodStart : null,
+    periodEnd: typeof candidate.periodEnd === 'string' ? candidate.periodEnd : null,
+    currency: typeof candidate.currency === 'string' ? candidate.currency : null,
+  };
+  return Object.values(details).some((item) => item !== null) ? details : undefined;
+}
+
+function toRow(row: StatementRowDb, cipher: StatementFileCipher): StatementRowRecord {
+  const fields = decryptRowFields(row, cipher);
+  return { id: row.id, importId: row.import_id, sourceLine: row.source_line, postedAt: row.posted_at, description: fields.description, merchant: fields.merchant, amount: row.amount, currency: row.currency, direction: row.direction as StatementRowRecord['direction'], categorySlug: row.category_slug, categorySource: row.category_source as StatementRowRecord['categorySource'], categoryConfidence: row.category_confidence, isRecurring: row.is_recurring, flags: [...row.flags], decision: row.decision as StatementRowRecord['decision'], fingerprint: row.fingerprint, raw: fields.raw, editedAt: row.edited_at?.toISOString() ?? null };
+}
+
+const ENCRYPTED_ROW_PLACEHOLDER = '[encrypted]';
+
+interface EncryptedRowFields {
+  description: string;
+  merchant: string | null;
+  raw: string;
+}
+
+function encryptRowFields(row: Pick<StatementRowRecord, 'description' | 'merchant' | 'raw'>, cipher: StatementFileCipher): { payload: string; placeholderDescription: string; placeholderRaw: string } {
+  const fields: EncryptedRowFields = { description: row.description, merchant: row.merchant, raw: row.raw };
+  return { payload: cipher.encrypt(JSON.stringify(fields)), placeholderDescription: ENCRYPTED_ROW_PLACEHOLDER, placeholderRaw: ENCRYPTED_ROW_PLACEHOLDER };
+}
+
+function decryptRowFields(row: StatementRowDb, cipher: StatementFileCipher): EncryptedRowFields {
+  if (!row.encrypted_fields) return { description: row.description, merchant: row.merchant, raw: row.raw };
+  const parsed: unknown = JSON.parse(cipher.decrypt(row.encrypted_fields));
+  if (!parsed || typeof parsed !== 'object') throw new Error('Statement row ciphertext is invalid.');
+  const fields = parsed as Record<string, unknown>;
+  if (typeof fields.description !== 'string' || typeof fields.raw !== 'string' || (fields.merchant !== null && typeof fields.merchant !== 'string')) throw new Error('Statement row ciphertext is invalid.');
+  return { description: fields.description, merchant: fields.merchant, raw: fields.raw };
 }

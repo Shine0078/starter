@@ -42,7 +42,7 @@ export class InMemoryStatementImportStore implements StatementImportStore {
   async create(userId: string, statement: StatementImport, encryptedSource: string, rows: readonly StatementRowRecord[]): Promise<StatementImport> {
     const bucket = this.bucket(userId);
     assertQuota(bucket, encryptedSource, false);
-    if (bucket.some((item) => item.accountId === statement.accountId && item.statementHash === statement.statementHash && item.status !== 'deleted')) {
+    if (bucket.some((item) => item.accountId === statement.accountId && item.statementHash === statement.statementHash && item.status !== 'deleted' && item.status !== 'failed')) {
       throw new Error('STATEMENT_DUPLICATE');
     }
     const created: StatementImportEvent = { id: `evt_${statement.id}_created`, importId: statement.id, rowId: null, kind: 'created', detail: { format: statement.format, rows: rows.length }, createdAt: statement.createdAt };
@@ -54,7 +54,7 @@ export class InMemoryStatementImportStore implements StatementImportStore {
   async enqueue(userId: string, statement: StatementImport, encryptedSource: string): Promise<StatementImport> {
     const bucket = this.bucket(userId);
     assertQuota(bucket, encryptedSource, true);
-    if (bucket.some((item) => item.accountId === statement.accountId && item.statementHash === statement.statementHash && item.status !== 'deleted')) {
+    if (bucket.some((item) => item.accountId === statement.accountId && item.statementHash === statement.statementHash && item.status !== 'deleted' && item.status !== 'failed')) {
       throw new Error('STATEMENT_DUPLICATE');
     }
     const created: StatementImportEvent = { id: `evt_${statement.id}_created`, importId: statement.id, rowId: null, kind: 'created', detail: { format: statement.format, queued: true }, createdAt: statement.createdAt };
@@ -110,13 +110,14 @@ export class InMemoryStatementImportStore implements StatementImportStore {
     return { statement: strip(statement), encryptedSource: statement.encryptedSource };
   }
 
-  async completeProcessing(userId: string, importId: string, rows: readonly StatementRowRecord[], processedAt: string, event: StatementImportEvent): Promise<StatementImport | null> {
+  async completeProcessing(userId: string, importId: string, rows: readonly StatementRowRecord[], processedAt: string, event: StatementImportEvent, documentDetails?: StatementImport['documentDetails']): Promise<StatementImport | null> {
     const statement = this.find(userId, importId);
     if (!statement || statement.status !== 'processing') return null;
     statement.rows = rows.map(cloneRow);
     statement.status = 'ready';
     statement.processedAt = processedAt;
     statement.error = null;
+    statement.documentDetails = documentDetails;
     statement.processingStartedAt = null;
     recalculate(statement);
     statement.events.push(cloneEvent(event));
@@ -142,6 +143,18 @@ export class InMemoryStatementImportStore implements StatementImportStore {
     recalculate(statement);
     statement.events.push(cloneEvent(event));
     return cloneRow(row);
+  }
+
+  async updateRowsDecision(userId: string, importId: string, rowIds: readonly string[], decision: StatementRowRecord['decision'], event: StatementImportEvent): Promise<StatementRowRecord[] | null> {
+    const statement = this.find(userId, importId);
+    if (!statement || statement.status !== 'ready' || rowIds.length === 0) return null;
+    const ids = new Set(rowIds);
+    const selected = statement.rows.filter((row) => ids.has(row.id));
+    if (selected.length !== rowIds.length) return null;
+    for (const row of selected) Object.assign(row, { decision, editedAt: event.createdAt });
+    recalculate(statement);
+    statement.events.push(cloneEvent(event));
+    return selected.map(cloneRow);
   }
 
   async splitRow(userId: string, importId: string, rowId: string, parts: readonly StatementRowRecord[], event: StatementImportEvent): Promise<StatementRowRecord[] | null> {

@@ -1085,6 +1085,22 @@ class ApiClient implements BackgroundSyncClient {
     return StatementRow.fromJson(json);
   }
 
+  Future<List<StatementRow>> decideStatementRows(
+    String importId,
+    List<String> rowIds,
+    String decision,
+  ) async {
+    final json = await _send(
+      'PATCH',
+      '/imports/statements/${Uri.encodeComponent(importId)}/rows',
+      {'rowIds': rowIds, 'decision': decision},
+    ) as List<dynamic>;
+    return json
+        .whereType<Map<String, dynamic>>()
+        .map(StatementRow.fromJson)
+        .toList();
+  }
+
   Future<StatementImport> approveStatementImport(String id) async {
     final json = await _send(
       'POST',

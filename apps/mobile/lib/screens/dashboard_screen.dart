@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../api/client.dart';
 import '../api/app_lock.dart';
@@ -19,6 +20,7 @@ import 'bank_connections_screen.dart';
 import 'notifications_screen.dart';
 import 'planning_screen.dart';
 import 'settings_screen.dart';
+import 'statement_import_screen.dart';
 import 'subscriptions_screen.dart';
 import 'transaction_detail_screen.dart';
 import 'transactions_screen.dart';
@@ -66,6 +68,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   InsightsReport? _insights;
   DataQualityReport? _dataQuality;
   MfaStatus? _mfa;
+  StatementImport? _latestApprovedImport;
+  StatementSummary? _latestImportSummary;
 
   @override
   void initState() {
@@ -180,12 +184,48 @@ class _DashboardScreenState extends State<DashboardScreen>
         _netWorthHistory = results[5] as List<NetWorthSnapshot>;
         _loading = false;
       });
+      // Statement summaries are supplementary to the dashboard's primary
+      // reads. Keep them best-effort so a temporary import-service outage
+      // cannot blank the rest of the dashboard.
+      unawaited(_loadLatestImportedStatement());
     } catch (error) {
       if (!mounted) return;
       setState(() {
         _error = friendlyErrorMessage(error);
         _loading = false;
       });
+    }
+  }
+
+  Future<void> _loadLatestImportedStatement() async {
+    try {
+      final imports = await widget.api.statementImports();
+      final approved = imports
+          .where((item) => item.status == 'approved')
+          .where((item) => item.documentDetails?.periodStart != null)
+          .where((item) => item.documentDetails?.periodEnd != null)
+          .toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      if (approved.isEmpty) {
+        if (mounted) {
+          setState(() {
+            _latestApprovedImport = null;
+            _latestImportSummary = null;
+          });
+        }
+        return;
+      }
+      final latest = approved.first;
+      final summary = await widget.api.statementImportSummary(latest.id);
+      if (!mounted) return;
+      setState(() {
+        _latestApprovedImport = latest;
+        _latestImportSummary = summary;
+      });
+    } catch (_) {
+      // This card is an enhancement over the primary dashboard reads. A
+      // failed supplementary request should never turn into a dashboard
+      // error, especially while the device is offline.
     }
   }
 
@@ -532,6 +572,9 @@ class _DashboardScreenState extends State<DashboardScreen>
       onAnalytics: () => Navigator.of(context).push(MaterialPageRoute(
         builder: (_) => AnalyticsScreen(api: widget.api),
       )),
+      onImportStatement: () => Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => StatementImportScreen(api: widget.api),
+      )),
     );
     final dataQuality = (_dataQuality?.needsAttention == true)
         ? _dataQualityCard(theme, _dataQuality!)
@@ -609,6 +652,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   /// list of self-contained columns so the narrow and wide layouts can consume
   /// the same content without duplicating it.
   List<Widget> _sections(ThemeData theme, AppLocalizations l10n) => [
+        if (_latestApprovedImport != null && _latestImportSummary != null)
+          _latestImportedStatementSection(theme),
         if (_visible(DashboardCard.netWorth) && _netWorthHistory.isNotEmpty)
           NetWorthHistoryChart(points: _netWorthHistory),
         if (_visible(DashboardCard.monthlySummary) && _insights != null)
@@ -628,6 +673,62 @@ class _DashboardScreenState extends State<DashboardScreen>
         if (_visible(DashboardCard.transactions))
           _transactionsSection(theme, l10n),
       ];
+
+  Widget _latestImportedStatementSection(ThemeData theme) {
+    final import = _latestApprovedImport!;
+    final summary = _latestImportSummary!;
+    final details = import.documentDetails!;
+    final currency = summary.currency.isEmpty ? 'USD' : summary.currency;
+    final formatter = NumberFormat.simpleCurrency(name: currency);
+    String amount(int minor) => formatter.format(minor / 100);
+    final period = '${details.periodStart} to ${details.periodEnd}';
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.description_outlined),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Latest imported statement',
+                    style: theme.textTheme.titleMedium,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => AnalyticsScreen(api: widget.api),
+                    ),
+                  ),
+                  child: const Text('Open analytics'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(import.filename, style: theme.textTheme.bodyMedium),
+            Text('$period · $currency', style: theme.textTheme.bodySmall),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                Chip(label: Text('Income ${amount(summary.income)}')),
+                Chip(label: Text('Expenses ${amount(summary.expenses)}')),
+                Chip(
+                    label:
+                        Text('Net cash flow ${amount(summary.netCashFlow)}')),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   bool _visible(DashboardCard card) {
     return DashboardLayoutControllerScope.maybeOf(context)?.isVisible(card) ??

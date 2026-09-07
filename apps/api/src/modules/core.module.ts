@@ -275,7 +275,12 @@ function storeProviders(): Provider[] {
     { provide: RECONCILIATION_STORE, useFactory: () => new PostgresReconciliationStore(pool) },
     { provide: SAVED_VIEW_STORE, useFactory: () => new PostgresSavedViewStore(pool) },
     { provide: IMPORT_BATCH_STORE, useFactory: () => new PostgresImportBatchStore(pool) },
-    { provide: STATEMENT_IMPORT_STORE, useFactory: () => new PostgresStatementImportStore(pool) },
+    {
+      provide: STATEMENT_IMPORT_STORE,
+      useFactory: (cipher: import('../ports/statement-import').StatementFileCipher) =>
+        new PostgresStatementImportStore(pool, cipher),
+      inject: [STATEMENT_FILE_CIPHER],
+    },
     { provide: SCHEDULE_STORE, useFactory: () => new PostgresScheduleStore(pool) },
     { provide: RULE_APPLICATION_STORE, useFactory: () => new PostgresRuleApplicationStore(pool) },
     { provide: FX_RATE_STORE, useFactory: () => new PostgresFxRateStore(pool) },

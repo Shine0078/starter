@@ -100,6 +100,14 @@ describe('categorizeDescriptor', () => {
     expect(categorizeDescriptor('WEALTHSIMPLE').categorySlug).toBe('investments');
   });
 
+  it('classifies explicit statement descriptors without guessing merchant names', () => {
+    expect(categorizeDescriptor('GROCERY MART 104').categorySlug).toBe('groceries');
+    expect(categorizeDescriptor('RENT PAYMENT AUGUST').categorySlug).toBe('rent');
+    expect(categorizeDescriptor('UTILITY BILL AUTOPAY').categorySlug).toBe('utilities');
+    expect(categorizeDescriptor('SALARY DIRECT CREDIT').categorySlug).toBe('salary');
+    expect(categorizeDescriptor('HARBOUR LANE MARKETPLACE').categorySlug).toBe('unknown');
+  });
+
   it('lets a user rule beat a confident lexicon match', () => {
     const rules: CategorizationRule[] = [
       { id: 'r1', matchType: 'contains', pattern: 'starbucks', categorySlug: 'entertainment', priority: 0 },

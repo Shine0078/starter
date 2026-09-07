@@ -14,6 +14,7 @@ void main() {
           onTransactions: () => tapped.add('transactions'),
           onPlanning: () => tapped.add('planning'),
           onAnalytics: () => tapped.add('analytics'),
+          onImportStatement: () => tapped.add('import'),
         ),
       ),
     ));
@@ -23,10 +24,12 @@ void main() {
     expect(find.text('Review transactions'), findsOneWidget);
     expect(find.text('Plan cash flow'), findsOneWidget);
     expect(find.text('Explore reports'), findsOneWidget);
+    expect(find.text('Upload statement'), findsOneWidget);
 
     await tester.tap(find.text('Connect an account'));
     await tester.tap(find.text('Plan cash flow'));
-    expect(tapped, ['accounts', 'planning']);
+    await tester.tap(find.text('Upload statement'));
+    expect(tapped, ['accounts', 'planning', 'import']);
   });
 
   testWidgets('connected dashboard changes the account action label',
@@ -39,6 +42,7 @@ void main() {
           onTransactions: () {},
           onPlanning: () {},
           onAnalytics: () {},
+          onImportStatement: () {},
         ),
       ),
     ));

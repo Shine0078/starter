@@ -34,6 +34,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   String _currency = 'USD';
   DateTime? _customFrom;
   DateTime? _customTo;
+  StatementImport? _latestApprovedImport;
   int _loadGeneration = 0;
 
   @override
@@ -80,13 +81,23 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         widget.api.insights(currency: _currency),
         widget.api.healthScore(currency: _currency),
         widget.api.subscriptions(currency: _currency),
+        widget.api.statementImports(),
       ]);
       if (!mounted || generation != _loadGeneration) return;
+      final imports = results[4] as List<StatementImport>;
+      StatementImport? latestApproved;
+      for (final item in imports) {
+        if (item.status == 'approved' && item.documentDetails?.periodStart != null && item.documentDetails?.periodEnd != null) {
+          latestApproved = item;
+          break;
+        }
+      }
       setState(() {
         _analytics = results[0] as AnalyticsReport;
         _insights = results[1] as InsightsReport;
         _health = results[2] as HealthScore;
         _subscriptions = results[3] as SubscriptionsReport;
+        _latestApprovedImport = latestApproved;
         _loading = false;
       });
     } catch (error) {
@@ -126,6 +137,19 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     } else {
       setState(() => _period = value);
     }
+    await _load();
+  }
+
+  Future<void> _viewLatestStatementPeriod() async {
+    final details = _latestApprovedImport?.documentDetails;
+    final from = details?.periodStart == null ? null : DateTime.tryParse(details!.periodStart!);
+    final to = details?.periodEnd == null ? null : DateTime.tryParse(details!.periodEnd!);
+    if (from == null || to == null) return;
+    setState(() {
+      _period = 'custom';
+      _customFrom = from;
+      _customTo = to;
+    });
     await _load();
   }
 
@@ -218,6 +242,28 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 12),
+          if (_period == 'month' &&
+              analytics.spendingByCategory.isEmpty &&
+              _latestApprovedImport?.documentDetails?.periodStart != null &&
+              _latestApprovedImport?.documentDetails?.periodEnd != null)
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.info_outline),
+                title: const Text('No activity in this period'),
+                subtitle: Text(
+                  'Your approved statement covers ${_latestApprovedImport!.documentDetails!.periodStart} to ${_latestApprovedImport!.documentDetails!.periodEnd}.',
+                ),
+                trailing: TextButton(
+                  onPressed: _loading ? null : _viewLatestStatementPeriod,
+                  child: const Text('View statement period'),
+                ),
+              ),
+            ),
+          if (_period == 'month' &&
+              analytics.spendingByCategory.isEmpty &&
+              _latestApprovedImport?.documentDetails?.periodStart != null &&
+              _latestApprovedImport?.documentDetails?.periodEnd != null)
+            const SizedBox(height: 12),
           _metricGrid(context, analytics),
           const SizedBox(height: 20),
           if (analytics.trend.isNotEmpty) ...[

@@ -8,13 +8,15 @@ import type { CategorizationRule, Transaction } from '../types';
 import { parseAmount, parseDate, suggestMapping, type ColumnMapping } from '../imports/mapping';
 import { parseCsv } from '../imports/csv-parse';
 import { reviewImport, type ReviewedRow } from '../imports/review';
-import type { StatementExtraction, StatementFormat, StatementRowDraft } from './types';
+import type { StatementDocumentDetails, StatementExtraction, StatementFormat, StatementRowDraft } from './types';
 
 const MAX_ROWS = 10_000;
 const MAX_DECOMPRESSED_BYTES = 10 * 1024 * 1024;
 const MAX_ZIP_ENTRIES = 512;
 const MAX_XLSX_COLUMNS = 16_384; // Excel's XFD limit.
+const MAX_PDF_OCR_PAGES = 20;
 const IMAGE_MIME = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/tiff', 'image/bmp']);
+const CURRENCY_CODES = ['CAD', 'USD', 'EUR', 'GBP', 'AUD', 'NZD', 'JPY', 'CHF', 'CNY', 'INR', 'MXN', 'BRL', 'SGD', 'HKD'] as const;
 
 export function formatFor(filename: string, mimeType?: string): StatementFormat {
   const ext = filename.toLowerCase().split('.').pop();
@@ -53,14 +55,105 @@ export async function analyzeStatement(input: StatementAnalyzeInput): Promise<St
   }
 
   const text = format === 'pdf' ? await extractPdfText(input.bytes) : await extractImageText(input.bytes);
+  const documentDetails = extractStatementDetails(text, input.currency);
+  assertCurrencyMatchesAccount(documentDetails.currency, input.currency);
   const rows = parseTextRows(text, input.currency, input.rules, input.existing, model);
   return {
     format,
     rows,
     warnings: rows.length === 0 ? ['No transaction rows could be identified. Check the statement quality or review it manually.'] : [],
     statementHash,
+    documentDetails,
     sourceText: text.slice(0, 200_000),
   };
+}
+
+/**
+ * Extract only safe header metadata. Full account/card numbers and addresses
+ * are deliberately discarded; the selected FINVERSE account remains the
+ * authoritative routing target.
+ */
+export function extractStatementDetails(text: string, currency: string): StatementDocumentDetails {
+  const lines = text.split(/\r?\n/).map((line) => line.replace(/\s+/g, ' ').trim()).filter(Boolean);
+  const issuer = [
+    ['cibc', 'CIBC'],
+    ['neo financial', 'Neo Financial'],
+    ['royal bank of canada|\\brbc\\b', 'RBC'],
+    ['toronto-dominion|\\btd bank\\b', 'TD'],
+    ['bank of montreal|\\bbmo\\b', 'BMO'],
+    ['scotiabank', 'Scotiabank'],
+    ['desjardins', 'Desjardins'],
+    ['tangerine', 'Tangerine'],
+    ['simplii', 'Simplii'],
+    ['capital one', 'Capital One'],
+  ].find(([pattern]) => new RegExp(pattern!, 'i').test(text))?.[1] ?? null;
+
+  const accountLine = lines.find((line) => /account number|card number|card account|••••/i.test(line) && /\d{4}/.test(line))
+    ?? lines.find((line) => {
+      const match = /^\D*(\d{4})\D*$/u.exec(line);
+      return Boolean(match && !/^20\d{2}$/.test(match[1]!));
+    });
+  const accountGroups = accountLine?.match(/\d{4}/g) ?? [];
+  const accountReferenceLast4 = accountGroups.at(-1) ?? null;
+
+  const statementDateMatch = /\bstatement\s+date\s*:?\s*([A-Za-z]{3,9}\s+\d{1,2},?\s+20\d{2})\b/i.exec(text);
+  const statementDate = statementDateMatch ? parseLongDate(statementDateMatch[1]!) : null;
+  const periodMatch = /\b([A-Za-z]{3,9}\s+\d{1,2})(?:,?\s*(20\d{2}))?\s+(?:to|[-–])\s+([A-Za-z]{3,9}\s+\d{1,2}),?\s*(20\d{2})\b/i.exec(text);
+  const endYear = periodMatch?.[4] ? Number(periodMatch[4]) : null;
+  const periodStart = periodMatch ? parseLongDate(periodMatch[1]!, periodMatch[2] ? Number(periodMatch[2]) : endYear) : null;
+  const periodEnd = periodMatch ? parseLongDate(periodMatch[3]!, endYear) : null;
+
+  return {
+    issuer,
+    accountReferenceLast4,
+    statementDate,
+    periodStart,
+    periodEnd,
+    currency: detectStatementCurrency(text, currency),
+  };
+}
+
+/**
+ * Detect a currency only from statement-style labels. A merchant description
+ * may contain an ISO code, so a broad `\\b[A-Z]{3}\\b` search would silently
+ * mislabel an account. The selected account currency remains the fallback and
+ * is checked before any rows are staged.
+ */
+export function detectStatementCurrency(text: string, fallback: string): string | null {
+  const normalizedFallback = fallback.trim().toUpperCase();
+  const codes = CURRENCY_CODES.join('|');
+  const labelled = new RegExp(
+    `(?:amount|balance|currency|total|debit|credit|payment)[^\\n]{0,36}\\(\\s*\\$?\\s*(${codes})\\s*\\)`,
+    'i',
+  ).exec(text)?.[1];
+  if (labelled) return labelled.toUpperCase();
+
+  const symbol = /(?:CA\$|C\$)\s*[-+]?\d|(?:US\$)\s*[-+]?\d/i.test(text)
+    ? (/(?:CA\$|C\$)\s*[-+]?\d/i.test(text) ? 'CAD' : 'USD')
+    : null;
+  if (symbol) return symbol;
+
+  const explicit = new RegExp(`(?:statement\\s+)?currency\\s*[:=]?\\s*(${codes})\\b`, 'i').exec(text)?.[1];
+  return explicit?.toUpperCase() ?? (normalizedFallback || null);
+}
+
+function assertCurrencyMatchesAccount(documentCurrency: string | null, accountCurrency: string): void {
+  const documentCode = documentCurrency?.trim().toUpperCase();
+  const accountCode = accountCurrency.trim().toUpperCase();
+  if (documentCode && accountCode && documentCode !== accountCode) {
+    throw new Error(
+      `This statement is in ${documentCode}, but the selected account is ${accountCode}. Select or create a ${documentCode} account before uploading it.`,
+    );
+  }
+}
+
+function parseLongDate(value: string, fallbackYear?: number | null): string | null {
+  const match = /^([A-Za-z]{3,9})\s+(\d{1,2})(?:,?\s*(20\d{2}))?$/.exec(value.trim());
+  if (!match) return null;
+  const month = MONTHS[match[1]!.toLowerCase()];
+  const day = Number(match[2]);
+  const year = match[3] ? Number(match[3]) : fallbackYear;
+  return buildTextDate(year ?? null, month, day);
 }
 
 function assertFileSignature(format: StatementFormat, bytes: Buffer): void {
@@ -88,6 +181,8 @@ function analyzeTabular(
   input: StatementAnalyzeInput,
   model: UserCorrectionClassifier,
 ): StatementExtraction {
+  const documentDetails = extractStatementDetails(content, input.currency);
+  assertCurrencyMatchesAccount(documentDetails.currency, input.currency);
   const parsed = parseCsv(content);
   if (parsed.rows.length > MAX_ROWS) throw new Error(`A statement may contain at most ${MAX_ROWS} rows.`);
   const suggestion = suggestMapping(parsed.headers, parsed.rows.slice(0, 25));
@@ -108,6 +203,7 @@ function analyzeTabular(
     rows: review.rows.map((row) => draftFromReviewed(row, input.currency, input.rules, ambiguousDates, model)),
     warnings: suggestion.warnings,
     statementHash,
+    documentDetails,
   };
 }
 
@@ -157,6 +253,14 @@ function parseTextRows(
   model: UserCorrectionClassifier,
 ): StatementRowDraft[] {
   const lines = text.split(/\r?\n/).map((line) => line.replace(/\s+/g, ' ').trim()).filter(Boolean);
+  // Many card issuers put two textual dates and a positive charge amount on
+  // each row (for example, "Aug 01 Aug 04 MERCHANT Restaurants 7.33").
+  // Those amounts are debits even though they do not carry a minus sign. Parse
+  // this well-known statement shape before the generic signed-amount parser so
+  // charges are not mistaken for income.
+  const cardRows = parseCreditCardRows(lines, text, currency, rules, existing, model);
+  if (cardRows.length > 0) return cardRows;
+
   const dates = lines.map((line) => /\b\d{1,4}[\/-]\d{1,2}[\/-]\d{1,4}\b/.exec(line)?.[0] ?? '').filter(Boolean);
   const dateOrder = dates.some((date) => /^\d{4}/.test(date)) ? 'YMD' : 'DMY';
   const ambiguousDate = dates.length > 0 && !dates.some((date) => {
@@ -210,18 +314,226 @@ function parseTextRows(
   return rows;
 }
 
+const MONTHS: Record<string, number> = {
+  jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3,
+  apr: 4, april: 4, may: 5, jun: 6, june: 6, jul: 7, july: 7,
+  aug: 8, august: 8, sep: 9, sept: 9, september: 9, oct: 10,
+  october: 10, nov: 11, november: 11, dec: 12, december: 12,
+};
+
+const CARD_CATEGORY_LABELS = [
+  'Retail and Grocery', 'Restaurants', 'Transportation',
+  'Personal and Household Expenses', 'Professional and Financial Services',
+  'Home and Office Improvement', 'Entertainment', 'Travel', 'Other',
+];
+
+function parseCreditCardRows(
+  lines: readonly string[],
+  text: string,
+  currency: string,
+  rules: readonly CategorizationRule[],
+  existing: readonly Transaction[],
+  model: UserCorrectionClassifier,
+): StatementRowDraft[] {
+  // Require a statement-year anchor. A month/day without a year is not safe
+  // to import because a statement can span December and January.
+  const year = findStatementYear(text);
+  if (year === null || !/(?:credit card|card account|card number|spend categories|new charges and credits)/i.test(text)) return [];
+
+  const rows: StatementRowDraft[] = [];
+  const datePattern = Object.keys(MONTHS).join('|');
+  const rowPattern = new RegExp(`^(${datePattern})\\s+(\\d{1,2})\\s+(${datePattern})\\s+(\\d{1,2})\\s+(.+?)\\s+((?:\\(?[-+]?[$€£]?\\d[\\d,.]*\\)?))$`, 'i');
+
+  for (let index = 0; index < lines.length && rows.length < MAX_ROWS; index += 1) {
+    const line = lines[index]!;
+    const match = rowPattern.exec(line);
+    if (!match) continue;
+
+    const transactionMonth = MONTHS[match[1]!.toLowerCase()];
+    const transactionDay = Number(match[2]);
+    const postedAt = buildTextDate(year, transactionMonth, transactionDay);
+    const amount = parseAmount(match[6]!, currency);
+    let description = match[5]!.trim();
+    let issuerCategory: string | undefined;
+    // Issuer-provided spend labels are metadata, not part of the merchant
+    // name. Strip only a known suffix so a similarly named merchant is kept.
+    for (const label of CARD_CATEGORY_LABELS) {
+      const suffix = new RegExp(`\\s+${escapeRegExp(label)}$`, 'i');
+      if (suffix.test(description)) {
+        issuerCategory = label;
+        description = description.replace(suffix, '').trim();
+        break;
+      }
+    }
+
+    const normalized = normalizeDescriptor(description);
+    const isCredit = /\b(payment|credit|refund|reversal)\b/i.test(normalized);
+    const signedAmount = amount === null ? null : isCredit ? Math.abs(amount) : -Math.abs(amount);
+    rows.push(textDraft({
+      sourceLine: index + 1,
+      raw: line,
+      postedAt,
+      amount: signedAmount,
+      currency,
+      description,
+      issuerCategory,
+      rules,
+      existing,
+      model,
+    }));
+  }
+  return rows;
+}
+
+function findStatementYear(text: string): number | null {
+  const explicit = /(?:statement date|statement period|to)\b[^\d]*(20\d{2})\b/i.exec(text)?.[1];
+  const fallback = /\b(20\d{2})\b/.exec(text)?.[1];
+  const year = Number(explicit ?? fallback ?? '');
+  return year >= 2000 && year <= 2100 ? year : null;
+}
+
+function buildTextDate(year: number | null, month: number | undefined, day: number): string | null {
+  if (year === null || month === undefined || day < 1 || day > 31) return null;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null;
+  return `${year.toString().padStart(4, '0')}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+}
+
+function textDraft(input: {
+  sourceLine: number;
+  raw: string;
+  postedAt: string | null;
+  amount: number | null;
+  currency: string;
+  description: string;
+  issuerCategory?: string;
+  rules: readonly CategorizationRule[];
+  existing: readonly Transaction[];
+  model: UserCorrectionClassifier;
+}): StatementRowDraft {
+  const categorizedByMerchant = input.description
+    ? categorizeStatementDescriptor(input.description, { rules: input.rules, model: input.model })
+    : null;
+  const categorized = categorizedByMerchant?.categorySlug !== UNKNOWN_CATEGORY
+    ? categorizedByMerchant
+    : issuerCategoryResult(input.issuerCategory) ?? categorizedByMerchant;
+  const normalized = normalizeDescriptor(input.description);
+  const flags = [
+    ...(input.postedAt ? [] : ['extraction_error']),
+    ...(input.amount === null || input.amount === 0 ? ['extraction_error'] : []),
+    ...(categorized && categorized.confidence < 0.7 ? ['low_confidence'] : []),
+    ...(!categorized || categorized.categorySlug === UNKNOWN_CATEGORY ? ['uncategorized'] : []),
+  ];
+  if (input.existing.some((txn) => txn.postedAt === input.postedAt && txn.amount === input.amount && txn.normalizedDescriptor === normalized)) {
+    flags.push('possible_duplicate');
+  }
+  const fingerprint = createHash('sha256')
+    .update(`${input.sourceLine}|${input.postedAt ?? ''}|${input.amount ?? ''}|${normalized}|${input.currency}`)
+    .digest('hex');
+  return {
+    sourceLine: input.sourceLine,
+    postedAt: input.postedAt,
+    description: input.description.slice(0, 500),
+    merchant: categorized?.merchant ?? null,
+    amount: input.amount,
+    currency: input.currency,
+    direction: input.amount === null ? 'unknown' : input.amount < 0 ? 'debit' : 'credit',
+    categorySlug: categorized?.categorySlug ?? UNKNOWN_CATEGORY,
+    categorySource: categorized?.source ?? 'unknown',
+    categoryConfidence: categorized?.confidence ?? 0,
+    isRecurring: false,
+    flags: flags.slice(0, 8),
+    decision: flags.length === 0 ? 'include' : 'needs_review',
+    fingerprint,
+    raw: input.raw.slice(0, 2_000),
+  };
+}
+
+/**
+ * Apply statement-specific semantics that a merchant lexicon cannot safely
+ * infer. Card payments and account transfers are money movement, not income;
+ * leaving a positive payment as unknown would inflate cash flow.
+ */
+function categorizeStatementDescriptor(
+  description: string,
+  options: { rules: readonly CategorizationRule[]; model: UserCorrectionClassifier },
+): ReturnType<typeof categorizeDescriptor> {
+  const categorized = categorizeDescriptor(description, options);
+  if (categorized.categorySlug !== UNKNOWN_CATEGORY) return categorized;
+
+  const normalized = normalizeDescriptor(description);
+  if (/\b(payment received|payment thank you|card payment|credit card payment|minimum payment)\b/i.test(normalized)) {
+    return {
+      categorySlug: 'credit_card_payment',
+      source: 'lexicon',
+      confidence: 0.99,
+      merchant: 'Credit card payment',
+      reason: 'Identified as a payment toward a credit-card balance; excluded from income and spending.',
+    };
+  }
+  if (/\b(e transfer|etransfer|interac|transfer from|transfer to|internal transfer)\b/i.test(normalized)) {
+    return {
+      categorySlug: 'transfer',
+      source: 'lexicon',
+      confidence: 0.96,
+      merchant: 'Account transfer',
+      reason: 'Identified as money movement between accounts, not income or spending.',
+    };
+  }
+  return categorized;
+}
+
+function issuerCategoryResult(label: string | undefined): { categorySlug: string; source: 'lexicon'; confidence: number; merchant?: string; reason: string } | null {
+  if (!label) return null;
+  if (/restaurant/i.test(label)) return { categorySlug: 'restaurants', source: 'lexicon', confidence: 0.82, merchant: 'Restaurant', reason: 'Matched the issuer-provided spend category.' };
+  if (/transportation/i.test(label)) return { categorySlug: 'transportation', source: 'lexicon', confidence: 0.82, merchant: 'Transportation', reason: 'Matched the issuer-provided spend category.' };
+  if (/retail and grocery/i.test(label)) return { categorySlug: 'groceries', source: 'lexicon', confidence: 0.72, merchant: 'Retail and Grocery', reason: 'Matched the issuer-provided spend category.' };
+  if (/entertainment/i.test(label)) return { categorySlug: 'entertainment', source: 'lexicon', confidence: 0.78, merchant: 'Entertainment', reason: 'Matched the issuer-provided spend category.' };
+  return null;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\[\]\\]/g, '\\$&');
+}
+
 async function extractPdfText(bytes: Buffer): Promise<string> {
   const module = await import('pdf-parse');
   const parser = new module.PDFParse({ data: bytes });
   try {
     const result = await parser.getText();
-    return result.text ?? '';
+    const text = result.text ?? '';
+    // Scanned statements have no text layer. Render a bounded number of pages
+    // and send only those in-memory images through the same local OCR path used
+    // for image uploads. If a text layer already contains transaction-shaped
+    // content, avoid OCR so we do not duplicate rows from hybrid PDFs.
+    if (hasTransactionText(text)) return text;
+    const screenshots = await parser.getScreenshot({
+      first: MAX_PDF_OCR_PAGES,
+      desiredWidth: 1600,
+      imageBuffer: true,
+      imageDataUrl: false,
+    });
+    const images = screenshots.pages
+      .map((page) => page.data)
+      .filter((image): image is Uint8Array => image instanceof Uint8Array && image.length > 0);
+    if (images.length === 0) return text;
+    const ocrText = await recognizeImages(images);
+    return [text.trim(), ocrText.trim()].filter(Boolean).join('\n');
   } finally {
     await parser.destroy();
   }
 }
 
 async function extractImageText(bytes: Buffer): Promise<string> {
+  return recognizeImages([bytes]);
+}
+
+function hasTransactionText(text: string): boolean {
+  return /\b\d{4}[\/-]\d{1,2}[\/-]\d{1,2}\b[^\r\n]*[-+]?[$€£]?\d[\d,.]*\.?\d{0,2}\s*$/m.test(text)
+    || /\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}\s+(?:[A-Za-z]{3,9}\s+\d{1,2}\s+)?[^\r\n]*[-+]?[$€£]?\d[\d,.]*\.?\d{0,2}\s*$/im.test(text);
+}
+
+async function recognizeImages(images: readonly Uint8Array[]): Promise<string> {
   // Tesseract ships with the English model in the application image. No
   // network request or third-party model service is involved.
   const tesseract = await import('tesseract.js');
@@ -231,8 +543,12 @@ async function extractImageText(bytes: Buffer): Promise<string> {
   const lang = require('@tesseract.js-data/eng') as { langPath: string };
   const worker = await tesseract.createWorker('eng', 1, { langPath: lang.langPath, gzip: true, logger: () => undefined });
   try {
-    const result = await worker.recognize(bytes);
-    return result.data.text ?? '';
+    const pages: string[] = [];
+    for (const image of images) {
+      const result = await worker.recognize(image);
+      if (result.data.text) pages.push(result.data.text);
+    }
+    return pages.join('\n');
   } finally {
     await worker.terminate();
   }
@@ -268,7 +584,28 @@ function xlsxToCsv(bytes: Buffer): string {
     }
     rows.push(cells);
   }
+  normalizeExcelDateColumns(rows);
   return rows.map((row) => row.map(csvEscape).join(',')).join('\n');
+}
+
+function normalizeExcelDateColumns(rows: string[][]): void {
+  const headers = rows[0] ?? [];
+  const dateColumns = headers
+    .map((header, index) => /\b(?:date|posted|posting|booking|completed|trans)\b/i.test(header) ? index : -1)
+    .filter((index) => index >= 0);
+  if (dateColumns.length === 0) return;
+
+  for (const row of rows.slice(1)) {
+    for (const column of dateColumns) {
+      const value = row[column]?.trim() ?? '';
+      if (!/^\d+(?:\.\d+)?$/.test(value)) continue;
+      const serial = Number(value);
+      if (!Number.isFinite(serial) || serial < 1 || serial > 100_000) continue;
+      const date = new Date(Date.UTC(1899, 11, 30) + Math.floor(serial) * 86_400_000);
+      if (Number.isNaN(date.getTime())) continue;
+      row[column] = `${date.getUTCFullYear().toString().padStart(4, '0')}-${(date.getUTCMonth() + 1).toString().padStart(2, '0')}-${date.getUTCDate().toString().padStart(2, '0')}`;
+    }
+  }
 }
 
 /**

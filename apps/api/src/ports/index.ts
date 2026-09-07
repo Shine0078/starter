@@ -38,6 +38,7 @@ import type {
   StatementImportEvent,
   StatementImportJob,
   StatementRowRecord,
+  StatementDocumentDetails,
 } from '../domain/statement-import/types';
 export type { StatementFileCipher } from './statement-import';
 
@@ -210,6 +211,8 @@ export class DuplicateViewNameError extends Error {
 export interface ImportBatch {
   id: string;
   accountId: string;
+  /** Links manual ledger rows back to their reviewable source document. */
+  statementImportId?: string;
   filename: string;
   status: 'committed' | 'reverted';
   rowsTotal: number;
@@ -268,6 +271,7 @@ export interface StatementImportStore {
     rows: readonly StatementRowRecord[],
     processedAt: string,
     event: StatementImportEvent,
+    documentDetails?: StatementDocumentDetails,
   ): Promise<StatementImport | null>;
   /** Mark irrecoverable analysis input failures without leaking source data. */
   failProcessing(
@@ -284,6 +288,13 @@ export interface StatementImportStore {
     patch: Partial<StatementRowRecord>,
     event: StatementImportEvent,
   ): Promise<StatementRowRecord | null>;
+  updateRowsDecision(
+    userId: string,
+    importId: string,
+    rowIds: readonly string[],
+    decision: StatementRowRecord['decision'],
+    event: StatementImportEvent,
+  ): Promise<StatementRowRecord[] | null>;
   splitRow(
     userId: string,
     importId: string,

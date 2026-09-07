@@ -6,14 +6,17 @@ Verified: 2026-09-06
 
 ## Current branch
 
-Working branch: `codex/passkey-webauthn-p0`
+Working branch: `main`
 Protected default branch: `main`
 
-## Current commit SHA
+## Verified source baseline
 
-- Protected `main` / `origin/main`: `5ebff34` (PR #28 merge).
-- Working branch `codex/passkey-webauthn-p0` remains at `4601e7d`; its release
-  workflow changes are included in protected `main`. The worktree is clean.
+- Fully tested source baseline: `65455e1` (`test(imports): verify PDF cash-flow analytics`).
+- Documentation-only follow-up commits may be ahead of this baseline; they do
+  not change executable source or the recorded test evidence.
+- FINVERSE source, tests, migrations, mobile code, deployment controls, and
+  documentation are committed. Three unrelated local artifact directories remain
+  untracked and are intentionally excluded from release commits.
 
 ## Canonical deployment
 
@@ -47,15 +50,22 @@ GitHub Pages and `finverse.onrender.com` are not the current API.
   SBOM/provenance, GHCR publication, keyless Cosign signing, Android release,
   and installable web/PWA artifacts all completed.
 
-Local verification on the current candidate (2026-09-06): API typecheck/build
-passed; API in-memory suite passed (66 files, 882 tests, 9 skipped); fresh
-PostgreSQL suite passed (72 files, 1,065 tests) under the restricted runtime
-role with forced RLS; Flutter analysis passed; Flutter tests passed (119);
-Flutter web release and Android release builds passed; focused statement
-parser/queue tests passed (11). The web-shell light-theme test passed (2).
-The candidate includes migration 040 for bounded statement-source retention,
-ZIP expansion limits, active import quotas, and the immutable-image release
-identity gates.
+Local verification on `main` (2026-09-06): API typecheck and production build
+passed; API in-memory suite passed (68 files, 894 tests, 9 skipped); fresh
+PostgreSQL suite passed (74 files, 1,079 tests) under the restricted runtime
+role with forced RLS; the statement-import PostgreSQL E2E passed, including
+queued processing, approval, batch provenance, analytics updates, and `/auth/me`;
+Flutter analysis passed; all Flutter tests passed (119); Flutter web release
+build passed. Focused statement analysis/import/categorization/encryption tests
+passed. The candidate includes migrations 041-043 for ledger-to-source
+provenance, safe document metadata, and authenticated encryption of staged
+statement text.
+
+The latest statement-analysis verification also covered bounded OCR fallback
+for scanned PDFs, numeric Excel date normalization, and two local sample card
+statement PDFs. One produced 15 rows and the other 71 rows, with parsed totals
+matching their visible statement summaries. The source documents were not added
+to the repository.
 
 ## Completed this session
 
@@ -90,34 +100,36 @@ CI follow-up 2:
 
 - Leave-one-out evaluation for the user-correction categorizer
 
-## Manual statement import (verified 2026-08-27)
+## Manual statement import (verified 2026-09-06)
 
 - CSV, XLSX, text-PDF, and PNG/JPEG/WEBP/TIFF/BMP uploads are authenticated,
-  bounded, signature-checked, encrypted at rest, and staged for review.
+  bounded, signature-checked, encrypted at rest, and staged for review. OCR is
+  bounded and preserves uncertain rows for review rather than guessing.
 - Rows expose date, description, merchant, amount, currency, debit/credit,
   category, confidence, recurring/duplicate/refund/transfer/unusual flags, and
   extraction-error warnings. Users can edit, split, merge, include, exclude,
   recategorize, approve, delete the source, and inspect an audit trail.
 - Approval atomically writes normal ledger transactions and import batches;
   statement identity plus transaction provider fingerprints prevent duplicates.
-- PostgreSQL migrations 031-032 apply cleanly under the restricted runtime role
+- PostgreSQL migrations 031-043 apply cleanly under the restricted runtime role
   with forced RLS. API DB tests cover cross-user isolation, source retention,
-  approval, and duplicate protection. No remote model-training path is used;
+  approval, batch provenance, and duplicate protection. No remote model-training
+  path is used;
   user corrections feed only the same user's local classifier/rules.
-- Current extraction is durable and deliberately bounded. Scanned PDFs without
-  a text layer return a warning rather than guessed transactions; production
+- Current extraction is durable and deliberately bounded. Scanned PDFs now use a
+  bounded OCR fallback when the text layer has no transaction-shaped content;
   OCR/load evidence and external worker observability remain required before
   increasing limits for large-volume use. Source retention is time-bounded and
   user deletion preserves approved records and audit history.
 
 ## P0 remaining
 
-- Deploy the exact CI-green protected-main SHA `5ebff34` to Cloud Run with
-  `GIT_SHA`, then verify `/api/version` before calling the public URL current
-- Replace live legal URLs before real users
-- Configure live `WEBAUTHN_*`
-- Physical passkey proof
-- Confirm Neon runtime role is restricted
+- Deploy the exact verified `main` SHA `65455e1` to Cloud Run with `GIT_SHA`,
+  then verify `/api/readiness`, `/api/version`, and `/app/` from the same origin
+- Supply reviewed production legal URLs and live `WEBAUTHN_*` configuration
+- Complete physical-device passkey proof and real Neon runtime-role attestation
+- Configure approved Plaid Production credentials and webhook/redirect settings
+- Run a production OCR/load observation before raising upload limits
 
 ## P1 remaining
 
@@ -132,4 +144,9 @@ CI follow-up 2:
 
 ## Exact next action
 
-Set live `LEGAL_*` to the same-origin technical-beta documents (`/api/legal/terms/technical-beta-v1` and `/api/legal/privacy/technical-beta-v1`), then deploy `5ebff34` to Cloud Run with `GIT_SHA` set. Replace those documents with counsel-reviewed Terms/Privacy before a commercial launch.
+Set live `LEGAL_*` to the same-origin technical-beta documents
+(`/api/legal/terms/technical-beta-v1` and
+`/api/legal/privacy/technical-beta-v1`), then deploy `65455e1` to Cloud Run
+with `GIT_SHA` set. Verify `/api/readiness`, `/api/version`, and `/app/` from
+the same origin. Replace those documents with counsel-reviewed Terms/Privacy
+before a commercial launch.

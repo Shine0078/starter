@@ -1,31 +1,36 @@
 # FINVERSE Current Status
 
 **Verified:** 2026-09-06
-**Integration branch:** `codex/passkey-webauthn-p0` at `4601e7d`. Its changes
-were merged through PR #27.
-**Protected main observed:** `5ebff34cfedfd913ab9ed3ede638d81692f5418d`.
+**Verified source baseline:** `65455e1`.
+**Current local main:** documentation-only follow-up commits are ahead of that
+baseline; the executable source is unchanged.
+**Protected/public deployment:** requires an owner-controlled Cloud Run deploy
+and `/api/version` verification before it can be called current.
 
 ## Verified Today
 
-- API TypeScript typecheck and production build on the integration branch:
-  passed.
-- API in-memory suite on the integration branch: 66 files passed, 882 tests
-  passed, 9 tests skipped because they require PostgreSQL.
-- API PostgreSQL suite on a fresh embedded cluster: 72 files and 1,065 tests
+- API TypeScript typecheck and production build on local `main`: passed.
+- API in-memory suite on local `main`: 68 files passed, 894 tests passed, 9
+  tests skipped because they require PostgreSQL.
+- API PostgreSQL suite on a fresh embedded cluster: 74 files and 1,079 tests
   passed using the restricted runtime role and forced RLS.
-- The fresh PostgreSQL test cluster applied all 40 numbered migrations and
+- The fresh PostgreSQL test cluster applied all 43 numbered migrations and
   provisioned `finverse_app`; migration repeat/idempotency is also a blocking
   CI step.
 - Production WebAuthn gate passed in that suite: unauthenticated options,
   restricted-role credential routing, assertion verification, normal access and
   refresh issuance, `/auth/me`, replay rejection, eligibility checks, and
   management authorization.
-- Flutter analysis on the integration branch: passed with no issues.
+- Flutter analysis on local `main`: passed with no issues.
 - Full Flutter test suite: 119 tests passed; Flutter web release build: passed.
 - Flutter Android release APK build: passed (`app-release.apk`).
-- Manual statement focused tests on the integration branch: extraction,
-  summaries, encryption, and authenticated review flow passed after correcting
-  a local generated dependency link.
+- Manual statement focused tests on local `main`: extraction, summaries,
+  scanned-PDF OCR fallback, Excel date normalization, encryption,
+  card-payment handling, and authenticated review flow passed.
+- Two local sample card-statement PDFs were analyzed end to end without
+  warnings: the text-layer statement produced 15 rows and the second statement
+  produced 71 rows. Their parsed debit/credit totals matched the visible
+  statement summaries. The source documents remain outside the repository.
 - Durable statement queue tests passed under both in-memory and PostgreSQL
   restricted-role paths, including stale-lease recovery and the production
   `202` upload contract.
@@ -43,15 +48,15 @@ were merged through PR #27.
   are published with SBOM/provenance attestations and signed by immutable
   digest through keyless Cosign/OIDC. Release run `34013496867` completed for
   `5ebff34`.
-- `npm audit --omit=dev` reported zero known production vulnerabilities for both
-  current `main` and the integration branch.
+- `npm audit --omit=dev` reported zero known production vulnerabilities in the
+  recorded audit evidence; rerun it in the release environment before publish.
 
 ## Integrated On Main
 
 - Encrypted manual statement import and review workflow.
-- Statement import migrations `031`, `032`, and durable queue migration `037`,
-  plus split invitation/consent migration `038` and balance-safe departure
-  migration `039`.
+- Statement import migrations `031`, `032`, `037`, `040`, `041`, `042`, and
+  `043`, plus split authorization/consent migrations `033`, `034`, `036`,
+  `038`, and `039`.
 - First-use account creation from the statement picker.
 - Light-only Flutter theme.
 - Additional operations, provider, device, incident, and privacy documentation.
@@ -60,25 +65,22 @@ were merged through PR #27.
 
 ## Not Live In Production Yet
 
-- Protected `main` SHA `5ebff34` has passed CI, CodeQL, dependency review,
-  container scanning, and the release artifact workflow. It is published as a
-  signed API image and verified Android/web artifacts, but it has not yet been
-  deployed to the canonical Cloud Run service.
+- Verified source baseline `65455e1` has passed all locally feasible API/database/mobile
+  gates, but it has not yet been deployed to the canonical Cloud Run service.
 - The canonical Cloud Run URL is stale: `/api/version` currently returns 404
   and `/app/` serves an older dark bundle. The local preview at
   `http://localhost:3001/app/` is the only runtime verified in this workstation
   session.
-- A repository-wide adversarial security scan is sealed for protected `main`
+- A repository-wide adversarial security scan is sealed for an earlier protected
+  `main`
   with five validated findings (two high, three medium). The report covers
   release identity, backup confidentiality, WebAuthn parser bounds, and split
-  authorization/consent; fixes on the newer integration branch are called out
-  separately because the scan target was the protected-main snapshot. The review
+  authorization/consent. The review
   identified backup confidentiality, deployment image identity, WebAuthn parser
   resource bounds, and shared-expense invitation/consent risks. Actor,
   non-admin write paths, direct split-membership deletes, invitation consent,
-  revocation, and balance-checked removal are now hardened on the integration
-  branch. The sealed report still targets the protected-main snapshot and has
-  not been rerun against this branch. Backup scripts now fail closed without
+  revocation, and balance-checked removal are now hardened on local `main`. The
+  sealed report has not been rerun against `65455e1`. Backup scripts now fail closed without
   age encryption, but production key custody is not locally verifiable.
 - Manual document analysis now has a durable, forced-RLS queue with stale-lease
   recovery, bounded workers, ZIP expansion limits, source retention expiry, and

@@ -49,6 +49,16 @@ export const MERCHANT_LEXICON: readonly LexiconEntry[] = [
   { match: 'costco', categorySlug: 'groceries', confidence: 0.75, merchant: 'Costco' },
   { match: 'target', categorySlug: 'shopping', confidence: 0.7, merchant: 'Target' },
   { match: 'walmart', categorySlug: 'groceries', confidence: 0.72, merchant: 'Walmart' },
+  { match: 'wal-mart', categorySlug: 'groceries', confidence: 0.72, merchant: 'Walmart' },
+  { match: 'freshco', categorySlug: 'groceries', confidence: 0.9, merchant: 'FreshCo' },
+  { match: 'dollarama', categorySlug: 'shopping', confidence: 0.82, merchant: 'Dollarama' },
+  { match: 'dollar tree', categorySlug: 'shopping', confidence: 0.82, merchant: 'Dollar Tree' },
+  { match: 'saq', categorySlug: 'shopping', confidence: 0.8, merchant: 'SAQ' },
+  // Statement exports often contain a generic merchant class instead of a
+  // recognizable chain. These phrases are explicit enough to classify, but
+  // deliberately do not treat every market or store name as groceries.
+  { match: 'groceries', categorySlug: 'groceries', confidence: 0.86, merchant: 'Groceries' },
+  { match: 'grocery', categorySlug: 'groceries', confidence: 0.84, merchant: 'Grocery' },
 
   // Restaurants & delivery
   { match: 'sweetgreen', categorySlug: 'restaurants', confidence: 0.93, merchant: 'Sweetgreen' },
@@ -192,6 +202,10 @@ export const MERCHANT_LEXICON: readonly LexiconEntry[] = [
   { match: 'hydro one', categorySlug: 'utilities', confidence: 0.92, merchant: 'Hydro One' },
   { match: 'hydro quebec', categorySlug: 'utilities', confidence: 0.92, merchant: 'Hydro-Québec' },
   { match: 'bc hydro', categorySlug: 'utilities', confidence: 0.92, merchant: 'BC Hydro' },
+  { match: 'utility bill', categorySlug: 'utilities', confidence: 0.88, merchant: 'Utility bill' },
+  { match: 'utilities', categorySlug: 'utilities', confidence: 0.84, merchant: 'Utilities' },
+  { match: 'rent payment', categorySlug: 'rent', confidence: 0.9, merchant: 'Rent payment' },
+  { match: 'rent', categorySlug: 'rent', confidence: 0.82, merchant: 'Rent' },
 
   // Travel
   { match: 'airbnb', categorySlug: 'travel', confidence: 0.93, merchant: 'Airbnb' },
@@ -210,6 +224,7 @@ export const MERCHANT_LEXICON: readonly LexiconEntry[] = [
   { match: 'hyatt', categorySlug: 'travel', confidence: 0.9, merchant: 'Hyatt' },
 
   // Money in / money moved
+  { match: 'salary', categorySlug: 'salary', confidence: 0.92, merchant: 'Salary' },
   { match: 'payroll', categorySlug: 'salary', confidence: 0.9, merchant: 'Payroll' },
   { match: 'direct dep', categorySlug: 'salary', confidence: 0.88, merchant: 'Direct Deposit' },
   { match: 'paypal', categorySlug: 'freelance', confidence: 0.7, merchant: 'PayPal' },

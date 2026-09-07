@@ -1,11 +1,13 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { BadRequestException, ConflictException, HttpException, HttpStatus, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, HttpException, HttpStatus, Inject, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 
-import { isKnownCategory } from '../../domain/categories';
+import { getCategory, isKnownCategory } from '../../domain/categories';
 import { categorizeDescriptor, ruleFromCorrection } from '../../domain/categorization/categorize';
 import { normalizeDescriptor } from '../../domain/categorization/normalize';
+import { addDays } from '../../domain/dates';
 import { analyzeStatement, formatFor } from '../../domain/statement-import/analyze';
 import { summarizeStatementRows } from '../../domain/statement-import/summary';
+import { detectInternalTransfers, internalTransferIds, isUserCategorised } from '../../domain/transactions/internal-transfers';
 import type { StatementImport, StatementImportEvent, StatementImportJob, StatementRowDraft, StatementRowRecord } from '../../domain/statement-import/types';
 import type { Transaction } from '../../domain/types';
 import { loadConfig } from '../../config';
@@ -14,6 +16,7 @@ import {
   type AccountStore, type ClockPort, type ImportBatch, type RuleStore, type StatementFileCipher,
   type StatementImportStore, type TransactionStore,
 } from '../../ports';
+import { FinanceEventBus } from '../../infra/events/finance-event-bus';
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const MAX_FILENAME = 260;
@@ -38,6 +41,8 @@ export interface EditStatementRowInput {
 
 @Injectable()
 export class StatementImportService {
+  private readonly logger = new Logger(StatementImportService.name);
+
   constructor(
     @Inject(STATEMENT_IMPORT_STORE) private readonly imports: StatementImportStore,
     @Inject(STATEMENT_FILE_CIPHER) private readonly cipher: StatementFileCipher,
@@ -45,6 +50,7 @@ export class StatementImportService {
     @Inject(TRANSACTION_STORE) private readonly transactions: TransactionStore,
     @Inject(RULE_STORE) private readonly rules: RuleStore,
     @Inject(CLOCK) private readonly clock: ClockPort,
+    @Optional() private readonly events?: FinanceEventBus,
   ) {}
 
   async create(userId: string, input: CreateStatementInput): Promise<{ statement: StatementImport; rows: StatementRowRecord[]; warnings: string[]; queued: boolean }> {
@@ -103,6 +109,7 @@ export class StatementImportService {
       rowsExcluded: rows.filter((row) => row.decision === 'exclude').length,
       rowsNeedsReview: rows.filter((row) => row.decision === 'needs_review').length,
       createdAt: now, processedAt: now, approvedAt: null, sourceDeletedAt: null, error: null,
+      documentDetails: extraction.documentDetails,
     };
     try {
       await this.imports.create(userId, statement, this.cipher.encrypt(encoded), rows);
@@ -157,6 +164,7 @@ export class StatementImportService {
           rows: rows.length,
           warnings: extraction.warnings.slice(0, 8),
         }),
+        extraction.documentDetails,
       );
     } catch (error) {
       const message = safeProcessingError(error);
@@ -225,6 +233,30 @@ export class StatementImportService {
     return updated;
   }
 
+  async decideRows(userId: string, importId: string, input: { rowIds?: unknown; decision?: unknown }): Promise<StatementRowRecord[]> {
+    if (!Array.isArray(input.rowIds) || input.rowIds.length < 1 || input.rowIds.length > 10_000 || input.rowIds.some((value) => typeof value !== 'string')) {
+      throw new BadRequestException('Provide one or more row ids.');
+    }
+    const rowIds = [...new Set(input.rowIds as string[])];
+    if (rowIds.length !== input.rowIds.length) throw new BadRequestException('rowIds must not contain duplicates.');
+    if (input.decision !== 'include' && input.decision !== 'exclude' && input.decision !== 'needs_review') {
+      throw new BadRequestException('decision must be include, exclude, or needs_review.');
+    }
+    const existing = await this.imports.rows(userId, importId);
+    if (existing.length === 0 || existing.some((row) => row.importId !== importId) || rowIds.some((id) => !existing.some((row) => row.id === id))) {
+      throw new NotFoundException('One or more statement rows were not found.');
+    }
+    const updated = await this.imports.updateRowsDecision(
+      userId,
+      importId,
+      rowIds,
+      input.decision as StatementRowRecord['decision'],
+      this.event(importId, null, 'row_edited', { fields: ['decision'], rows: rowIds.length, decision: input.decision }),
+    );
+    if (!updated) throw new ConflictException('This statement is no longer awaiting row review.');
+    return updated;
+  }
+
   async splitRow(userId: string, importId: string, rowId: string, input: { parts?: unknown }): Promise<StatementRowRecord[]> {
     const current = await this.findRow(userId, importId, rowId);
     if (!Array.isArray(input.parts) || input.parts.length < 2 || input.parts.length > 10 || current.amount === null) throw new BadRequestException('Provide between 2 and 10 parts for a valid transaction.');
@@ -269,6 +301,10 @@ export class StatementImportService {
     if (alreadyPersisted.length > 0) {
       throw new ConflictException('One or more included rows already exist in this account. Exclude them to prevent a duplicate ledger entry.');
     }
+    const alreadyImported = included.filter((row) => existing.some((transaction) => sameTransactionIdentity(transaction, row)));
+    if (alreadyImported.length > 0) {
+      throw new ConflictException('One or more included rows match an existing transaction in this account. Exclude them to prevent a duplicate ledger entry.');
+    }
     const batchId = randomUUID();
     const transactions: Transaction[] = included.map((row) => ({
       id: `stmt_${importId}_${row.id}`, accountId: found.statement.accountId, providerTxnId: `manual_${row.fingerprint}`,
@@ -277,7 +313,7 @@ export class StatementImportService {
       categorySlug: row.categorySlug, categorySource: row.categorySource, categoryConfidence: row.categoryConfidence,
       isRecurring: row.isRecurring, pending: false, importBatchId: batchId,
     }));
-    const batch: ImportBatch = { id: batchId, accountId: found.statement.accountId, filename: found.statement.filename, status: 'committed', rowsTotal: found.rows.length, rowsImported: transactions.length, rowsDuplicate: found.rows.filter((row) => row.flags.includes('possible_duplicate')).length, rowsInvalid: found.rows.filter((row) => row.flags.includes('extraction_error')).length, createdAt: this.clock.now().toISOString(), revertedAt: null };
+    const batch: ImportBatch = { id: batchId, accountId: found.statement.accountId, statementImportId: importId, filename: found.statement.filename, status: 'committed', rowsTotal: found.rows.length, rowsImported: transactions.length, rowsDuplicate: found.rows.filter((row) => row.flags.includes('possible_duplicate')).length, rowsInvalid: found.rows.filter((row) => row.flags.includes('extraction_error')).length, createdAt: this.clock.now().toISOString(), revertedAt: null };
     let result: StatementImport | null;
     try {
       result = await this.imports.finalize(userId, importId, batch, transactions, this.event(importId, null, 'approved', { rows: transactions.length }));
@@ -288,6 +324,21 @@ export class StatementImportService {
       throw error;
     }
     if (!result) throw new ConflictException('This statement is no longer awaiting approval.');
+    this.events?.publish({
+      type: 'TransactionImported',
+      userId,
+      at: this.clock.now().toISOString(),
+      inserted: transactions.length,
+      transactionIds: transactions.map((transaction) => transaction.id),
+    });
+    try {
+      await this.reconcileInternalTransfers(userId, included);
+    } catch (error) {
+      // Approval is already durable. A transient categorisation failure must
+      // not turn a successful financial write into a misleading 500; the next
+      // bank sync or manual approval can safely retry this derived update.
+      this.logger.warn(`Internal transfer reconciliation deferred: ${safeProcessingError(error)}`);
+    }
     for (const row of included.filter((candidate) => candidate.categorySource === 'user_manual')) {
       try { await this.rules.create(userId, ruleFromCorrection(row.description, row.categorySlug, randomUUID())); } catch { /* a duplicate correction does not invalidate an approved import */ }
     }
@@ -325,11 +376,59 @@ export class StatementImportService {
       const key = normalizeDescriptor(row.description);
       const recurring = (counts.get(key) ?? 0) > 1 || existing.filter((txn) => normalizeDescriptor(txn.rawDescriptor) === key && txn.amount === row.amount).length > 0;
       if (recurring && !flags.includes('recurring_payment')) flags.push('recurring_payment');
-      if ((row.categorySlug === 'transfer' || row.categorySlug === 'savings' || row.categorySlug === 'investments') && !flags.includes('internal_transfer')) flags.push('internal_transfer');
+      if (getCategory(row.categorySlug)?.kind === 'transfer' && !flags.includes('internal_transfer')) flags.push('internal_transfer');
       if ((row.categorySlug === 'refunds' || /\brefund\b|\breversal\b/i.test(row.description)) && !flags.includes('refund')) flags.push('refund');
       if (row.amount !== null && Math.abs(row.amount) > 500_000 && !flags.includes('unusual_spending')) flags.push('unusual_spending');
-      return { ...row, id: `${importId}_row_${row.sourceLine}_${randomUUID().slice(0, 8)}`, importId, isRecurring: recurring || row.isRecurring, flags: flags.slice(0, 8), decision: flags.length > 0 ? 'needs_review' : row.decision, editedAt: null };
+      // Recurring, refund, transfer, and unusual-spend markers are useful
+      // analysis signals, not extraction failures. Only evidence that makes a
+      // row unsafe to approve should hold the import at the review boundary.
+      const blocksApproval = flags.some((flag) =>
+        ['extraction_error', 'uncategorized', 'low_confidence', 'ambiguous_date', 'possible_duplicate'].includes(flag),
+      );
+      return { ...row, id: `${importId}_row_${row.sourceLine}_${randomUUID().slice(0, 8)}`, importId, isRecurring: recurring || row.isRecurring, flags: flags.slice(0, 8), decision: blocksApproval ? 'needs_review' : row.decision, editedAt: null };
     });
+  }
+
+  /**
+   * Manual statements can arrive in either order. Re-check the small date
+   * window around the approved rows so a matching debit and credit across two
+   * user-owned accounts are classified as a transfer immediately, without
+   * waiting for a future bank sync. User corrections always win.
+   */
+  private async reconcileInternalTransfers(userId: string, importedRows: readonly StatementRowRecord[]): Promise<void> {
+    const dates = importedRows
+      .map((row) => row.postedAt)
+      .filter((date): date is string => date !== null)
+      .sort();
+    if (dates.length === 0) return;
+
+    const recent = await this.transactions.list(userId, {
+      range: { start: addDays(dates[0]!, -3), end: addDays(dates[dates.length - 1]!, 3) },
+    });
+    const pairs = detectInternalTransfers(recent);
+    if (pairs.length === 0) return;
+
+    const byId = new Map(recent.map((transaction) => [transaction.id, transaction]));
+    const categorized: string[] = [];
+    for (const id of internalTransferIds(pairs)) {
+      const transaction = byId.get(id);
+      if (!transaction || isUserCategorised(transaction) || transaction.categorySlug === 'transfer') continue;
+      const updated = await this.transactions.update(userId, id, {
+        categorySlug: 'transfer',
+        categorySource: 'transfer_pairing',
+        categoryConfidence: 0.95,
+      });
+      if (updated) categorized.push(id);
+    }
+    if (categorized.length > 0) {
+      this.events?.publish({
+        type: 'TransactionCategorized',
+        userId,
+        at: this.clock.now().toISOString(),
+        transactionIds: categorized,
+        updated: categorized.length,
+      });
+    }
   }
 
   private event(importId: string, rowId: string | null, kind: StatementImportEvent['kind'], detail: Record<string, unknown>): StatementImportEvent {
@@ -344,6 +443,13 @@ function stringField(value: unknown, field: string, min: number, max: number): s
 
 function fingerprint(row: Pick<StatementRowRecord, 'sourceLine' | 'postedAt' | 'amount' | 'description' | 'currency'>): string {
   return createHash('sha256').update(`${row.sourceLine}|${row.postedAt ?? ''}|${row.amount ?? ''}|${normalizeDescriptor(row.description)}|${row.currency}`).digest('hex');
+}
+
+function sameTransactionIdentity(transaction: Transaction, row: StatementRowRecord): boolean {
+  return transaction.postedAt === row.postedAt
+    && transaction.amount === row.amount
+    && transaction.currency === row.currency
+    && transaction.normalizedDescriptor === normalizeDescriptor(row.description);
 }
 
 function safeProcessingError(error: unknown): string {

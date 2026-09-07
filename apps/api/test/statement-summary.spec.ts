@@ -22,9 +22,21 @@ describe('statement summaries', () => {
     ]);
     expect(summary.income).toBe(500);
     expect(summary.expenses).toBe(100);
+    expect(summary.netCashFlow).toBe(400);
     expect(summary.savings).toBe(50);
     expect(summary.recurringCount).toBe(1);
     expect(summary.duplicateCount).toBe(1);
     expect(summary.unusualCount).toBe(1);
+  });
+
+  it('does not treat positive card payments or transfers as income', () => {
+    const summary = summarizeStatementRows([
+      row({ amount: 98995, direction: 'credit', categorySlug: 'credit_card_payment' }),
+      row({ amount: 50000, direction: 'credit', categorySlug: 'transfer' }),
+      row({ amount: 250000, direction: 'credit', categorySlug: 'salary' }),
+    ]);
+    expect(summary.income).toBe(250000);
+    expect(summary.expenses).toBe(0);
+    expect(summary.netCashFlow).toBe(250000);
   });
 });
