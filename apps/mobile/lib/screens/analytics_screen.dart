@@ -5,6 +5,7 @@ import '../design/design.dart';
 import '../l10n/app_localizations.dart';
 import '../models/models.dart';
 import '../widgets/health_score_card.dart';
+import '../widgets/cash_flow_sankey.dart';
 import '../widgets/spending_chart.dart';
 import '../widgets/trend_chart.dart';
 import '../widgets/spending_heatmap.dart';
@@ -265,6 +266,17 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               _latestApprovedImport?.documentDetails?.periodEnd != null)
             const SizedBox(height: 12),
           _metricGrid(context, analytics),
+          const SizedBox(height: 20),
+          CashFlowSankey(
+            incomeSources: analytics.incomeBySource,
+            expenseCategories: analytics.spendingByCategory,
+            currency: analytics.currency,
+            totalIncome: analytics.trend.fold<int>(
+              0,
+              (sum, point) => sum + point.income,
+            ),
+            totalExpenses: analytics.grossExpenses,
+          ),
           const SizedBox(height: 20),
           if (analytics.trend.isNotEmpty) ...[
             TrendChart(points: analytics.trend),
