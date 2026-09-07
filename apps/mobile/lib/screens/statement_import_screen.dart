@@ -304,6 +304,44 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
     }
   }
 
+  List<StatementRow> _selectableRows(StatementImportDetail detail) => detail.rows
+      .where((row) => row.decision != 'exclude')
+      .toList(growable: false);
+
+  void _toggleSelectAll(StatementImportDetail detail, bool selected) {
+    final ids = _selectableRows(detail).map((row) => row.id).toSet();
+    setState(() {
+      if (selected) {
+        _selected.addAll(ids);
+      } else {
+        _selected.removeAll(ids);
+      }
+    });
+  }
+
+  Future<void> _bulkDecision(String decision) async {
+    final detail = _detail;
+    if (detail == null || _selected.isEmpty) return;
+    final ids = _selected.where((id) => detail.rows.any((row) => row.id == id)).toList();
+    if (ids.isEmpty) return;
+    setState(() => _working = true);
+    try {
+      await widget.api.decideStatementRows(detail.statement.id, ids, decision);
+      final fresh = await widget.api.statementImport(detail.statement.id);
+      if (!mounted) return;
+      setState(() {
+        _detail = fresh;
+        _selected.clear();
+      });
+      await _refreshSummary(fresh.statement.id);
+      _showMessage('${ids.length} transactions marked ${decision == 'include' ? 'included' : 'excluded'}.');
+    } catch (error) {
+      if (mounted) _showError(error);
+    } finally {
+      if (mounted) setState(() => _working = false);
+    }
+  }
+
   Future<void> _editCategory(StatementRow row) async {
     final detail = _detail;
     if (detail == null) return;
@@ -499,8 +537,11 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
       final approved =
           await widget.api.approveStatementImport(detail.statement.id);
       if (mounted) {
-        setState(() => _detail =
-            StatementImportDetail(statement: approved, rows: detail.rows));
+        setState(() {
+          _detail = StatementImportDetail(statement: approved, rows: detail.rows);
+          _selected.clear();
+        });
+        _showMessage('Approved transactions were added to your ledger. Dashboard totals follow the statement dates.');
       }
     } catch (error) {
       if (mounted) _showError(error);
@@ -579,7 +620,7 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
                   items: _accounts
                       .map((account) => DropdownMenuItem(
                           value: account.id,
-                          child: Text('${account.name}  ••${account.mask}')))
+                          child: Text('${account.name}  ••${account.mask} · ${account.currency}')))
                       .toList(),
                   onChanged: _working
                       ? null
@@ -659,6 +700,43 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
                     style: Theme.of(context).textTheme.bodySmall),
                 if (_summary != null) _summaryView(_summary!),
                 const SizedBox(height: 8),
+                if (detail.statement.status == 'ready' && detail.rows.isNotEmpty) ...[
+                  Builder(builder: (context) {
+                    final selectable = _selectableRows(detail);
+                    final selectedCount = _selected.intersection(selectable.map((row) => row.id).toSet()).length;
+                    final allSelected = selectable.isNotEmpty && selectedCount == selectable.length;
+                    return Column(
+                      children: [
+                        CheckboxListTile(
+                          contentPadding: EdgeInsets.zero,
+                          tristate: true,
+                          value: allSelected ? true : selectedCount == 0 ? false : null,
+                          onChanged: _working ? null : (value) => _toggleSelectAll(detail, value == true),
+                          title: Text(allSelected ? 'Clear selection' : 'Select all transactions'),
+                          subtitle: Text('$selectedCount of ${selectable.length} selectable rows selected'),
+                          controlAffinity: ListTileControlAffinity.leading,
+                        ),
+                        if (selectedCount > 0)
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              FilledButton.tonalIcon(
+                                onPressed: _working ? null : () => _bulkDecision('include'),
+                                icon: const Icon(Icons.check),
+                                label: const Text('Include selected'),
+                              ),
+                              OutlinedButton.icon(
+                                onPressed: _working ? null : () => _bulkDecision('exclude'),
+                                icon: const Icon(Icons.remove_circle_outline),
+                                label: const Text('Exclude selected'),
+                              ),
+                            ],
+                          ),
+                      ],
+                    );
+                  }),
+                ],
                 if (_selected.length >= 2)
                   Align(
                       alignment: Alignment.centerRight,
@@ -797,6 +875,7 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
         'Statement period: ${details.periodStart} to ${details.periodEnd}',
       if (details.statementDate != null)
         'Statement date: ${details.statementDate}',
+      if (details.currency != null) 'Document currency: ${details.currency}',
     ];
     if (lines.isEmpty) return const SizedBox.shrink();
     return Card(
