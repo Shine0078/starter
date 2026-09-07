@@ -2564,6 +2564,42 @@ void main() {
     expect(find.text('Add account for this statement'), findsOneWidget);
   });
 
+  testWidgets('statement import keeps the browser picker tied to a click',
+      (tester) async {
+    var accountReads = 0;
+    const account =
+        '{"id":"acc-1","name":"CAD checking","type":"checking","mask":"manual","currency":"CAD","balanceCurrent":0,"balanceFormatted":"CA\$0.00","source":"manual"}';
+    final api = clientWith(MockClient((request) async {
+      if (request.method == 'GET' && request.url.path == '/api/accounts') {
+        accountReads += 1;
+        return http.Response(accountReads == 1 ? '[]' : '[$account]', 200);
+      }
+      if (request.method == 'GET' && request.url.path == '/api/imports/statements') {
+        return http.Response('[]', 200);
+      }
+      if (request.method == 'POST' &&
+          request.url.path == '/api/accounts/manual') {
+        return http.Response(account, 201);
+      }
+      return http.Response('{}', 404);
+    }));
+
+    await tester.pumpWidget(statementImportHarness(api));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add account and choose statement'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).at(0), 'CAD checking');
+    await tester.enterText(find.byType(TextFormField).at(1), '0');
+    await tester.enterText(find.byType(TextFormField).at(2), 'CAD');
+    await tester.tap(find.text('Add account'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Account added. Tap Choose statement to select the file.'),
+        findsOneWidget);
+    expect(
+        find.widgetWithText(FilledButton, 'Choose statement'), findsOneWidget);
+  });
+
   testWidgets('statement import selects all rows for one bulk decision',
       (tester) async {
     const detail = '{"statement":{"id":"stmt-1","accountId":"acc-1","filename":"july.csv","mimeType":"text/csv","format":"csv","status":"ready","rowsTotal":2,"rowsIncluded":2,"rowsExcluded":0,"rowsNeedsReview":0,"createdAt":"2026-08-01T00:00:00Z","documentDetails":{"currency":"CAD","periodStart":"2026-07-01","periodEnd":"2026-07-31"}},"rows":[{"id":"row-1","importId":"stmt-1","sourceLine":2,"description":"Grocery","amount":-1000,"currency":"CAD","direction":"debit","categorySlug":"groceries","categoryConfidence":0.9,"decision":"include","flags":[],"postedAt":"2026-07-01","isRecurring":false},{"id":"row-2","importId":"stmt-1","sourceLine":3,"description":"Transit","amount":-500,"currency":"CAD","direction":"debit","categorySlug":"transportation","categoryConfidence":0.9,"decision":"include","flags":[],"postedAt":"2026-07-02","isRecurring":false}]}';

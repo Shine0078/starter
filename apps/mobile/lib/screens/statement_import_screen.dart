@@ -2,6 +2,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
 import '../api/client.dart';
+import '../api/platform/file_selector_registration.dart';
 import '../models/models.dart';
 
 /// Review-first manual statement ingestion. The server is authoritative for
@@ -53,6 +54,11 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
       final account = await _addManualAccount();
       if (!mounted || account == null) return;
       setState(() => _accountId = account.id);
+      // A browser file chooser must be opened directly from a user gesture.
+      // The account dialog consumes the original gesture, so ask for a
+      // second tap instead of silently losing the chooser on the web.
+      _showMessage('Account added. Tap Choose statement to select the file.');
+      return;
     }
     await _pickAndAnalyze();
   }
@@ -211,24 +217,33 @@ class _StatementImportScreenState extends State<StatementImportScreen> {
   Future<void> _pickAndAnalyze() async {
     final accountId = _accountId;
     if (accountId == null) return;
-    final file = await openFile(
-      acceptedTypeGroups: const [
-        XTypeGroup(
-          label: 'Financial statements',
-          extensions: [
-            'csv',
-            'xlsx',
-            'pdf',
-            'png',
-            'jpg',
-            'jpeg',
-            'webp',
-            'tiff',
-            'bmp'
-          ],
-        ),
-      ],
-    );
+    XFile? file;
+    try {
+      // Some Flutter web release registrants omit file_selector_web. Register
+      // it synchronously here so the chooser remains tied to this click.
+      ensureFileSelectorPlatform();
+      file = await openFile(
+        acceptedTypeGroups: const [
+          XTypeGroup(
+            label: 'Financial statements',
+            extensions: [
+              'csv',
+              'xlsx',
+              'pdf',
+              'png',
+              'jpg',
+              'jpeg',
+              'webp',
+              'tiff',
+              'bmp'
+            ],
+          ),
+        ],
+      );
+    } catch (error) {
+      if (mounted) _showError(error);
+      return;
+    }
     if (file == null) return;
     setState(() {
       _working = true;
